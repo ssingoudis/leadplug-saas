@@ -1,0 +1,115 @@
+{
+  "slug": "_template",
+  "companyName": "",
+  "contactEmail": "",
+  "logoUrl": "",
+  "phone": "",
+  "address": "",
+  "website": "",
+
+  "theme": {
+    "primaryColor": "#22c55e",
+    "primaryColorHover": "#16a34a",
+    "textColor": "#1f2937",
+    "textColorMuted": "#6b7280",
+    "backgroundColor": "#ffffff",
+    "borderColor": "#e5e7eb",
+    "inputBgColor": "#f9fafb",
+    "fontFamily": "Inter, sans-serif",
+    "borderRadius": "0.5rem",
+    "maxWidth": "640px"
+  },
+
+  "funnel": {
+    "title": "Solar-Konfigurator",
+    "subtitle": "In nur 6 Schritten zu Ihrem individuellen Angebot",
+    "submitButtonLabel": "Angebotsvergleich starten",
+    "successMessage": "Vielen Dank! Sie erhalten in Kürze Ihre Preisschätzung per E-Mail.",
+    "privacyPolicyUrl": ""
+  },
+
+  "questions": [
+    {
+      "id": "gebaeudetyp",
+      "title": "Worauf soll die Solaranlage installiert werden?",
+      "visible": true,
+      "defaultValue": "efh",
+      "options": [
+        { "label": "Ein-/Zweifamilienhaus", "value": "efh", "iconKey": "House" },
+        { "label": "Mehrfamilienhaus", "value": "mfh", "iconKey": "Apartment" },
+        { "label": "Firmengebäude", "value": "firma", "iconKey": "Factory" },
+        { "label": "Sonstiges", "value": "sonstiges", "iconKey": "Question" }
+      ]
+    },
+    {
+      "id": "flaeche",
+      "title": "Wie groß ist die Fläche bzw. die geplante Anlage?",
+      "visible": true,
+      "defaultValue": "21-100",
+      "options": [
+        { "label": "Bis 20 qm", "value": "bis-20", "iconKey": "SolarSmall" },
+        { "label": "21 bis 100 qm", "value": "21-100", "iconKey": "SolarMedium" },
+        { "label": "101 bis 200 qm", "value": "101-200", "iconKey": "SolarLarge" },
+        { "label": "Über 200 qm", "value": "ueber-200", "iconKey": "SolarXL" }
+      ]
+    },
+    {
+      "id": "ausrichtung",
+      "title": "Haben Sie eine südlich ausgerichtete Dachfläche?",
+      "visible": true,
+      "defaultValue": "ja",
+      "options": [
+        { "label": "Ja", "value": "ja", "iconKey": "Check" },
+        { "label": "Nein", "value": "nein", "iconKey": "Cross" },
+        { "label": "Teilweise", "value": "teilweise", "iconKey": "HousePartial" },
+        { "label": "Bin nicht sicher", "value": "unsicher", "iconKey": "Question" }
+      ]
+    },
+    {
+      "id": "stromspeicher",
+      "title": "Sind Sie an einem Stromspeicher interessiert?",
+      "visible": true,
+      "defaultValue": "ja",
+      "options": [
+        { "label": "Ja", "value": "ja", "iconKey": "Check" },
+        { "label": "Nein", "value": "nein", "iconKey": "Cross" },
+        { "label": "Weiß nicht", "value": "unsicher", "iconKey": "Question" }
+      ]
+    },
+    {
+      "id": "kaufmiete",
+      "title": "Möchten Sie einen Angebotsvergleich zu Kauf und Miete?",
+      "visible": true,
+      "defaultValue": "beides",
+      "options": [
+        { "label": "Ja, beides interessant", "value": "beides", "iconKey": "Check" },
+        { "label": "Kaufen", "value": "kaufen", "iconKey": "Euro" },
+        { "label": "Mieten", "value": "mieten", "iconKey": "Document" },
+        { "label": "Weiß nicht / bitte Beratung", "value": "unsicher", "iconKey": "Question" }
+      ]
+    },
+    {
+      "id": "zeitraum",
+      "title": "Wann soll das Projekt umgesetzt werden?",
+      "visible": true,
+      "defaultValue": "1-3",
+      "options": [
+        { "label": "Umgehend", "value": "umgehend", "iconKey": "Calendar", "iconProps": { "text": "<1" } },
+        { "label": "In 1 bis 3 Monaten", "value": "1-3", "iconKey": "Calendar", "iconProps": { "text": "1-3" } },
+        { "label": "In 3 bis 6 Monaten", "value": "3-6", "iconKey": "Calendar", "iconProps": { "text": "3-6" } },
+        { "label": "Weiß nicht", "value": "unsicher", "iconKey": "Question" }
+      ]
+    }
+  ],
+
+  "pricing": {
+    "basePrice": {
+      "bis-20": 8000,
+      "21-100": 18000,
+      "101-200": 45000,
+      "ueber-200": 90000
+    },
+    "storageAddon": 4500,
+    "currency": "EUR"
+  }
+}
