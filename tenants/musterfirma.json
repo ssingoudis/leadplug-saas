@@ -17,7 +17,7 @@
     "inputBgColor": "#f9fafb",
     "fontFamily": "Inter, sans-serif",
     "borderRadius": "0.75rem",
-    "maxWidth": "640px"
+    "maxWidth": "720px"
   },
 
   "funnel": {

@@ -46,7 +46,7 @@ const defaultTheme: FunnelTheme = {
   inputBgColor: "#f9fafb",
   fontFamily: "inherit",
   borderRadius: "0.5rem",
-  maxWidth: "640px",
+  maxWidth: "720px",
 }
 
 // =============================================================================
@@ -307,6 +307,17 @@ export function SolarFunnel({
     email: "",
   })
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [errors, setErrors] = useState({ anrede: "", name: "", telefon: "", email: "" })
+
+  const validateField = (field: keyof ContactData, value: string): string => {
+    switch (field) {
+      case "anrede": return !value ? "Bitte wählen Sie eine Anrede aus." : ""
+      case "name": return !value.trim() ? "Bitte geben Sie Ihren Namen ein." : ""
+      case "email": return !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? "Bitte geben Sie eine gültige E-Mail-Adresse ein." : ""
+      case "telefon": return !/^[+\d\s\-()]{6,}$/.test(value) ? "Bitte geben Sie eine gültige Telefonnummer ein." : ""
+      default: return ""
+    }
+  }
 
   const totalSteps = visibleQuestions.length + 1
   const isContactStep = currentStep === visibleQuestions.length
@@ -326,11 +337,14 @@ export function SolarFunnel({
     if (currentStep > 0) setCurrentStep(prev => prev - 1)
   }
 
+  const isValid = !validateField("anrede", contactData.anrede)
+    && !validateField("name", contactData.name)
+    && !validateField("email", contactData.email)
+    && !validateField("telefon", contactData.telefon)
+
   const handleSubmit = () => {
-    if (contactData.name && contactData.email && contactData.telefon) {
-      setIsSubmitted(true)
-      onSubmit?.({ answers, contact: contactData })
-    }
+    setIsSubmitted(true)
+    onSubmit?.({ answers, contact: contactData })
   }
 
   // CSS Custom Properties für dynamisches Styling
@@ -405,7 +419,7 @@ export function SolarFunnel({
 
   return (
     <div 
-      className="mx-auto rounded-lg shadow-lg overflow-hidden"
+      className="mx-auto rounded-lg shadow-lg w-full"
       style={{ 
         ...cssVars, 
         maxWidth: theme.maxWidth,
@@ -417,15 +431,15 @@ export function SolarFunnel({
         {!isContactStep ? (
           <div>
             {/* Frage */}
-            <h1 
-              className="text-xl sm:text-2xl font-bold mb-4 leading-tight"
+            <h1
+              className="text-lg md:text-xl lg:text-2xl font-bold mb-4 leading-tight"
               style={{ color: theme.textColor }}
             >
               {currentQuestion.title}
             </h1>
-            
-            <p 
-              className="text-sm mb-5"
+
+            <p
+              className="text-xs mb-5"
               style={{ color: theme.textColorMuted }}
             >
               Bitte wählen Sie eine Antwort aus:
@@ -434,8 +448,10 @@ export function SolarFunnel({
             {/* Options Grid */}
             <div className={cn(
               "grid gap-3 mb-6",
-              currentQuestion.options.length === 3 
-                ? "grid-cols-3" 
+              currentQuestion.options.length === 2
+                ? "grid-cols-2"
+                : currentQuestion.options.length === 3
+                ? "grid-cols-3"
                 : "grid-cols-2 sm:grid-cols-4"
             )}>
               {currentQuestion.options.map((option) => {
@@ -444,7 +460,7 @@ export function SolarFunnel({
                   <button
                     key={option.value}
                     onClick={() => handleSelect(currentQuestion.id, option.value)}
-                    className="flex flex-col items-center p-3 sm:p-4 rounded-lg border-2 transition-all duration-150 cursor-pointer"
+                    className="flex flex-col items-center p-2 sm:p-3 md:p-4 rounded-lg border-2 transition-all duration-150 cursor-pointer"
                     style={{
                       borderColor: isSelected ? theme.primaryColor : theme.borderColor,
                       backgroundColor: theme.backgroundColor,
@@ -461,7 +477,7 @@ export function SolarFunnel({
                     }}
                   >
                     {/* Icon */}
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 mb-2">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 mb-2">
                       {renderIcon(option.iconKey, option.iconProps)}
                     </div>
                     
@@ -479,8 +495,8 @@ export function SolarFunnel({
                     </div>
                     
                     {/* Label */}
-                    <span 
-                      className="text-xs sm:text-sm font-medium text-center leading-tight"
+                    <span
+                      className="text-xs sm:text-sm font-medium text-center leading-tight whitespace-normal wrap-break-word"
                       style={{ color: isSelected ? theme.primaryColor : theme.textColor }}
                     >
                       {option.label}
@@ -493,8 +509,8 @@ export function SolarFunnel({
         ) : (
           /* Kontakt-Formular */
           <div>
-            <h1 
-              className="text-xl sm:text-2xl font-bold mb-2 leading-tight"
+            <h1
+              className="text-lg md:text-xl lg:text-2xl font-bold mb-2 leading-tight"
               style={{ color: theme.textColor }}
             >
               Kostenlos Angebote vergleichen und genaue Ersparnis erfahren.
@@ -508,98 +524,127 @@ export function SolarFunnel({
             </p>
 
             {/* Anrede */}
-            <div className="flex gap-5 mb-4">
-              {["Herr", "Frau", "Divers"].map((anrede) => (
-                <label key={anrede} className="flex items-center gap-2 cursor-pointer">
-                  <div 
-                    className="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors"
-                    style={{ borderColor: contactData.anrede === anrede ? theme.primaryColor : theme.borderColor }}
-                  >
-                    {contactData.anrede === anrede && (
-                      <div 
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: theme.primaryColor }}
-                      />
-                    )}
-                  </div>
-                  <span style={{ color: theme.textColor }}>{anrede}</span>
-                  <input
-                    type="radio"
-                    name="anrede"
-                    value={anrede}
-                    checked={contactData.anrede === anrede}
-                    onChange={(e) => setContactData(prev => ({ ...prev, anrede: e.target.value }))}
-                    className="sr-only"
-                  />
-                </label>
-              ))}
+            <div className="mb-4">
+              <div className="flex gap-5">
+                {["Herr", "Frau", "Divers"].map((anrede) => (
+                  <label key={anrede} className="flex items-center gap-2 cursor-pointer min-h-11">
+                    <div
+                      className="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors"
+                      style={{ borderColor: contactData.anrede === anrede ? theme.primaryColor : theme.borderColor }}
+                    >
+                      {contactData.anrede === anrede && (
+                        <div
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: theme.primaryColor }}
+                        />
+                      )}
+                    </div>
+                    <span style={{ color: theme.textColor }}>{anrede}</span>
+                    <input
+                      type="radio"
+                      name="anrede"
+                      value={anrede}
+                      checked={contactData.anrede === anrede}
+                      onChange={(e) => {
+                        setContactData(prev => ({ ...prev, anrede: e.target.value }))
+                        setErrors(prev => ({ ...prev, anrede: "" }))
+                      }}
+                      className="sr-only"
+                    />
+                  </label>
+                ))}
+              </div>
+              {errors.anrede && (
+                <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors.anrede}</p>
+              )}
             </div>
 
             {/* Form Fields */}
             <div className="space-y-3 mb-4">
-              <input
-                type="text"
-                placeholder="Vor- und Nachname"
-                value={contactData.name}
-                onChange={(e) => setContactData(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full px-4 py-3 border rounded-lg transition-colors outline-none"
-                style={{ 
-                  borderColor: theme.borderColor,
-                  backgroundColor: theme.inputBgColor,
-                  color: theme.textColor,
-                  borderRadius: theme.borderRadius,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = theme.primaryColor
-                  e.currentTarget.style.backgroundColor = theme.backgroundColor
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = theme.borderColor
-                  e.currentTarget.style.backgroundColor = theme.inputBgColor
-                }}
-              />
-              <input
-                type="tel"
-                placeholder="Telefonnummer"
-                value={contactData.telefon}
-                onChange={(e) => setContactData(prev => ({ ...prev, telefon: e.target.value }))}
-                className="w-full px-4 py-3 border rounded-lg transition-colors outline-none"
-                style={{ 
-                  borderColor: theme.borderColor,
-                  backgroundColor: theme.inputBgColor,
-                  color: theme.textColor,
-                  borderRadius: theme.borderRadius,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = theme.primaryColor
-                  e.currentTarget.style.backgroundColor = theme.backgroundColor
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = theme.borderColor
-                  e.currentTarget.style.backgroundColor = theme.inputBgColor
-                }}
-              />
-              <input
-                type="email"
-                placeholder="E-Mail"
-                value={contactData.email}
-                onChange={(e) => setContactData(prev => ({ ...prev, email: e.target.value }))}
-                className="w-full px-4 py-3 border rounded-lg transition-colors outline-none"
-                style={{ 
-                  borderColor: theme.borderColor,
-                  backgroundColor: theme.inputBgColor,
-                  color: theme.textColor,
-                  borderRadius: theme.borderRadius,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = theme.primaryColor
-                  e.currentTarget.style.backgroundColor = theme.backgroundColor
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = theme.borderColor
-                  e.currentTarget.style.backgroundColor = theme.inputBgColor
-                }}
-              />
+              <div>
+                <input
+                  type="text"
+                  placeholder="Vor- und Nachname"
+                  value={contactData.name}
+                  onChange={(e) => setContactData(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
+                  style={{
+                    borderColor: errors.name ? "#ef4444" : theme.borderColor,
+                    backgroundColor: theme.inputBgColor,
+                    color: theme.textColor,
+                    borderRadius: theme.borderRadius,
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = theme.primaryColor
+                    e.currentTarget.style.backgroundColor = theme.backgroundColor
+                  }}
+                  onBlur={(e) => {
+                    const error = validateField("name", e.currentTarget.value)
+                    setErrors(prev => ({ ...prev, name: error }))
+                    e.currentTarget.style.borderColor = error ? "#ef4444" : theme.borderColor
+                    e.currentTarget.style.backgroundColor = theme.inputBgColor
+                  }}
+                />
+                {errors.name && (
+                  <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors.name}</p>
+                )}
+              </div>
+              <div>
+                <input
+                  type="tel"
+                  placeholder="Telefonnummer"
+                  value={contactData.telefon}
+                  onChange={(e) => setContactData(prev => ({ ...prev, telefon: e.target.value }))}
+                  className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
+                  style={{
+                    borderColor: errors.telefon ? "#ef4444" : theme.borderColor,
+                    backgroundColor: theme.inputBgColor,
+                    color: theme.textColor,
+                    borderRadius: theme.borderRadius,
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = theme.primaryColor
+                    e.currentTarget.style.backgroundColor = theme.backgroundColor
+                  }}
+                  onBlur={(e) => {
+                    const error = validateField("telefon", e.currentTarget.value)
+                    setErrors(prev => ({ ...prev, telefon: error }))
+                    e.currentTarget.style.borderColor = error ? "#ef4444" : theme.borderColor
+                    e.currentTarget.style.backgroundColor = theme.inputBgColor
+                  }}
+                />
+                {errors.telefon && (
+                  <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors.telefon}</p>
+                )}
+              </div>
+              <div>
+                <input
+                  type="email"
+                  placeholder="E-Mail"
+                  value={contactData.email}
+                  onChange={(e) => setContactData(prev => ({ ...prev, email: e.target.value }))}
+                  className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
+                  style={{
+                    borderColor: errors.email ? "#ef4444" : theme.borderColor,
+                    backgroundColor: theme.inputBgColor,
+                    color: theme.textColor,
+                    borderRadius: theme.borderRadius,
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = theme.primaryColor
+                    e.currentTarget.style.backgroundColor = theme.backgroundColor
+                  }}
+                  onBlur={(e) => {
+                    const error = validateField("email", e.currentTarget.value)
+                    setErrors(prev => ({ ...prev, email: error }))
+                    e.currentTarget.style.borderColor = error ? "#ef4444" : theme.borderColor
+                    e.currentTarget.style.backgroundColor = theme.inputBgColor
+                  }}
+                />
+                {errors.email && (
+                  <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors.email}</p>
+                )}
+              </div>
             </div>
 
             {/* Datenschutz */}
@@ -613,27 +658,34 @@ export function SolarFunnel({
 
             {/* Submit Button */}
             <button
-              onClick={handleSubmit}
-              disabled={!contactData.name || !contactData.email || !contactData.telefon}
-              className="flex items-center justify-center gap-2 w-full text-white px-5 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ 
-                backgroundColor: (!contactData.name || !contactData.email || !contactData.telefon) 
-                  ? theme.borderColor 
-                  : theme.primaryColor,
+              onClick={() => {
+                const newErrors = {
+                  anrede: validateField("anrede", contactData.anrede),
+                  name: validateField("name", contactData.name),
+                  telefon: validateField("telefon", contactData.telefon),
+                  email: validateField("email", contactData.email),
+                }
+                setErrors(newErrors)
+                if (Object.values(newErrors).every(e => !e)) {
+                  handleSubmit()
+                }
+              }}
+              className="flex items-center justify-center gap-2 w-full text-white px-5 py-3 rounded-lg font-semibold transition-colors"
+              style={{
+                backgroundColor: theme.primaryColor,
                 borderRadius: theme.borderRadius,
+                cursor: isValid ? "pointer" : "not-allowed",
               }}
               onMouseEnter={(e) => {
-                if (contactData.name && contactData.email && contactData.telefon) {
+                if (isValid) {
                   e.currentTarget.style.backgroundColor = theme.primaryColorHover
                 }
               }}
               onMouseLeave={(e) => {
-                if (contactData.name && contactData.email && contactData.telefon) {
-                  e.currentTarget.style.backgroundColor = theme.primaryColor
-                }
+                e.currentTarget.style.backgroundColor = theme.primaryColor
               }}
             >
-              <span>Angebotsvergleich starten</span>
+              <span className="text-sm sm:text-base">Angebotsvergleich starten</span>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
@@ -668,11 +720,11 @@ export function SolarFunnel({
               </svg>
               zurück
             </button>
-            <span 
-              className="text-xs"
+            <span
+              className="text-xs font-medium"
               style={{ color: theme.textColorMuted }}
             >
-              Schritt {currentStep + 1} von {totalSteps}
+              {Math.ceil((currentStep + 1) / totalSteps * 100)}%
             </span>
           </div>
         </div>
