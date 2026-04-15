@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { SolarFunnel } from '@/components/solar-funnel'
+import { TenantFunnelClient } from '@/components/TenantFunnelClient'
 import { getTenantConfig } from '@/lib/getTenantConfig'
 import type { Metadata } from 'next'
 
@@ -32,10 +32,7 @@ export default async function TenantPage({ params }: TenantPageProps) {
       className="min-h-screen py-8 px-4"
       style={{ backgroundColor: config.theme.backgroundColor }}
     >
-      <SolarFunnel
-        theme={config.theme}
-        questions={config.questions}
-      />
+      <TenantFunnelClient config={config} />
     </main>
   )
 }
