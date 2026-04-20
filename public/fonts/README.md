@@ -23,23 +23,15 @@ Diese Fonts werden lokal ausgeliefert – **kein** Request an `fonts.googleapis.
 
 **Wichtig:** Die Versionsnummer (`v20`, `v21`, …) ändert sich, wenn Google die Font aktualisiert. Die `@font-face`-Regeln in [app/globals.css](../../app/globals.css) müssen genau zu deinen Dateinamen passen.
 
-Aktuell in `globals.css` eingetragene Pfade:
+Aktuell in `globals.css` eingetragene Pfade (je 4 Weights: regular/500/600/700):
 
 ```
-public/fonts/inter/
-  inter-v20-latin-regular.woff2
-  inter-v20-latin-500.woff2
-  inter-v20-latin-600.woff2
-  inter-v20-latin-700.woff2
-
-public/fonts/poppins/
-  poppins-regular.woff2, poppins-500.woff2, poppins-600.woff2, poppins-700.woff2
-
-public/fonts/roboto/
-  roboto-regular.woff2, roboto-500.woff2, roboto-600.woff2, roboto-700.woff2
+public/fonts/inter/inter-v20-latin-{regular,500,600,700}.woff2
+public/fonts/poppins/poppins-v24-latin-{regular,500,600,700}.woff2
+public/fonts/roboto/roboto-v51-latin-{regular,500,600,700}.woff2
 ```
 
-Für Poppins/Roboto entweder **(a)** Dateien nach dem Download wie oben kurz umbenennen, oder **(b)** die gwfh-Originalnamen (`poppins-vXX-latin-500.woff2` etc.) behalten und die `src:`-URLs in `globals.css` entsprechend anpassen.
+Wenn gwfh dir eine neuere Version liefert (z. B. `v21`, `v25`, …), entweder die Dateien auf die oben genannten Versionen umbenennen, **oder** die `src:`-URLs in `globals.css` an die neue Version anpassen.
 
 Fehlt eine Datei, fällt der Browser stumm auf den System-Font-Stack zurück – das Widget bleibt funktional, nur ohne Wunschschrift.
 
