@@ -27,6 +27,10 @@ export async function logSubmission(params: {
   contact: ContactData
   answers: Record<string, string>
   estimate: PriceEstimate
+  startedAt: string
+  sourceUrl: string
+  userAgent: string
+  pricePerLead: number
 }): Promise<void> {
   const supabase = getSupabase()
   if (!supabase) return
@@ -41,6 +45,10 @@ export async function logSubmission(params: {
       price_min: params.estimate.min,
       price_max: params.estimate.max,
       emails_sent: true,
+      started_at: params.startedAt,
+      source_url: params.sourceUrl,
+      user_agent: params.userAgent,
+      price_per_lead: params.pricePerLead,
     })
     if (error) console.error('Supabase logging error:', error)
   } catch (err) {

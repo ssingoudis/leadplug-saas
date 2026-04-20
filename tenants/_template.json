@@ -105,5 +105,10 @@
     },
     "storageAddon": 4500,
     "currency": "EUR"
+  },
+
+  "billing": {
+    "pricePerLead": 0.10,
+    "currency": "EUR"
   }
 }

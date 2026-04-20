@@ -798,7 +798,95 @@ NEXT_PUBLIC_BASE_URL=https://solar-funnel.de
 
 ---
 
-## 22. Spätere Erweiterungen (nicht jetzt umsetzen)
+## 22. Tracking-Erweiterung MVP (Lead-Herkunft, Device, Dauer, flexibles Preisschema)
+
+**Problem:** Das initiale Schema kennt pro Submission nur Kontaktdaten, Antworten und eine Preisschätzung. Der Platform-Owner kann damit zwar Leads zählen, sieht aber nicht **woher** ein Lead kam (Referrer), **auf welchem Gerät** er ausgefüllt wurde und **wie lange** der Nutzer gebraucht hat. Außerdem ist die Abrechnung auf `0,10 €/Lead` hartcodiert, obwohl der Preis pro Tenant individuell verhandelt wird (0,10 € / 0,20 € / 2 € …).
+
+**Lösung:** 4 neue Spalten in `submissions` – keine neuen Tabellen, keine Client-Event-Pipeline.
+
+### 1. Schema-Erweiterung (`context/supabase-schema.sql`)
+
+Neue Spalten auf `submissions`:
+
+- `source_url TEXT` – Referrer der einbettenden Seite (`document.referrer`, kann leer sein)
+- `user_agent TEXT` – `navigator.userAgent`-String
+- `started_at TIMESTAMPTZ` – Zeitpunkt, an dem der Nutzer Frage 1 geöffnet hat. Dauer = `created_at - started_at` (per SQL ableitbar, keine eigene Spalte nötig)
+- `price_per_lead NUMERIC(10,4) NOT NULL DEFAULT 0.10` – Abrechnungspreis zum Zeitpunkt der Submission. **Pro Zeile gespeichert, damit spätere Preisänderungen alte Leads nicht rückwirkend neu bepreisen.**
+
+Umsetzung idempotent via `ADD COLUMN IF NOT EXISTS`, sodass das SQL bei bestehenden Deployments re-runnable bleibt.
+
+`monthly_billing`-View: `COUNT(*) * 0.10` → `SUM(price_per_lead)`.
+
+### 2. Tenant-Konfiguration
+
+Neuer optionaler Block in `tenants/[slug].json`:
+
+```json
+"billing": {
+  "pricePerLead": 0.10,
+  "currency": "EUR"
+}
+```
+
+Default bei Fehlen: `0.10 EUR`. Pro Tenant individuell pflegbar – eine JSON-Änderung reicht, kein Code-Deployment.
+
+### 3. Typen (`types/index.ts`)
+
+```typescript
+export interface BillingConfig {
+  pricePerLead: number   // z. B. 0.10, 0.20, 2.00
+  currency: string
+}
+
+// TenantConfig um optionales Feld erweitern:
+billing?: BillingConfig
+
+// SubmitPayload um 3 Felder erweitern:
+startedAt: string    // ISO-String, bei Mount gesetzt
+sourceUrl: string    // document.referrer
+userAgent: string    // navigator.userAgent
+```
+
+### 4. Client (`components/TenantFunnelClient.tsx`)
+
+- Beim Mount (`useRef` + Lazy-Init): `startedAt = new Date().toISOString()`
+- Beim Submit: `document.referrer` + `navigator.userAgent` auslesen
+- Mitsenden im `fetch('/api/submit', …)`-Body
+
+### 5. Server (`lib/tracking.ts`, `app/api/submit/route.ts`)
+
+- `logSubmission()` erhält 4 neue Felder (`sourceUrl`, `userAgent`, `startedAt`, `pricePerLead`) und schreibt sie
+- API-Route liest `pricePerLead` **server-side** aus `tenantConfig.billing?.pricePerLead ?? 0.10` (nicht vom Client – manipulationssicher)
+- Payload-Shape-Check bleibt tolerant: Client-Felder `startedAt/sourceUrl/userAgent` dürfen fehlen und werden serverseitig auf sinnvolle Defaults (`new Date().toISOString()` bzw. `""`) gemappt
+
+### 6. Was NICHT Teil dieses MVP ist
+
+- Separate Tabellen für Funnel-Starts / Step-Events (Abbruchquote) – erst wenn > 100 Leads/Monat die Statistik sinnvoll machen **und** Consent-Flow rechtlich geklärt ist
+- UTM-Parameter (`utm_source` etc.) – `source_url` reicht für v1
+- Geolocation, IP-Logging, A/B-Testing
+
+### 7. Agenda (manuell, außerhalb Code-Repo)
+
+1. SQL aus `context/supabase-schema.sql` im Supabase-SQL-Editor des Projekts `pcnugbecujlxrivwltfp` ausführen
+2. In `.env.local` eintragen:
+   ```
+   SUPABASE_URL=https://pcnugbecujlxrivwltfp.supabase.co
+   SUPABASE_SERVICE_KEY=<service_role-Key aus Project Settings → API>
+   ```
+3. Test-Submit → in `submissions` prüfen, ob `source_url`, `user_agent`, `started_at` und `price_per_lead` befüllt sind
+
+### Betroffene Dateien
+
+- `context/supabase-schema.sql`
+- `types/index.ts`
+- `tenants/_template.json`, `tenants/demo.json`, `tenants/musterfirma.json`
+- `components/TenantFunnelClient.tsx`
+- `lib/tracking.ts`
+- `app/api/submit/route.ts`
+
+---
+
+## 23. Spätere Erweiterungen (nicht jetzt umsetzen)
 
 - Admin-Dashboard zum Anlegen neuer Mandanten ohne Code-Deployment
 - Abrechnungs-Übersicht pro Tenant (Monatsrechnung aus Supabase-View)
