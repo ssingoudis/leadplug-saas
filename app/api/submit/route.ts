@@ -40,6 +40,11 @@ export async function POST(req: Request) {
   const { tenant, answers, contact } = payload as SubmitPayload & {
     contact: ContactData
   }
+  const p = payload as unknown as Record<string, unknown>
+  const startedAt =
+    typeof p.startedAt === 'string' ? p.startedAt : new Date().toISOString()
+  const sourceUrl = typeof p.sourceUrl === 'string' ? p.sourceUrl : ''
+  const userAgent = typeof p.userAgent === 'string' ? p.userAgent : ''
 
   const tenantConfig = await getTenantConfig(tenant)
   if (!tenantConfig) {
@@ -47,12 +52,17 @@ export async function POST(req: Request) {
   }
 
   const estimate = calculateEstimate(answers, tenantConfig.pricing)
+  const pricePerLead = tenantConfig.billing?.pricePerLead ?? 0.1
 
   await logSubmission({
     tenantSlug: tenant,
     contact,
     answers,
     estimate,
+    startedAt,
+    sourceUrl,
+    userAgent,
+    pricePerLead,
   })
 
   const submittedAt = new Date()

@@ -40,6 +40,11 @@ export interface PricingConfig {
   currency: string
 }
 
+export interface BillingConfig {
+  pricePerLead: number
+  currency: string
+}
+
 export interface TenantConfig {
   slug: string
   companyName: string
@@ -52,6 +57,7 @@ export interface TenantConfig {
   funnel: FunnelConfig
   questions: QuestionConfig[]
   pricing: PricingConfig
+  billing?: BillingConfig
 }
 
 export interface ContactData {
@@ -71,4 +77,7 @@ export interface SubmitPayload {
   tenant: string
   answers: Record<string, string>
   contact: ContactData
+  startedAt: string
+  sourceUrl: string
+  userAgent: string
 }
