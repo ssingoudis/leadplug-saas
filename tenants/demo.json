@@ -9,20 +9,14 @@
 
   "theme": {
     "primaryColor": "#22c55e",
-    "primaryColorHover": "#16a34a",
-    "textColor": "#1f2937",
-    "textColorMuted": "#6b7280",
-    "backgroundColor": "#ffffff",
-    "borderColor": "#e5e7eb",
-    "inputBgColor": "#f9fafb",
-    "fontFamily": "Inter, sans-serif",
+    "font": "inter",
     "borderRadius": "0.5rem",
     "maxWidth": "720px"
   },
 
   "funnel": {
-    "title": "Solar-Konfigurator",
-    "subtitle": "In nur 6 Schritten zu Ihrem individuellen Angebot",
+    "title": "erstmal irrelevant - Solar-Konfigurator",
+    "subtitle": "erstmal irrelevant - In nur 6 Schritten zu Ihrem individuellen Angebot",
     "submitButtonLabel": "Angebotsvergleich starten",
     "successMessage": "Vielen Dank! Sie erhalten in Kürze Ihre Preisschätzung per E-Mail.",
     "privacyPolicyUrl": "https://solar-funnel.de/datenschutz"

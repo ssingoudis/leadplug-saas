@@ -1,0 +1,51 @@
+# Self-hosted Fonts (DSGVO-konform)
+
+Diese Fonts werden lokal ausgeliefert – **kein** Request an `fonts.googleapis.com`, kein Third-Party-Tracking. Nötig wegen des LG-München-Urteils (2022) zu Google Fonts.
+
+## Welche Fonts sind vorgesehen?
+
+| Wert in `tenant.json` (`theme.font`) | Fonts werden geladen? |
+| ------------------------------------ | --------------------- |
+| `"system"` (default)                 | Nein – System-Font-Stack, kein Download |
+| `"inter"`                            | Ja – aus `/public/fonts/inter/` |
+| `"poppins"`                          | Ja – aus `/public/fonts/poppins/` |
+| `"roboto"`                           | Ja – aus `/public/fonts/roboto/` |
+
+## Installation der `.woff2`-Dateien
+
+1. Öffne **https://gwfh.mranftl.com/fonts** (google-webfonts-helper – DSGVO-sicherer Download-Wrapper).
+2. Suche die gewünschte Font (z. B. "Inter").
+3. Wähle:
+   - **Charsets:** `latin` (+ optional `latin-ext`)
+   - **Styles:** `400` (regular), `500`, `600`, `700`
+   - **Browser support:** `Modern` (nur `.woff2`)
+4. Dateien herunterladen, entpacken und in den jeweiligen Ordner legen. gwfh nutzt das Benennungsschema `{font}-v{version}-latin-{weight}.woff2` (z. B. `inter-v20-latin-500.woff2`).
+
+**Wichtig:** Die Versionsnummer (`v20`, `v21`, …) ändert sich, wenn Google die Font aktualisiert. Die `@font-face`-Regeln in [app/globals.css](../../app/globals.css) müssen genau zu deinen Dateinamen passen.
+
+Aktuell in `globals.css` eingetragene Pfade:
+
+```
+public/fonts/inter/
+  inter-v20-latin-regular.woff2
+  inter-v20-latin-500.woff2
+  inter-v20-latin-600.woff2
+  inter-v20-latin-700.woff2
+
+public/fonts/poppins/
+  poppins-regular.woff2, poppins-500.woff2, poppins-600.woff2, poppins-700.woff2
+
+public/fonts/roboto/
+  roboto-regular.woff2, roboto-500.woff2, roboto-600.woff2, roboto-700.woff2
+```
+
+Für Poppins/Roboto entweder **(a)** Dateien nach dem Download wie oben kurz umbenennen, oder **(b)** die gwfh-Originalnamen (`poppins-vXX-latin-500.woff2` etc.) behalten und die `src:`-URLs in `globals.css` entsprechend anpassen.
+
+Fehlt eine Datei, fällt der Browser stumm auf den System-Font-Stack zurück – das Widget bleibt funktional, nur ohne Wunschschrift.
+
+## Neue Font hinzufügen
+
+1. Ordner `public/fonts/<name>/` anlegen und `.woff2`-Dateien platzieren.
+2. `@font-face`-Block in [app/globals.css](../../app/globals.css) ergänzen (vorhandene Blöcke kopieren).
+3. Typ `FunnelFont` in [types/index.ts](../../types/index.ts) erweitern.
+4. Konstante `FONT_STACKS` in [components/solar-funnel.tsx](../../components/solar-funnel.tsx) um den neuen Key ergänzen.

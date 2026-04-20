@@ -104,15 +104,9 @@ Das Widget ist **mandantenfähig (Multi-Tenant)**:
 
   "theme": {
     "primaryColor": "#22c55e",
-    "primaryColorHover": "#16a34a",
-    "textColor": "#1f2937",
-    "textColorMuted": "#6b7280",
-    "backgroundColor": "#ffffff",
-    "borderColor": "#e5e7eb",
-    "inputBgColor": "#f9fafb",
-    "fontFamily": "Inter, sans-serif",
+    "font": "inter",
     "borderRadius": "0.5rem",
-    "maxWidth": "640px"
+    "maxWidth": "720px"
   },
 
   "funnel": {
@@ -258,17 +252,16 @@ Das Widget ist **mandantenfähig (Multi-Tenant)**:
 ## 5. TypeScript-Typen (`/types/index.ts`)
 
 ```typescript
+// "system" = System-Font-Stack (kein Download). Weitere Werte entsprechen self-hosted Fonts unter public/fonts/.
+export type FunnelFont = "system" | "inter" | "poppins" | "roboto";
+
 export interface FunnelTheme {
-  primaryColor: string;
-  primaryColorHover: string;
-  textColor: string;
-  textColorMuted: string;
-  backgroundColor: string;
-  borderColor: string;
-  inputBgColor: string;
-  fontFamily: string;
-  borderRadius: string;
-  maxWidth: string;
+  primaryColor: string;         // Markenfarbe (Pflicht). Hover/Border/Muted-Text/Input-BG werden abgeleitet.
+  textColor?: string;           // Optional. Default "#1f2937". Nur setzen bei Dark-Themes.
+  backgroundColor?: string;     // Optional. Default "#ffffff". Nur setzen bei Dark-Themes.
+  font?: FunnelFont;            // Optional. Default "system".
+  borderRadius?: string;        // Optional. Default "0.5rem".
+  maxWidth?: string;            // Optional. Default "720px".
 }
 
 export interface Option {

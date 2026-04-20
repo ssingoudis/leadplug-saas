@@ -9,13 +9,7 @@
 
   "theme": {
     "primaryColor": "#22c55e",
-    "primaryColorHover": "#16a34a",
-    "textColor": "#1f2937",
-    "textColorMuted": "#6b7280",
-    "backgroundColor": "#ffffff",
-    "borderColor": "#e5e7eb",
-    "inputBgColor": "#f9fafb",
-    "fontFamily": "Inter, sans-serif",
+    "font": "system",
     "borderRadius": "0.5rem",
     "maxWidth": "720px"
   },

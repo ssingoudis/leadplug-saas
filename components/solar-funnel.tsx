@@ -2,23 +2,11 @@
 
 import { useState, useCallback } from "react"
 import { cn } from "@/lib/utils"
+import type { FunnelTheme, FunnelFont } from "@/types"
 
 // =============================================================================
 // TYPEN & KONFIGURATION
 // =============================================================================
-
-interface FunnelTheme {
-  primaryColor: string       // Hauptfarbe für Selections (z.B. "#22c55e" grün)
-  primaryColorHover: string  // Hover-Farbe
-  textColor: string          // Haupttextfarbe
-  textColorMuted: string     // Sekundärtextfarbe
-  backgroundColor: string    // Hintergrund der Karte
-  borderColor: string        // Rahmenfarbe
-  inputBgColor: string       // Input Hintergrund
-  fontFamily: string         // Schriftart
-  borderRadius: string       // Eckenrundung
-  maxWidth: string           // Maximale Breite des Funnels
-}
 
 interface Option {
   label: string
@@ -35,18 +23,51 @@ interface QuestionConfig {
   visible: boolean
 }
 
-// Standard-Theme (Grün)
-const defaultTheme: FunnelTheme = {
+const THEME_DEFAULTS = {
   primaryColor: "#22c55e",
-  primaryColorHover: "#16a34a",
   textColor: "#1f2937",
-  textColorMuted: "#6b7280",
   backgroundColor: "#ffffff",
-  borderColor: "#e5e7eb",
-  inputBgColor: "#f9fafb",
-  fontFamily: "inherit",
+  font: "system" as FunnelFont,
   borderRadius: "0.5rem",
   maxWidth: "720px",
+}
+
+const SYSTEM_FONT =
+  '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+
+// Self-hosted Fonts – siehe public/fonts/ und @font-face in app/globals.css.
+const FONT_STACKS: Record<FunnelFont, string> = {
+  system: SYSTEM_FONT,
+  inter: `'Inter', ${SYSTEM_FONT}`,
+  poppins: `'Poppins', ${SYSTEM_FONT}`,
+  roboto: `'Roboto', ${SYSTEM_FONT}`,
+}
+
+// Farbhelfer: Hover / Muted / Border / Input-BG werden abgeleitet.
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace("#", "")
+  return [
+    parseInt(h.slice(0, 2), 16),
+    parseInt(h.slice(2, 4), 16),
+    parseInt(h.slice(4, 6), 16),
+  ]
+}
+function toHex(r: number, g: number, b: number): string {
+  const clamp = (c: number) => Math.max(0, Math.min(255, Math.round(c)))
+  return `#${[r, g, b].map(c => clamp(c).toString(16).padStart(2, "0")).join("")}`
+}
+function darken(hex: string, amount: number): string {
+  const [r, g, b] = hexToRgb(hex)
+  return toHex(r * (1 - amount), g * (1 - amount), b * (1 - amount))
+}
+function mix(hex1: string, hex2: string, pct: number): string {
+  const [r1, g1, b1] = hexToRgb(hex1)
+  const [r2, g2, b2] = hexToRgb(hex2)
+  return toHex(
+    r1 * (1 - pct) + r2 * pct,
+    g1 * (1 - pct) + g2 * pct,
+    b1 * (1 - pct) + b2 * pct,
+  )
 }
 
 // =============================================================================
@@ -282,13 +303,31 @@ interface ContactData {
   email: string
 }
 
-export function SolarFunnel({ 
-  theme: themeOverrides, 
+export function SolarFunnel({
+  theme: themeOverrides,
   questions = questionsConfig,
-  onSubmit 
+  onSubmit
 }: SolarFunnelProps) {
-  // Theme zusammenführen
-  const theme = { ...defaultTheme, ...themeOverrides }
+  // Nur primaryColor ist pflicht; alles andere hat Defaults oder wird abgeleitet.
+  const primaryColor = themeOverrides?.primaryColor ?? THEME_DEFAULTS.primaryColor
+  const textColor = themeOverrides?.textColor ?? THEME_DEFAULTS.textColor
+  const backgroundColor = themeOverrides?.backgroundColor ?? THEME_DEFAULTS.backgroundColor
+  const borderRadius = themeOverrides?.borderRadius ?? THEME_DEFAULTS.borderRadius
+  const maxWidth = themeOverrides?.maxWidth ?? THEME_DEFAULTS.maxWidth
+  const font = themeOverrides?.font ?? THEME_DEFAULTS.font
+
+  const theme = {
+    primaryColor,
+    primaryColorHover: darken(primaryColor, 0.12),
+    textColor,
+    textColorMuted: mix(backgroundColor, textColor, 0.55),
+    backgroundColor,
+    borderColor: mix(backgroundColor, textColor, 0.12),
+    inputBgColor: mix(backgroundColor, textColor, 0.03),
+    borderRadius,
+    maxWidth,
+    fontFamily: FONT_STACKS[font],
+  }
   
   const visibleQuestions = questions.filter(q => q.visible)
   
@@ -734,5 +773,5 @@ export function SolarFunnel({
 }
 
 // Export für einfache Anpassung
-export type { FunnelTheme, QuestionConfig, Option }
+export type { QuestionConfig, Option }
 export { questionsConfig as defaultQuestions }

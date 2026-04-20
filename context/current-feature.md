@@ -22,6 +22,20 @@ Completed
 - Supabase IMMER zuerst loggen, bevor E-Mails versendet werden
 - SUPABASE_SERVICE_KEY niemals mit NEXT_PUBLIC_ Prefix verwenden
 
+### Font-System (seit Aufgabe 22)
+
+Das Widget nutzt einen **kuratierten Font-Enum** statt dynamischem Loading. `FunnelFont = "system" | "inter" | "poppins" | "roboto"` in [types/index.ts](../types/index.ts). Alle Nicht-System-Fonts liegen DSGVO-konform self-hosted unter [public/fonts/](../public/fonts/) – **kein Google-Fonts-Request** (LG München 2022).
+
+**Nur Fonts herunterladen, die tatsächlich von einem Tenant genutzt werden.** Fehlt eine `.woff2`-Datei, fällt der Browser stumm auf den System-Stack zurück (Widget bleibt funktional, nur 404s in der Konsole). Für Download-Prozess und Dateinamen-Schema siehe [public/fonts/README.md](../public/fonts/README.md) – gwfh.mranftl.com als Quelle, Pattern `{font}-v{version}-latin-{weight}.woff2`.
+
+**Neue Custom-Font pro Kundenwunsch hinzufügen (~2 Min):**
+1. `public/fonts/<name>/` anlegen + `.woff2`-Dateien (Weights 400/500/600/700) reinlegen
+2. `@font-face`-Block in [app/globals.css](../app/globals.css) kopieren und Pfade anpassen
+3. Neuen Key in `FunnelFont`-Typ ([types/index.ts](../types/index.ts)) ergänzen
+4. Entsprechenden Eintrag in `FONT_STACKS` in [components/solar-funnel.tsx](../components/solar-funnel.tsx) hinzufügen
+
+**Wann auf dynamisches Loading umstellen:** Wenn Kunden regelmäßig exotische Fonts verlangen und der Enum unhandlich wird. Dann Tenant-JSON erweitern um `fontName` + optional `fontFaceSrc`-URLs und `<style>`-Tag zur Laufzeit injizieren. Bis dahin: einfach Liste erweitern – 95 % der Kundenwünsche sollten mit 6–8 kuratierten Fonts (Inter, Poppins, Roboto, Montserrat, Open Sans, Lato, DM Sans, Nunito) abgedeckt sein.
+
 ## History
 
 - Initial Next.js project setup (Create Next App, App Router, TypeScript, Tailwind CSS v4)
@@ -47,6 +61,8 @@ Completed
 - UI Aufgabe 15 – title/subtitle-Block aus Widget-Darstellung entfernt; Felder bleiben in TenantConfig erhalten (Metadata, PDF, E-Mails nutzen sie weiterhin); Wrapper-Div vereinfacht (app/[tenant]/page.tsx)
 
 - Aufgabe 21 – Formular-Validierung: validateField() für alle 4 Felder (Anrede/Name/Email/Telefon); errors-State + isValid-Variable; Fehlermeldungen erscheinen onBlur (Text-Inputs) bzw. bei Button-Klick; alle Fehler beim Submit gleichzeitig angezeigt; rote Borders (#ef4444) + Fehlertexte darunter; isValid steuert cursor-not-allowed und hover-Farbe (components/solar-funnel.tsx)
+
+- Aufgabe 22 – Theme vereinfacht + DSGVO-Font-Hosting: FunnelTheme von 10 auf 6 Felder reduziert (nur primaryColor Pflicht; textColor/backgroundColor/font/borderRadius/maxWidth optional); primaryColorHover/textColorMuted/borderColor/inputBgColor werden per hexToRgb/darken/mix-Helfer im solar-funnel.tsx abgeleitet statt konfiguriert; neuer Typ FunnelFont = "system" | "inter" | "poppins" | "roboto" mit FONT_STACKS-Map (System-Stack + self-hosted Fallbacks); self-hosted Fonts unter public/fonts/{inter,poppins,roboto}/ mit README.md (Download-Anleitung via gwfh.mranftl.com, Dateinamen-Schema, DSGVO-Begründung LG München 2022); @font-face-Regeln für je 4 Weights (400/500/600/700) pro Font in app/globals.css mit font-display:swap; Tenants aktualisiert (demo: inter, musterfirma: poppins, _template: system); project-overview.md Abschnitt 4 & 5 an neue Theme-Shape angepasst; tsc + next build grün (types/index.ts, components/solar-funnel.tsx, tenants/demo.json, tenants/musterfirma.json, tenants/_template.json, public/fonts/README.md, public/fonts/inter/.gitkeep, public/fonts/poppins/.gitkeep, public/fonts/roboto/.gitkeep, app/globals.css, context/project-overview.md)
 
 <!-- Claude: Nach jeder abgeschlossenen Aufgabe hier einen Eintrag hinzufügen -->
 <!-- Format: - [Aufgabe] – [kurze Beschreibung was gemacht wurde] (welche Dateien erstellt/geändert) -->

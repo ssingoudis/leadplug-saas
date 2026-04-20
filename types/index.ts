@@ -1,14 +1,14 @@
+// Self-hosted Fonts unter public/fonts/ (DSGVO-konform, keine Google-Requests).
+// "system" = System-Font-Stack ohne Download.
+export type FunnelFont = "system" | "inter" | "poppins" | "roboto"
+
 export interface FunnelTheme {
-  primaryColor: string
-  primaryColorHover: string
-  textColor: string
-  textColorMuted: string
-  backgroundColor: string
-  borderColor: string
-  inputBgColor: string
-  fontFamily: string
-  borderRadius: string
-  maxWidth: string
+  primaryColor: string         // Markenfarbe (Pflicht). Alle abgeleiteten Farben (Hover, Border, Muted-Text, Input-BG) werden daraus + textColor/backgroundColor berechnet.
+  textColor?: string           // Optional. Default "#1f2937". Nur setzen bei Dark-Themes.
+  backgroundColor?: string     // Optional. Default "#ffffff". Nur setzen bei Dark-Themes.
+  font?: FunnelFont            // Optional. Default "system".
+  borderRadius?: string        // Optional. Default "0.5rem".
+  maxWidth?: string            // Optional. Default "720px".
 }
 
 export interface Option {
