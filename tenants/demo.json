@@ -8,7 +8,7 @@
   "website": "https://solar-funnel.de",
 
   "theme": {
-    "primaryColor": "#22c55e",
+    "primaryColor": "#7033ff",
     "font": "inter",
     "borderRadius": "0.5rem",
     "maxWidth": "720px"
