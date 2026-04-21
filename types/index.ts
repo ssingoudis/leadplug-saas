@@ -5,7 +5,8 @@ export type FunnelFont = "system" | "inter" | "poppins" | "roboto"
 export interface FunnelTheme {
   primaryColor: string         // Markenfarbe (Pflicht). Alle abgeleiteten Farben (Hover, Border, Muted-Text, Input-BG) werden daraus + textColor/backgroundColor berechnet.
   textColor?: string           // Optional. Default "#1f2937". Nur setzen bei Dark-Themes.
-  backgroundColor?: string     // Optional. Default "#ffffff". Nur setzen bei Dark-Themes.
+  backgroundColor?: string     // Optional. Default "#ffffff". Card-Hintergrund des Widgets.
+  pageBackgroundColor?: string // Optional. Default "transparent". Hintergrund der Seite/des iFrames um die Card. "transparent" = Parent-Website scheint durch.
   font?: FunnelFont            // Optional. Default "system".
   borderRadius?: string        // Optional. Default "0.5rem".
   maxWidth?: string            // Optional. Default "720px".

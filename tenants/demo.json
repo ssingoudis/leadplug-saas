@@ -29,7 +29,7 @@
       "visible": true,
       "defaultValue": "efh",
       "options": [
-        { "label": "Ein-/Zweifamilienhaus", "value": "efh", "iconKey": "House" },
+        { "label": "Einfamilien- oder Zweifamilienhaus", "value": "efh", "iconKey": "House" },
         { "label": "Mehrfamilienhaus", "value": "mfh", "iconKey": "Apartment" },
         { "label": "Firmengebäude", "value": "firma", "iconKey": "Factory" },
         { "label": "Sonstiges", "value": "sonstiges", "iconKey": "Question" }
