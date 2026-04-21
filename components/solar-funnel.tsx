@@ -26,8 +26,8 @@ interface QuestionConfig {
 const THEME_DEFAULTS = {
   primaryColor: "#22c55e",
   textColor: "#1f2937",
-  backgroundColor: "#ffffff",
-  pageBackgroundColor: "transparent",
+  backgroundColor: "#F7F6FF",
+  pageBackgroundColor: "#F7F6FF",
   font: "system" as FunnelFont,
   borderRadius: "0.5rem",
   maxWidth: "720px",
@@ -352,6 +352,8 @@ export function SolarFunnel({
   const textColor = themeOverrides?.textColor ?? THEME_DEFAULTS.textColor;
   const backgroundColor =
     themeOverrides?.backgroundColor ?? THEME_DEFAULTS.backgroundColor;
+  const pageBackgroundColor =
+    themeOverrides?.pageBackgroundColor ?? THEME_DEFAULTS.pageBackgroundColor;
   const borderRadius =
     themeOverrides?.borderRadius ?? THEME_DEFAULTS.borderRadius;
   const maxWidth = themeOverrides?.maxWidth ?? THEME_DEFAULTS.maxWidth;
@@ -523,418 +525,437 @@ export function SolarFunnel({
 
   return (
     <div
-      className="@container mx-auto rounded-lg shadow-lg w-full"
       style={{
-        ...cssVars,
-        maxWidth: theme.maxWidth,
-        backgroundColor: theme.backgroundColor,
-        fontFamily: theme.fontFamily,
+        backgroundColor: pageBackgroundColor,
+        width: "100%",
+        minHeight: "100%",
       }}
     >
-      <div className="p-4 @md:p-8">
-        {!isContactStep ? (
-          <div>
-            {/* Frage */}
-            <h1
-              className="text-lg md:text-xl lg:text-2xl font-bold mb-4 leading-tight"
-              style={{ color: theme.textColor }}
-            >
-              {currentQuestion.title}
-            </h1>
+      <div
+        className="@container mx-auto w-full"
+        style={{
+          ...cssVars,
+          maxWidth: theme.maxWidth,
+          // backgroundColor: theme.backgroundColor,
+          backgroundColor: pageBackgroundColor,
+          fontFamily: theme.fontFamily,
+        }}
+      >
+        <div className="p-4 @md:p-8">
+          {!isContactStep ? (
+            <div>
+              {/* Frage-Container: Hält die Höhe stabil, egal ob 1 oder 2 Zeilen */}
+              <div className="flex flex-col justify-end min-h-[60px] @md:min-h-[80px] mb-6 @lg:mb-4">
+                <h1
+                  className="text-lg md:text-xl lg:text-2xl font-bold leading-tight text-center lg:text-left"
+                  style={{ color: theme.textColor }}
+                >
+                  {currentQuestion.title}
+                </h1>
+              </div>
 
-            <p className="text-xs mb-5" style={{ color: theme.textColorMuted }}>
-              Bitte wählen Sie eine Antwort aus:
-            </p>
-
-            {/* Options Grid – container queries (basieren auf Widget-Breite, nicht Viewport).
+              {/* Options Grid – container queries (basieren auf Widget-Breite, nicht Viewport).
                 Reservierte min-h pro Breakpoint hält die Container-Höhe frageübergreifend stabil:
                   < 320px (1-col, 4-opt = 4 Reihen): 548px
                   320–447px (2x2, 4-opt = 2 Reihen): 268px
                   ≥ 448px (1x4, 1 Reihe): 144px */}
-            <div className="flex items-center mb-6 min-h-137 @xs:min-h-67 @md:min-h-36">
-              <div
-                className={cn(
-                  "grid gap-3 w-full",
-                  currentQuestion.options.length === 2
-                    ? "grid-cols-1 @xs:grid-cols-2"
-                    : currentQuestion.options.length === 3
-                      ? "grid-cols-1 @xs:grid-cols-3"
-                      : "grid-cols-1 @xs:grid-cols-2 @lg:grid-cols-4",
-                )}
-              >
-                {currentQuestion.options.map((option) => {
-                  const isSelected =
-                    answers[currentQuestion.id] === option.value;
-                  return (
-                    <button
-                      key={option.value}
-                      onClick={() =>
-                        handleSelect(currentQuestion.id, option.value)
-                      }
-                      className="flex flex-col items-center h-32 @md:h-36 p-2 @md:p-3 rounded-lg border-2 transition-all duration-150 cursor-pointer"
-                      style={{
-                        borderColor: isSelected
-                          ? theme.primaryColor
-                          : theme.borderColor,
-                        backgroundColor: theme.backgroundColor,
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isSelected)
-                          e.currentTarget.style.borderColor =
-                            theme.primaryColor;
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isSelected)
-                          e.currentTarget.style.borderColor = theme.borderColor;
-                      }}
-                    >
-                      {/* 1. Icon: In fester Box für gleiche Höhe */}
-                      <div className="h-10 @md:h-12 flex items-center justify-center mb-1 shrink-0">
-                        <div className="w-9 h-9 @md:w-11 @md:h-11">
-                          {renderIcon(option.iconKey, option.iconProps)}
-                        </div>
-                      </div>
-
-                      {/* 2. Radio Circle: In fester Box für gleiche Höhe */}
-                      <div className="h-6 flex items-center justify-center mb-1 shrink-0">
-                        <div
-                          className="w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center transition-colors"
-                          style={{
-                            borderColor: isSelected
-                              ? theme.primaryColor
-                              : theme.borderColor,
-                          }}
-                        >
-                          {isSelected && (
-                            <div
-                              className="w-1.5 h-1.5 rounded-full"
-                              style={{ backgroundColor: theme.primaryColor }}
-                            />
-                          )}
-                        </div>
-                      </div>
-
-                      {/* 3. Text: flex-1 füllt den Rest, items-center zentriert vertikal */}
-                      <div className="flex-1 flex items-center justify-center w-full min-h-0">
-                        <span
-                          className="text-xs @md:text-sm font-medium text-center leading-tight hyphens-auto px-1"
-                          style={{
-                            color: isSelected
-                              ? theme.primaryColor
-                              : theme.textColor,
-                          }}
-                        >
-                          {option.label}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        ) : (
-          /* Kontakt-Formular */
-          <div>
-            <h1
-              className="text-lg md:text-xl lg:text-2xl font-bold mb-2 leading-tight"
-              style={{ color: theme.textColor }}
-            >
-              Kostenlos Angebote vergleichen und genaue Ersparnis erfahren.
-            </h1>
-
-            <p
-              className="font-semibold mb-4"
-              style={{ color: theme.primaryColor }}
-            >
-              Wer soll die Angebote erhalten?
-            </p>
-
-            {/* Anrede */}
-            <div className="mb-4">
-              <div className="flex gap-5">
-                {["Herr", "Frau", "Divers"].map((anrede) => (
-                  <label
-                    key={anrede}
-                    className="flex items-center gap-2 cursor-pointer min-h-11"
-                  >
-                    <div
-                      className="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors"
-                      style={{
-                        borderColor:
-                          contactData.anrede === anrede
+              <div className="flex items-center mb-3 min-h-[548px] @xs:min-h-[268px] @lg:min-h-[144px]">
+                <div
+                  className={cn(
+                    "grid gap-3 w-full",
+                    currentQuestion.options.length === 2
+                      ? "grid-cols-1 @xs:grid-cols-2"
+                      : currentQuestion.options.length === 3
+                        ? "grid-cols-1 @xs:grid-cols-3"
+                        : "grid-cols-1 @xs:grid-cols-2 @lg:grid-cols-4",
+                  )}
+                >
+                  {currentQuestion.options.map((option) => {
+                    const isSelected =
+                      answers[currentQuestion.id] === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        onClick={() =>
+                          handleSelect(currentQuestion.id, option.value)
+                        }
+                        className="flex flex-col items-center h-32 @md:h-36 p-2 @md:p-3 rounded-lg border-2 transition-all duration-150 cursor-pointer"
+                        style={{
+                          borderColor: isSelected
                             ? theme.primaryColor
                             : theme.borderColor,
-                      }}
-                    >
-                      {contactData.anrede === anrede && (
-                        <div
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: theme.primaryColor }}
-                        />
-                      )}
-                    </div>
-                    <span style={{ color: theme.textColor }}>{anrede}</span>
-                    <input
-                      type="radio"
-                      name="anrede"
-                      value={anrede}
-                      checked={contactData.anrede === anrede}
-                      onChange={(e) => {
-                        setContactData((prev) => ({
-                          ...prev,
-                          anrede: e.target.value,
-                        }));
-                        setErrors((prev) => ({ ...prev, anrede: "" }));
-                      }}
-                      className="sr-only"
-                    />
-                  </label>
-                ))}
-              </div>
-              {errors.anrede && (
-                <p className="text-xs mt-1" style={{ color: "#ef4444" }}>
-                  {errors.anrede}
-                </p>
-              )}
-            </div>
+                          backgroundColor: "#ffffff",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSelected)
+                            e.currentTarget.style.borderColor =
+                              theme.primaryColor;
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected)
+                            e.currentTarget.style.borderColor =
+                              theme.borderColor;
+                        }}
+                      >
+                        {/* 1. Icon: In fester Box für gleiche Höhe */}
+                        <div className="h-10 @md:h-12 flex items-center justify-center mb-1 shrink-0">
+                          <div className="w-9 h-9 @md:w-11 @md:h-11">
+                            {renderIcon(option.iconKey, option.iconProps)}
+                          </div>
+                        </div>
 
-            {/* Form Fields */}
-            <div className="space-y-3 mb-4">
-              <div>
-                <input
-                  type="text"
-                  placeholder="Vor- und Nachname"
-                  value={contactData.name}
-                  onChange={(e) =>
-                    setContactData((prev) => ({
-                      ...prev,
-                      name: e.target.value,
-                    }))
-                  }
-                  className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
-                  style={{
-                    borderColor: errors.name ? "#ef4444" : theme.borderColor,
-                    backgroundColor: theme.inputBgColor,
-                    color: theme.textColor,
-                    borderRadius: theme.borderRadius,
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = theme.primaryColor;
-                    e.currentTarget.style.backgroundColor =
-                      theme.backgroundColor;
-                  }}
-                  onBlur={(e) => {
-                    const error = validateField("name", e.currentTarget.value);
-                    setErrors((prev) => ({ ...prev, name: error }));
-                    e.currentTarget.style.borderColor = error
-                      ? "#ef4444"
-                      : theme.borderColor;
-                    e.currentTarget.style.backgroundColor = theme.inputBgColor;
-                  }}
-                />
-                {errors.name && (
-                  <p className="text-xs mt-1" style={{ color: "#ef4444" }}>
-                    {errors.name}
-                  </p>
-                )}
-              </div>
-              <div>
-                <input
-                  type="tel"
-                  placeholder="Telefonnummer"
-                  value={contactData.telefon}
-                  onChange={(e) =>
-                    setContactData((prev) => ({
-                      ...prev,
-                      telefon: e.target.value,
-                    }))
-                  }
-                  className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
-                  style={{
-                    borderColor: errors.telefon ? "#ef4444" : theme.borderColor,
-                    backgroundColor: theme.inputBgColor,
-                    color: theme.textColor,
-                    borderRadius: theme.borderRadius,
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = theme.primaryColor;
-                    e.currentTarget.style.backgroundColor =
-                      theme.backgroundColor;
-                  }}
-                  onBlur={(e) => {
-                    const error = validateField(
-                      "telefon",
-                      e.currentTarget.value,
+                        {/* 2. Radio Circle: In fester Box für gleiche Höhe */}
+                        <div className="h-6 flex items-center justify-center mb-1 shrink-0">
+                          <div
+                            className="w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center transition-colors"
+                            style={{
+                              borderColor: isSelected
+                                ? theme.primaryColor
+                                : theme.borderColor,
+                            }}
+                          >
+                            {isSelected && (
+                              <div
+                                className="w-1.5 h-1.5 rounded-full"
+                                style={{ backgroundColor: theme.primaryColor }}
+                              />
+                            )}
+                          </div>
+                        </div>
+
+                        {/* 3. Text: flex-1 füllt den Rest, items-center zentriert vertikal */}
+                        <div className="flex-1 flex items-center justify-center w-full min-h-0">
+                          <span
+                            className="text-xs @md:text-sm font-medium text-center leading-tight hyphens-auto px-1"
+                            style={{
+                              color: isSelected
+                                ? theme.primaryColor
+                                : theme.textColor,
+                            }}
+                          >
+                            {option.label}
+                          </span>
+                        </div>
+                      </button>
                     );
-                    setErrors((prev) => ({ ...prev, telefon: error }));
-                    e.currentTarget.style.borderColor = error
-                      ? "#ef4444"
-                      : theme.borderColor;
-                    e.currentTarget.style.backgroundColor = theme.inputBgColor;
-                  }}
-                />
-                {errors.telefon && (
-                  <p className="text-xs mt-1" style={{ color: "#ef4444" }}>
-                    {errors.telefon}
-                  </p>
-                )}
-              </div>
-              <div>
-                <input
-                  type="email"
-                  placeholder="E-Mail"
-                  value={contactData.email}
-                  onChange={(e) =>
-                    setContactData((prev) => ({
-                      ...prev,
-                      email: e.target.value,
-                    }))
-                  }
-                  className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
-                  style={{
-                    borderColor: errors.email ? "#ef4444" : theme.borderColor,
-                    backgroundColor: theme.inputBgColor,
-                    color: theme.textColor,
-                    borderRadius: theme.borderRadius,
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = theme.primaryColor;
-                    e.currentTarget.style.backgroundColor =
-                      theme.backgroundColor;
-                  }}
-                  onBlur={(e) => {
-                    const error = validateField("email", e.currentTarget.value);
-                    setErrors((prev) => ({ ...prev, email: error }));
-                    e.currentTarget.style.borderColor = error
-                      ? "#ef4444"
-                      : theme.borderColor;
-                    e.currentTarget.style.backgroundColor = theme.inputBgColor;
-                  }}
-                />
-                {errors.email && (
-                  <p className="text-xs mt-1" style={{ color: "#ef4444" }}>
-                    {errors.email}
-                  </p>
-                )}
+                  })}
+                </div>
               </div>
             </div>
+          ) : (
+            /* Kontakt-Formular */
+            <div>
+              <h1
+                className="text-lg md:text-xl lg:text-2xl font-bold mb-2 leading-tight"
+                style={{ color: theme.textColor }}
+              >
+                Kostenlos Angebote vergleichen und genaue Ersparnis erfahren.
+              </h1>
 
-            {/* Datenschutz */}
-            <p
-              className="text-xs mb-4 leading-relaxed"
-              style={{ color: theme.textColorMuted }}
-            >
-              Mit Klick auf &quot;Angebotsvergleich starten&quot; stimme ich zu,
-              zwecks Photovoltaik Angebotsvergleich per E-Mail &amp; Telefon
-              kontaktiert zu werden. Widerrufen geht jederzeit. Mehr Infos in
-              den{" "}
-              <a
-                href="#"
+              <p
+                className="font-semibold mb-4"
                 style={{ color: theme.primaryColor }}
-                className="underline"
               >
-                Datenschutzhinweisen
-              </a>
-              .
-            </p>
+                Wer soll die Angebote erhalten?
+              </p>
 
-            {/* Submit Button */}
-            <button
-              onClick={() => {
-                const newErrors = {
-                  anrede: validateField("anrede", contactData.anrede),
-                  name: validateField("name", contactData.name),
-                  telefon: validateField("telefon", contactData.telefon),
-                  email: validateField("email", contactData.email),
-                };
-                setErrors(newErrors);
-                if (Object.values(newErrors).every((e) => !e)) {
-                  handleSubmit();
-                }
-              }}
-              className="flex items-center justify-center gap-2 w-full text-white px-5 py-3 rounded-lg font-semibold transition-colors"
-              style={{
-                backgroundColor: theme.primaryColor,
-                borderRadius: theme.borderRadius,
-                cursor: isValid ? "pointer" : "not-allowed",
-              }}
-              onMouseEnter={(e) => {
-                if (isValid) {
-                  e.currentTarget.style.backgroundColor =
-                    theme.primaryColorHover;
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = theme.primaryColor;
-              }}
-            >
-              <span className="text-sm sm:text-base">
-                Angebotsvergleich starten
-              </span>
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+              {/* Anrede */}
+              <div className="mb-4">
+                <div className="flex gap-5">
+                  {["Herr", "Frau", "Divers"].map((anrede) => (
+                    <label
+                      key={anrede}
+                      className="flex items-center gap-2 cursor-pointer min-h-11"
+                    >
+                      <div
+                        className="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors"
+                        style={{
+                          borderColor:
+                            contactData.anrede === anrede
+                              ? theme.primaryColor
+                              : theme.borderColor,
+                        }}
+                      >
+                        {contactData.anrede === anrede && (
+                          <div
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: theme.primaryColor }}
+                          />
+                        )}
+                      </div>
+                      <span style={{ color: theme.textColor }}>{anrede}</span>
+                      <input
+                        type="radio"
+                        name="anrede"
+                        value={anrede}
+                        checked={contactData.anrede === anrede}
+                        onChange={(e) => {
+                          setContactData((prev) => ({
+                            ...prev,
+                            anrede: e.target.value,
+                          }));
+                          setErrors((prev) => ({ ...prev, anrede: "" }));
+                        }}
+                        className="sr-only"
+                      />
+                    </label>
+                  ))}
+                </div>
+                {errors.anrede && (
+                  <p className="text-xs mt-1" style={{ color: "#ef4444" }}>
+                    {errors.anrede}
+                  </p>
+                )}
+              </div>
+
+              {/* Form Fields */}
+              <div className="space-y-3 mb-4">
+                <div>
+                  <input
+                    type="text"
+                    placeholder="Vor- und Nachname"
+                    value={contactData.name}
+                    onChange={(e) =>
+                      setContactData((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
+                    }
+                    className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
+                    style={{
+                      borderColor: errors.name ? "#ef4444" : theme.borderColor,
+                      backgroundColor: theme.inputBgColor,
+                      color: theme.textColor,
+                      borderRadius: theme.borderRadius,
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = theme.primaryColor;
+                      e.currentTarget.style.backgroundColor =
+                        theme.backgroundColor;
+                    }}
+                    onBlur={(e) => {
+                      const error = validateField(
+                        "name",
+                        e.currentTarget.value,
+                      );
+                      setErrors((prev) => ({ ...prev, name: error }));
+                      e.currentTarget.style.borderColor = error
+                        ? "#ef4444"
+                        : theme.borderColor;
+                      e.currentTarget.style.backgroundColor =
+                        theme.inputBgColor;
+                    }}
+                  />
+                  {errors.name && (
+                    <p className="text-xs mt-1" style={{ color: "#ef4444" }}>
+                      {errors.name}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <input
+                    type="tel"
+                    placeholder="Telefonnummer"
+                    value={contactData.telefon}
+                    onChange={(e) =>
+                      setContactData((prev) => ({
+                        ...prev,
+                        telefon: e.target.value,
+                      }))
+                    }
+                    className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
+                    style={{
+                      borderColor: errors.telefon
+                        ? "#ef4444"
+                        : theme.borderColor,
+                      backgroundColor: theme.inputBgColor,
+                      color: theme.textColor,
+                      borderRadius: theme.borderRadius,
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = theme.primaryColor;
+                      e.currentTarget.style.backgroundColor =
+                        theme.backgroundColor;
+                    }}
+                    onBlur={(e) => {
+                      const error = validateField(
+                        "telefon",
+                        e.currentTarget.value,
+                      );
+                      setErrors((prev) => ({ ...prev, telefon: error }));
+                      e.currentTarget.style.borderColor = error
+                        ? "#ef4444"
+                        : theme.borderColor;
+                      e.currentTarget.style.backgroundColor =
+                        theme.inputBgColor;
+                    }}
+                  />
+                  {errors.telefon && (
+                    <p className="text-xs mt-1" style={{ color: "#ef4444" }}>
+                      {errors.telefon}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <input
+                    type="email"
+                    placeholder="E-Mail"
+                    value={contactData.email}
+                    onChange={(e) =>
+                      setContactData((prev) => ({
+                        ...prev,
+                        email: e.target.value,
+                      }))
+                    }
+                    className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
+                    style={{
+                      borderColor: errors.email ? "#ef4444" : theme.borderColor,
+                      backgroundColor: theme.inputBgColor,
+                      color: theme.textColor,
+                      borderRadius: theme.borderRadius,
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = theme.primaryColor;
+                      e.currentTarget.style.backgroundColor =
+                        theme.backgroundColor;
+                    }}
+                    onBlur={(e) => {
+                      const error = validateField(
+                        "email",
+                        e.currentTarget.value,
+                      );
+                      setErrors((prev) => ({ ...prev, email: error }));
+                      e.currentTarget.style.borderColor = error
+                        ? "#ef4444"
+                        : theme.borderColor;
+                      e.currentTarget.style.backgroundColor =
+                        theme.inputBgColor;
+                    }}
+                  />
+                  {errors.email && (
+                    <p className="text-xs mt-1" style={{ color: "#ef4444" }}>
+                      {errors.email}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Datenschutz */}
+              <p
+                className="text-xs mb-4 leading-relaxed"
+                style={{ color: theme.textColorMuted }}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
-          </div>
-        )}
+                Mit Klick auf &quot;Angebotsvergleich starten&quot; stimme ich
+                zu, zwecks Photovoltaik Angebotsvergleich per E-Mail &amp;
+                Telefon kontaktiert zu werden. Widerrufen geht jederzeit. Mehr
+                Infos in den{" "}
+                <a
+                  href="#"
+                  style={{ color: theme.primaryColor }}
+                  className="underline"
+                >
+                  Datenschutzhinweisen
+                </a>
+                .
+              </p>
 
-        {/* Progress Bar & Navigation */}
-        <div
-          className="mt-6 pt-4 border-t"
-          style={{ borderColor: theme.borderColor }}
-        >
+              {/* Submit Button */}
+              <button
+                onClick={() => {
+                  const newErrors = {
+                    anrede: validateField("anrede", contactData.anrede),
+                    name: validateField("name", contactData.name),
+                    telefon: validateField("telefon", contactData.telefon),
+                    email: validateField("email", contactData.email),
+                  };
+                  setErrors(newErrors);
+                  if (Object.values(newErrors).every((e) => !e)) {
+                    handleSubmit();
+                  }
+                }}
+                className="flex items-center justify-center gap-2 w-full text-white px-5 py-3 rounded-lg font-semibold transition-colors"
+                style={{
+                  backgroundColor: theme.primaryColor,
+                  borderRadius: theme.borderRadius,
+                  cursor: isValid ? "pointer" : "not-allowed",
+                }}
+                onMouseEnter={(e) => {
+                  if (isValid) {
+                    e.currentTarget.style.backgroundColor =
+                      theme.primaryColorHover;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = theme.primaryColor;
+                }}
+              >
+                <span className="text-sm sm:text-base">
+                  Angebotsvergleich starten
+                </span>
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
+
+          {/* Progress Bar & Navigation */}
           <div
-            className="h-1.5 rounded-full mb-3 overflow-hidden"
-            style={{ backgroundColor: theme.inputBgColor }}
+            className="mt-6 pt-4 border-t"
+            style={{ borderColor: theme.borderColor }}
           >
             <div
-              className="h-full rounded-full transition-all duration-300"
-              style={{
-                width: `${progress}%`,
-                backgroundColor: theme.primaryColor,
-              }}
-            />
-          </div>
+              className="h-1.5 rounded-full mb-3 overflow-hidden"
+              style={{ backgroundColor: theme.inputBgColor }}
+            >
+              <div
+                className="h-full rounded-full transition-all duration-300"
+                style={{
+                  width: `${progress}%`,
+                  backgroundColor: theme.primaryColor,
+                }}
+              />
+            </div>
 
-          <div className="flex justify-between items-center">
-            <button
-              onClick={handleBack}
-              disabled={currentStep === 0}
-              className="flex items-center gap-1 text-sm transition-colors disabled:opacity-30"
-              style={{ color: theme.textColorMuted }}
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            <div className="flex justify-between items-center">
+              <button
+                onClick={handleBack}
+                disabled={currentStep === 0}
+                className="flex items-center gap-1 text-sm transition-colors disabled:opacity-30"
+                style={{ color: theme.textColorMuted }}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              zurück
-            </button>
-            <span
-              className="text-xs font-medium"
-              style={{ color: theme.textColorMuted }}
-            >
-              {Math.ceil(((currentStep + 1) / totalSteps) * 100)}%
-            </span>
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                zurück
+              </button>
+              <span
+                className="text-xs font-medium"
+                style={{ color: theme.textColorMuted }}
+              >
+                {Math.ceil(((currentStep + 1) / totalSteps) * 100)}%
+              </span>
+            </div>
           </div>
         </div>
       </div>
