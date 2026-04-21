@@ -11,7 +11,8 @@
     "primaryColor": "#22c55e",
     "font": "system",
     "borderRadius": "0.5rem",
-    "maxWidth": "720px"
+    "maxWidth": "720px",
+    "pageBackgroundColor": "transparent"
   },
 
   "funnel": {
