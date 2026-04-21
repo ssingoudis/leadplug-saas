@@ -29,7 +29,7 @@ export default async function TenantPage({ params }: TenantPageProps) {
 
   return (
     <main
-      className="min-h-dvh flex items-center justify-center p-2 sm:p-4"
+      className="min-h-dvh flex items-center justify-center"
       style={{ backgroundColor: config.theme.pageBackgroundColor ?? "transparent" }}
     >
       <TenantFunnelClient config={config} />
