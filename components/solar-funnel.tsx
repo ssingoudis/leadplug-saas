@@ -536,22 +536,18 @@ export function SolarFunnel({
           <div>
             {/* Frage */}
             <h1
-              className="text-lg md:text-xl lg:text-2xl font-bold mb-4 leading-tight"
+              className="text-lg md:text-xl lg:text-2xl font-bold mb-6 leading-tight text-center lg:text-left"
               style={{ color: theme.textColor }}
             >
               {currentQuestion.title}
             </h1>
-
-            <p className="text-xs mb-5" style={{ color: theme.textColorMuted }}>
-              Bitte wählen Sie eine Antwort aus:
-            </p>
 
             {/* Options Grid – container queries (basieren auf Widget-Breite, nicht Viewport).
                 Reservierte min-h pro Breakpoint hält die Container-Höhe frageübergreifend stabil:
                   < 320px (1-col, 4-opt = 4 Reihen): 548px
                   320–447px (2x2, 4-opt = 2 Reihen): 268px
                   ≥ 448px (1x4, 1 Reihe): 144px */}
-            <div className="flex items-center mb-6 min-h-137 @xs:min-h-67 @md:min-h-36">
+            <div className="flex items-center mb-3 min-h-[548px] @xs:min-h-[268px] @lg:min-h-[144px]">
               <div
                 className={cn(
                   "grid gap-3 w-full",
