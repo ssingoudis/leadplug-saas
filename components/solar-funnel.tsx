@@ -567,7 +567,7 @@ export function SolarFunnel({
                       ? "grid-cols-1 @xs:grid-cols-2"
                       : currentQuestion.options.length === 3
                         ? "grid-cols-1 @xs:grid-cols-3"
-                        : "grid-cols-1 @xs:grid-cols-2 @lg:grid-cols-4",
+                        : "grid-cols-1 @xs:grid-cols-2 @xl:grid-cols-4",
                   )}
                 >
                   {currentQuestion.options.map((option) => {
