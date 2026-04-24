@@ -16,6 +16,7 @@ export interface Option {
   label: string
   value: string
   iconKey: string
+  iconUrl?: string
   iconProps?: Record<string, string>
 }
 
@@ -29,25 +30,18 @@ export interface QuestionConfig {
 
 export interface FunnelConfig {
   title: string
-  subtitle: string
+  subtitle?: string            // Nur noch optional (SEO-Fallback). Kommt nicht aus Supabase.
   submitButtonLabel: string
   successMessage: string
+  responseTimeText: string
+  contactFormSubtitle: string
+  privacyText: string
   privacyPolicyUrl: string
-}
-
-export interface PricingConfig {
-  basePrice: Record<string, number>
-  storageAddon: number
-  currency: string
-}
-
-export interface BillingConfig {
-  pricePerLead: number
-  currency: string
 }
 
 export interface TenantConfig {
   slug: string
+  industry: string             // 'solar' | 'waermepumpe' | 'heizung' | 'sanitaer' | 'elektro' | 'general'
   companyName: string
   contactEmail: string
   logoUrl?: string
@@ -56,9 +50,11 @@ export interface TenantConfig {
   website?: string
   theme: FunnelTheme
   funnel: FunnelConfig
+  billingModel: 'per_lead' | 'flat_monthly'
+  leadPriceBase: number
+  flatMonthlyPrice?: number
+  flatMonthlyLeadLimit?: number
   questions: QuestionConfig[]
-  pricing: PricingConfig
-  billing?: BillingConfig
 }
 
 export interface ContactData {
@@ -68,16 +64,12 @@ export interface ContactData {
   email: string
 }
 
-export interface PriceEstimate {
-  min: number
-  max: number
-  currency: string
-}
 
 export interface SubmitPayload {
   tenant: string
   answers: Record<string, string>
   contact: ContactData
+  honeypot?: string
   startedAt: string
   sourceUrl: string
   userAgent: string
