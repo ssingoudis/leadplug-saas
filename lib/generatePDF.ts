@@ -8,11 +8,9 @@ import {
   type DocumentProps,
 } from '@react-pdf/renderer'
 import { createElement, type ReactElement } from 'react'
-import type {
-  ContactData,
-  PriceEstimate,
-  TenantConfig,
-} from '@/types'
+import type { ContactData, TenantConfig } from '@/types'
+
+type PriceEstimate = { min: number; max: number; currency: string }
 
 type GeneratePDFParams = {
   contact: ContactData

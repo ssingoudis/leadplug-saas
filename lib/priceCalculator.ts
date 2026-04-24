@@ -1,4 +1,5 @@
-import type { PriceEstimate, PricingConfig } from '@/types'
+type PricingConfig = { basePrice: Record<string, number>; storageAddon: number; currency: string }
+type PriceEstimate = { min: number; max: number; currency: string }
 
 const FALLBACK_BASE_PRICE = 15000
 

@@ -112,10 +112,7 @@ async function fetchFromJson(slug: string): Promise<TenantConfig | null> {
       leadPriceBase:        Number(j.leadPriceBase ?? j.billing?.pricePerLead ?? 0),
       flatMonthlyPrice:     j.flatMonthlyPrice,
       flatMonthlyLeadLimit: j.flatMonthlyLeadLimit,
-      questions:            j.questions            ?? [],
-      // Deprecated Felder aus alten JSON-Dateien durchreichen (Aufgabe 4 entfernt sie)
-      pricing:              j.pricing,
-      billing:              j.billing,
+      questions: j.questions ?? [],
     }
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null

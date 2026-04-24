@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { getTenantConfig } from '@/lib/getTenantConfig'
-import { calculateEstimate } from '@/lib/priceCalculator'
 import { getMonthlyCount, logSubmission } from '@/lib/tracking'
 import { generatePDF } from '@/lib/generatePDF'
 import { sendAllEmails } from '@/lib/sendEmails'
@@ -51,9 +50,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Tenant not found' }, { status: 404 })
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const estimate = calculateEstimate(answers, tenantConfig.pricing!)
-  const pricePerLead = tenantConfig.billing?.pricePerLead ?? 0.1
+  const estimate = { min: 0, max: 0, currency: 'EUR' }  // deprecated – wird in Aufgabe 6 entfernt
+  const pricePerLead = 0
 
   await logSubmission({
     tenantSlug: tenant,

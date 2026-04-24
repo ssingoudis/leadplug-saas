@@ -39,19 +39,6 @@ export interface FunnelConfig {
   privacyPolicyUrl: string
 }
 
-// Deprecated – wird in Aufgabe 4 entfernt
-export interface PricingConfig {
-  basePrice: Record<string, number>
-  storageAddon: number
-  currency: string
-}
-
-// Deprecated – wird in Aufgabe 4 entfernt
-export interface BillingConfig {
-  pricePerLead: number
-  currency: string
-}
-
 export interface TenantConfig {
   slug: string
   industry: string             // 'solar' | 'waermepumpe' | 'heizung' | 'sanitaer' | 'elektro' | 'general'
@@ -63,15 +50,11 @@ export interface TenantConfig {
   website?: string
   theme: FunnelTheme
   funnel: FunnelConfig
-  // Billing
   billingModel: 'per_lead' | 'flat_monthly'
   leadPriceBase: number
   flatMonthlyPrice?: number
   flatMonthlyLeadLimit?: number
   questions: QuestionConfig[]
-  // Deprecated – wird in Aufgabe 4 entfernt
-  pricing?: PricingConfig
-  billing?: BillingConfig
 }
 
 export interface ContactData {
@@ -81,12 +64,6 @@ export interface ContactData {
   email: string
 }
 
-// Deprecated – wird in Aufgabe 4 entfernt (generatePDF.ts, tracking.ts)
-export interface PriceEstimate {
-  min: number
-  max: number
-  currency: string
-}
 
 export interface SubmitPayload {
   tenant: string

@@ -1,5 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import type { ContactData, PriceEstimate } from '@/types'
+import type { ContactData } from '@/types'
+
+type PriceEstimate = { min: number; max: number; currency: string }
 
 let cachedClient: SupabaseClient | null = null
 

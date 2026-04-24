@@ -2,7 +2,9 @@ import { Resend } from 'resend'
 import { CustomerConfirmation } from '@/emails/CustomerConfirmation'
 import { TenantLeadNotification } from '@/emails/TenantLeadNotification'
 import { PlatformTracking } from '@/emails/PlatformTracking'
-import type { ContactData, PriceEstimate, TenantConfig } from '@/types'
+import type { ContactData, TenantConfig } from '@/types'
+
+type PriceEstimate = { min: number; max: number; currency: string }
 
 type SendAllEmailsParams = {
   contact: ContactData

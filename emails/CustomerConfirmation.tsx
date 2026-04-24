@@ -10,7 +10,9 @@ import {
   Section,
   Text,
 } from '@react-email/components'
-import type { ContactData, PriceEstimate, TenantConfig } from '@/types'
+import type { ContactData, TenantConfig } from '@/types'
+
+type PriceEstimate = { min: number; max: number; currency: string }
 
 type CustomerConfirmationProps = {
   contact: ContactData
