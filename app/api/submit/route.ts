@@ -51,7 +51,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Tenant not found' }, { status: 404 })
   }
 
-  const estimate = calculateEstimate(answers, tenantConfig.pricing)
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const estimate = calculateEstimate(answers, tenantConfig.pricing!)
   const pricePerLead = tenantConfig.billing?.pricePerLead ?? 0.1
 
   await logSubmission({

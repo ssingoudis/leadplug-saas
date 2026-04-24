@@ -16,6 +16,7 @@ export interface Option {
   label: string
   value: string
   iconKey: string
+  iconUrl?: string
   iconProps?: Record<string, string>
 }
 
@@ -29,18 +30,23 @@ export interface QuestionConfig {
 
 export interface FunnelConfig {
   title: string
-  subtitle: string
+  subtitle?: string            // Nur noch optional (SEO-Fallback). Kommt nicht aus Supabase.
   submitButtonLabel: string
   successMessage: string
+  responseTimeText: string
+  contactFormSubtitle: string
+  privacyText: string
   privacyPolicyUrl: string
 }
 
+// Deprecated – wird in Aufgabe 4 entfernt
 export interface PricingConfig {
   basePrice: Record<string, number>
   storageAddon: number
   currency: string
 }
 
+// Deprecated – wird in Aufgabe 4 entfernt
 export interface BillingConfig {
   pricePerLead: number
   currency: string
@@ -48,6 +54,7 @@ export interface BillingConfig {
 
 export interface TenantConfig {
   slug: string
+  industry: string             // 'solar' | 'waermepumpe' | 'heizung' | 'sanitaer' | 'elektro' | 'general'
   companyName: string
   contactEmail: string
   logoUrl?: string
@@ -56,8 +63,14 @@ export interface TenantConfig {
   website?: string
   theme: FunnelTheme
   funnel: FunnelConfig
+  // Billing
+  billingModel: 'per_lead' | 'flat_monthly'
+  leadPriceBase: number
+  flatMonthlyPrice?: number
+  flatMonthlyLeadLimit?: number
   questions: QuestionConfig[]
-  pricing: PricingConfig
+  // Deprecated – wird in Aufgabe 4 entfernt
+  pricing?: PricingConfig
   billing?: BillingConfig
 }
 
@@ -68,6 +81,7 @@ export interface ContactData {
   email: string
 }
 
+// Deprecated – wird in Aufgabe 4 entfernt (generatePDF.ts, tracking.ts)
 export interface PriceEstimate {
   min: number
   max: number
