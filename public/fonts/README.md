@@ -40,4 +40,4 @@ Fehlt eine Datei, fällt der Browser stumm auf den System-Font-Stack zurück –
 1. Ordner `public/fonts/<name>/` anlegen und `.woff2`-Dateien platzieren.
 2. `@font-face`-Block in [app/globals.css](../../app/globals.css) ergänzen (vorhandene Blöcke kopieren).
 3. Typ `FunnelFont` in [types/index.ts](../../types/index.ts) erweitern.
-4. Konstante `FONT_STACKS` in [components/solar-funnel.tsx](../../components/solar-funnel.tsx) um den neuen Key ergänzen.
+4. Konstante `FONT_STACKS` in [components/funnel.tsx](../../components/funnel.tsx) um den neuen Key ergänzen.

@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef } from 'react'
-import { SolarFunnel } from '@/components/solar-funnel'
+import { Funnel } from '@/components/funnel'
 import type { TenantConfig, ContactData } from '@/types'
 
 type Props = {
@@ -37,8 +37,9 @@ export function TenantFunnelClient({ config }: Props) {
   }
 
   return (
-    <SolarFunnel
+    <Funnel
       theme={config.theme}
+      funnel={config.funnel}
       questions={config.questions}
       onSubmit={handleSubmit}
     />

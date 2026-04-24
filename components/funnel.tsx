@@ -1,27 +1,18 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import type { FunnelTheme, FunnelFont } from "@/types";
+import type {
+  FunnelTheme,
+  FunnelFont,
+  FunnelConfig,
+  QuestionConfig,
+  ContactData,
+} from "@/types";
 
 // =============================================================================
-// TYPEN & KONFIGURATION
+// THEME & FONTS
 // =============================================================================
-
-interface Option {
-  label: string;
-  value: string;
-  iconKey: string;
-  iconProps?: Record<string, string>;
-}
-
-interface QuestionConfig {
-  id: string;
-  title: string;
-  options: Option[];
-  defaultValue?: string;
-  visible: boolean;
-}
 
 const THEME_DEFAULTS = {
   primaryColor: "#22c55e",
@@ -72,7 +63,7 @@ function mix(hex1: string, hex2: string, pct: number): string {
 }
 
 // =============================================================================
-// ICON KOMPONENTEN
+// ICON LIBRARY – neue Icons per Eintrag hier hinzufügen, referenziert via icon_key
 // =============================================================================
 
 const Icons = {
@@ -103,61 +94,83 @@ const Icons = {
       <rect x="20" y="44" width="8" height="8" />
     </svg>
   ),
-  SolarSmall: ({ color = "#444" }: { color?: string }) => (
+  HousePartial: ({ color = "#444" }: { color?: string }) => (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill={color}>
-      <path d="M18 14L12 48h16l6-34H18z" />
-      <line x1="22" y1="14" x2="18" y2="48" stroke="#fff" strokeWidth="1.5" />
-      <line x1="28" y1="14" x2="24" y2="48" stroke="#fff" strokeWidth="1.5" />
-      <line x1="13" y1="31" x2="32" y2="28" stroke="#fff" strokeWidth="1.5" />
-      <rect x="10" y="48" width="20" height="4" rx="1" />
-      <rect x="18" y="52" width="4" height="8" />
+      <path d="M32 6L4 28h6v28h44V28h6L32 6zm18 46H14V30h36v22z" />
+      <rect x="24" y="38" width="16" height="16" />
     </svg>
   ),
-  SolarMedium: ({ color = "#444" }: { color?: string }) => (
+  SolarPanel: ({ color = "#444" }: { color?: string }) => (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill={color}>
-      <path d="M12 12L4 52h24l8-40H12z" />
-      <path d="M38 12L30 52h24l8-40H38z" />
-      <line x1="18" y1="12" x2="12" y2="52" stroke="#fff" strokeWidth="1.5" />
-      <line x1="28" y1="12" x2="22" y2="52" stroke="#fff" strokeWidth="1.5" />
-      <line x1="44" y1="12" x2="38" y2="52" stroke="#fff" strokeWidth="1.5" />
-      <line x1="54" y1="12" x2="48" y2="52" stroke="#fff" strokeWidth="1.5" />
-      <line x1="5" y1="32" x2="34" y2="28" stroke="#fff" strokeWidth="1.5" />
-      <line x1="31" y1="32" x2="60" y2="28" stroke="#fff" strokeWidth="1.5" />
-      <rect x="2" y="52" width="60" height="4" rx="1" />
-      <rect x="28" y="56" width="8" height="6" />
+      <path d="M10 14L4 52h50l6-38H10z" />
+      <line x1="22" y1="14" x2="18" y2="52" stroke="#fff" strokeWidth="1.5" />
+      <line x1="34" y1="14" x2="30" y2="52" stroke="#fff" strokeWidth="1.5" />
+      <line x1="46" y1="14" x2="42" y2="52" stroke="#fff" strokeWidth="1.5" />
+      <line x1="6" y1="33" x2="58" y2="33" stroke="#fff" strokeWidth="1.5" />
     </svg>
   ),
-  SolarLarge: ({ color = "#444" }: { color?: string }) => (
+  Thermometer: ({ color = "#444" }: { color?: string }) => (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill={color}>
-      <path d="M4 8L0 32h32l4-24H4z" />
-      <path d="M32 8L28 32h32l4-24H32z" />
-      <path d="M4 36L0 60h32l4-24H4z" />
-      <path d="M32 36L28 60h32l4-24H32z" />
-      <line x1="12" y1="8" x2="8" y2="32" stroke="#fff" strokeWidth="1" />
-      <line x1="24" y1="8" x2="20" y2="32" stroke="#fff" strokeWidth="1" />
-      <line x1="40" y1="8" x2="36" y2="32" stroke="#fff" strokeWidth="1" />
-      <line x1="52" y1="8" x2="48" y2="32" stroke="#fff" strokeWidth="1" />
-      <line x1="12" y1="36" x2="8" y2="60" stroke="#fff" strokeWidth="1" />
-      <line x1="24" y1="36" x2="20" y2="60" stroke="#fff" strokeWidth="1" />
-      <line x1="40" y1="36" x2="36" y2="60" stroke="#fff" strokeWidth="1" />
-      <line x1="52" y1="36" x2="48" y2="60" stroke="#fff" strokeWidth="1" />
-      <line x1="1" y1="20" x2="34" y2="18" stroke="#fff" strokeWidth="1" />
-      <line x1="29" y1="20" x2="62" y2="18" stroke="#fff" strokeWidth="1" />
-      <line x1="1" y1="48" x2="34" y2="46" stroke="#fff" strokeWidth="1" />
-      <line x1="29" y1="48" x2="62" y2="46" stroke="#fff" strokeWidth="1" />
+      <path d="M28 8a4 4 0 0 1 8 0v31.1a10 10 0 1 1-8 0V8zm4 48a6 6 0 0 0 2-11.6V12a2 2 0 0 0-4 0v32.4A6 6 0 0 0 32 56z" />
+      <circle cx="32" cy="50" r="4" />
+      <rect x="30" y="16" width="4" height="30" rx="1" />
     </svg>
   ),
-  SolarXL: ({ color = "#444" }: { color?: string }) => (
+  Flame: ({ color = "#444" }: { color?: string }) => (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill={color}>
-      <path d="M2 4L0 20h20l2-16H2z" />
-      <path d="M24 4L22 20h20l2-16H24z" />
-      <path d="M46 4L44 20h18l2-16H46z" />
-      <path d="M2 24L0 40h20l2-16H2z" />
-      <path d="M24 24L22 40h20l2-16H24z" />
-      <path d="M46 24L44 40h18l2-16H46z" />
-      <path d="M2 44L0 60h20l2-16H2z" />
-      <path d="M24 44L22 60h20l2-16H24z" />
-      <path d="M46 44L44 60h18l2-16H46z" />
+      <path d="M32 4c-2 10-14 16-14 30 0 10 6 22 14 22s14-12 14-22c0-8-4-12-4-18-3 5-7 6-10 6 0-6 0-10 0-18z" />
+    </svg>
+  ),
+  HeatPump: ({ color = "#444" }: { color?: string }) => (
+    <svg viewBox="0 0 64 64" className="w-full h-full" fill={color}>
+      <path d="M8 12h48v36H8V12zm4 4v28h40V16H12z" />
+      <circle cx="32" cy="30" r="10" />
+      <circle cx="32" cy="30" r="3" fill="#fff" />
+      <path
+        d="M32 20c-2 3-2 7 0 10 2-3 6-3 10 0-3-2-3-6 0-10-3 2-7 2-10 0z"
+        fill="#fff"
+      />
+      <rect x="14" y="50" width="8" height="6" />
+      <rect x="42" y="50" width="8" height="6" />
+    </svg>
+  ),
+  Drop: ({ color = "#444" }: { color?: string }) => (
+    <svg viewBox="0 0 64 64" className="w-full h-full" fill={color}>
+      <path d="M32 4C22 20 14 32 14 42c0 10 8 18 18 18s18-8 18-18c0-10-8-22-18-38z" />
+    </svg>
+  ),
+  Snowflake: ({ color = "#444" }: { color?: string }) => (
+    <svg
+      viewBox="0 0 64 64"
+      className="w-full h-full"
+      stroke={color}
+      strokeWidth="3"
+      strokeLinecap="round"
+      fill="none"
+    >
+      <line x1="32" y1="6" x2="32" y2="58" />
+      <line x1="6" y1="32" x2="58" y2="32" />
+      <line x1="13" y1="13" x2="51" y2="51" />
+      <line x1="51" y1="13" x2="13" y2="51" />
+      <polyline points="26,10 32,16 38,10" />
+      <polyline points="26,54 32,48 38,54" />
+      <polyline points="10,26 16,32 10,38" />
+      <polyline points="54,26 48,32 54,38" />
+    </svg>
+  ),
+  Wrench: ({ color = "#444" }: { color?: string }) => (
+    <svg viewBox="0 0 64 64" className="w-full h-full" fill={color}>
+      <path d="M52.3 17.7l-7.1 7.1-5.6-5.6 7.1-7.1c-7 .4-11.5 3-13.7 7.9-1.6 3.6-1.4 7.4.1 10.6L9.9 52.7c-1.6 1.6-1.6 4.1 0 5.7 1.6 1.6 4.1 1.6 5.7 0l23-23c3.2 1.5 7 1.7 10.6.1 4.9-2.2 7.5-6.7 7.9-13.7l-4.8-4.1z" />
+    </svg>
+  ),
+  Lightning: ({ color = "#444" }: { color?: string }) => (
+    <svg viewBox="0 0 64 64" className="w-full h-full" fill={color}>
+      <path d="M36 4L12 36h14l-4 24 26-34H34l4-22z" />
+    </svg>
+  ),
+  Star: ({ color = "#444" }: { color?: string }) => (
+    <svg viewBox="0 0 64 64" className="w-full h-full" fill={color}>
+      <path d="M32 4l8.6 17.4L60 24.2 46 37.8l3.3 19.2L32 48l-17.3 9 3.3-19.2L4 24.2l19.4-2.8L32 4z" />
     </svg>
   ),
   Check: ({ color = "#444" }: { color?: string }) => (
@@ -173,12 +186,6 @@ const Icons = {
   Question: ({ color = "#444" }: { color?: string }) => (
     <svg viewBox="0 0 64 64" className="w-full h-full" fill={color}>
       <path d="M32 8c-8.8 0-16 7.2-16 16h6c0-5.5 4.5-10 10-10s10 4.5 10 10c0 4.1-2.5 7.8-6.3 9.4-2.8 1.2-5.7 4.2-5.7 8.6v4h6v-4c0-1.6.9-3.2 2.7-4 6-2.5 9.3-8.5 9.3-14 0-8.8-7.2-16-16-16zm-3 44h6v6h-6v-6z" />
-    </svg>
-  ),
-  HousePartial: ({ color = "#444" }: { color?: string }) => (
-    <svg viewBox="0 0 64 64" className="w-full h-full" fill={color}>
-      <path d="M32 6L4 28h6v28h44V28h6L32 6zm18 46H14V30h36v22z" />
-      <rect x="24" y="38" width="16" height="16" />
     </svg>
   ),
   Euro: ({ color = "#444" }: { color?: string }) => (
@@ -217,135 +224,100 @@ const Icons = {
   ),
 };
 
-// =============================================================================
-// FRAGEN-KONFIGURATION
-// =============================================================================
-
-const questionsConfig: QuestionConfig[] = [
-  {
-    id: "gebaeudetyp",
-    title: "Worauf soll die Solaranlage installiert werden?",
-    visible: true,
-    defaultValue: "efh",
-    options: [
-      { label: "Ein-/Zweifamilienhaus", value: "efh", iconKey: "House" },
-      { label: "Mehrfamilienhaus", value: "mfh", iconKey: "Apartment" },
-      { label: "Firmengebäude", value: "firma", iconKey: "Factory" },
-      { label: "Sonstiges", value: "sonstiges", iconKey: "Question" },
-    ],
-  },
-  {
-    id: "flaeche",
-    title: "Wie groß ist die Fläche bzw. die geplante Anlage?",
-    visible: true,
-    defaultValue: "21-100",
-    options: [
-      { label: "Bis 20 qm", value: "bis-20", iconKey: "SolarSmall" },
-      { label: "21 bis 100 qm", value: "21-100", iconKey: "SolarMedium" },
-      { label: "101 bis 200 qm", value: "101-200", iconKey: "SolarLarge" },
-      { label: "Über 200 qm", value: "ueber-200", iconKey: "SolarXL" },
-    ],
-  },
-  {
-    id: "ausrichtung",
-    title: "Haben Sie eine südlich ausgerichtete Dachfläche?",
-    visible: true,
-    defaultValue: "ja",
-    options: [
-      { label: "Ja", value: "ja", iconKey: "Check" },
-      { label: "Nein", value: "nein", iconKey: "Cross" },
-      { label: "Teilweise", value: "teilweise", iconKey: "HousePartial" },
-      { label: "Bin nicht sicher", value: "unsicher", iconKey: "Question" },
-    ],
-  },
-  {
-    id: "stromspeicher",
-    title: "Sind Sie an einem Stromspeicher interessiert?",
-    visible: true,
-    defaultValue: "ja",
-    options: [
-      { label: "Ja", value: "ja", iconKey: "Check" },
-      { label: "Nein", value: "nein", iconKey: "Cross" },
-      { label: "Weiß nicht", value: "unsicher", iconKey: "Question" },
-    ],
-  },
-  {
-    id: "kaufmiete",
-    title: "Möchten Sie einen Angebotsvergleich zu Kauf und Miete?",
-    visible: true,
-    defaultValue: "beides",
-    options: [
-      { label: "Ja, beides interessant", value: "beides", iconKey: "Check" },
-      { label: "Kaufen", value: "kaufen", iconKey: "Euro" },
-      { label: "Mieten", value: "mieten", iconKey: "Document" },
-      {
-        label: "Weiß nicht / bitte Beratung",
-        value: "unsicher",
-        iconKey: "Question",
-      },
-    ],
-  },
-  {
-    id: "zeitraum",
-    title: "Wann soll das Projekt umgesetzt werden?",
-    visible: true,
-    defaultValue: "1-3",
-    options: [
-      {
-        label: "umgehend",
-        value: "umgehend",
-        iconKey: "Calendar",
-        iconProps: { text: "<1" },
-      },
-      {
-        label: "In 1 bis 3 Monaten",
-        value: "1-3",
-        iconKey: "Calendar",
-        iconProps: { text: "1-3" },
-      },
-      {
-        label: "In 3 bis 6 Monaten",
-        value: "3-6",
-        iconKey: "Calendar",
-        iconProps: { text: "3-6" },
-      },
-      { label: "Weiß nicht", value: "unsicher", iconKey: "Question" },
-    ],
-  },
-];
-
-// Icon Renderer
-function renderIcon(iconKey: string, props?: Record<string, string>) {
+function renderIcon(
+  iconKey: string,
+  iconUrl?: string,
+  iconProps?: Record<string, string>,
+) {
+  if (iconUrl) {
+    return (
+      <img
+        src={iconUrl}
+        alt=""
+        className="w-full h-full object-contain"
+        loading="lazy"
+      />
+    );
+  }
   const IconComponent = Icons[iconKey as keyof typeof Icons];
   if (!IconComponent) return null;
-  return <IconComponent {...props} />;
+  return <IconComponent {...iconProps} />;
+}
+
+// =============================================================================
+// GRID-LAYOUT für variable Optionszahlen
+// =============================================================================
+// Regeln:
+//   2 → immer 1×2
+//   3 → immer 1×3
+//   4 → 2×2 → ab @lg 1×4
+//   5 → 2+3 (via grid-cols-6 + col-span) → ab @lg 1×5
+//   6 → 2×3 → ab @lg 3×2
+//
+// Reservierte min-h stabilisiert den Container frageübergreifend
+// (Card-Höhe h-32=128px / @md h-36=144px, gap-3=12px).
+
+function getOptionsGridClasses(count: number): string {
+  switch (count) {
+    case 2:
+      return "grid-cols-2";
+    case 3:
+      return "grid-cols-3";
+    case 4:
+      return "grid-cols-2 @lg:grid-cols-4";
+    case 5:
+      return "grid-cols-6 @lg:grid-cols-5";
+    case 6:
+      return "grid-cols-2 @lg:grid-cols-3";
+    default:
+      return "grid-cols-2 @lg:grid-cols-4";
+  }
+}
+
+function getOptionsMinHeightClasses(count: number): string {
+  switch (count) {
+    case 2:
+    case 3:
+      return "min-h-[128px] @md:min-h-[144px]";
+    case 4:
+    case 5:
+      return "min-h-[268px] @md:min-h-[300px] @lg:min-h-[144px]";
+    case 6:
+      return "min-h-[408px] @md:min-h-[456px] @lg:min-h-[300px]";
+    default:
+      return "min-h-[408px] @md:min-h-[456px] @lg:min-h-[300px]";
+  }
+}
+
+// 5 Optionen: grid-cols-6 als Basis → erste 2 Cards spannen 3 Spalten
+// (oben 2), letzte 3 Cards spannen 2 Spalten (unten 3). Ab @lg alles 1-spaltig.
+function getOptionColSpanClasses(count: number, idx: number): string {
+  if (count !== 5) return "";
+  return idx < 2
+    ? "col-span-3 @lg:col-span-1"
+    : "col-span-2 @lg:col-span-1";
 }
 
 // =============================================================================
 // HAUPTKOMPONENTE
 // =============================================================================
 
-interface SolarFunnelProps {
+interface FunnelProps {
   theme?: Partial<FunnelTheme>;
-  questions?: QuestionConfig[];
+  funnel: FunnelConfig;
+  questions: QuestionConfig[];
   onSubmit?: (data: {
     answers: Record<string, string>;
     contact: ContactData;
   }) => void;
 }
 
-interface ContactData {
-  anrede: string;
-  name: string;
-  telefon: string;
-  email: string;
-}
-
-export function SolarFunnel({
+export function Funnel({
   theme: themeOverrides,
-  questions = questionsConfig,
+  funnel,
+  questions,
   onSubmit,
-}: SolarFunnelProps) {
+}: FunnelProps) {
   // Nur primaryColor ist pflicht; alles andere hat Defaults oder wird abgeleitet.
   const primaryColor =
     themeOverrides?.primaryColor ?? THEME_DEFAULTS.primaryColor;
@@ -447,6 +419,21 @@ export function SolarFunnel({
     onSubmit?.({ answers, contact: contactData });
   };
 
+  // Widget → Parent: aktuelle Höhe nach jedem Step-/Submit-Wechsel senden.
+  useEffect(() => {
+    if (typeof window === "undefined" || window.parent === window) return;
+    const raf = requestAnimationFrame(() => {
+      window.parent.postMessage(
+        {
+          type: "funnel-resize",
+          height: document.documentElement.scrollHeight,
+        },
+        "*",
+      );
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [currentStep, isSubmitted]);
+
   // CSS Custom Properties für dynamisches Styling
   const cssVars = {
     "--funnel-primary": theme.primaryColor,
@@ -490,14 +477,11 @@ export function SolarFunnel({
             </svg>
           </div>
           <h2
-            className="text-xl font-bold mb-3"
+            className="text-xl font-bold mb-4 leading-snug"
             style={{ color: theme.textColor }}
           >
-            Vielen Dank für Ihre Anfrage!
+            {funnel.successMessage}
           </h2>
-          <p className="text-sm mb-4" style={{ color: theme.textColorMuted }}>
-            Wir melden uns innerhalb von 24 Stunden bei Ihnen.
-          </p>
           <div
             className="p-4 rounded-lg text-left text-sm"
             style={{ backgroundColor: theme.inputBgColor }}
@@ -523,6 +507,10 @@ export function SolarFunnel({
     );
   }
 
+  const optionCount = currentQuestion?.options.length ?? 0;
+  const gridClasses = getOptionsGridClasses(optionCount);
+  const minHeightClasses = getOptionsMinHeightClasses(optionCount);
+
   return (
     <div
       style={{
@@ -536,7 +524,6 @@ export function SolarFunnel({
         style={{
           ...cssVars,
           maxWidth: theme.maxWidth,
-          // backgroundColor: theme.backgroundColor,
           backgroundColor: pageBackgroundColor,
           fontFamily: theme.fontFamily,
         }}
@@ -554,32 +541,23 @@ export function SolarFunnel({
                 </h1>
               </div>
 
-              {/* Options Grid – container queries (basieren auf Widget-Breite, nicht Viewport).
-                Reservierte min-h pro Breakpoint hält die Container-Höhe frageübergreifend stabil:
-                  < 320px (1-col, 4-opt = 4 Reihen): 548px
-                  320–447px (2x2, 4-opt = 2 Reihen): 268px
-                  ≥ 448px (1x4, 1 Reihe): 144px */}
-              <div className="flex items-center mb-3 min-h-[548px] @xs:min-h-[268px] @lg:min-h-[144px]">
-                <div
-                  className={cn(
-                    "grid gap-3 w-full",
-                    currentQuestion.options.length === 2
-                      ? "grid-cols-1 @xs:grid-cols-2"
-                      : currentQuestion.options.length === 3
-                        ? "grid-cols-1 @sm:grid-cols-3"
-                        : "grid-cols-1 @sm:grid-cols-2 @xl:grid-cols-4",
-                  )}
-                >
-                  {currentQuestion.options.map((option) => {
+              {/* Options Grid – container queries (basieren auf Widget-Breite) */}
+              <div className={cn("flex items-center mb-3", minHeightClasses)}>
+                <div className={cn("grid gap-3 w-full", gridClasses)}>
+                  {currentQuestion.options.map((option, idx) => {
                     const isSelected =
                       answers[currentQuestion.id] === option.value;
+                    const colSpan = getOptionColSpanClasses(optionCount, idx);
                     return (
                       <button
                         key={option.value}
                         onClick={() =>
                           handleSelect(currentQuestion.id, option.value)
                         }
-                        className="flex flex-col items-center h-32 @md:h-36 p-2 @md:p-3 rounded-lg border-2 transition-all duration-150 cursor-pointer"
+                        className={cn(
+                          "flex flex-col items-center h-32 @md:h-36 p-2 @md:p-3 rounded-lg border-2 transition-all duration-150 cursor-pointer",
+                          colSpan,
+                        )}
                         style={{
                           borderColor: isSelected
                             ? theme.primaryColor
@@ -600,7 +578,11 @@ export function SolarFunnel({
                         {/* 1. Icon: In fester Box für gleiche Höhe */}
                         <div className="h-10 @md:h-12 flex items-center justify-center mb-1 shrink-0">
                           <div className="w-9 h-9 @md:w-11 @md:h-11">
-                            {renderIcon(option.iconKey, option.iconProps)}
+                            {renderIcon(
+                              option.iconKey,
+                              option.iconUrl,
+                              option.iconProps,
+                            )}
                           </div>
                         </div>
 
@@ -649,14 +631,14 @@ export function SolarFunnel({
                 className="text-lg md:text-xl lg:text-2xl font-bold mb-2 leading-tight"
                 style={{ color: theme.textColor }}
               >
-                Kostenlos Angebote vergleichen und genaue Ersparnis erfahren.
+                {funnel.title}
               </h1>
 
               <p
                 className="font-semibold mb-4"
                 style={{ color: theme.primaryColor }}
               >
-                Wer soll die Angebote erhalten?
+                {funnel.contactFormSubtitle}
               </p>
 
               {/* Anrede */}
@@ -845,18 +827,22 @@ export function SolarFunnel({
                 className="text-xs mb-4 leading-relaxed"
                 style={{ color: theme.textColorMuted }}
               >
-                Mit Klick auf &quot;Angebotsvergleich starten&quot; stimme ich
-                zu, zwecks Photovoltaik Angebotsvergleich per E-Mail &amp;
-                Telefon kontaktiert zu werden. Widerrufen geht jederzeit. Mehr
-                Infos in den{" "}
-                <a
-                  href="#"
-                  style={{ color: theme.primaryColor }}
-                  className="underline"
-                >
-                  Datenschutzhinweisen
-                </a>
-                .
+                {funnel.privacyText}
+                {funnel.privacyPolicyUrl && funnel.privacyPolicyUrl !== "#" && (
+                  <>
+                    {" "}
+                    <a
+                      href={funnel.privacyPolicyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: theme.primaryColor }}
+                      className="underline"
+                    >
+                      Datenschutzhinweise
+                    </a>
+                    .
+                  </>
+                )}
               </p>
 
               {/* Submit Button */}
@@ -890,7 +876,7 @@ export function SolarFunnel({
                 }}
               >
                 <span className="text-sm sm:text-base">
-                  Angebotsvergleich starten
+                  {funnel.submitButtonLabel}
                 </span>
                 <svg
                   className="w-5 h-5"
@@ -962,7 +948,3 @@ export function SolarFunnel({
     </div>
   );
 }
-
-// Export für einfache Anpassung
-export type { QuestionConfig, Option };
-export { questionsConfig as defaultQuestions };
