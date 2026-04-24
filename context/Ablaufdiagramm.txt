@@ -1,0 +1,67 @@
+flowchart TB
+    %% --- Farb- und Stildefinitionen ---
+    classDef ext fill:#fdf4ff,stroke:#c026d3,stroke-width:2px,color:#701a75
+    classDef nextjs fill:#f8fafc,stroke:#94a3b8,stroke-width:2px,color:#0f172a
+    classDef primary fill:#eff6ff,stroke:#3b82f6,stroke-width:3px,color:#1e3a8a
+    classDef db fill:#ecfdf5,stroke:#10b981,stroke-width:2px,color:#064e3b
+    classDef email fill:#fff7ed,stroke:#f97316,stroke-width:2px,color:#9a3412
+    classDef alert fill:#fef2f2,stroke:#ef4444,stroke-width:3px,color:#991b1b
+    classDef success fill:#f0fdf4,stroke:#22c55e,stroke-width:2px,color:#166534
+
+    %% --- Subgraphen ---
+    subgraph EXT["🌐 Kunden-Website (extern)"]
+        WEB["🖥️ Webseite des Handwerksbetriebs"]:::ext
+        IFR["🖼️ &lt;iframe src='/[slug]'&gt;"]:::ext
+    end
+
+    subgraph VERCEL["☁️ Vercel – Next.js App"]
+        PAGE["📄 app/[tenant]/page.tsx\n(Server Component)"]:::nextjs
+        FUNNEL["🖱️ components/funnel.tsx\n(Client Component / Multi-Step UI)"]:::primary
+        API["⚙️ POST /api/submit\n(Server Route)"]:::primary
+        CFG["🎛️ getTenantConfig(slug)"]:::nextjs
+        JSON[("📁 tenants/[slug].json\n(Fallback)")]:::nextjs
+        
+        HON{"🤖 Honeypot\ngefüllt?"}:::alert
+        DONE["🛑 Abbruch & 200 OK\n(Silent Discard)"]:::success
+        MAIL_TRIGGER{"⚙️ Promise.all\n(Mails senden)"}:::primary
+    end
+
+    subgraph SB["🗄️ Supabase (PostgreSQL)"]
+        T[("🏢 tenants\n(Theme, Texte, Billing)")]:::db
+        Q[("❓ funnel_questions")]:::db
+        O[("✅ funnel_options\n(icon_key / icon_url)")]:::db
+        SUB[("📥 submissions\n(lead_price Snapshot)")]:::db
+        VIEW[("📊 monthly_billing\n(View)")]:::db
+    end
+
+    subgraph EMAIL["✉️ Resend"]
+        M1["📨 Mail 1 → Endkunde\n(Danke-Nachricht)"]:::email
+        M2["📨 Mail 2 → Betreiber\n(Daten + Antworten)"]:::email
+    end
+
+    %% --- Verbindungen & Logik ---
+    
+    %% Externe Einbindung
+    WEB -.->|"eingebettet via"| IFR
+    IFR -->|"lädt URL"| PAGE
+    FUNNEL -.->|"postMessage\n(funnel-resize)"| IFR
+    
+    %% Config & Render Flow
+    PAGE -->|"holt Config"| CFG
+    CFG -->|"1. Prio: DB"| T
+    T -.-> Q -.-> O
+    CFG -.->|"2. Fallback"| JSON
+    PAGE -->|"rendert"| FUNNEL
+    
+    %% Main Submission Flow (Hervorgehoben mit dicken Pfeilen ===>)
+    FUNNEL ===>|"onSubmit"| API
+    
+    API ===>|"1. Check"| HON
+    HON -.->|"ja (Bot) → sofortiges return!\n(Keine DB, keine Mails)"| DONE
+    
+    HON ===>|"nein (Mensch) → 2. ZUERST DB"| SUB
+    SUB -.->|"aggregiert in"| VIEW
+    
+    SUB ===>|"3. Nach DB-Erfolg"| MAIL_TRIGGER
+    MAIL_TRIGGER ===>|"Mail 1"| M1
+    MAIL_TRIGGER ===>|"Mail 2"| M2

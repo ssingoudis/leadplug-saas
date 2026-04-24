@@ -1,79 +1,249 @@
 # Current Feature
 
-Solar Funnel Widget – Multi-Tenant iFrame Sales Funnel für Photovoltaik-Monteure.
+Funnel Widget Platform – generischer Multi-Tenant iFrame Sales-Funnel für Handwerksbetriebe aller Branchen.
 
 ## Status
 
-Completed
+In Arbeit – Umbau von Solar-only auf generische Platform mit Supabase als primärer Config-Quelle.
 
-## Goals
+## Ziele
 
-- Einbettbares iFrame-Widget als Click-Funnel (6 Fragen + Kontaktformular)
-- Multi-Tenant: eigene URL `/[slug]` pro Kunde mit eigener JSON-Konfiguration
-- 3 automatische E-Mails pro Submission (Endkunde, Monteur, Platform-Owner)
-- PDF-Generierung mit vorläufiger Preisschätzung als Anhang
-- Supabase-Tracking für Abrechnung – **Lead-Preis ist pro Tenant individuell verhandelbar** (`billing.pricePerLead` in der Tenant-JSON, z. B. 0,10 € / 0,20 € / 2,00 €), wird pro Submission persistiert
+- Generischer Funnel (branchenunabhängig): Solar, Wärmepumpe, Heizung, Sanitär, Elektro, …
+- Supabase als primäre Konfigurationsquelle (Tenants, Fragen, Optionen)
+- JSON-Dateien als Notfall-Fallback erhalten
+- Vereinfachter E-Mail-Flow: 2 Mails, kein PDF, keine Preisschätzung
+- Honeypot-Spam-Schutz
+- postMessage Höhen-Kommunikation Widget → Parent-Frame
+- Zwei Billing-Modelle: `per_lead` und `flat_monthly`
 
 Architektur-Details: [`project-overview.md`](project-overview.md).
 
-## Notes
+---
 
-### Font-System (seit Aufgabe 22)
+## Aufgaben
 
-Das Widget nutzt einen **kuratierten Font-Enum** statt dynamischem Loading. `FunnelFont = "system" | "inter" | "poppins" | "roboto"` in [types/index.ts](../types/index.ts). Alle Nicht-System-Fonts liegen DSGVO-konform self-hosted unter [public/fonts/](../public/fonts/) – **kein Google-Fonts-Request** (LG München 2022).
+### Aufgabe 1 – Supabase Schema einrichten
 
-**Nur Fonts herunterladen, die tatsächlich von einem Tenant genutzt werden.** Fehlt eine `.woff2`-Datei, fällt der Browser stumm auf den System-Stack zurück (Widget bleibt funktional, nur 404s in der Konsole). Für Download-Prozess und Dateinamen-Schema siehe [public/fonts/README.md](../public/fonts/README.md) – gwfh.mranftl.com als Quelle, Pattern `{font}-v{version}-latin-{weight}.woff2`.
-
-**Neue Custom-Font pro Kundenwunsch hinzufügen (~2 Min):**
-1. `public/fonts/<name>/` anlegen + `.woff2`-Dateien (Weights 400/500/600/700) reinlegen
-2. `@font-face`-Block in [app/globals.css](../app/globals.css) kopieren und Pfade anpassen
-3. Neuen Key in `FunnelFont`-Typ ([types/index.ts](../types/index.ts)) ergänzen
-4. Entsprechenden Eintrag in `FONT_STACKS` in [components/solar-funnel.tsx](../components/solar-funnel.tsx) hinzufügen
-
-**Wann auf dynamisches Loading umstellen:** Wenn Kunden regelmäßig exotische Fonts verlangen und der Enum unhandlich wird. Bis dahin: einfach Liste erweitern – 95 % der Kundenwünsche sollten mit 6–8 kuratierten Fonts (Inter, Poppins, Roboto, Montserrat, Open Sans, Lato, DM Sans, Nunito) abge deckt sein.
-
-## Next Task
-
-### Neues Design
-
-**Problem:**: Der Funnel soll ist nicht ansprechend genug designed. Je nach Frage, varriert die Höhe des Container, das soll nicht so sein. 
+**Problem:** Das aktuelle Schema ist solar-spezifisch und kennt keine `tenants`-, `funnel_questions`- oder `funnel_options`-Tabellen.
 
 **Lösung:**
-- Die Texte bei den Antworten in den Cards stets mittig platziert sein, d.h. horizontal und vertikal!
-- Alles muss so gestaltet sein, dass der User direkt darauf anspringt, es muss flüßig durch laufen
-- Wenn die Kacheln responsive werden, also zum 2x2 oder 1x4 grid, dann soll das konstant bei allen Fragen passieren, nicht nur bei ausgewählten.
-- du kannst in "context\Screenshot1.png" sehen, wie es eingebettet aussieht, wenn es klein/responsive ist.
-- Der Hintergrund muss neutral sein, d.h. weiß, transparent o.Ä. und steuerbar über die .json Datei des jeweiligen tenants sein.
+- Das neue Schema aus `context/supabase-schema.sql` im Supabase SQL-Editor ausführen
+- Tabellen: `tenants`, `funnel_questions`, `funnel_options`, `submissions`
+- View: `monthly_billing`
+
+**Betroffene Dateien:** `context/supabase-schema.sql` (nur ausführen, nicht bearbeiten)
 
 **Akzeptanzkriterien:**
-- Bedenke, dass es sich hier um ein iFrame handelt, dass später in anderen webseiten eingebunden wird, es soll so gestyled werden, dass dies reibungslos funktioniert! Also keine unnötigen margins o.Ä.
-- Stelle Rückfragen falls du unsicher bist statt einfach etwas umzusetzen.
-- Das iFrame muss universell anwendbar sein auf alle möglichen Fragen und Branchen, auch außerhalb Photovolatik.
+- Alle 4 Tabellen + View in Supabase vorhanden
+- Schema erneut ausführbar ohne Fehler (idempotent)
 
+---
 
-**Template für neue Specs:**
+### Aufgabe 2 – Seed-Daten erstellen und einspielen
+
+**Problem:** Ohne Testdaten in der DB kann kein Ende-zu-Ende-Test durchgeführt werden.
+
+**Lösung:** Datei `context/supabase-seed.sql` erstellen mit:
+- **Tenant 1 – Solar-Demo** (`slug: "demo"`, `industry: "solar"`, `billing_model: "per_lead"`, `lead_price_base: 3.00`, Solar-typische Fragen + Optionen mit `icon_key`)
+- **Tenant 2 – Wärmepumpe-Demo** (`slug: "demo-waermepumpe"`, `industry: "waermepumpe"`, `billing_model: "flat_monthly"`, `flat_monthly_price: 20.00`, `flat_monthly_lead_limit: 10`, Wärmepumpen-typische Fragen)
+- Seed-Daten idempotent gestalten (via `ON CONFLICT (slug) DO NOTHING` für Tenants; Questions/Options mit DELETE + INSERT um Slug)
+
+**Betroffene Dateien:** `context/supabase-seed.sql` (neu erstellen)
+
+**Akzeptanzkriterien:**
+- Beide Demo-Tenants in Supabase mit je mindestens 3 Fragen
+- Fragen haben unterschiedliche Optionszahlen (2, 3, 4) – damit Aufgabe 5 (Grid-Layout) testbar ist
+- Seed erneut ausführbar ohne Fehler
+
+---
+
+### Aufgabe 3 – `getTenantConfig.ts` auf Supabase umstellen
+
+**Problem:** `lib/getTenantConfig.ts` liest aktuell nur JSON-Dateien.
+
+**Lösung:**
+- Supabase zuerst: `tenants` JOIN `funnel_questions` JOIN `funnel_options` (sortiert nach `sort_order`)
+- Bei DB-Fehler oder fehlendem Eintrag: JSON-Fallback `tenants/[slug].json`
+- `is_active = false` → `null` → `notFound()` in `page.tsx`
+- Konfigurierbare Texte mit Defaults befüllen wenn DB-Wert `NULL`:
+
+| Feld | Default |
+|---|---|
+| `funnel_title` | `"Jetzt kostenloses Angebot anfordern"` |
+| `submit_button_label` | `"Anfrage absenden"` |
+| `success_message` | `"Vielen Dank! Wir melden uns in Kürze bei Ihnen."` |
+| `response_time_text` | `"24 Stunden"` |
+| `contact_form_subtitle` | `"Wer soll das Angebot erhalten?"` |
+| `privacy_text` | `"Mit dem Absenden stimme ich zu, per E-Mail und Telefon zu meiner Anfrage kontaktiert zu werden. Widerrufen geht jederzeit."` |
+| `privacy_policy_url` | `"#"` |
+
+**Betroffene Dateien:** `lib/getTenantConfig.ts`, `types/index.ts`
+
+**Akzeptanzkriterien:**
+- `localhost:3000/demo` lädt Config aus Supabase (Breakpoint/Log bestätigt)
+- Bei `SUPABASE_URL=` leer → JSON-Fallback greift ohne Fehler
+- TypeScript-Fehler: keine
+
+---
+
+### Aufgabe 4 – `types/index.ts` aktualisieren
+
+**Problem:** `TenantConfig` enthält noch `PricingConfig` und `PriceEstimate` (werden entfernt). Neue Felder fehlen.
+
+**Lösung:**
+- `PricingConfig` Interface entfernen
+- `PriceEstimate` Interface entfernen
+- `TenantConfig` um neue Felder ergänzen: `industry`, `billingModel`, `leadPriceBase`, `flatMonthlyPrice`, `flatMonthlyLeadLimit`, alle konfigurierbaren Texte
+- `FunnelConfig` Interface: konfigurierbare Texte ergänzen (oder in `TenantConfig` flach aufnehmen)
+
+**Betroffene Dateien:** `types/index.ts`
+
+**Akzeptanzkriterien:**
+- Kein Import von `PricingConfig` oder `PriceEstimate` irgendwo im Projekt
+- TypeScript-Fehler: keine
+
+---
+
+### Aufgabe 5 – `solar-funnel.tsx` → `funnel.tsx` (generisch)
+
+**Problem:** `components/solar-funnel.tsx` ist solar-spezifisch: hardcoded Solar-Icons, hardcoded Texte ("Photovoltaik", "Angebotsvergleich starten"), hardcoded Fragen-Defaults.
+
+**Lösung:**
+- Datei umbenennen: `components/solar-funnel.tsx` → `components/funnel.tsx`
+- Komponente umbenennen: `SolarFunnel` → `Funnel`
+- Hardcoded Texte durch Props aus `TenantConfig` ersetzen (Submit-Label, Datenschutz-Text, Datenschutz-URL, Kontaktformular-Subtitle, Success-Message)
+- Hardcoded Fragen-Defaults (`questionsConfig`) entfernen – Fragen kommen ausschließlich aus Props
+- `defaultQuestions`-Export entfernen
+
+**Icon-System:**
+- Solar-Icons (`SolarSmall`, `SolarMedium`, `SolarLarge`, `SolarXL`) zu einem einzigen `SolarPanel`-Icon zusammenfassen
+- Neue Icons hinzufügen: `Thermometer`, `Flame`, `HeatPump`, `Drop`, `Snowflake`, `Wrench`, `Lightning`, `Star`
+- `icon_url`-Unterstützung: wenn Option `iconUrl` gesetzt → `<img src={iconUrl}>` statt SVG-Komponente
+
+**Grid-Layout für variable Optionszahlen (wichtig für Generalisierung):**
+
+Das Grid muss für 2, 3, 4 und 5 Optionen gut aussehen – ohne leere halbvolle Zeilen.
+
+| Optionen | Layout-Regel |
+|---|---|
+| 2 | immer 1×2 (nebeneinander) |
+| 3 | immer 1×3 (nebeneinander) |
+| 4 | 2×2 → bei ≥ `@lg` 1×4 |
+| 5 | 2+3 (erste Zeile 2, zweite Zeile 3) → bei ≥ `@lg` 1×5 |
+| 6 | 2×3 → bei ≥ `@lg` 3×2 oder 1×6 |
+
+Die reservierten `min-h`-Werte für den Grid-Container müssen pro Optionszahl und Breakpoint korrekt gesetzt werden, damit die Container-Höhe frageübergreifend stabil bleibt. Werte berechnen und als Lookup-Tabelle im Code ablegen.
+
+**postMessage Höhe:**
+- `useEffect` nach jedem `currentStep`-Wechsel und nach `isSubmitted`:
+  ```js
+  window.parent.postMessage({ type: 'funnel-resize', height: document.documentElement.scrollHeight }, '*')
+  ```
+
+**Betroffene Dateien:** `components/solar-funnel.tsx` (umbenennen), `components/TenantFunnelClient.tsx`, `app/[tenant]/page.tsx`, alle weiteren Importe
+
+**Akzeptanzkriterien:**
+- Kein Wort "Solar", "Photovoltaik", "Angebotsvergleich" hardcoded in der Komponente
+- Solar-Demo (Aufgabe 2) zeigt korrekt an
+- Wärmepumpen-Demo (Aufgabe 2) zeigt korrekt an
+- Fragen mit 2, 3, 4 Optionen: kein leerer ungefüllter Grid-Platz sichtbar
+- postMessage wird bei jedem Schritt gefeuert (in Browser-Konsole des Parent prüfbar)
+- TypeScript-Fehler: keine
+
+---
+
+### Aufgabe 6 – API-Route aktualisieren
+
+**Problem:** `app/api/submit/route.ts` generiert PDF, berechnet Preise und sendet 3 Mails.
+
+**Lösung:**
+- PDF-Generierung entfernen
+- Preisberechnung entfernen
+- Platform-Tracking-Mail entfernen (nur noch 2 Mails)
+- `lead_price`: bei `billing_model = "per_lead"` → `tenantConfig.leadPriceBase`; bei `"flat_monthly"` → `0`
+- `billing_model`-Snapshot in Submission speichern
+
+**Honeypot-Logik (kritisch):**
+
+Der Honeypot-Check ist der **allererste** Schritt. Bei positivem Befund wird die Funktion sofort mit `return NextResponse.json({success:true})` beendet – **bevor** irgendein anderer Code ausgeführt wird. Weder DB-Eintrag noch Mails.
 
 ```
-### [Aufgabenname]
-
-**Problem:** Was ist das aktuelle Verhalten / welches Ziel verfehlt es?
-
-**Lösung:** Was soll konkret passieren? Welche Logik, welches UI-Verhalten?
-
-**Akzeptanzkriterien (optional):**
-- ...
-- ...
-
-**Betroffene Dateien:** z. B. components/solar-funnel.tsx, tenants/*.json
+if (payload.honeypot) {
+  return NextResponse.json({ success: true })  // sofortiges Ende, nichts passiert
+}
 ```
+
+**Reihenfolge:**
+1. **Honeypot-Check → sofortiges Return** (kein DB-Eintrag, keine Mail, kein Logging)
+2. Payload-Shape-Check → 400
+3. `getTenantConfig(slug)` → 404
+4. `logSubmission()` (Supabase, mit `lead_price` + `billing_model`)
+5. `sendAllEmails()` in try/catch → 2 Mails parallel
+
+**Betroffene Dateien:** `app/api/submit/route.ts`
+
+**Akzeptanzkriterien:**
+- Formular normal absenden → Supabase-Eintrag vorhanden, 2 Mails empfangen
+- Honeypot gefüllt → 200, **kein** DB-Eintrag, **keine** Mail an Endkunde, **keine** Mail an Betreiber
+- Kein Import von `generatePDF` oder `priceCalculator`
+
+---
+
+### Aufgabe 7 – E-Mail-Templates aktualisieren
+
+**Problem:** 3 Mails statt 2, `CustomerConfirmation` enthält Preis, `TenantLeadNotification` referenziert Preis-Felder.
+
+**Lösung:**
+- `emails/PlatformTracking.tsx` löschen
+- `emails/CustomerConfirmation.tsx`: Preis-Block und PDF entfernen; Danke-Text + `response_time_text` anzeigen
+- `emails/TenantLeadNotification.tsx`: `price_min`/`price_max`-Felder entfernen; Kontaktdaten + Antworten-Tabelle behalten
+- `lib/sendEmails.ts`: nur noch 2 Mails via `Promise.all`
+
+**Betroffene Dateien:** `emails/PlatformTracking.tsx` (löschen), `emails/CustomerConfirmation.tsx`, `emails/TenantLeadNotification.tsx`, `lib/sendEmails.ts`
+
+**Akzeptanzkriterien:**
+- `sendEmails.ts` ruft nur noch 2 Mails auf
+- Kunden-Mail enthält kein Preis-Feld
+- Kein Import von `PlatformTracking` irgendwo
+
+---
+
+### Aufgabe 8 – Deprecated Files entfernen und Build prüfen
+
+**Problem:** Nach den vorherigen Aufgaben gibt es tote Code-Dateien.
+
+**Lösung:**
+- Vor dem Löschen: grep-Suche nach Importen der jeweiligen Datei
+- Dann löschen: `lib/generatePDF.ts`, `lib/priceCalculator.ts`, `emails/PlatformTracking.tsx`
+- `npm run build` oder `tsc --noEmit` ausführen und alle Fehler beheben
+
+**Betroffene Dateien:** s.o.
+
+**Akzeptanzkriterien:**
+- `tsc --noEmit` → 0 Fehler
+- `npm run build` → erfolgreich
+
+---
+
+## Notes
+
+### Font-System
+
+Kuratierter Font-Enum: `FunnelFont = "system" | "inter" | "poppins" | "roboto"`. Self-hosted unter `public/fonts/` (DSGVO-konform). Neuen Font: `.woff2` in `public/fonts/<name>/`, `@font-face` in `app/globals.css`, Key in `FunnelFont` und `FONT_STACKS` in `funnel.tsx`.
+
+### Billing-Logik
+
+- `per_lead`: `lead_price` = `tenants.lead_price_base` pro Submission
+- `flat_monthly`: `lead_price` = `0` pro Submission; Abrechnung = `flat_monthly_price` pauschal/Monat; Leads über `flat_monthly_lead_limit` erscheinen als `overage_leads` in der View (automatische Overage-Berechnung ist spätere Erweiterung)
+
+### Supabase Free Tier
+
+Pausiert nach Inaktivität (~10 Min Cold Start). Für Produktiv-Einsatz auf Pro upgraden oder Keep-Alive einrichten.
+
+---
 
 ## History
 
 Ältere Einträge: [`history-archive.md`](history-archive.md).
 
-
-<!-- Claude: Nach jeder abgeschlossenen Aufgabe hier einen Eintrag hinzufügen. -->
-<!-- Format: - [Aufgabe] – [kurze Beschreibung was gemacht wurde] (welche Dateien geändert) -->
-<!-- Bei > 5 Einträgen: ältesten 3 Einträge nach history-archive.md verschieben. -->
-
-- **Neues Design** – Option-Cards mit fixer Höhe (`h-32 @md:h-36`) und vertikal zentriertem Inhalt; **Container-Queries** statt Viewport-Breakpoints, damit das Widget auf seine eigene iFrame-Breite reagiert: < 320px → 1-per-row, 320–447px → 2x2 (4-Opt) bzw. 1x3 (3-Opt), ≥ 448px → 1x4. Reservierte Grid-Höhen (`min-h-137 @xs:min-h-67 @md:min-h-36`) halten Container frageübergreifend stabil. Word-Break über `hyphens-auto` + `lang="de"` (deutsche Silbentrennung statt mid-word break). Vertikale Centering im iFrame via `min-h-dvh flex items-center justify-center`. Neues optionales Theme-Feld `pageBackgroundColor` (Default `"transparent"`) trennt iFrame-Hintergrund von Card-Hintergrund; html/body global transparent. (components/solar-funnel.tsx, app/[tenant]/page.tsx, app/layout.tsx, app/globals.css, types/index.ts, tenants/_template.json)
+- **Neues Design** – Option-Cards mit fixer Höhe (`h-32 @md:h-36`) und vertikal zentriertem Inhalt; Container-Queries statt Viewport-Breakpoints; reservierte Grid-Höhen halten Container frageübergreifend stabil; `pageBackgroundColor` trennt iFrame-Hintergrund von Card-Hintergrund. (`components/solar-funnel.tsx`, `app/[tenant]/page.tsx`, `app/layout.tsx`, `app/globals.css`, `types/index.ts`, `tenants/_template.json`)
