@@ -38,50 +38,106 @@ WITH q AS (
   INSERT INTO funnel_questions (tenant_id, sort_order, question_key, title)
   VALUES (
     (SELECT id FROM tenants WHERE slug = 'demo'),
-    1, 'gebaeudetyp', 'Was für ein Gebäude haben Sie?'
+    1, 'gebaeudetyp', 'Worauf soll die Solaranlage installiert werden?'
   )
   RETURNING id
 )
 INSERT INTO funnel_options (question_id, sort_order, label, value, icon_key)
 SELECT q.id, s.sort_order, s.label, s.value, s.icon_key
 FROM q, (VALUES
-  (1, 'Einfamilienhaus',  'einfamilienhaus',  'House'),
-  (2, 'Doppelhaus',       'doppelhaus',       'House'),
-  (3, 'Mehrfamilienhaus', 'mehrfamilienhaus',  'House'),
-  (4, 'Gewerbe',          'gewerbe',          'Wrench')
+  (1, 'Einfamilien- oder Zweifamilienhaus', 'efh',       'House'),
+  (2, 'Mehrfamilienhaus',                   'mfh',       'Apartment'),
+  (3, 'Firmengebäude',                      'firma',     'Factory'),
+  (4, 'Sonstiges',                          'sonstiges', 'Question')
 ) AS s(sort_order, label, value, icon_key);
 
--- Frage 2 – Dachfläche (3 Optionen → testet 1×3-Grid)
+-- Frage 2 – Fläche (4 Optionen → testet 2×2-Grid)
 WITH q AS (
   INSERT INTO funnel_questions (tenant_id, sort_order, question_key, title)
   VALUES (
     (SELECT id FROM tenants WHERE slug = 'demo'),
-    2, 'dachflaeche', 'Wie groß ist Ihre nutzbare Dachfläche?'
+    2, 'flaeche', 'Wie groß ist die Fläche bzw. die geplante Anlage?'
   )
   RETURNING id
 )
 INSERT INTO funnel_options (question_id, sort_order, label, value, icon_key)
 SELECT q.id, s.sort_order, s.label, s.value, s.icon_key
 FROM q, (VALUES
-  (1, 'Klein (< 40 m²)',   'klein',  'SolarPanel'),
-  (2, 'Mittel (40–80 m²)', 'mittel', 'SolarPanel'),
-  (3, 'Groß (> 80 m²)',    'gross',  'SolarPanel')
+  (1, 'Bis 20 qm',       'bis-20',    'SolarPanel'),
+  (2, '21 bis 100 qm',   '21-100',    'SolarPanel'),
+  (3, '101 bis 200 qm',  '101-200',   'SolarPanel'),
+  (4, 'Über 200 qm',     'ueber-200', 'SolarPanel')
 ) AS s(sort_order, label, value, icon_key);
 
--- Frage 3 – Stromspeicher (2 Optionen → testet 1×2-Grid)
+-- Frage 3 – Ausrichtung (4 Optionen → testet 2×2-Grid)
 WITH q AS (
   INSERT INTO funnel_questions (tenant_id, sort_order, question_key, title)
   VALUES (
     (SELECT id FROM tenants WHERE slug = 'demo'),
-    3, 'stromspeicher', 'Möchten Sie einen Stromspeicher dazunehmen?'
+    3, 'ausrichtung', 'Haben Sie eine südlich ausgerichtete Dachfläche?'
   )
   RETURNING id
 )
 INSERT INTO funnel_options (question_id, sort_order, label, value, icon_key)
 SELECT q.id, s.sort_order, s.label, s.value, s.icon_key
 FROM q, (VALUES
-  (1, 'Ja, mit Speicher',   'ja',   'Lightning'),
-  (2, 'Nein, ohne Speicher','nein', 'Star')
+  (1, 'Ja',              'ja',        'Check'),
+  (2, 'Nein',            'nein',      'Cross'),
+  (3, 'Teilweise',       'teilweise', 'HousePartial'),
+  (4, 'Bin nicht sicher','unsicher',  'Question')
+) AS s(sort_order, label, value, icon_key);
+
+-- Frage 4 – Stromspeicher (3 Optionen → testet 1×3-Grid)
+WITH q AS (
+  INSERT INTO funnel_questions (tenant_id, sort_order, question_key, title)
+  VALUES (
+    (SELECT id FROM tenants WHERE slug = 'demo'),
+    4, 'stromspeicher', 'Sind Sie an einem Stromspeicher interessiert?'
+  )
+  RETURNING id
+)
+INSERT INTO funnel_options (question_id, sort_order, label, value, icon_key)
+SELECT q.id, s.sort_order, s.label, s.value, s.icon_key
+FROM q, (VALUES
+  (1, 'Ja',        'ja',       'Check'),
+  (2, 'Nein',      'nein',     'Cross'),
+  (3, 'Weiß nicht','unsicher', 'Question')
+) AS s(sort_order, label, value, icon_key);
+
+-- Frage 5 – Kauf/Miete (4 Optionen → testet 2×2-Grid)
+WITH q AS (
+  INSERT INTO funnel_questions (tenant_id, sort_order, question_key, title)
+  VALUES (
+    (SELECT id FROM tenants WHERE slug = 'demo'),
+    5, 'kaufmiete', 'Möchten Sie einen Angebotsvergleich zu Kauf und Miete?'
+  )
+  RETURNING id
+)
+INSERT INTO funnel_options (question_id, sort_order, label, value, icon_key)
+SELECT q.id, s.sort_order, s.label, s.value, s.icon_key
+FROM q, (VALUES
+  (1, 'Ja, beides interessant',    'beides',   'Check'),
+  (2, 'Kaufen',                    'kaufen',   'Euro'),
+  (3, 'Mieten',                    'mieten',   'Document'),
+  (4, 'Weiß nicht / bitte Beratung','unsicher','Question')
+) AS s(sort_order, label, value, icon_key);
+
+-- Frage 6 – Zeitraum (4 Optionen → testet 2×2-Grid)
+WITH q AS (
+  INSERT INTO funnel_questions (tenant_id, sort_order, question_key, title)
+  VALUES (
+    (SELECT id FROM tenants WHERE slug = 'demo'),
+    6, 'zeitraum', 'Wann soll das Projekt umgesetzt werden?'
+  )
+  RETURNING id
+)
+INSERT INTO funnel_options (question_id, sort_order, label, value, icon_key)
+SELECT q.id, s.sort_order, s.label, s.value, s.icon_key
+FROM q, (VALUES
+  (1, 'Umgehend',          'umgehend', 'Calendar'),
+  (2, 'In 1 bis 3 Monaten','1-3',      'Calendar'),
+  (3, 'In 3 bis 6 Monaten','3-6',      'Calendar'),
+  (4, 'Weiß nicht',        'unsicher', 'Question')
 ) AS s(sort_order, label, value, icon_key);
 
 

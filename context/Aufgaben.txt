@@ -119,3 +119,14 @@ Phase 2: .env.local ausfüllen              ← du machst das (5 Min)
 Phase 3: Claude Aufgaben 2–8 ausführen    ← Claude macht das, du tippst die Nachrichten
 Phase 4: Testen                            ← du machst das (10 Min)
 Gesamtaufwand auf deiner Seite: ca. 30–45 Minuten aktive Zeit, der Rest ist Claude.
+
+Welches Modell für welche Aufgabe
+Aufgabe	Empfehlung	Warum
+1 – Schema	egal (du machst das manuell in Supabase)	–
+2 – Seed-Daten	Sonnet (aktuell)	Einfaches SQL schreiben
+3 – getTenantConfig	Sonnet	Klare Logik, überschaubare Datei
+4 – types/index.ts	Sonnet	Nur Typen umschreiben
+5 – funnel.tsx	Opus	Größte Aufgabe: Icon-Bibliothek erweitern, Grid-Layout für variable Optionen, postMessage, hardcoded Texte entfernen – viel Code auf einmal
+6 – API-Route	Sonnet	Klare Reihenfolge vorgegeben
+7 – E-Mail-Templates	Sonnet	Relativ einfaches Entfernen + Anpassen
+8 – Cleanup + Build	Sonnet	Grep + Löschen + Fehler beheben
