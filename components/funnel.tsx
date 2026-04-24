@@ -309,6 +309,7 @@ interface FunnelProps {
   onSubmit?: (data: {
     answers: Record<string, string>;
     contact: ContactData;
+    honeypot: string;
   }) => void;
 }
 
@@ -367,6 +368,7 @@ export function Funnel({
     telefon: "",
     email: "",
   });
+  const [honeypot, setHoneypot] = useState("");
 
   const validateField = (field: keyof ContactData, value: string): string => {
     switch (field) {
@@ -416,7 +418,7 @@ export function Funnel({
 
   const handleSubmit = () => {
     setIsSubmitted(true);
-    onSubmit?.({ answers, contact: contactData });
+    onSubmit?.({ answers, contact: contactData, honeypot });
   };
 
   // Widget → Parent: aktuelle Höhe nach jedem Step-/Submit-Wechsel senden.
@@ -640,6 +642,18 @@ export function Funnel({
               >
                 {funnel.contactFormSubtitle}
               </p>
+
+              {/* Honeypot – für Menschen unsichtbar, Bots füllen es aus */}
+              <input
+                type="text"
+                name="website"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 0, height: 0 }}
+              />
 
               {/* Anrede */}
               <div className="mb-4">

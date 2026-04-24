@@ -12,22 +12,12 @@ import {
 } from '@react-email/components'
 import type { ContactData, TenantConfig } from '@/types'
 
-type PriceEstimate = { min: number; max: number; currency: string }
-
-type TenantLeadNotificationProps = {
+export type TenantLeadNotificationProps = {
   contact: ContactData
   answers: Record<string, string>
-  estimate: PriceEstimate
   tenantConfig: TenantConfig
   submittedAt?: Date
 }
-
-const currencyFormat = (value: number, currency: string) =>
-  new Intl.NumberFormat('de-DE', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 0,
-  }).format(value)
 
 const dateTimeFormat = new Intl.DateTimeFormat('de-DE', {
   day: '2-digit',
@@ -40,22 +30,20 @@ const dateTimeFormat = new Intl.DateTimeFormat('de-DE', {
 export function TenantLeadNotification({
   contact,
   answers,
-  estimate,
   tenantConfig,
   submittedAt = new Date(),
 }: TenantLeadNotificationProps) {
   const primary = tenantConfig.theme.primaryColor
   const visibleQuestions = tenantConfig.questions.filter((q) => q.visible)
-  const priceLine = `${currencyFormat(estimate.min, estimate.currency)} – ${currencyFormat(estimate.max, estimate.currency)}`
 
   return (
     <Html>
       <Head />
-      <Preview>Neue Solar-Anfrage von {contact.name}</Preview>
+      <Preview>Neue Anfrage von {contact.name}</Preview>
       <Body style={styles.body}>
         <Container style={styles.container}>
           <Heading as="h1" style={{ ...styles.heading, color: primary }}>
-            🔔 Neue Solar-Anfrage
+            Neue Anfrage eingegangen
           </Heading>
           <Text style={styles.text}>
             Eingegangen: {dateTimeFormat.format(submittedAt)} Uhr
@@ -103,23 +91,8 @@ export function TenantLeadNotification({
 
           <Hr style={styles.hr} />
 
-          <Section
-            style={{
-              ...styles.priceBox,
-              borderColor: primary,
-              backgroundColor: `${primary}15`,
-            }}
-          >
-            <Text style={styles.priceLabel}>
-              Berechnete Preisschätzung (interne Info)
-            </Text>
-            <Text style={{ ...styles.priceValue, color: primary }}>
-              {priceLine}
-            </Text>
-          </Section>
-
           <Text style={styles.hint}>
-            💡 Kontaktieren Sie den Kunden zeitnah für maximale Abschlussrate.
+            Kontaktieren Sie den Kunden zeitnah für maximale Abschlussrate.
           </Text>
         </Container>
       </Body>
@@ -180,24 +153,6 @@ const styles = {
   },
   label: {
     color: '#6b7280',
-  },
-  priceBox: {
-    padding: '16px',
-    borderRadius: '6px',
-    borderWidth: '2px',
-    borderStyle: 'solid',
-    textAlign: 'center' as const,
-    margin: '12px 0',
-  },
-  priceLabel: {
-    fontSize: '11px',
-    color: '#6b7280',
-    margin: '0 0 4px',
-  },
-  priceValue: {
-    fontSize: '18px',
-    fontWeight: 'bold' as const,
-    margin: 0,
   },
   hr: {
     borderColor: '#e5e7eb',

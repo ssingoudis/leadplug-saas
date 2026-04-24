@@ -69,6 +69,7 @@ export interface SubmitPayload {
   tenant: string
   answers: Record<string, string>
   contact: ContactData
+  honeypot?: string
   startedAt: string
   sourceUrl: string
   userAgent: string

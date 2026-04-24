@@ -17,6 +17,7 @@ export function TenantFunnelClient({ config }: Props) {
   async function handleSubmit(data: {
     answers: Record<string, string>
     contact: ContactData
+    honeypot: string
   }) {
     try {
       await fetch('/api/submit', {
@@ -26,6 +27,7 @@ export function TenantFunnelClient({ config }: Props) {
           tenant: config.slug,
           answers: data.answers,
           contact: data.contact,
+          honeypot: data.honeypot,
           startedAt: startedAtRef.current,
           sourceUrl: typeof document !== 'undefined' ? document.referrer : '',
           userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',

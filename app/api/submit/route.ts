@@ -1,13 +1,20 @@
 import { NextResponse } from 'next/server'
 import { getTenantConfig } from '@/lib/getTenantConfig'
-import { getMonthlyCount, logSubmission } from '@/lib/tracking'
-import { generatePDF } from '@/lib/generatePDF'
+import { logSubmission } from '@/lib/tracking'
 import { sendAllEmails } from '@/lib/sendEmails'
-import type { ContactData, SubmitPayload } from '@/types'
+import type { ContactData } from '@/types'
 
 export const runtime = 'nodejs'
 
-function isValidPayload(value: unknown): value is SubmitPayload {
+function isValidPayload(value: unknown): value is {
+  tenant: string
+  answers: Record<string, string>
+  contact: ContactData
+  honeypot?: string
+  startedAt?: string
+  sourceUrl?: string
+  userAgent?: string
+} {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
   if (typeof v.tenant !== 'string' || v.tenant.length === 0) return false
@@ -25,64 +32,61 @@ function isValidPayload(value: unknown): value is SubmitPayload {
 }
 
 export async function POST(req: Request) {
-  let payload: unknown
+  let body: unknown
   try {
-    payload = await req.json()
+    body = await req.json()
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  if (!isValidPayload(payload)) {
+  // 1. Honeypot – sofortiges Ende, kein DB-Eintrag, keine Mail
+  const raw = body as Record<string, unknown>
+  if (typeof raw?.honeypot === 'string' && raw.honeypot.length > 0) {
+    return NextResponse.json({ success: true })
+  }
+
+  // 2. Payload-Shape-Check
+  if (!isValidPayload(body)) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
   }
 
-  const { tenant, answers, contact } = payload as SubmitPayload & {
-    contact: ContactData
-  }
-  const p = payload as unknown as Record<string, unknown>
-  const startedAt =
-    typeof p.startedAt === 'string' ? p.startedAt : new Date().toISOString()
-  const sourceUrl = typeof p.sourceUrl === 'string' ? p.sourceUrl : ''
-  const userAgent = typeof p.userAgent === 'string' ? p.userAgent : ''
+  const { tenant, answers, contact } = body
+  const startedAt = typeof body.startedAt === 'string' ? body.startedAt : new Date().toISOString()
+  const sourceUrl = typeof body.sourceUrl === 'string' ? body.sourceUrl : ''
+  const userAgent = typeof body.userAgent === 'string' ? body.userAgent : ''
 
+  // 3. Tenant-Config laden
   const tenantConfig = await getTenantConfig(tenant)
   if (!tenantConfig) {
     return NextResponse.json({ error: 'Tenant not found' }, { status: 404 })
   }
 
-  const estimate = { min: 0, max: 0, currency: 'EUR' }  // deprecated – wird in Aufgabe 6 entfernt
-  const pricePerLead = 0
+  // 4. lead_price server-side aus Tenant-Config ableiten – niemals vom Client vertrauen
+  const leadPrice =
+    tenantConfig.billingModel === 'per_lead' ? tenantConfig.leadPriceBase : 0
 
+  // 5. Submission loggen
   await logSubmission({
     tenantSlug: tenant,
     contact,
     answers,
-    estimate,
+    leadPrice,
+    billingModel: tenantConfig.billingModel,
     startedAt,
     sourceUrl,
     userAgent,
-    pricePerLead,
   })
 
-  const submittedAt = new Date()
-
+  // 6. E-Mails senden (Fehler loggen, nicht werfen – Endkunde bekommt immer success:true)
   try {
-    const [pdfBuffer, monthlyCount] = await Promise.all([
-      generatePDF({ contact, answers, estimate, tenantConfig }),
-      getMonthlyCount(tenant),
-    ])
-
     await sendAllEmails({
       contact,
       answers,
-      estimate,
       tenantConfig,
-      pdfBuffer,
-      monthlyCount,
-      submittedAt,
+      submittedAt: new Date(),
     })
   } catch (err) {
-    console.error('submit route: PDF/email pipeline failed', err)
+    console.error('submit route: email pipeline failed', err)
   }
 
   return NextResponse.json({ success: true })
