@@ -24,6 +24,7 @@ function getSupabase(): SupabaseClient | null {
 
 export async function logSubmission(params: {
   tenantSlug: string
+  tenantId?: string
   contact: ContactData
   answers: Record<string, string>
   leadPrice: number
@@ -37,6 +38,7 @@ export async function logSubmission(params: {
 
   try {
     const { error } = await supabase.from('submissions').insert({
+      tenant_id: params.tenantId ?? null,
       tenant_slug: params.tenantSlug,
       contact_salutation: params.contact.anrede,
       contact_name: params.contact.name,
