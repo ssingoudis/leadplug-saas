@@ -68,6 +68,7 @@ export async function POST(req: Request) {
   // 5. Submission loggen
   await logSubmission({
     tenantSlug: tenant,
+    tenantId: tenantConfig.id,
     contact,
     answers,
     leadPrice,

@@ -24,6 +24,7 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
     : []
 
   return {
+    id:           row.id,
     slug:         row.slug,
     industry:     row.industry ?? 'general',
     companyName:  row.company_name,

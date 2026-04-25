@@ -40,6 +40,7 @@ export interface FunnelConfig {
 }
 
 export interface TenantConfig {
+  id?: string
   slug: string
   industry: string             // 'solar' | 'waermepumpe' | 'heizung' | 'sanitaer' | 'elektro' | 'general'
   companyName: string
