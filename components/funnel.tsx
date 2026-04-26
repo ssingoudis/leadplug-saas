@@ -421,20 +421,35 @@ export function Funnel({
     onSubmit?.({ answers, contact: contactData, honeypot });
   };
 
-  // Widget → Parent: aktuelle Höhe nach jedem Step-/Submit-Wechsel senden.
+  // FALLBACK (auskommentiert): Höhe nach jedem Step-/Submit-Wechsel senden.
+  // useEffect(() => {
+  //   if (typeof window === "undefined" || window.parent === window) return;
+  //   const raf = requestAnimationFrame(() => {
+  //     window.parent.postMessage(
+  //       {
+  //         type: "funnel-resize",
+  //         height: document.documentElement.scrollHeight,
+  //       },
+  //       "*",
+  //     );
+  //   });
+  //   return () => cancelAnimationFrame(raf);
+  // }, [currentStep, isSubmitted]);
+
+  // Widget → Parent: Höhe bei Window-Resize senden (deckt Step-Wechsel, Submit und Browser-Resize ab).
   useEffect(() => {
     if (typeof window === "undefined" || window.parent === window) return;
-    const raf = requestAnimationFrame(() => {
-      window.parent.postMessage(
-        {
-          type: "funnel-resize",
-          height: document.documentElement.scrollHeight,
-        },
-        "*",
-      );
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [currentStep, isSubmitted]);
+    const sendHeight = () => {
+      requestAnimationFrame(() => {
+        window.parent.postMessage(
+          { type: "funnel-resize", height: document.documentElement.scrollHeight },
+          "*",
+        );
+      });
+    };
+    window.addEventListener("resize", sendHeight);
+    return () => window.removeEventListener("resize", sendHeight);
+  }, []);
 
   // CSS Custom Properties für dynamisches Styling
   const cssVars = {
@@ -533,8 +548,7 @@ export function Funnel({
         <div className="p-4 @md:p-8">
           {!isContactStep ? (
             <div>
-              {/* Frage-Container: Hält die Höhe stabil, egal ob 1 oder 2 Zeilen */}
-              <div className="flex flex-col justify-end min-h-[60px] @md:min-h-[80px] mb-6 @lg:mb-4">
+              <div className="mb-6 @lg:mb-4">
                 <h1
                   className="text-lg md:text-xl lg:text-2xl font-bold leading-tight text-center lg:text-left"
                   style={{ color: theme.textColor }}
