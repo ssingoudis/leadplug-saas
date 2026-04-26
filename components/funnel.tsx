@@ -533,7 +533,6 @@ export function Funnel({
       style={{
         backgroundColor: pageBackgroundColor,
         width: "100%",
-        minHeight: "100%",
       }}
     >
       <div
