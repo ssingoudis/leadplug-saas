@@ -421,11 +421,17 @@ export function Funnel({
     onSubmit?.({ answers, contact: contactData, honeypot });
   };
 
-  // iframe-resizer: Child-Script dynamisch laden (nur im iFrame, SSR-safe).
+  // Widget → Parent: Höhe nach jedem Step-/Submit-Wechsel und beim ersten Mount senden.
   useEffect(() => {
     if (typeof window === "undefined" || window.parent === window) return;
-    import("iframe-resizer/js/iframeResizer.contentWindow");
-  }, []);
+    const raf = requestAnimationFrame(() => {
+      window.parent.postMessage(
+        { type: "funnel-resize", height: document.documentElement.scrollHeight },
+        "*",
+      );
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [currentStep, isSubmitted]);
 
   // CSS Custom Properties für dynamisches Styling
   const cssVars = {
