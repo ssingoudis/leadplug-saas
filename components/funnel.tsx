@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import type {
   FunnelTheme,
@@ -421,34 +421,20 @@ export function Funnel({
     onSubmit?.({ answers, contact: contactData, honeypot });
   };
 
-  // Widget → Parent: Höhe nach jedem Step-/Submit-Wechsel senden.
-  useEffect(() => {
-    if (typeof window === "undefined" || window.parent === window) return;
-    const raf = requestAnimationFrame(() => {
-      window.parent.postMessage(
-        {
-          type: "funnel-resize",
-          height: document.documentElement.scrollHeight,
-        },
-        "*",
-      );
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [currentStep, isSubmitted]);
+  const rootRef = useRef<HTMLDivElement>(null);
 
-  // Widget → Parent: Höhe bei Window-Resize senden.
+  // Widget → Parent: ResizeObserver auf Root-Div – feuert bei erstem Render,
+  // Step-Wechsel und Window-Resize. Kein initialer height-Wert im iFrame nötig.
   useEffect(() => {
     if (typeof window === "undefined" || window.parent === window) return;
-    const sendHeight = () => {
-      requestAnimationFrame(() => {
-        window.parent.postMessage(
-          { type: "funnel-resize", height: document.documentElement.scrollHeight },
-          "*",
-        );
-      });
-    };
-    window.addEventListener("resize", sendHeight);
-    return () => window.removeEventListener("resize", sendHeight);
+    const el = rootRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const height = entries[0].contentRect.height;
+      window.parent.postMessage({ type: "funnel-resize", height }, "*");
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
   // CSS Custom Properties für dynamisches Styling
@@ -530,6 +516,7 @@ export function Funnel({
 
   return (
     <div
+      ref={rootRef}
       style={{
         backgroundColor: pageBackgroundColor,
         width: "100%",
