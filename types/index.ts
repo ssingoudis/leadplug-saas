@@ -39,6 +39,7 @@ export interface FunnelConfig {
   privacyPolicyUrl: string
 }
 
+/* alte Datenbank solar-widget
 export interface TenantConfig {
   id?: string
   slug: string
@@ -46,6 +47,27 @@ export interface TenantConfig {
   companyName: string
   contactEmail: string
   logoUrl?: string
+  phone?: string
+  address?: string
+  website?: string
+  theme: FunnelTheme
+  funnel: FunnelConfig
+  billingModel: 'per_lead' | 'flat_monthly'
+  leadPriceBase: number
+  flatMonthlyPrice?: number
+  flatMonthlyLeadLimit?: number
+  questions: QuestionConfig[]
+}
+*/
+
+// neue Datenbank widget-funnel
+export interface TenantConfig {
+  id?: string          // tenant ID
+  funnelId?: string    // funnel ID (neu in v2)
+  slug: string
+  industry: string
+  companyName: string
+  contactEmail: string
   phone?: string
   address?: string
   website?: string

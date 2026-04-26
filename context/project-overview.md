@@ -38,8 +38,8 @@ Einbettbarer **Sales-Funnel als iFrame-Widget** für Handwerksbetriebe aller Bra
 ## 3. Ordnerstruktur
 
 ```
-app/[tenant]/page.tsx              # Widget-Seite pro Mandant (iframe-target)
-app/[tenant]/layout.tsx            # Minimales Layout ohne Header/Footer
+app/[slug]/page.tsx                # Widget-Seite pro Funnel-Slug (iframe-target)
+app/[slug]/layout.tsx              # Minimales Layout ohne Header/Footer
 app/api/submit/route.ts            # POST: Formular → Log → 2 Mails
 
 components/funnel.tsx              # Generischer Funnel (branchenunabhängig)
@@ -50,50 +50,77 @@ emails/TenantLeadNotification.tsx  # Mail 2 – Betreiber (Kontaktdaten + Antwor
 
 lib/getTenantConfig.ts   # Supabase-Loader mit JSON-Fallback
 lib/sendEmails.ts        # Resend, 2 Mails via Promise.all
-lib/tracking.ts          # Supabase: logSubmission, getMonthlyCount
+lib/tracking.ts          # Supabase: logSubmission
 
 tenants/_template.json   # Fallback-Vorlage (wird nicht aktiv gepflegt)
 tenants/demo.json        # Demo-Tenant Fallback
 
-types/index.ts                 # Alle TypeScript-Interfaces
-context/supabase-schema.sql    # DB-Schema (idempotent)
-context/supabase-seed.sql      # Seed-Daten für Tests (Solar + Wärmepumpe Demo)
-public/fonts/                  # Self-hosted Fonts (DSGVO)
+types/index.ts                      # Alle TypeScript-Interfaces
+context/supabase-schema-v2.sql      # DB-Schema v2 (idempotent, aktuelle DB)
+context/supabase-seed-v2.sql        # Seed-Daten v2 (Solar + Wärmepumpe Demo)
+context/database-guide.md           # Bedienungsanleitung zur Datenbank
+context/_alt-supabase-schema.sql    # Altes Schema (Referenz, nicht aktiv)
+context/_alt-supabase-seed.sql      # Alte Seed-Daten (Referenz, nicht aktiv)
+public/fonts/                       # Self-hosted Fonts (DSGVO)
 ```
 
 ---
 
 ## 4. Supabase Datenbank-Schema
 
-Vollständiges Schema: [`supabase-schema.sql`](supabase-schema.sql), Seed-Daten: [`supabase-seed.sql`](supabase-seed.sql).
+Vollständiges Schema: [`supabase-schema-v2.sql`](supabase-schema-v2.sql), Seed-Daten: [`supabase-seed-v2.sql`](supabase-seed-v2.sql), Bedienungsanleitung: [`database-guide.md`](database-guide.md).
+
+### Struktur (3 Ebenen)
+
+```
+tenants           → Wer ist der Kunde? (Stammdaten, Billing)
+  └── funnels     → Welches Widget? (Slug, Branche, Texte, Theme)
+        └── funnel_questions → Fragen pro Funnel
+              └── funnel_options   → Antwortoptionen pro Frage
+```
 
 ### Tabellen
 
-**`tenants`** – Haupt-Konfiguration pro Funnel
-- Alle Theme-Felder (`primary_color`, `font`, `border_radius`, `max_width`, …)
-- Konfigurierbare Funnel-Texte mit sinnvollen Defaults (s. Abschnitt 5)
-- `industry` – Branchenkenner für interne Auswertung (`solar`, `waermepumpe`, `heizung`, …)
-- `lead_price_base` – Preis pro Lead in EUR (individuell pro Tenant)
-- `is_active` – deaktivierte Tenants → 404
+**`industries`** – Lookup-Tabelle der erlaubten Branchen
+- `id` (Text, PK): `solar`, `waermepumpe`, `heizung`, `sanitaer`, `elektro`, `general`
+- Neue Branche hinzufügen = ein INSERT, kein Schema-Change
 
-**`funnel_questions`** – Fragen pro Tenant, geordnet
-- `tenant_id`, `sort_order`, `question_key` (= Key im `answers`-JSONB), `title`, `visible`
+**`tenants`** – Kunden (Handwerksbetriebe)
+- Stammdaten: `company_name`, `contact_email`, `phone`, `address`, `website`
+- Billing: `billing_model`, `lead_price_base`, `flat_monthly_price`, `flat_monthly_lead_limit`
+- `stripe_customer_id` – vorbereitet, noch leer
+
+**`themes`** – Wiederverwendbare Design-Konfigurationen
+- `tenant_id NULL` = globale Vorlage; `tenant_id NOT NULL` = kundenspezifisch
+- Felder: `primary_color`, `text_color`, `background_color`, `font`, `border_radius`, `max_width`
+
+**`funnels`** – Das Widget (ein Tenant kann mehrere haben)
+- `slug` (UNIQUE) → URL: `domain.de/[slug]`
+- `tenant_id` → Zugehöriger Kunde
+- `theme_id` → Zugehöriges Design
+- `industry` → FK auf `industries`
+- Alle konfigurierbaren Texte (`funnel_title`, `submit_button_label`, …)
+
+**`funnel_questions`** – Fragen pro Funnel, geordnet
+- `funnel_id`, `sort_order`, `question_key` (UNIQUE pro Funnel = Key im `answers`-JSONB), `title`, `visible`
 
 **`funnel_options`** – Antwortoptionen pro Frage
-- `question_id`, `sort_order`, `label`, `value`
-- `icon_key` (String → Built-in SVG in `funnel.tsx`) **oder** `icon_url` (externes Bild, Vorrang)
+- `question_id`, `sort_order`, `label`, `value` (UNIQUE pro Frage)
+- `icon_key` (Built-in SVG in `funnel.tsx`) **oder** `icon_url` (externes Bild, Vorrang)
 
-**`submissions`** – ein Eintrag pro Formular-Submission
-- `tenant_id`, `tenant_slug` (denormalisiert), Kontaktdaten, `answers` (JSONB)
-- `lead_price` – Preis zum Zeitpunkt der Submission (historisch korrekt, nicht rückwirkend änderbar)
-- `honeypot_triggered` – Bot-Analyse; diese Einträge zählen **nicht** in `monthly_billing`
-- `emails_sent`, `billed`
+**`submissions`** – Ein Eintrag pro Formular-Submission
+- `funnel_id` + `funnel_slug` (Snapshot), `tenant_id`
+- Kontaktdaten, `answers` (JSONB)
+- `lead_price` + `billing_model` – Snapshot zum Zeitpunkt der Submission (historisch korrekt)
+- `utm_source`, `utm_medium`, `utm_campaign` – vorbereitet, noch nicht ausgewertet
+- `honeypot_triggered` – Bots zählen nicht in `monthly_billing`
+- `billed`, `billed_at`
 
-**View `monthly_billing`** – eine Zeile pro Tenant/Monat, `SUM(lead_price)` nur für legitime Submissions.
+**View `monthly_billing`** – Eine Zeile pro Tenant/Monat, aggregiert über alle Funnels des Tenants.
 
 ### Fallback-Verhalten
 
-`getTenantConfig(slug)` fragt zuerst Supabase ab. Bei DB-Fehler oder fehlendem Eintrag: JSON-Datei `tenants/[slug].json` laden. JSON-Dateien werden nicht aktiv gepflegt – sie dienen nur als Notfall-Fallback.
+`getTenantConfig(slug)` fragt zuerst die `funnels`-Tabelle ab (joined mit `tenants`, `themes`, `funnel_questions`). Bei DB-Fehler oder fehlendem Eintrag: JSON-Datei `tenants/[slug].json` laden. JSON-Dateien werden nicht aktiv gepflegt – sie dienen nur als Notfall-Fallback.
 
 > **Supabase Free Tier Warnung:** Pausiert nach Inaktivität (~10 Min Cold Start). Für Produktiv-Einsatz auf Pro upgraden oder Keep-Alive-Ping einrichten.
 
@@ -101,9 +128,9 @@ Vollständiges Schema: [`supabase-schema.sql`](supabase-schema.sql), Seed-Daten:
 
 ## 5. Konfigurierbare Texte (mit Defaults)
 
-Alle Texte sind pro Tenant in Supabase einstellbar. Wenn `NULL`, greift der generische Default.
+Alle Texte sind pro Funnel in Supabase einstellbar. Wenn `NULL`, greift der generische Default.
 
-| Feld in `tenants` | Default |
+| Feld in `funnels` | Default |
 |---|---|
 | `funnel_title` | `"Jetzt kostenloses Angebot anfordern"` |
 | `submit_button_label` | `"Anfrage absenden"` |
@@ -190,8 +217,8 @@ Ohne Listener im Parent: Widget funktioniert weiter mit fixer iFrame-Höhe, kein
 
 ## 11. Routing & iFrame
 
-- [`../app/[tenant]/page.tsx`](../app/[tenant]/page.tsx): lädt Config, `notFound()` bei ungültigem Slug oder `is_active = false`
-- [`../app/[tenant]/layout.tsx`](../app/[tenant]/layout.tsx): minimales HTML, optimiert für iFrame
+- [`../app/[slug]/page.tsx`](../app/[slug]/page.tsx): lädt Config via Funnel-Slug, `notFound()` bei ungültigem Slug, inaktivem Funnel oder inaktivem Tenant
+- [`../app/[slug]/layout.tsx`](../app/[slug]/layout.tsx): minimales HTML, optimiert für iFrame
 - [`../next.config.mjs`](../next.config.mjs): `frame-ancestors *` und `X-Frame-Options: ALLOWALL`
 
 ---

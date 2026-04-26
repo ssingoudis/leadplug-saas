@@ -66,9 +66,25 @@ export async function POST(req: Request) {
     tenantConfig.billingModel === 'per_lead' ? tenantConfig.leadPriceBase : 0
 
   // 5. Submission loggen
+  /* alte Datenbank solar-widget
   await logSubmission({
     tenantSlug: tenant,
     tenantId: tenantConfig.id,
+    contact,
+    answers,
+    leadPrice,
+    billingModel: tenantConfig.billingModel,
+    startedAt,
+    sourceUrl,
+    userAgent,
+  })
+  */
+
+  // neue Datenbank widget-funnel
+  await logSubmission({
+    funnelId:     tenantConfig.funnelId,
+    funnelSlug:   tenant,
+    tenantId:     tenantConfig.id,
     contact,
     answers,
     leadPrice,

@@ -3,25 +3,25 @@ import { TenantFunnelClient } from '@/components/TenantFunnelClient'
 import { getTenantConfig } from '@/lib/getTenantConfig'
 import type { Metadata } from 'next'
 
-type TenantPageProps = {
-  params: Promise<{ tenant: string }>
+type SlugPageProps = {
+  params: Promise<{ slug: string }>
 }
 
 export async function generateMetadata(
-  { params }: TenantPageProps,
+  { params }: SlugPageProps,
 ): Promise<Metadata> {
-  const { tenant } = await params
-  const config = await getTenantConfig(tenant)
-  if (!config) return { title: 'Solar-Konfigurator' }
+  const { slug } = await params
+  const config = await getTenantConfig(slug)
+  if (!config) return { title: 'Angebot anfordern' }
   return {
     title: `${config.funnel.title} – ${config.companyName}`,
     description: config.funnel.subtitle,
   }
 }
 
-export default async function TenantPage({ params }: TenantPageProps) {
-  const { tenant } = await params
-  const config = await getTenantConfig(tenant)
+export default async function SlugPage({ params }: SlugPageProps) {
+  const { slug } = await params
+  const config = await getTenantConfig(slug)
 
   if (!config) {
     notFound()
