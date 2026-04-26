@@ -421,22 +421,22 @@ export function Funnel({
     onSubmit?.({ answers, contact: contactData, honeypot });
   };
 
-  // FALLBACK (auskommentiert): Höhe nach jedem Step-/Submit-Wechsel senden.
-  // useEffect(() => {
-  //   if (typeof window === "undefined" || window.parent === window) return;
-  //   const raf = requestAnimationFrame(() => {
-  //     window.parent.postMessage(
-  //       {
-  //         type: "funnel-resize",
-  //         height: document.documentElement.scrollHeight,
-  //       },
-  //       "*",
-  //     );
-  //   });
-  //   return () => cancelAnimationFrame(raf);
-  // }, [currentStep, isSubmitted]);
+  // Widget → Parent: Höhe nach jedem Step-/Submit-Wechsel senden.
+  useEffect(() => {
+    if (typeof window === "undefined" || window.parent === window) return;
+    const raf = requestAnimationFrame(() => {
+      window.parent.postMessage(
+        {
+          type: "funnel-resize",
+          height: document.documentElement.scrollHeight,
+        },
+        "*",
+      );
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [currentStep, isSubmitted]);
 
-  // Widget → Parent: Höhe bei Window-Resize senden (deckt Step-Wechsel, Submit und Browser-Resize ab).
+  // Widget → Parent: Höhe bei Window-Resize senden.
   useEffect(() => {
     if (typeof window === "undefined" || window.parent === window) return;
     const sendHeight = () => {
