@@ -384,10 +384,13 @@ export function Funnel({
         return !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
           ? "Bitte geben Sie eine gültige E-Mail-Adresse ein."
           : "";
-      case "telefon":
-        return !/^[+\d\s\-()]{6,}$/.test(value)
+      case "telefon": {
+        const onlyAllowed = /^[+\d\s\-()\/]+$/.test(value)
+        const digitCount = (value.match(/\d/g) ?? []).length
+        return !onlyAllowed || digitCount < 6
           ? "Bitte geben Sie eine gültige Telefonnummer ein."
           : "";
+      }
       default:
         return "";
     }
