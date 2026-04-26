@@ -43,6 +43,8 @@ export function TenantFunnelClient({ config }: Props) {
       theme={config.theme}
       funnel={config.funnel}
       questions={config.questions}
+      companyName={config.companyName}
+      contactEmail={config.contactEmail}
       onSubmit={handleSubmit}
     />
   )

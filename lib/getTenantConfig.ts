@@ -9,7 +9,7 @@ const TEXT_DEFAULTS = {
   funnelTitle:          'Jetzt kostenloses Angebot anfordern',
   submitButtonLabel:    'Anfrage absenden',
   successMessage:       'Vielen Dank! Wir melden uns in Kürze bei Ihnen.',
-  responseTimeText:     '24 Stunden',
+  responseTimeText:     'so schnell wie möglich',
   contactFormSubtitle:  'Wer soll das Angebot erhalten?',
   privacyText:          'Mit dem Absenden stimme ich zu, per E-Mail und Telefon zu meiner Anfrage kontaktiert zu werden. Widerrufen geht jederzeit.',
   privacyPolicyUrl:     '#',

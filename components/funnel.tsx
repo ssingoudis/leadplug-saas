@@ -306,6 +306,8 @@ interface FunnelProps {
   theme?: Partial<FunnelTheme>;
   funnel: FunnelConfig;
   questions: QuestionConfig[];
+  companyName?: string;
+  contactEmail?: string;
   onSubmit?: (data: {
     answers: Record<string, string>;
     contact: ContactData;
@@ -317,6 +319,8 @@ export function Funnel({
   theme: themeOverrides,
   funnel,
   questions,
+  companyName,
+  contactEmail,
   onSubmit,
 }: FunnelProps) {
   // Nur primaryColor ist pflicht; alles andere hat Defaults oder wird abgeleitet.
@@ -450,7 +454,7 @@ export function Funnel({
   if (isSubmitted) {
     return (
       <div
-        className="mx-auto p-8 rounded-lg shadow-lg"
+        className="mx-auto rounded-lg shadow-lg overflow-hidden"
         style={{
           ...cssVars,
           maxWidth: theme.maxWidth,
@@ -458,9 +462,18 @@ export function Funnel({
           fontFamily: theme.fontFamily,
         }}
       >
-        <div className="text-center">
+        {/* Header Banner */}
+        <div
+          className="px-8 py-5"
+          style={{ backgroundColor: theme.primaryColor }}
+        >
+          <p className="text-white font-bold text-base m-0">{companyName}</p>
+        </div>
+
+        {/* Content */}
+        <div className="p-8 text-center">
           <div
-            className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+            className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5"
             style={{ backgroundColor: `${theme.primaryColor}20` }}
           >
             <svg
@@ -477,32 +490,54 @@ export function Funnel({
               />
             </svg>
           </div>
+
           <h2
-            className="text-xl font-bold mb-4 leading-snug"
+            className="text-2xl font-bold mb-2 leading-snug"
             style={{ color: theme.textColor }}
           >
             {funnel.successMessage}
           </h2>
+
+          <p className="text-sm mb-6" style={{ color: theme.textColorMuted }}>
+            Wir melden uns {funnel.responseTimeText} bei Ihnen.
+          </p>
+
+          {/* Antworten-Box */}
           <div
-            className="p-4 rounded-lg text-left text-sm"
-            style={{ backgroundColor: theme.inputBgColor }}
+            className="rounded-lg text-left text-sm p-4"
+            style={{
+              backgroundColor: theme.inputBgColor,
+              borderLeft: `4px solid ${theme.primaryColor}`,
+            }}
           >
-            <p
-              className="font-semibold mb-2"
-              style={{ color: theme.textColor }}
-            >
-              Ihre Angaben:
+            <p className="font-semibold mb-3" style={{ color: theme.textColor }}>
+              Ihre Angaben im Überblick:
             </p>
-            {visibleQuestions.map((q) => (
-              <p key={q.id} style={{ color: theme.textColorMuted }}>
-                {q.title.replace("?", ":")}{" "}
-                <span style={{ color: theme.textColor, fontWeight: 500 }}>
-                  {q.options.find((o) => o.value === answers[q.id])?.label ||
-                    "-"}
-                </span>
-              </p>
-            ))}
+            {visibleQuestions.map((q) => {
+              const selected = q.options.find((o) => o.value === answers[q.id])
+              if (!selected) return null
+              return (
+                <p key={q.id} className="mb-1" style={{ color: theme.textColorMuted }}>
+                  {q.title.replace("?", "")}:{" "}
+                  <span style={{ color: theme.textColor, fontWeight: 500 }}>
+                    {selected.label}
+                  </span>
+                </p>
+              )
+            })}
           </div>
+        </div>
+
+        {/* Footer */}
+        <div
+          className="px-8 py-4 border-t text-xs"
+          style={{
+            backgroundColor: theme.inputBgColor,
+            borderColor: theme.borderColor,
+            color: theme.textColorMuted,
+          }}
+        >
+          <p className="m-0">{companyName} · {contactEmail}</p>
         </div>
       </div>
     );

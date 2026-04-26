@@ -32,56 +32,87 @@ export function CustomerConfirmation({
       <Preview>Ihre Anfrage bei {tenantConfig.companyName}</Preview>
       <Body style={styles.body}>
         <Container style={styles.container}>
-          <Heading as="h1" style={{ ...styles.heading, color: primary }}>
-            Vielen Dank, {contact.name}!
-          </Heading>
 
-          <Text style={styles.text}>
-            {tenantConfig.funnel.successMessage}
-          </Text>
-
-          <Section style={styles.answersBox}>
-            <Heading as="h2" style={styles.subheading}>
-              Ihre Angaben im Überblick
-            </Heading>
-            {visibleQuestions.map((q) => {
-              const selected = q.options.find((o) => o.value === answers[q.id])
-              return (
-                <Text key={q.id} style={styles.answerRow}>
-                  <span style={styles.answerLabel}>
-                    {q.title.replace('?', '')}:
-                  </span>{' '}
-                  <strong>{selected?.label ?? '-'}</strong>
-                </Text>
-              )
-            })}
+          {/* Header Banner */}
+          <Section style={{ ...styles.header, backgroundColor: primary }}>
+            <Text style={styles.headerText}>{tenantConfig.companyName}</Text>
           </Section>
 
-          <Hr style={styles.hr} />
+          {/* Content */}
+          <Section style={styles.content}>
+            <Heading as="h1" style={{ ...styles.heading, color: primary }}>
+              Vielen Dank, {contact.name}!
+            </Heading>
 
-          <Text style={styles.text}>
-            <strong>Ihr Ansprechpartner:</strong>
-            <br />
-            {tenantConfig.companyName}
-            {tenantConfig.phone && (
-              <>
-                <br />
-                Tel.: {tenantConfig.phone}
-              </>
-            )}
-            <br />
-            <Link href={`mailto:${tenantConfig.contactEmail}`} style={{ color: primary }}>
-              {tenantConfig.contactEmail}
-            </Link>
-            {tenantConfig.website && (
-              <>
-                <br />
-                <Link href={tenantConfig.website} style={{ color: primary }}>
-                  {tenantConfig.website}
-                </Link>
-              </>
-            )}
-          </Text>
+            <Text style={styles.text}>
+              {tenantConfig.funnel.successMessage}
+            </Text>
+
+            <Text style={{ ...styles.text, color: '#6b7280' }}>
+              Wir melden uns {tenantConfig.funnel.responseTimeText} bei Ihnen.
+            </Text>
+
+            {/* Antworten */}
+            <Section style={{ ...styles.answersBox, borderLeftColor: primary }}>
+              <Heading as="h2" style={styles.subheading}>
+                Ihre Angaben im Überblick
+              </Heading>
+              {visibleQuestions.map((q) => {
+                const selected = q.options.find((o) => o.value === answers[q.id])
+                if (!selected) return null
+                return (
+                  <Text key={q.id} style={styles.answerRow}>
+                    <span style={styles.answerLabel}>
+                      {q.title.replace('?', '')}:
+                    </span>{' '}
+                    <strong>{selected.label}</strong>
+                  </Text>
+                )
+              })}
+            </Section>
+
+            <Hr style={styles.hr} />
+
+            {/* Kontakt */}
+            <Text style={styles.text}>
+              <strong>Ihr Ansprechpartner:</strong>
+              <br />
+              {tenantConfig.companyName}
+              {tenantConfig.phone && (
+                <>
+                  <br />
+                  Tel.: {tenantConfig.phone}
+                </>
+              )}
+              <br />
+              <Link href={`mailto:${tenantConfig.contactEmail}`} style={{ color: primary }}>
+                {tenantConfig.contactEmail}
+              </Link>
+              {tenantConfig.website && (
+                <>
+                  <br />
+                  <Link href={tenantConfig.website} style={{ color: primary }}>
+                    {tenantConfig.website}
+                  </Link>
+                </>
+              )}
+            </Text>
+          </Section>
+
+          {/* Footer */}
+          <Section style={styles.footer}>
+            <Text style={styles.footerText}>
+              {tenantConfig.companyName}
+              {tenantConfig.address && ` · ${tenantConfig.address}`}
+            </Text>
+            <Text style={styles.footerText}>
+              Diese E-Mail wurde automatisch generiert. Bitte antworten Sie direkt an{' '}
+              <Link href={`mailto:${tenantConfig.contactEmail}`} style={styles.footerLink}>
+                {tenantConfig.contactEmail}
+              </Link>
+            </Text>
+          </Section>
+
         </Container>
       </Body>
     </Html>
@@ -99,19 +130,31 @@ const styles = {
   container: {
     backgroundColor: '#ffffff',
     margin: '0 auto',
-    padding: '32px 24px',
     maxWidth: '600px',
     borderRadius: '8px',
+    overflow: 'hidden' as const,
+  },
+  header: {
+    padding: '28px 32px',
+  },
+  headerText: {
+    color: '#ffffff',
+    fontSize: '20px',
+    fontWeight: 'bold' as const,
+    margin: '0',
+  },
+  content: {
+    padding: '32px 32px 24px',
   },
   heading: {
-    fontSize: '24px',
+    fontSize: '28px',
     fontWeight: 'bold' as const,
     margin: '0 0 16px',
   },
   subheading: {
-    fontSize: '16px',
+    fontSize: '15px',
     fontWeight: 'bold' as const,
-    margin: '0 0 8px',
+    margin: '0 0 10px',
     color: '#1f2937',
   },
   text: {
@@ -122,8 +165,9 @@ const styles = {
   },
   answersBox: {
     backgroundColor: '#f9fafb',
-    padding: '16px',
-    borderRadius: '6px',
+    padding: '16px 20px',
+    borderRadius: '4px',
+    borderLeft: '4px solid',
     margin: '16px 0',
   },
   answerRow: {
@@ -138,5 +182,19 @@ const styles = {
   hr: {
     borderColor: '#e5e7eb',
     margin: '24px 0',
+  },
+  footer: {
+    backgroundColor: '#f9fafb',
+    padding: '16px 32px',
+    borderTop: '1px solid #e5e7eb',
+  },
+  footerText: {
+    fontSize: '12px',
+    color: '#9ca3af',
+    margin: '0 0 4px',
+    lineHeight: '18px',
+  },
+  footerLink: {
+    color: '#9ca3af',
   },
 }
