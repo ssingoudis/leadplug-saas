@@ -421,17 +421,19 @@ export function Funnel({
     onSubmit?.({ answers, contact: contactData, honeypot });
   };
 
-  // Widget → Parent: Höhe nach jedem Step-/Submit-Wechsel und beim ersten Mount senden.
+  // Widget → Parent: Höhe bei jeder Layoutänderung senden (Schritte, Responsive, Schriften).
   useEffect(() => {
     if (typeof window === "undefined" || window.parent === window) return;
-    const raf = requestAnimationFrame(() => {
-      window.parent.postMessage(
-        { type: "funnel-resize", height: document.documentElement.scrollHeight },
-        "*",
-      );
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [currentStep, isSubmitted]);
+    const sendHeight = () => {
+      const height = document.body.scrollHeight;
+      if (height > 0) {
+        window.parent.postMessage({ type: "funnel-resize", height }, "*");
+      }
+    };
+    const ro = new ResizeObserver(sendHeight);
+    ro.observe(document.body);
+    return () => ro.disconnect();
+  }, []);
 
   // CSS Custom Properties für dynamisches Styling
   const cssVars = {

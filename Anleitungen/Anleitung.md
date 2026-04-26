@@ -212,29 +212,17 @@ Der Funnel zeigt dann eine 404-Seite.
 
 ## 7. Widget beim Kunden einbetten
 
-Auf der Kundenseite (WordPress, Jimdo, Squarespace, beliebiges HTML) einfügen:
+Vollständige Anleitung inkl. WordPress, Webflow und lokalem Test:
+
+→ **[Widget-Einbetten.md](Widget-Einbetten.md)**
+
+**Kurzfassung – ein Script-Tag genügt:**
 
 ```html
-<iframe
-  id="funnel-widget"
-  src="https://deine-domain.de/musterfirma"
-  width="100%"
-  height="600"
-  frameborder="0"
-  scrolling="no"
-  style="border:none;"
-></iframe>
-
-<script>
-  window.addEventListener('message', function(e) {
-    if (e.data && e.data.type === 'funnel-resize') {
-      document.getElementById('funnel-widget').height = e.data.height;
-    }
-  });
-</script>
+<script src="https://deine-domain.de/embed.js" data-slug="musterfirma"></script>
 ```
 
-Das Widget sendet nach jedem Schritt seine aktuelle Höhe per `postMessage` – der Listener passt die iFrame-Höhe automatisch an, damit kein internes Scrollen entsteht. Ohne Listener funktioniert der Funnel trotzdem, nur mit fixer Höhe.
+Das Widget passt seine Höhe automatisch an (Desktop & Mobil) – kein festes `height` nötig.
 
 ---
 
