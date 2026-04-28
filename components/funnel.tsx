@@ -250,12 +250,13 @@ function renderIcon(
 // Regeln:
 //   2 → immer 1×2
 //   3 → immer 1×3
-//   4 → 2×2 → ab @lg 1×4
-//   5 → 2+3 (via grid-cols-6 + col-span) → ab @lg 1×5
-//   6 → 2×3 → ab @lg 3×2
+//   4 → 2×2 → ab @[660px] 1×4
+//   5 → 2+3 (via grid-cols-6 + col-span) → ab @[660px] 1×5
+//   6 → 2×3 → ab @[660px] 3×2
 //
 // Reservierte min-h stabilisiert den Container frageübergreifend
 // (Card-Höhe h-32=128px / @md h-36=144px, gap-3=12px).
+// Tailwind v4: @md=448px, @lg=512px – deshalb explizites @[660px] statt @lg.
 
 function getOptionsGridClasses(count: number): string {
   switch (count) {
@@ -264,13 +265,13 @@ function getOptionsGridClasses(count: number): string {
     case 3:
       return "grid-cols-3";
     case 4:
-      return "grid-cols-2 @lg:grid-cols-4";
+      return "grid-cols-2 @[660px]:grid-cols-4";
     case 5:
-      return "grid-cols-6 @lg:grid-cols-5";
+      return "grid-cols-6 @[660px]:grid-cols-5";
     case 6:
-      return "grid-cols-2 @lg:grid-cols-3";
+      return "grid-cols-2 @[660px]:grid-cols-3";
     default:
-      return "grid-cols-2 @lg:grid-cols-4";
+      return "grid-cols-2 @[660px]:grid-cols-4";
   }
 }
 
@@ -281,21 +282,21 @@ function getOptionsMinHeightClasses(count: number): string {
       return "min-h-[128px] @md:min-h-[144px]";
     case 4:
     case 5:
-      return "min-h-[268px] @md:min-h-[300px] @lg:min-h-[144px]";
+      return "min-h-[268px] @md:min-h-[300px] @[660px]:min-h-[144px]";
     case 6:
-      return "min-h-[408px] @md:min-h-[456px] @lg:min-h-[300px]";
+      return "min-h-[408px] @md:min-h-[456px] @[660px]:min-h-[300px]";
     default:
-      return "min-h-[408px] @md:min-h-[456px] @lg:min-h-[300px]";
+      return "min-h-[408px] @md:min-h-[456px] @[660px]:min-h-[300px]";
   }
 }
 
 // 5 Optionen: grid-cols-6 als Basis → erste 2 Cards spannen 3 Spalten
-// (oben 2), letzte 3 Cards spannen 2 Spalten (unten 3). Ab @lg alles 1-spaltig.
+// (oben 2), letzte 3 Cards spannen 2 Spalten (unten 3). Ab @[660px] alles 1-spaltig.
 function getOptionColSpanClasses(count: number, idx: number): string {
   if (count !== 5) return "";
   return idx < 2
-    ? "col-span-3 @lg:col-span-1"
-    : "col-span-2 @lg:col-span-1";
+    ? "col-span-3 @[660px]:col-span-1"
+    : "col-span-2 @[660px]:col-span-1";
 }
 
 // =============================================================================
@@ -558,6 +559,7 @@ export function Funnel({
     //   }}
     // >
       <div
+        lang="de"
         className="@container mx-auto w-full"
         style={{
           ...cssVars,
