@@ -1,6 +1,7 @@
 'use client'
 
-import { useRef } from 'react'
+
+
 import { Funnel } from '@/components/funnel'
 import type { TenantConfig, ContactData } from '@/types'
 
@@ -9,11 +10,6 @@ type Props = {
 }
 
 export function TenantFunnelClient({ config }: Props) {
-  const startedAtRef = useRef<string | null>(null)
-  if (startedAtRef.current === null) {
-    startedAtRef.current = new Date().toISOString()
-  }
-
   async function handleSubmit(data: {
     answers: Record<string, string>
     contact: ContactData
@@ -28,7 +24,6 @@ export function TenantFunnelClient({ config }: Props) {
           answers: data.answers,
           contact: data.contact,
           honeypot: data.honeypot,
-          startedAt: startedAtRef.current,
           sourceUrl: typeof document !== 'undefined' ? document.referrer : '',
           userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
         }),
@@ -44,7 +39,7 @@ export function TenantFunnelClient({ config }: Props) {
       funnel={config.funnel}
       questions={config.questions}
       companyName={config.companyName}
-      contactEmail={config.contactEmail}
+      publicEmail={config.publicEmail}
       onSubmit={handleSubmit}
     />
   )

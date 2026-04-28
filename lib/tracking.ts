@@ -62,14 +62,11 @@ export async function logSubmission(params: {
 
 // neue Datenbank widget-funnel
 export async function logSubmission(params: {
-  funnelId?: string
   funnelSlug: string
-  tenantId?: string
+  tenantSlug: string
   contact: ContactData
   answers: Record<string, string>
   leadPrice: number
-  billingModel: string
-  startedAt: string
   sourceUrl: string
   userAgent: string
 }): Promise<void> {
@@ -78,20 +75,16 @@ export async function logSubmission(params: {
 
   try {
     const { error } = await supabase.from('submissions').insert({
-      funnel_id:          params.funnelId ?? null,
-      funnel_slug:        params.funnelSlug,
-      tenant_id:          params.tenantId ?? null,
-      contact_salutation: params.contact.anrede,
-      contact_name:       params.contact.name,
-      contact_email:      params.contact.email,
-      contact_phone:      params.contact.telefon,
-      answers:            params.answers,
-      lead_price:         params.leadPrice,
-      billing_model:      params.billingModel,
-      emails_sent:        true,
-      started_at:         params.startedAt,
-      source_url:         params.sourceUrl,
-      user_agent:         params.userAgent,
+      funnel_slug:   params.funnelSlug,
+      tenant_slug:   params.tenantSlug,
+      contact_name:  params.contact.name,
+      contact_email: params.contact.email,
+      contact_phone: params.contact.telefon,
+      answers:       params.answers,
+      lead_price:    params.leadPrice,
+      emails_sent:   true,
+      source_url:    params.sourceUrl,
+      user_agent:    params.userAgent,
     })
     if (error) console.error('Supabase logging error:', error)
   } catch (err) {

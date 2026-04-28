@@ -63,11 +63,13 @@ export interface TenantConfig {
 // neue Datenbank widget-funnel
 export interface TenantConfig {
   id?: string          // tenant ID
-  funnelId?: string    // funnel ID (neu in v2)
-  slug: string
+  funnelId?: string    // funnel ID
+  slug: string         // funnel slug (URL-Identifier)
+  tenantSlug: string   // tenant slug (lesbarer Identifier des Kunden)
   industry: string
   companyName: string
-  contactEmail: string
+  publicEmail: string          // Wird dem Kunden angezeigt (z.B. im Success-Screen)
+  notificationEmail: string    // Wohin neue Leads gesendet werden
   phone?: string
   address?: string
   website?: string
@@ -93,7 +95,6 @@ export interface SubmitPayload {
   answers: Record<string, string>
   contact: ContactData
   honeypot?: string
-  startedAt: string
   sourceUrl: string
   userAgent: string
 }

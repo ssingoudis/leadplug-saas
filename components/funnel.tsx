@@ -307,7 +307,7 @@ interface FunnelProps {
   funnel: FunnelConfig;
   questions: QuestionConfig[];
   companyName?: string;
-  contactEmail?: string;
+  publicEmail?: string;
   onSubmit?: (data: {
     answers: Record<string, string>;
     contact: ContactData;
@@ -320,7 +320,7 @@ export function Funnel({
   funnel,
   questions,
   companyName,
-  contactEmail,
+  publicEmail,
   onSubmit,
 }: FunnelProps) {
   // Nur primaryColor ist pflicht; alles andere hat Defaults oder wird abgeleitet.
@@ -540,7 +540,7 @@ export function Funnel({
             color: theme.textColorMuted,
           }}
         >
-          <p className="m-0">{companyName} · {contactEmail}</p>
+          <p className="m-0">{companyName} · {publicEmail}</p>
         </div>
       </div>
     );
@@ -551,12 +551,12 @@ export function Funnel({
   const minHeightClasses = getOptionsMinHeightClasses(optionCount);
 
   return (
-    <div
-      style={{
-        backgroundColor: pageBackgroundColor,
-        width: "100%",
-      }}
-    >
+    // <div
+    //   style={{
+    //     backgroundColor: pageBackgroundColor,
+    //     width: "100%",
+    //   }}
+    // >
       <div
         className="@container mx-auto w-full"
         style={{
@@ -993,7 +993,7 @@ export function Funnel({
             </div>
           </div>
         </div>
-      </div>
+      {/* </div> */}
     </div>
   );
 }

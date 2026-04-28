@@ -90,15 +90,17 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
     : []
 
   return {
-    id:           tenant.id,
-    funnelId:     row.id,
-    slug:         row.slug,
-    industry:     row.industry    ?? 'general',
-    companyName:  tenant.company_name,
-    contactEmail: tenant.contact_email,
-    phone:        tenant.phone    ?? undefined,
-    address:      tenant.address  ?? undefined,
-    website:      tenant.website  ?? undefined,
+    id:                tenant.id,
+    funnelId:          row.id,
+    slug:              row.slug,
+    tenantSlug:        tenant.slug,
+    industry:          row.industry    ?? 'general',
+    companyName:       tenant.company_name,
+    publicEmail:       tenant.public_email,
+    notificationEmail: tenant.notification_email,
+    phone:             tenant.public_phone ?? undefined,
+    address:           tenant.address  ?? undefined,
+    website:           tenant.website  ?? undefined,
     theme: {
       primaryColor:        theme.primary_color        ?? '#22c55e',
       textColor:           theme.text_color           ?? '#1f2937',
@@ -128,8 +130,7 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
         title:   q.title,
         visible: q.visible ?? true,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        options: (Array.isArray(q.funnel_options) ? q.funnel_options as Record<string, any>[] : [])
-          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+        options: (Array.isArray(q.options) ? q.options as Record<string, any>[] : [])
           .map((o) => ({
             label:   o.label,
             value:   o.value,
@@ -148,11 +149,13 @@ async function fetchFromJson(slug: string): Promise<TenantConfig | null> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const j: Record<string, any> = JSON.parse(raw)
     return {
-      slug:         j.slug         ?? slug,
-      industry:     j.industry     ?? 'general',
-      companyName:  j.companyName  ?? '',
-      contactEmail: j.contactEmail ?? '',
-      phone:        j.phone,
+      slug:              j.slug              ?? slug,
+      tenantSlug:        j.tenantSlug        ?? slug,
+      industry:          j.industry          ?? 'general',
+      companyName:       j.companyName       ?? '',
+      publicEmail:       j.publicEmail       ?? '',
+      notificationEmail: j.notificationEmail ?? j.publicEmail ?? '',
+      phone:             j.phone,
       address:      j.address,
       website:      j.website,
       theme: {
@@ -232,7 +235,7 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
       funnel_title, submit_button_label, success_message,
       response_time_text, contact_form_subtitle, privacy_text, privacy_policy_url,
       tenants (
-        id, company_name, contact_email, phone, address, website, is_active,
+        id, slug, company_name, public_email, notification_email, public_phone, address, website, is_active,
         billing_model, lead_price_base, flat_monthly_price, flat_monthly_lead_limit
       ),
       themes (
@@ -240,8 +243,7 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
         font, border_radius, max_width
       ),
       funnel_questions (
-        id, sort_order, question_key, title, visible,
-        funnel_options ( id, sort_order, label, value, icon_key, icon_url )
+        sort_order, question_key, title, visible, options
       )
     `)
     .eq('slug', slug)

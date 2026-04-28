@@ -67,7 +67,7 @@ export async function sendAllEmails(
   const tenantPromise = resend.emails
     .send({
       from,
-      to: tenantConfig.contactEmail,
+      to: tenantConfig.notificationEmail,
       replyTo: contact.email,
       subject: `Neue Anfrage von ${contact.name}`,
       react: TenantLeadNotification({ contact, answers, tenantConfig, submittedAt }),

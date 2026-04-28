@@ -85,8 +85,8 @@ export function CustomerConfirmation({
                 </>
               )}
               <br />
-              <Link href={`mailto:${tenantConfig.contactEmail}`} style={{ color: primary }}>
-                {tenantConfig.contactEmail}
+              <Link href={`mailto:${tenantConfig.publicEmail}`} style={{ color: primary }}>
+                {tenantConfig.publicEmail}
               </Link>
               {tenantConfig.website && (
                 <>
@@ -107,8 +107,8 @@ export function CustomerConfirmation({
             </Text>
             <Text style={styles.footerText}>
               Diese E-Mail wurde automatisch generiert. Bitte antworten Sie direkt an{' '}
-              <Link href={`mailto:${tenantConfig.contactEmail}`} style={styles.footerLink}>
-                {tenantConfig.contactEmail}
+              <Link href={`mailto:${tenantConfig.publicEmail}`} style={styles.footerLink}>
+                {tenantConfig.publicEmail}
               </Link>
             </Text>
           </Section>

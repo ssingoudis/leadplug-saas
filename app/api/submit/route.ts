@@ -11,7 +11,6 @@ function isValidPayload(value: unknown): value is {
   answers: Record<string, string>
   contact: ContactData
   honeypot?: string
-  startedAt?: string
   sourceUrl?: string
   userAgent?: string
 } {
@@ -51,7 +50,6 @@ export async function POST(req: Request) {
   }
 
   const { tenant, answers, contact } = body
-  const startedAt = typeof body.startedAt === 'string' ? body.startedAt : new Date().toISOString()
   const sourceUrl = typeof body.sourceUrl === 'string' ? body.sourceUrl : ''
   const userAgent = typeof body.userAgent === 'string' ? body.userAgent : ''
 
@@ -82,14 +80,11 @@ export async function POST(req: Request) {
 
   // neue Datenbank widget-funnel
   await logSubmission({
-    funnelId:     tenantConfig.funnelId,
-    funnelSlug:   tenant,
-    tenantId:     tenantConfig.id,
+    funnelSlug: tenant,
+    tenantSlug: tenantConfig.tenantSlug,
     contact,
     answers,
     leadPrice,
-    billingModel: tenantConfig.billingModel,
-    startedAt,
     sourceUrl,
     userAgent,
   })
