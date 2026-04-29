@@ -70,6 +70,7 @@ export interface TenantConfig {
   companyName: string
   publicEmail: string          // Wird dem Kunden angezeigt (z.B. im Success-Screen)
   notificationEmail: string    // Wohin neue Leads gesendet werden
+  emailSenderLocal?: string    // Lokalteil der Absender-Adresse, z.B. "anfragen" → anfragen@domain.de
   phone?: string
   address?: string
   website?: string

@@ -103,6 +103,7 @@ CREATE TABLE IF NOT EXISTS funnels (
   funnel_title          TEXT,                      -- Default: "Jetzt kostenloses Angebot anfordern"
   submit_button_label   TEXT,                      -- Default: "Anfrage absenden"
   success_message       TEXT,                      -- Default: "Vielen Dank! Wir melden uns in Kürze bei Ihnen."
+  email_sender_local    TEXT,
   response_time_text    TEXT,                      -- Default: "24 Stunden"
   contact_form_subtitle TEXT,                      -- Default: "Wer soll das Angebot erhalten?"
   privacy_text          TEXT,
