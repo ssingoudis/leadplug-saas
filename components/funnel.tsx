@@ -453,7 +453,7 @@ export function Funnel({
 
                         {/* 3. Text */}
                         <span
-                          className="text-xs font-medium text-center leading-tight hyphens-auto px-1 mt-auto"
+                          className="text-xs font-medium text-center leading-tight hyphens-auto px-1 my-auto"
                           style={{
                             color: isSelected
                               ? theme.primaryColor
