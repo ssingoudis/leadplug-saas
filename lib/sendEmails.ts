@@ -43,7 +43,12 @@ export async function sendAllEmails(
     submittedAt = new Date(),
   } = params
 
-  const from = process.env.EMAIL_FROM ?? 'noreply@example.com'
+  const emailDomain = process.env.EMAIL_DOMAIN
+  const senderLocal = tenantConfig.emailSenderLocal
+  const from =
+    senderLocal && emailDomain
+      ? `${senderLocal}@${emailDomain}`
+      : (process.env.EMAIL_FROM ?? 'noreply@example.com')
 
   const customerPromise = resend.emails
     .send({

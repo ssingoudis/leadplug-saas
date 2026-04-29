@@ -98,6 +98,7 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
     companyName:       tenant.company_name,
     publicEmail:       tenant.public_email,
     notificationEmail: tenant.notification_email,
+    emailSenderLocal:  row.email_sender_local ?? undefined,
     phone:             tenant.public_phone ?? undefined,
     address:           tenant.address  ?? undefined,
     website:           tenant.website  ?? undefined,
@@ -234,6 +235,7 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
       id, slug, industry, is_active,
       funnel_title, submit_button_label, success_message,
       response_time_text, contact_form_subtitle, privacy_text, privacy_policy_url,
+      email_sender_local,
       tenants (
         id, slug, company_name, public_email, notification_email, public_phone, address, website, is_active,
         billing_model, lead_price_base, flat_monthly_price, flat_monthly_lead_limit
