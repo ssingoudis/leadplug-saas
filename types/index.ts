@@ -17,7 +17,6 @@ export interface Option {
   value: string
   iconKey: string
   iconUrl?: string
-  iconProps?: Record<string, string>
 }
 
 export interface QuestionConfig {
