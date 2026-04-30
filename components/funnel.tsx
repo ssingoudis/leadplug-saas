@@ -18,8 +18,8 @@ import type {
 const THEME_DEFAULTS = {
   primaryColor: "#22c55e",
   textColor: "#1f2937",
-  backgroundColor: "#F7F6FF",
-  pageBackgroundColor: "#F7F6FF",
+  backgroundColor: "#ffffff",
+  pageBackgroundColor: "transparent",
   font: "system" as FunnelFont,
   borderRadius: "0.5rem",
   maxWidth: "720px",
@@ -84,9 +84,9 @@ function mix(hex1: string, hex2: string, pct: number): string {
 function getOptionsGridClasses(count: number): string {
   switch (count) {
     case 2:
-      return "grid-cols-2";
+      return "grid-cols-2 max-w-[360px]";
     case 3:
-      return "grid-cols-3";
+      return "grid-cols-3 max-w-[520px]";
     case 4:
       return "grid-cols-2 @[660px]:grid-cols-4";
     case 5:
@@ -266,13 +266,16 @@ export function Funnel({
 
   if (isSubmitted) {
     return (
+      <div style={{ backgroundColor: pageBackgroundColor, width: "100%" }}>
       <div
-        className="mx-auto rounded-lg shadow-lg overflow-hidden"
+        className="mx-auto overflow-hidden"
         style={{
           ...cssVars,
           maxWidth: theme.maxWidth,
           backgroundColor: theme.backgroundColor,
           fontFamily: theme.fontFamily,
+          borderRadius: theme.borderRadius,
+          boxShadow: "0 8px 24px -4px rgba(0,0,0,0.12), 0 2px 8px -2px rgba(0,0,0,0.08)",
         }}
       >
         {/* Header Banner */}
@@ -353,6 +356,7 @@ export function Funnel({
           <p className="m-0">{companyName} · {publicEmail}</p>
         </div>
       </div>
+      </div>
     );
   }
 
@@ -360,20 +364,18 @@ export function Funnel({
   const gridClasses = getOptionsGridClasses(optionCount);
 
   return (
-    // <div
-    //   style={{
-    //     backgroundColor: pageBackgroundColor,
-    //     width: "100%",
-    //   }}
-    // >
+    <div style={{ backgroundColor: pageBackgroundColor, width: "100%" }}>
       <div
         lang="de"
         className="@container mx-auto w-full"
         style={{
           ...cssVars,
           maxWidth: theme.maxWidth,
-          backgroundColor: pageBackgroundColor,
+          backgroundColor: theme.backgroundColor,
           fontFamily: theme.fontFamily,
+          borderRadius: theme.borderRadius,
+          overflow: "hidden",
+          boxShadow: "0 8px 24px -4px rgba(0,0,0,0.12), 0 2px 8px -2px rgba(0,0,0,0.08)",
         }}
       >
         <div className="p-4 @md:p-8">
@@ -390,7 +392,7 @@ export function Funnel({
               </div>
 
               {/* Options Grid – container queries (basieren auf Widget-Breite) */}
-              <div className="flex items-center mb-3">
+              <div className="flex items-center justify-center mb-3">
                 <div className={cn("grid gap-3 w-full", gridClasses)}>
                   {currentQuestion.options.map((option, idx) => {
                     const isSelected =
@@ -403,55 +405,47 @@ export function Funnel({
                           handleSelect(currentQuestion.id, option.value)
                         }
                         className={cn(
-                          "flex flex-col items-center min-h-24 p-3 rounded-lg border-2 transition-all duration-150 cursor-pointer",
+                          "flex flex-col items-center min-h-20 p-3 border-2 transition-all duration-150 cursor-pointer",
                           colSpan,
                         )}
                         style={{
                           borderColor: isSelected
                             ? theme.primaryColor
                             : theme.borderColor,
-                          backgroundColor: "#ffffff",
+                          backgroundColor: isSelected
+                            ? `${theme.primaryColor}0a`
+                            : theme.backgroundColor,
+                          borderRadius: theme.borderRadius,
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
                         }}
                         onMouseEnter={(e) => {
-                          if (!isSelected)
-                            e.currentTarget.style.borderColor =
-                              theme.primaryColor;
+                          if (!isSelected) {
+                            e.currentTarget.style.borderColor = theme.primaryColor;
+                            e.currentTarget.style.backgroundColor = `${theme.primaryColor}0a`;
+                            e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.12)";
+                          }
                         }}
                         onMouseLeave={(e) => {
-                          if (!isSelected)
-                            e.currentTarget.style.borderColor =
-                              theme.borderColor;
+                          if (!isSelected) {
+                            e.currentTarget.style.borderColor = theme.borderColor;
+                            e.currentTarget.style.backgroundColor = theme.backgroundColor;
+                            e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)";
+                          }
                         }}
                       >
                         {/* 1. Icon */}
-                        <div className="w-9 h-9 flex items-center justify-center mb-2 shrink-0">
+                        <div
+                          className="w-10 h-10 flex items-center justify-center mb-2 shrink-0 rounded-xl"
+                          style={{ backgroundColor: `${theme.primaryColor}15` }}
+                        >
                           {renderIcon(
                             option.iconKey,
                             option.iconUrl,
-                            option.iconProps,
+                            theme.primaryColor,
                           )}
                         </div>
 
-                        {/* 2. Radio Circle */}
-                        <div className="flex items-center justify-center mb-2 shrink-0">
-                          <div
-                            className="w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center transition-colors"
-                            style={{
-                              borderColor: isSelected
-                                ? theme.primaryColor
-                                : theme.borderColor,
-                            }}
-                          >
-                            {isSelected && (
-                              <div
-                                className="w-1.5 h-1.5 rounded-full"
-                                style={{ backgroundColor: theme.primaryColor }}
-                              />
-                            )}
-                          </div>
-                        </div>
-
-                        {/* 3. Text */}
+                        {/* 2. Text */}
                         <span
                           className="text-xs font-medium text-center leading-tight hyphens-auto px-1 my-auto"
                           style={{
@@ -758,7 +752,7 @@ export function Funnel({
             style={{ borderColor: theme.borderColor }}
           >
             <div
-              className="h-1.5 rounded-full mb-3 overflow-hidden"
+              className="h-2.5 rounded-full mb-3 overflow-hidden"
               style={{ backgroundColor: theme.inputBgColor }}
             >
               <div
@@ -770,13 +764,20 @@ export function Funnel({
               />
             </div>
 
-            <div className="flex justify-between items-center">
+            <div className="flex items-center">
               <button
                 onClick={handleBack}
                 disabled={currentStep === 0}
                 suppressHydrationWarning
-                className="flex items-center gap-1 text-sm transition-colors disabled:opacity-30"
+                className="flex items-center gap-1 text-sm transition-colors disabled:opacity-30 cursor-pointer disabled:cursor-default"
                 style={{ color: theme.textColorMuted }}
+                onMouseEnter={(e) => {
+                  if (!e.currentTarget.disabled)
+                    e.currentTarget.style.color = theme.textColor;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = theme.textColorMuted;
+                }}
               >
                 <svg
                   className="w-4 h-4"
@@ -793,16 +794,10 @@ export function Funnel({
                 </svg>
                 zurück
               </button>
-              <span
-                className="text-xs font-medium"
-                style={{ color: theme.textColorMuted }}
-              >
-                {Math.ceil(((currentStep + 1) / totalSteps) * 100)}%
-              </span>
             </div>
           </div>
         </div>
-      {/* </div> */}
+      </div>
     </div>
   );
 }
