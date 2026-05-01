@@ -144,7 +144,7 @@ Alle Texte sind pro Funnel in Supabase einstellbar. Wenn `NULL`, greift der gene
 
 ## 6. Icon-System
 
-**Eine Komponenten-Datei:** `components/funnel.tsx` enthält ein `Icons`-Objekt mit allen SVG-Komponenten. Referenzierung per `icon_key` (String). Neue Icons = neuer Eintrag im `Icons`-Objekt. Kein separates Icon-File.
+**Icon-Datei:** `components/icons.tsx` enthält alle SVG-Komponenten als `ICON_MAP`. Referenzierung per `icon_key` (String). Neue Icons = neuer Eintrag in `icons.tsx`.
 
 **Built-in Icons (wachsende Liste):**
 - Allgemein: `House`, `Apartment`, `Factory`, `Check`, `Cross`, `Question`, `Calendar`, `Euro`, `Document`, `HousePartial`, `Star`
@@ -193,22 +193,28 @@ Parallel via `Promise.all` in [`../lib/sendEmails.ts`](../lib/sendEmails.ts).
 
 ## 10. postMessage Höhen-Kommunikation
 
-Das Widget sendet nach jedem Render seine aktuelle Inhaltshöhe an den Parent-Frame:
+Das Widget misst via `ResizeObserver` die Höhe des äußeren Container-Elements und sendet sie an den Parent-Frame:
 
 ```js
-window.parent.postMessage({ type: 'funnel-resize', height: document.body.scrollHeight }, '*')
+window.parent.postMessage({ type: 'funnel-resize', height: containerRef.scrollHeight }, '*')
 ```
 
 Ohne Listener im Parent: Widget funktioniert weiter mit fixer iFrame-Höhe, kein Fehler.
 
-**Empfohlenes Einbettungs-Snippet für Kunden:**
+**Einbettungs-Snippet für Kunden** (vollständig dokumentiert in `Anleitungen/iFrame-Code.md`):
 ```html
-<iframe id="funnel" src="https://domain.de/[slug]" width="100%" height="600" frameborder="0"></iframe>
+<iframe
+  src="https://domain.de/[slug]"
+  id="funnel-widget"
+  style="width:100%;border:none;display:block;height:500px;"
+  scrolling="no"
+  loading="lazy">
+</iframe>
 <script>
   window.addEventListener('message', function(e) {
-    if (e.data && e.data.type === 'funnel-resize') {
-      document.getElementById('funnel').height = e.data.height;
-    }
+    if (!e.data || e.data.type !== 'funnel-resize') return;
+    var h = parseInt(e.data.height, 10);
+    if (h > 0) document.getElementById('funnel-widget').style.height = h + 'px';
   });
 </script>
 ```

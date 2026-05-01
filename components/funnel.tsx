@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { renderIcon } from "@/components/icons";
 import type {
@@ -62,10 +62,6 @@ function mix(hex1: string, hex2: string, pct: number): string {
     b1 * (1 - pct) + b2 * pct,
   );
 }
-
-// =============================================================================
-// ICON LIBRARY – neue Icons per Eintrag hier hinzufügen, referenziert via icon_key
-// =============================================================================
 
 // =============================================================================
 // GRID-LAYOUT für variable Optionszahlen
@@ -159,6 +155,7 @@ export function Funnel({
     fontFamily: FONT_STACKS[font],
   };
 
+  const containerRef = useRef<HTMLDivElement>(null);
   const visibleQuestions = questions.filter((q) => q.visible);
 
   const [currentStep, setCurrentStep] = useState(0);
@@ -241,16 +238,18 @@ export function Funnel({
   // Widget → Parent: Höhe bei jeder Layoutänderung senden (Schritte, Responsive, Schriften).
   useEffect(() => {
     if (typeof window === "undefined" || window.parent === window) return;
+    const el = containerRef.current;
+    if (!el) return;
     const sendHeight = () => {
-      const height = document.body.scrollHeight;
+      const height = el.scrollHeight;
       if (height > 0) {
         window.parent.postMessage({ type: "funnel-resize", height }, "*");
       }
     };
     const ro = new ResizeObserver(sendHeight);
-    ro.observe(document.body);
+    ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [isSubmitted]);
 
   // CSS Custom Properties für dynamisches Styling
   const cssVars = {
@@ -266,7 +265,7 @@ export function Funnel({
 
   if (isSubmitted) {
     return (
-      <div style={{ backgroundColor: pageBackgroundColor, width: "100%" }}>
+      <div ref={containerRef} style={{ backgroundColor: pageBackgroundColor, width: "100%", paddingTop: "8px", paddingBottom: "28px" }}>
       <div
         className="mx-auto overflow-hidden"
         style={{
@@ -364,7 +363,7 @@ export function Funnel({
   const gridClasses = getOptionsGridClasses(optionCount);
 
   return (
-    <div style={{ backgroundColor: pageBackgroundColor, width: "100%" }}>
+    <div ref={containerRef} style={{ backgroundColor: pageBackgroundColor, width: "100%", paddingTop: "8px", paddingBottom: "28px" }}>
       <div
         lang="de"
         className="@container mx-auto w-full"
@@ -494,7 +493,7 @@ export function Funnel({
               {/* Anrede */}
               <div className="mb-4">
                 <div className="flex gap-5">
-                  {["Herr", "Frau", "Divers"].map((anrede) => (
+                  {["Herr", "Frau"].map((anrede) => (
                     <label
                       key={anrede}
                       className="flex items-center gap-2 cursor-pointer min-h-11"

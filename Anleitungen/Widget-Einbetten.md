@@ -1,38 +1,65 @@
 # Widget beim Kunden einbetten
 
-Das Widget bindet sich selbst ein und passt seine Höhe automatisch an – kein festes `height`-Attribut nötig, funktioniert auf Desktop und Mobil.
+Das Widget passt seine Höhe automatisch an – kein festes `height`-Attribut nötig, funktioniert auf Desktop und Mobil.
+
+**Einziger Pflicht-Parameter: der Slug.** Der Slug ist der eindeutige Bezeichner eines Funnels (Tabelle `funnels`, Spalte `slug` in Supabase). Er bestimmt, welche Fragen, Farben, Texte und Ziel-E-Mail geladen werden. Ein ungültiger Slug ergibt eine 404-Seite.
 
 ---
 
 ## Variante A – Empfohlen: Ein Script-Tag
 
-Das iframe erscheint genau an der Stelle des Script-Tags.
+Das iframe erscheint genau an der Stelle des Script-Tags im HTML-Fluss.
 
 ```html
-<script src="https://deine-domain.de/embed.js" data-slug="musterfirma"></script>
+<script src="https://DEINE-DOMAIN.de/embed.js" data-slug="DEIN-SLUG"></script>
 ```
 
-`musterfirma` durch den Tenant-Slug ersetzen.
+`DEIN-SLUG` durch den Funnel-Slug aus Supabase ersetzen.
 
 ---
 
 ## Variante B – Platzhalter-Div
 
-Mehr Kontrolle über die Position. Der Div wird automatisch durch das iframe ersetzt.
+Mehr Kontrolle über die Position. Das `<div>` wird automatisch durch das iframe ersetzt.  
+Mehrere Divs (verschiedene Slugs) auf einer Seite werden alle erkannt.
 
 ```html
 <!-- Platzhalter an gewünschter Position -->
-<div data-funnel-slug="musterfirma"></div>
+<div data-funnel-slug="DEIN-SLUG"></div>
 
 <!-- Script-Tag irgendwo auf der Seite, z.B. vor </body> -->
-<script src="https://deine-domain.de/embed.js"></script>
+<!-- Kein data-slug am Script nötig – der Slug steht am div -->
+<script src="https://DEINE-DOMAIN.de/embed.js"></script>
+```
+
+---
+
+## Variante C – Direktes iFrame (kein externes Script)
+
+Wenn auf der Zielseite kein externes Script erlaubt ist (z.B. wegen Content Security Policy).
+
+```html
+<iframe
+  src="https://DEINE-DOMAIN.de/DEIN-SLUG"
+  id="funnel-DEIN-SLUG"
+  scrolling="no"
+  frameborder="0"
+  style="border:none;width:100%;display:block;overflow:hidden;height:0;"
+></iframe>
+<script>
+  window.addEventListener('message', function(e) {
+    if (!e.data || e.data.type !== 'funnel-resize') return;
+    var h = parseInt(e.data.height, 10);
+    if (h > 0) document.getElementById('funnel-DEIN-SLUG').style.height = h + 'px';
+  });
+</script>
 ```
 
 ---
 
 ## WordPress
 
-1. Im WordPress-Editor auf **„Code-Editor"** umschalten (oben rechts → Optionen → Code-Editor)
+1. Im WordPress-Editor auf **„Code-Editor"** umschalten (Block-Editor oben rechts → Optionen → Code-Editor)
 2. Den Code aus Variante A oder B einfügen
 3. Speichern und Vorschau öffnen
 
@@ -59,11 +86,20 @@ Alternativ: Plugin **„Headers and Footers Scripts"** → Script-Tag im Footer 
 
 ---
 
+## Hintergrundfarbe / Transparenz
+
+Das Widget hat standardmäßig einen transparenten Seiten-Hintergrund (`pageBackgroundColor: transparent`). Der Host-Hintergrund der Kunden-Website scheint durch. Das Widget-Card selbst hat immer eine definierte Hintergrundfarbe (aus der Supabase-Theme-Konfiguration).
+
+Transparenz funktioniert in allen modernen Browsern ohne zusätzliche Attribute.
+
+---
+
 ## Wie es funktioniert
 
-- Das `embed.js` Script erstellt das iframe und setzt automatisch einen Listener.
-- Das Widget sendet bei jeder Layoutänderung (Schritte, Fensterbreite) seine aktuelle Höhe per `postMessage`.
-- Das Script empfängt die Nachricht und setzt `iframe.style.height` – kein Scrollen im iframe, immer korrekte Höhe.
+- `embed.js` liest den Slug aus `data-slug` (am Script-Tag) oder `data-funnel-slug` (am Div)
+- Die Widget-URL lautet `{domain}/{slug}` – Next.js lädt dort die Konfiguration aus Supabase
+- Das Widget sendet bei jeder Layoutänderung `window.parent.postMessage({ type: 'funnel-resize', height: X }, '*')`
+- `embed.js` empfängt die Nachricht und setzt `iframe.style.height` – kein Scrollen im iframe, immer korrekte Höhe
 
 ---
 
@@ -75,4 +111,4 @@ Während `npm run dev` läuft, im Browser öffnen:
 http://localhost:3000/test-embed.html
 ```
 
-Die Seite simuliert eine Kunden-Website mit Text oben und unten, um die dynamische Höhenanpassung zu testen.
+Der verwendete Slug muss in `tenants/*.json` oder in Supabase existieren.

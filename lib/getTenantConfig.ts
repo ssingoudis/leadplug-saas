@@ -15,67 +15,6 @@ const TEXT_DEFAULTS = {
   privacyPolicyUrl:     '#',
 }
 
-/* alte Datenbank solar-widget
-// Supabase-DB-Zeile → TenantConfig
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapDbRow(row: Record<string, any>): TenantConfig {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const questions: Record<string, any>[] = Array.isArray(row.funnel_questions)
-    ? row.funnel_questions
-    : []
-
-  return {
-    id:           row.id,
-    slug:         row.slug,
-    industry:     row.industry ?? 'general',
-    companyName:  row.company_name,
-    contactEmail: row.contact_email,
-    phone:        row.phone    ?? undefined,
-    address:      row.address  ?? undefined,
-    website:      row.website  ?? undefined,
-    logoUrl:      row.logo_url ?? undefined,
-    theme: {
-      primaryColor:       row.primary_color       ?? '#22c55e',
-      textColor:          row.text_color           ?? '#1f2937',
-      backgroundColor:    row.background_color     ?? '#ffffff',
-      pageBackgroundColor:row.page_background_color ?? 'transparent',
-      font:               (row.font ?? 'system') as FunnelFont,
-      borderRadius:       row.border_radius        ?? '0.5rem',
-      maxWidth:           row.max_width            ?? '720px',
-    },
-    funnel: {
-      title:              row.funnel_title         ?? TEXT_DEFAULTS.funnelTitle,
-      submitButtonLabel:  row.submit_button_label  ?? TEXT_DEFAULTS.submitButtonLabel,
-      successMessage:     row.success_message      ?? TEXT_DEFAULTS.successMessage,
-      responseTimeText:   row.response_time_text   ?? TEXT_DEFAULTS.responseTimeText,
-      contactFormSubtitle:row.contact_form_subtitle ?? TEXT_DEFAULTS.contactFormSubtitle,
-      privacyText:        row.privacy_text         ?? TEXT_DEFAULTS.privacyText,
-      privacyPolicyUrl:   row.privacy_policy_url   ?? TEXT_DEFAULTS.privacyPolicyUrl,
-    },
-    billingModel:         row.billing_model        ?? 'per_lead',
-    leadPriceBase:        Number(row.lead_price_base ?? 0),
-    flatMonthlyPrice:     row.flat_monthly_price     != null ? Number(row.flat_monthly_price)     : undefined,
-    flatMonthlyLeadLimit: row.flat_monthly_lead_limit != null ? Number(row.flat_monthly_lead_limit) : undefined,
-    questions: questions
-      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-      .map((q) => ({
-        id:      q.question_key,
-        title:   q.title,
-        visible: q.visible ?? true,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        options: (Array.isArray(q.funnel_options) ? q.funnel_options as Record<string, any>[] : [])
-          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-          .map((o) => ({
-            label:   o.label,
-            value:   o.value,
-            iconKey: o.icon_key ?? '',
-            iconUrl: o.icon_url ?? undefined,
-          })),
-      })),
-  }
-}
-*/
-
 // neue Datenbank widget-funnel
 // funnels-Zeile mit joins auf tenants, themes, funnel_questions → TenantConfig
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -191,35 +130,6 @@ async function fetchFromJson(slug: string): Promise<TenantConfig | null> {
 }
 
 class TenantInactiveError extends Error {}
-
-/* alte Datenbank solar-widget
-// Supabase-Abfrage: gibt null zurück wenn Tenant nicht existiert,
-// wirft TenantInactiveError wenn Tenant existiert aber is_active=false.
-async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
-  const url = process.env.SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_KEY
-  if (!url || !key) return null
-
-  const supabase = createClient(url, key)
-  const { data, error } = await supabase
-    .from('tenants')
-    .select(`
-      *,
-      funnel_questions (
-        id, sort_order, question_key, title, visible,
-        funnel_options ( id, sort_order, label, value, icon_key, icon_url )
-      )
-    `)
-    .eq('slug', slug)
-    .maybeSingle()
-
-  if (error) throw error
-  if (!data)          return null   // Tenant nicht in DB → JSON-Fallback
-  if (!data.is_active) throw new TenantInactiveError()  // Deaktiviert → 404, kein Fallback
-
-  return mapDbRow(data)
-}
-*/
 
 // neue Datenbank widget-funnel
 // Abfrage auf funnels (slug), joined mit tenants + themes + questions
