@@ -209,6 +209,7 @@ export function Funnel({
     email: "",
   });
   const [honeypot, setHoneypot] = useState("");
+  const [hasTriedSubmit, setHasTriedSubmit] = useState(false);
 
   const validateField = (field: keyof ContactData, value: string): string => {
     switch (field) {
@@ -223,7 +224,7 @@ export function Funnel({
       case "telefon": {
         const onlyAllowed = /^[+\d\s\-()\/]+$/.test(value)
         const digitCount = (value.match(/\d/g) ?? []).length
-        return !onlyAllowed || digitCount < 6
+        return !onlyAllowed || digitCount < 7
           ? "Bitte geben Sie eine gültige Telefonnummer ein."
           : "";
       }
@@ -251,6 +252,21 @@ export function Funnel({
 
   const handleBack = () => {
     if (currentStep > 0) setCurrentStep((prev) => prev - 1);
+  };
+
+  const handleFormSubmit = (e: { preventDefault(): void }) => {
+    e.preventDefault();
+    setHasTriedSubmit(true);
+    const newErrors = {
+      anrede: validateField("anrede", contactData.anrede),
+      name: validateField("name", contactData.name),
+      telefon: validateField("telefon", contactData.telefon),
+      email: validateField("email", contactData.email),
+    };
+    setErrors(newErrors);
+    if (Object.values(newErrors).every((err) => !err)) {
+      handleSubmit();
+    }
   };
 
   const isValid =
@@ -492,7 +508,7 @@ export function Funnel({
             </div>
           ) : (
             /* Kontakt-Formular */
-            <div>
+            <form onSubmit={handleFormSubmit}>
               <h1
                 className="text-lg md:text-xl lg:text-2xl font-bold mb-2 leading-tight"
                 style={{ color: theme.textColor }}
@@ -594,16 +610,14 @@ export function Funnel({
                         theme.backgroundColor;
                     }}
                     onBlur={(e) => {
-                      const error = validateField(
-                        "name",
-                        e.currentTarget.value,
-                      );
-                      setErrors((prev) => ({ ...prev, name: error }));
-                      e.currentTarget.style.borderColor = error
-                        ? "#ef4444"
-                        : theme.borderColor;
-                      e.currentTarget.style.backgroundColor =
-                        theme.inputBgColor;
+                      if (hasTriedSubmit) {
+                        const error = validateField("name", e.currentTarget.value);
+                        setErrors((prev) => ({ ...prev, name: error }));
+                        e.currentTarget.style.borderColor = error ? "#ef4444" : theme.borderColor;
+                      } else {
+                        e.currentTarget.style.borderColor = theme.borderColor;
+                      }
+                      e.currentTarget.style.backgroundColor = theme.inputBgColor;
                     }}
                   />
                   {errors.name && (
@@ -638,16 +652,14 @@ export function Funnel({
                         theme.backgroundColor;
                     }}
                     onBlur={(e) => {
-                      const error = validateField(
-                        "telefon",
-                        e.currentTarget.value,
-                      );
-                      setErrors((prev) => ({ ...prev, telefon: error }));
-                      e.currentTarget.style.borderColor = error
-                        ? "#ef4444"
-                        : theme.borderColor;
-                      e.currentTarget.style.backgroundColor =
-                        theme.inputBgColor;
+                      if (hasTriedSubmit) {
+                        const error = validateField("telefon", e.currentTarget.value);
+                        setErrors((prev) => ({ ...prev, telefon: error }));
+                        e.currentTarget.style.borderColor = error ? "#ef4444" : theme.borderColor;
+                      } else {
+                        e.currentTarget.style.borderColor = theme.borderColor;
+                      }
+                      e.currentTarget.style.backgroundColor = theme.inputBgColor;
                     }}
                   />
                   {errors.telefon && (
@@ -680,16 +692,14 @@ export function Funnel({
                         theme.backgroundColor;
                     }}
                     onBlur={(e) => {
-                      const error = validateField(
-                        "email",
-                        e.currentTarget.value,
-                      );
-                      setErrors((prev) => ({ ...prev, email: error }));
-                      e.currentTarget.style.borderColor = error
-                        ? "#ef4444"
-                        : theme.borderColor;
-                      e.currentTarget.style.backgroundColor =
-                        theme.inputBgColor;
+                      if (hasTriedSubmit) {
+                        const error = validateField("email", e.currentTarget.value);
+                        setErrors((prev) => ({ ...prev, email: error }));
+                        e.currentTarget.style.borderColor = error ? "#ef4444" : theme.borderColor;
+                      } else {
+                        e.currentTarget.style.borderColor = theme.borderColor;
+                      }
+                      e.currentTarget.style.backgroundColor = theme.inputBgColor;
                     }}
                   />
                   {errors.email && (
@@ -705,43 +715,28 @@ export function Funnel({
                 className="text-xs mb-4 leading-relaxed"
                 style={{ color: theme.textColorMuted }}
               >
-                {funnel.privacyText}
-                {funnel.privacyPolicyUrl && funnel.privacyPolicyUrl !== "#" && (
-                  <>
-                    {" "}
-                    <a
-                      href={funnel.privacyPolicyUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: theme.primaryColor }}
-                      className="underline"
-                    >
-                      Datenschutzhinweise
-                    </a>
-                    .
-                  </>
-                )}
+                Mit dem Absenden stimme ich zu, per E-Mail und Telefon zu meiner Anfrage kontaktiert zu werden
+                {funnel.privacyPolicyUrl ? (
+                  <> (siehe <a
+                    href={funnel.privacyPolicyUrl.startsWith('http') ? funnel.privacyPolicyUrl : `https://${funnel.privacyPolicyUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: theme.primaryColor }}
+                    className="underline"
+                  >Datenschutzhinweise</a>)</>
+                ) : null}
+                . Widerruf jederzeit möglich.
               </p>
 
               {/* Submit Button */}
               <button
-                onClick={() => {
-                  const newErrors = {
-                    anrede: validateField("anrede", contactData.anrede),
-                    name: validateField("name", contactData.name),
-                    telefon: validateField("telefon", contactData.telefon),
-                    email: validateField("email", contactData.email),
-                  };
-                  setErrors(newErrors);
-                  if (Object.values(newErrors).every((e) => !e)) {
-                    handleSubmit();
-                  }
-                }}
+                type="submit"
                 className="flex items-center justify-center gap-2 w-full text-white px-5 py-3 rounded-lg font-semibold transition-colors"
                 style={{
                   backgroundColor: theme.primaryColor,
                   borderRadius: theme.borderRadius,
                   cursor: isValid ? "pointer" : "not-allowed",
+                  opacity: isValid ? 1 : 0.5,
                 }}
                 onMouseEnter={(e) => {
                   if (isValid) {
@@ -770,7 +765,7 @@ export function Funnel({
                   />
                 </svg>
               </button>
-            </div>
+            </form>
           )}
           </div>
 
