@@ -11,8 +11,6 @@ const TEXT_DEFAULTS = {
   successMessage:       'Vielen Dank! Wir melden uns in Kürze bei Ihnen.',
   responseTimeText:     'so schnell wie möglich',
   contactFormSubtitle:  'Wer soll das Angebot erhalten?',
-  privacyText:          'Mit dem Absenden stimme ich zu, per E-Mail und Telefon zu meiner Anfrage kontaktiert zu werden. Widerrufen geht jederzeit.',
-  privacyPolicyUrl:     '#',
 }
 
 // neue Datenbank widget-funnel
@@ -56,8 +54,7 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
       successMessage:      row.success_message       ?? TEXT_DEFAULTS.successMessage,
       responseTimeText:    row.response_time_text    ?? TEXT_DEFAULTS.responseTimeText,
       contactFormSubtitle: row.contact_form_subtitle ?? TEXT_DEFAULTS.contactFormSubtitle,
-      privacyText:         row.privacy_text          ?? TEXT_DEFAULTS.privacyText,
-      privacyPolicyUrl:    row.privacy_policy_url    ?? TEXT_DEFAULTS.privacyPolicyUrl,
+      privacyPolicyUrl:    row.privacy_policy_url    ?? undefined,
     },
     billingModel:         tenant.billing_model         ?? 'per_lead',
     leadPriceBase:        Number(tenant.lead_price_base ?? 0),
@@ -114,8 +111,7 @@ async function fetchFromJson(slug: string): Promise<TenantConfig | null> {
         successMessage:      j.funnel?.successMessage     ?? TEXT_DEFAULTS.successMessage,
         responseTimeText:    j.funnel?.responseTimeText   ?? TEXT_DEFAULTS.responseTimeText,
         contactFormSubtitle: j.funnel?.contactFormSubtitle ?? TEXT_DEFAULTS.contactFormSubtitle,
-        privacyText:         j.funnel?.privacyText        ?? TEXT_DEFAULTS.privacyText,
-        privacyPolicyUrl:    j.funnel?.privacyPolicyUrl   ?? TEXT_DEFAULTS.privacyPolicyUrl,
+        privacyPolicyUrl:    j.funnel?.privacyPolicyUrl   ?? undefined,
       },
       billingModel:         j.billingModel         ?? 'per_lead',
       leadPriceBase:        Number(j.leadPriceBase ?? j.billing?.pricePerLead ?? 0),
@@ -144,7 +140,7 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
     .select(`
       id, slug, industry, is_active,
       funnel_title, submit_button_label, success_message,
-      response_time_text, contact_form_subtitle, privacy_text, privacy_policy_url,
+      response_time_text, contact_form_subtitle, privacy_policy_url,
       email_sender_local,
       tenants (
         id, slug, company_name, public_email, notification_email, public_phone, address, website, is_active,

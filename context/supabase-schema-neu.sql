@@ -106,8 +106,7 @@ CREATE TABLE IF NOT EXISTS funnels (
   email_sender_local    TEXT,
   response_time_text    TEXT,                      -- Default: "24 Stunden"
   contact_form_subtitle TEXT,                      -- Default: "Wer soll das Angebot erhalten?"
-  privacy_text          TEXT,
-  privacy_policy_url    TEXT DEFAULT '#',
+  privacy_policy_url    TEXT,
 
   -- Meta
   created_at            TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

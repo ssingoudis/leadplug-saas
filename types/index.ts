@@ -34,8 +34,7 @@ export interface FunnelConfig {
   successMessage: string
   responseTimeText: string
   contactFormSubtitle: string
-  privacyText: string
-  privacyPolicyUrl: string
+  privacyPolicyUrl?: string
 }
 
 /* alte Datenbank solar-widget
