@@ -15,6 +15,35 @@ import type {
 // THEME & FONTS
 // =============================================================================
 
+// Shadow-Definition als Single Source of Truth – unterstützt mehrere Layer.
+// Padding wird automatisch aus dem maximalen Extent aller Layer abgeleitet.
+const CARD_SHADOW_LAYERS = [
+  { offsetY: 8, blur: 20, spread: -16, alpha: 0.28 }, // Haupt-Shadow: starker Bottom, Seiten ~4px
+  { offsetY: 0, blur: 10, spread:  -3, alpha: 0.16 }, // Ambient-Layer: gleichmäßiger Glow rundum
+] as const;
+
+const _extent = CARD_SHADOW_LAYERS.reduce(
+  (acc, { offsetY, blur, spread }) => {
+    const base = blur + spread;
+    return {
+      top:    Math.max(acc.top,    Math.max(0, base - offsetY)),
+      bottom: Math.max(acc.bottom, base + offsetY),
+      sides:  Math.max(acc.sides,  Math.max(0, base)),
+    };
+  },
+  { top: 0, bottom: 0, sides: 0 },
+);
+const SHADOW_PADDING = {
+  top:    Math.ceil(_extent.top) + 4,
+  bottom: Math.ceil(_extent.bottom),
+  sides:  Math.ceil(_extent.sides),
+};
+const CARD_SHADOW_STRING = CARD_SHADOW_LAYERS
+  .map(({ offsetY, blur, spread, alpha }) =>
+    `0 ${offsetY}px ${blur}px ${spread}px rgba(0,0,0,${alpha})`
+  )
+  .join(", ");
+
 const THEME_DEFAULTS = {
   primaryColor: "#22c55e",
   textColor: "#1f2937",
@@ -265,7 +294,7 @@ export function Funnel({
 
   if (isSubmitted) {
     return (
-      <div ref={containerRef} style={{ backgroundColor: pageBackgroundColor, width: "100%", paddingTop: "8px", paddingBottom: "28px" }}>
+      <div ref={containerRef} style={{ backgroundColor: pageBackgroundColor, width: "100%", paddingTop: `${SHADOW_PADDING.top}px`, paddingBottom: `${SHADOW_PADDING.bottom}px` }}>
       <div
         className="mx-auto overflow-hidden"
         style={{
@@ -274,7 +303,7 @@ export function Funnel({
           backgroundColor: theme.backgroundColor,
           fontFamily: theme.fontFamily,
           borderRadius: theme.borderRadius,
-          boxShadow: "0 8px 24px -4px rgba(0,0,0,0.12), 0 2px 8px -2px rgba(0,0,0,0.08)",
+          boxShadow: CARD_SHADOW_STRING,
         }}
       >
         {/* Header Banner */}
@@ -363,7 +392,7 @@ export function Funnel({
   const gridClasses = getOptionsGridClasses(optionCount);
 
   return (
-    <div ref={containerRef} style={{ backgroundColor: pageBackgroundColor, width: "100%", paddingTop: "8px", paddingBottom: "28px" }}>
+    <div ref={containerRef} style={{ backgroundColor: pageBackgroundColor, width: "100%", paddingTop: `${SHADOW_PADDING.top}px`, paddingBottom: `${SHADOW_PADDING.bottom}px` }}>
       <div
         lang="de"
         className="@container mx-auto w-full"
@@ -374,7 +403,7 @@ export function Funnel({
           fontFamily: theme.fontFamily,
           borderRadius: theme.borderRadius,
           overflow: "hidden",
-          boxShadow: "0 8px 24px -4px rgba(0,0,0,0.12), 0 2px 8px -2px rgba(0,0,0,0.08)",
+          boxShadow: CARD_SHADOW_STRING,
         }}
       >
         <div className="p-4 @md:p-8">
