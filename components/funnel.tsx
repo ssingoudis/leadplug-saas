@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { renderIcon } from "@/components/icons";
 import type {
@@ -9,6 +9,7 @@ import type {
   FunnelFont,
   FunnelConfig,
   QuestionConfig,
+  TextConfig,
   ContactData,
 } from "@/types";
 
@@ -255,6 +256,10 @@ export function Funnel({
     if (currentStep > 0) setCurrentStep((prev) => prev - 1);
   };
 
+  const handleNext = useCallback(() => {
+    setCurrentStep((prev) => prev + 1);
+  }, []);
+
   const handleFormSubmit = (e: { preventDefault(): void }) => {
     e.preventDefault();
     setHasTriedSubmit(true);
@@ -408,6 +413,14 @@ export function Funnel({
   const optionCount = currentQuestion?.options.length ?? 0;
   const gridClasses = getOptionsGridClasses(optionCount);
 
+  const isChoiceType =
+    !isContactStep &&
+    (currentQuestion?.questionType === "single_choice" ||
+      currentQuestion?.questionType === "multiple_choice");
+  const showWeiterButton = !isContactStep && !isChoiceType;
+  const currentAnswer = currentQuestion ? (answers[currentQuestion.id] ?? "") : "";
+  const isWeiterDisabled = showWeiterButton && !currentAnswer.trim();
+
   return (
     <div ref={containerRef} style={{ backgroundColor: pageBackgroundColor, width: "100%", paddingTop: `${SHADOW_PADDING.top}px`, paddingBottom: `${SHADOW_PADDING.bottom}px` }}>
       <div
@@ -436,70 +449,102 @@ export function Funnel({
                 </h1>
               </div>
 
-              {/* Options Grid – container queries (basieren auf Widget-Breite) */}
-              <div className="flex items-center justify-center mb-3">
-                <div className={cn("grid gap-3 w-full", gridClasses)}>
-                  {currentQuestion.options.map((option, idx) => {
-                    const isSelected =
-                      answers[currentQuestion.id] === option.value;
-                    const colSpan = getOptionColSpanClasses(optionCount, idx);
-                    return (
-                      <button
-                        key={option.value}
-                        onClick={() =>
-                          handleSelect(currentQuestion.id, option.value)
-                        }
-                        className={cn(
-                          "flex flex-col items-center justify-center min-h-24 p-4 transition-all duration-200 cursor-pointer",
-                          colSpan,
-                        )}
-                        style={{
-                          borderRadius: theme.borderRadius,
-                          backgroundColor: isSelected
-                            ? theme.primaryColor
-                            : theme.backgroundColor,
-                          border: `2px solid ${isSelected ? theme.primaryColor : "transparent"}`,
-                          boxShadow: isSelected
-                            ? `0 4px 16px ${theme.primaryColor}40`
-                            : "0 2px 8px rgba(0,0,0,0.08)",
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isSelected) {
-                            e.currentTarget.style.border = `2px solid ${theme.primaryColor}`;
-                            e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.14)";
+              {/* single_choice */}
+              {currentQuestion.questionType === "single_choice" && (
+                <div className="flex items-center justify-center mb-3">
+                  <div className={cn("grid gap-3 w-full", gridClasses)}>
+                    {currentQuestion.options.map((option, idx) => {
+                      const isSelected =
+                        answers[currentQuestion.id] === option.value;
+                      const colSpan = getOptionColSpanClasses(optionCount, idx);
+                      return (
+                        <button
+                          key={option.value}
+                          onClick={() =>
+                            handleSelect(currentQuestion.id, option.value)
                           }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isSelected) {
-                            e.currentTarget.style.border = "2px solid transparent";
-                            e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
-                          }
-                        }}
-                      >
-                        {/* 1. Icon – nackt, kein Pill-Container */}
-                        <div className="mb-3 shrink-0">
-                          {renderIcon(
-                            option.iconKey,
-                            option.iconUrl,
-                            isSelected ? "#ffffff" : theme.primaryColor,
-                            44,
+                          className={cn(
+                            "flex flex-col items-center justify-center min-h-24 p-4 transition-all duration-200 cursor-pointer",
+                            colSpan,
                           )}
-                        </div>
-
-                        {/* 2. Text */}
-                        <span
-                          className="text-xs font-medium text-center leading-tight hyphens-auto px-1"
                           style={{
-                            color: isSelected ? "#ffffff" : theme.textColor,
+                            borderRadius: theme.borderRadius,
+                            backgroundColor: isSelected
+                              ? theme.primaryColor
+                              : theme.backgroundColor,
+                            border: `2px solid ${isSelected ? theme.primaryColor : "transparent"}`,
+                            boxShadow: isSelected
+                              ? `0 4px 16px ${theme.primaryColor}40`
+                              : "0 2px 8px rgba(0,0,0,0.08)",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.border = `2px solid ${theme.primaryColor}`;
+                              e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.14)";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.border = "2px solid transparent";
+                              e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+                            }
                           }}
                         >
-                          {option.label}
-                        </span>
-                      </button>
-                    );
-                  })}
+                          <div className="mb-3 shrink-0">
+                            {renderIcon(
+                              option.iconKey,
+                              option.iconUrl,
+                              isSelected ? "#ffffff" : theme.primaryColor,
+                              44,
+                            )}
+                          </div>
+                          <span
+                            className="text-xs font-medium text-center leading-tight hyphens-auto px-1"
+                            style={{
+                              color: isSelected ? "#ffffff" : theme.textColor,
+                            }}
+                          >
+                            {option.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* short_text */}
+              {currentQuestion.questionType === "short_text" && (
+                <div className="mb-3">
+                  <input
+                    type="text"
+                    value={answers[currentQuestion.id] ?? ""}
+                    onChange={(e) =>
+                      setAnswers((prev) => ({
+                        ...prev,
+                        [currentQuestion.id]: e.target.value,
+                      }))
+                    }
+                    placeholder={(currentQuestion.config as TextConfig).placeholder ?? ""}
+                    maxLength={(currentQuestion.config as TextConfig).maxLength}
+                    className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
+                    style={{
+                      borderColor: theme.borderColor,
+                      backgroundColor: theme.inputBgColor,
+                      color: theme.textColor,
+                      borderRadius: theme.borderRadius,
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = theme.primaryColor;
+                      e.currentTarget.style.backgroundColor = theme.backgroundColor;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = theme.borderColor;
+                      e.currentTarget.style.backgroundColor = theme.inputBgColor;
+                    }}
+                  />
+                </div>
+              )}
             </div>
           ) : (
             /* Kontakt-Formular */
@@ -769,25 +814,13 @@ export function Funnel({
             className="mt-6 pt-4 border-t"
             style={{ borderColor: theme.borderColor }}
           >
-            <div
-              className="h-2.5 rounded-full mb-3 overflow-hidden"
-              style={{ backgroundColor: theme.inputBgColor }}
-            >
-              <div
-                className="h-full rounded-full transition-all duration-300"
-                style={{
-                  width: `${progress}%`,
-                  backgroundColor: theme.primaryColor,
-                }}
-              />
-            </div>
-
-            <div className="flex items-center">
+            <div className="flex items-center gap-3">
+              {/* Zurück */}
               <button
                 onClick={handleBack}
                 disabled={currentStep === 0}
                 suppressHydrationWarning
-                className="flex items-center gap-2 text-sm transition-colors disabled:opacity-30 cursor-pointer disabled:cursor-default"
+                className="flex items-center gap-2 text-sm transition-colors disabled:opacity-30 cursor-pointer disabled:cursor-default shrink-0"
                 style={{ color: theme.textColorMuted }}
                 onMouseEnter={(e) => {
                   if (!e.currentTarget.disabled)
@@ -800,6 +833,43 @@ export function Funnel({
                 <ArrowLeft size={16} strokeWidth={1.5} />
                 zurück
               </button>
+
+              {/* Fortschrittsbalken */}
+              <div
+                className="flex-1 h-2.5 rounded-full overflow-hidden"
+                style={{ backgroundColor: theme.inputBgColor }}
+              >
+                <div
+                  className="h-full rounded-full transition-all duration-300"
+                  style={{
+                    width: `${progress}%`,
+                    backgroundColor: theme.primaryColor,
+                  }}
+                />
+              </div>
+
+              {/* Weiter – nur für Nicht-Choice-Typen */}
+              {showWeiterButton && (
+                <button
+                  onClick={handleNext}
+                  disabled={isWeiterDisabled}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white transition-colors shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                  style={{
+                    backgroundColor: theme.primaryColor,
+                    borderRadius: theme.borderRadius,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!e.currentTarget.disabled)
+                      e.currentTarget.style.backgroundColor = theme.primaryColorHover;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.primaryColor;
+                  }}
+                >
+                  Weiter
+                  <ArrowRight size={16} strokeWidth={1.5} />
+                </button>
+              )}
             </div>
           </div>
         </div>
