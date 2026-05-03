@@ -10,6 +10,7 @@ import type {
   FunnelConfig,
   QuestionConfig,
   TextConfig,
+  SliderConfig,
   ContactData,
 } from "@/types";
 
@@ -419,7 +420,10 @@ export function Funnel({
       currentQuestion?.questionType === "multiple_choice");
   const showWeiterButton = !isContactStep && !isChoiceType;
   const currentAnswer = currentQuestion ? (answers[currentQuestion.id] ?? "") : "";
-  const isWeiterDisabled = showWeiterButton && !currentAnswer.trim();
+  const isWeiterDisabled =
+    showWeiterButton &&
+    currentQuestion?.questionType !== "slider" &&
+    !currentAnswer.trim();
 
   return (
     <div ref={containerRef} style={{ backgroundColor: pageBackgroundColor, width: "100%", paddingTop: `${SHADOW_PADDING.top}px`, paddingBottom: `${SHADOW_PADDING.bottom}px` }}>
@@ -513,6 +517,44 @@ export function Funnel({
                   </div>
                 </div>
               )}
+
+              {/* slider */}
+              {currentQuestion.questionType === "slider" && (() => {
+                const sc = currentQuestion.config as SliderConfig;
+                const val = Number(answers[currentQuestion.id] ?? sc.default ?? sc.min);
+                return (
+                  <div className="mb-3">
+                    <p
+                      className="text-center text-2xl font-bold mb-6"
+                      style={{ color: theme.primaryColor }}
+                    >
+                      {val.toLocaleString("de-DE")} {sc.unit}
+                    </p>
+                    <input
+                      type="range"
+                      min={sc.min}
+                      max={sc.max}
+                      step={sc.step ?? 1}
+                      value={val}
+                      onChange={(e) =>
+                        setAnswers((prev) => ({
+                          ...prev,
+                          [currentQuestion.id]: e.target.value,
+                        }))
+                      }
+                      className="w-full"
+                      style={{ accentColor: theme.primaryColor }}
+                    />
+                    <div
+                      className="flex justify-between text-xs mt-2"
+                      style={{ color: theme.textColorMuted }}
+                    >
+                      <span>{sc.min.toLocaleString("de-DE")} {sc.unit}</span>
+                      <span>{sc.max.toLocaleString("de-DE")} {sc.unit}</span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* short_text */}
               {currentQuestion.questionType === "short_text" && (
