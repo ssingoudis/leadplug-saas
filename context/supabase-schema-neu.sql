@@ -134,14 +134,17 @@ CREATE TABLE IF NOT EXISTS funnels (
 --   short_text / long_text: { "placeholder": "Ihre Antwort...", "maxLength": 500 }
 --   slider:                 { "min": 0, "max": 50000, "step": 1000, "unit": "€", "default": 10000 }
 -- ============================================================
+DO $$ BEGIN
+  CREATE TYPE question_type AS ENUM (
+    'single_choice', 'multiple_choice', 'short_text', 'long_text', 'slider'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
 CREATE TABLE IF NOT EXISTS funnel_questions (
   question_key  TEXT NOT NULL,
   title         TEXT NOT NULL,
-  question_type TEXT NOT NULL DEFAULT 'single_choice'
-                  CHECK (question_type IN (
-                    'single_choice', 'multiple_choice',
-                    'short_text', 'long_text', 'slider'
-                  )),
+  question_type question_type NOT NULL DEFAULT 'single_choice',
   options       JSONB NOT NULL DEFAULT '[]',
   config        JSONB NOT NULL DEFAULT '{}',
   sort_order    INTEGER NOT NULL DEFAULT 0,
