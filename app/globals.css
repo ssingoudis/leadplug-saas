@@ -210,6 +210,37 @@
   animation: funnel-step-in 180ms ease forwards;
 }
 
+/* Funnel Slider – grauer Track, farbiger Thumb, kein filled-Track */
+.funnel-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: var(--funnel-border);
+  border-radius: 9999px;
+  outline: none;
+  cursor: pointer;
+}
+.funnel-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--funnel-primary);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+.funnel-slider::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--funnel-primary);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

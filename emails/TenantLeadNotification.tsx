@@ -11,6 +11,7 @@ import {
   Text,
 } from '@react-email/components'
 import type { ContactData, TenantConfig } from '@/types'
+import { resolveAnswer } from '@/lib/resolveAnswer'
 
 export type TenantLeadNotificationProps = {
   contact: ContactData
@@ -79,12 +80,12 @@ export function TenantLeadNotification({
             Antworten
           </Heading>
           {visibleQuestions.map((q) => {
-            const selected = q.options.find((o) => o.value === answers[q.id])
+            const display = resolveAnswer(q, answers)
             return (
               <Text key={q.id} style={styles.answerRow}>
                 <span style={styles.label}>{q.title}</span>
                 <br />
-                <strong>{selected?.label ?? '-'}</strong>
+                <strong>{display ?? '-'}</strong>
               </Text>
             )
           })}

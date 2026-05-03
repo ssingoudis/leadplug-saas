@@ -12,6 +12,13 @@ export interface FunnelTheme {
   maxWidth?: string            // Optional. Default "720px".
 }
 
+export type QuestionType =
+  | 'single_choice'
+  | 'multiple_choice'
+  | 'short_text'
+  | 'long_text'
+  | 'slider'
+
 export interface Option {
   label: string
   value: string
@@ -19,10 +26,25 @@ export interface Option {
   iconUrl?: string
 }
 
+export interface TextConfig {
+  placeholder?: string
+  maxLength?: number
+}
+
+export interface SliderConfig {
+  min: number
+  max: number
+  step?: number
+  unit?: string
+  default?: number
+}
+
 export interface QuestionConfig {
   id: string
   title: string
+  questionType: QuestionType
   options: Option[]
+  config: TextConfig | SliderConfig | Record<string, never>
   defaultValue?: string
   visible: boolean
 }

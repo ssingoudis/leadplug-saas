@@ -1,14 +1,17 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { renderIcon } from "@/components/icons";
+import { resolveAnswer } from "@/lib/resolveAnswer";
 import type {
   FunnelTheme,
   FunnelFont,
   FunnelConfig,
   QuestionConfig,
+  TextConfig,
+  SliderConfig,
   ContactData,
 } from "@/types";
 
@@ -255,6 +258,23 @@ export function Funnel({
     if (currentStep > 0) setCurrentStep((prev) => prev - 1);
   };
 
+  const handleNext = useCallback(() => {
+    setCurrentStep((prev) => prev + 1);
+  }, []);
+
+  const handleToggleMultiple = useCallback(
+    (questionId: string, value: string) => {
+      setAnswers((prev) => {
+        const current = prev[questionId]?.split(",").filter(Boolean) ?? [];
+        const updated = current.includes(value)
+          ? current.filter((v) => v !== value)
+          : [...current, value];
+        return { ...prev, [questionId]: updated.join(",") };
+      });
+    },
+    [],
+  );
+
   const handleFormSubmit = (e: { preventDefault(): void }) => {
     e.preventDefault();
     setHasTriedSubmit(true);
@@ -375,13 +395,13 @@ export function Funnel({
               Ihre Angaben im Überblick:
             </p>
             {visibleQuestions.map((q) => {
-              const selected = q.options.find((o) => o.value === answers[q.id])
-              if (!selected) return null
+              const display = resolveAnswer(q, answers)
+              if (!display) return null
               return (
                 <p key={q.id} className="mb-1" style={{ color: theme.textColorMuted }}>
                   {q.title.replace("?", "")}:{" "}
                   <span style={{ color: theme.textColor, fontWeight: 500 }}>
-                    {selected.label}
+                    {display}
                   </span>
                 </p>
               )
@@ -407,6 +427,16 @@ export function Funnel({
 
   const optionCount = currentQuestion?.options.length ?? 0;
   const gridClasses = getOptionsGridClasses(optionCount);
+
+  const isChoiceType =
+    !isContactStep && currentQuestion?.questionType === "single_choice";
+  const showWeiterButton = !isContactStep && !isChoiceType;
+  const currentAnswer = currentQuestion ? (answers[currentQuestion.id] ?? "") : "";
+  const isWeiterDisabled =
+    showWeiterButton &&
+    currentQuestion?.questionType !== "slider" &&
+    !currentAnswer.trim();
+    // multiple_choice: currentAnswer ist kommagetrennte Liste → leer wenn nichts gewählt
 
   return (
     <div ref={containerRef} style={{ backgroundColor: pageBackgroundColor, width: "100%", paddingTop: `${SHADOW_PADDING.top}px`, paddingBottom: `${SHADOW_PADDING.bottom}px` }}>
@@ -436,70 +466,219 @@ export function Funnel({
                 </h1>
               </div>
 
-              {/* Options Grid – container queries (basieren auf Widget-Breite) */}
-              <div className="flex items-center justify-center mb-3">
-                <div className={cn("grid gap-3 w-full", gridClasses)}>
-                  {currentQuestion.options.map((option, idx) => {
-                    const isSelected =
-                      answers[currentQuestion.id] === option.value;
-                    const colSpan = getOptionColSpanClasses(optionCount, idx);
-                    return (
-                      <button
-                        key={option.value}
-                        onClick={() =>
-                          handleSelect(currentQuestion.id, option.value)
-                        }
-                        className={cn(
-                          "flex flex-col items-center justify-center min-h-24 p-4 transition-all duration-200 cursor-pointer",
-                          colSpan,
-                        )}
-                        style={{
-                          borderRadius: theme.borderRadius,
-                          backgroundColor: isSelected
-                            ? theme.primaryColor
-                            : theme.backgroundColor,
-                          border: `2px solid ${isSelected ? theme.primaryColor : "transparent"}`,
-                          boxShadow: isSelected
-                            ? `0 4px 16px ${theme.primaryColor}40`
-                            : "0 2px 8px rgba(0,0,0,0.08)",
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isSelected) {
-                            e.currentTarget.style.border = `2px solid ${theme.primaryColor}`;
-                            e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.14)";
+              {/* single_choice / multiple_choice */}
+              {(currentQuestion.questionType === "single_choice" ||
+                currentQuestion.questionType === "multiple_choice") && (
+                <div className="flex items-center justify-center mb-3">
+                  <div className={cn("grid gap-3 w-full", gridClasses)}>
+                    {currentQuestion.options.map((option, idx) => {
+                      const isMultiple = currentQuestion.questionType === "multiple_choice";
+                      const selectedValues = answers[currentQuestion.id]?.split(",").filter(Boolean) ?? [];
+                      const isSelected = isMultiple
+                        ? selectedValues.includes(option.value)
+                        : answers[currentQuestion.id] === option.value;
+                      const colSpan = getOptionColSpanClasses(optionCount, idx);
+                      return (
+                        <button
+                          key={option.value}
+                          onClick={() =>
+                            isMultiple
+                              ? handleToggleMultiple(currentQuestion.id, option.value)
+                              : handleSelect(currentQuestion.id, option.value)
                           }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isSelected) {
-                            e.currentTarget.style.border = "2px solid transparent";
-                            e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
-                          }
-                        }}
-                      >
-                        {/* 1. Icon – nackt, kein Pill-Container */}
-                        <div className="mb-3 shrink-0">
-                          {renderIcon(
-                            option.iconKey,
-                            option.iconUrl,
-                            isSelected ? "#ffffff" : theme.primaryColor,
-                            44,
+                          className={cn(
+                            "flex flex-col items-center justify-center min-h-24 p-4 transition-all duration-200 cursor-pointer",
+                            colSpan,
                           )}
-                        </div>
-
-                        {/* 2. Text */}
-                        <span
-                          className="text-xs font-medium text-center leading-tight hyphens-auto px-1"
                           style={{
-                            color: isSelected ? "#ffffff" : theme.textColor,
+                            borderRadius: theme.borderRadius,
+                            backgroundColor: isSelected
+                              ? theme.primaryColor
+                              : theme.backgroundColor,
+                            border: `2px solid ${isSelected ? theme.primaryColor : "transparent"}`,
+                            boxShadow: isSelected
+                              ? `0 4px 16px ${theme.primaryColor}40`
+                              : "0 2px 8px rgba(0,0,0,0.08)",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.border = `2px solid ${theme.primaryColor}`;
+                              e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.14)";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.border = "2px solid transparent";
+                              e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+                            }
                           }}
                         >
-                          {option.label}
-                        </span>
-                      </button>
-                    );
-                  })}
+                          <div className="mb-3 shrink-0">
+                            {renderIcon(
+                              option.iconKey,
+                              option.iconUrl,
+                              isSelected ? "#ffffff" : theme.primaryColor,
+                              44,
+                            )}
+                          </div>
+                          <span
+                            className="text-xs font-medium text-center leading-tight hyphens-auto px-1"
+                            style={{
+                              color: isSelected ? "#ffffff" : theme.textColor,
+                            }}
+                          >
+                            {option.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* slider */}
+              {currentQuestion.questionType === "slider" && (() => {
+                const sc = currentQuestion.config as SliderConfig;
+                const val = Number(answers[currentQuestion.id] ?? sc.default ?? sc.min);
+                return (
+                  <div className="mb-6">
+                    <p className="text-center text-3xl font-bold mb-6"
+                      style={{ color: theme.primaryColor }}>
+                      {val.toLocaleString("de-DE")} {sc.unit}
+                    </p>
+
+                    <input
+                      type="range"
+                      min={sc.min}
+                      max={sc.max}
+                      step={sc.step ?? 1}
+                      value={val}
+                      onChange={(e) =>
+                        setAnswers((prev) => ({
+                          ...prev,
+                          [currentQuestion.id]: e.target.value,
+                        }))
+                      }
+                      className="funnel-slider"
+                    />
+                    <div className="flex justify-between text-xs mt-1 mb-5"
+                      style={{ color: theme.textColorMuted }}>
+                      <span>{sc.min.toLocaleString("de-DE")} {sc.unit}</span>
+                      <span>{sc.max.toLocaleString("de-DE")} {sc.unit}</span>
+                    </div>
+
+                    {/* Synced Eingabefeld */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm shrink-0"
+                        style={{ color: theme.textColorMuted }}>
+                        Alternativ eintippen:
+                      </span>
+                      <div className="relative flex-1">
+                        <input
+                          type="number"
+                          value={val}
+                          min={sc.min}
+                          max={sc.max}
+                          step={sc.step ?? 1}
+                          onChange={(e) => {
+                            const clamped = Math.min(
+                              sc.max,
+                              Math.max(sc.min, Number(e.target.value) || sc.min),
+                            );
+                            setAnswers((prev) => ({
+                              ...prev,
+                              [currentQuestion.id]: String(clamped),
+                            }));
+                          }}
+                          className="w-full px-4 py-2.5 border outline-none text-center"
+                          style={{
+                            borderColor: theme.borderColor,
+                            backgroundColor: theme.backgroundColor,
+                            color: theme.textColor,
+                            borderRadius: "9999px",
+                            paddingRight: "3.5rem",
+                          }}
+                        />
+                        <div
+                          className="absolute right-0 top-0 bottom-0 flex items-center justify-center w-12 text-white text-sm font-bold"
+                          style={{
+                            backgroundColor: theme.primaryColor,
+                            borderRadius: "0 9999px 9999px 0",
+                          }}
+                        >
+                          {sc.unit}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* long_text */}
+              {currentQuestion.questionType === "long_text" && (
+                <div className="mb-3">
+                  <textarea
+                    value={answers[currentQuestion.id] ?? ""}
+                    onChange={(e) =>
+                      setAnswers((prev) => ({
+                        ...prev,
+                        [currentQuestion.id]: e.target.value,
+                      }))
+                    }
+                    placeholder={(currentQuestion.config as TextConfig).placeholder ?? ""}
+                    maxLength={(currentQuestion.config as TextConfig).maxLength}
+                    rows={4}
+                    className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base resize-none"
+                    style={{
+                      borderColor: theme.borderColor,
+                      backgroundColor: theme.inputBgColor,
+                      color: theme.textColor,
+                      borderRadius: theme.borderRadius,
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = theme.primaryColor;
+                      e.currentTarget.style.backgroundColor = theme.backgroundColor;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = theme.borderColor;
+                      e.currentTarget.style.backgroundColor = theme.inputBgColor;
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* short_text */}
+              {currentQuestion.questionType === "short_text" && (
+                <div className="mb-3">
+                  <input
+                    type="text"
+                    value={answers[currentQuestion.id] ?? ""}
+                    onChange={(e) =>
+                      setAnswers((prev) => ({
+                        ...prev,
+                        [currentQuestion.id]: e.target.value,
+                      }))
+                    }
+                    placeholder={(currentQuestion.config as TextConfig).placeholder ?? ""}
+                    maxLength={(currentQuestion.config as TextConfig).maxLength}
+                    className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
+                    style={{
+                      borderColor: theme.borderColor,
+                      backgroundColor: theme.inputBgColor,
+                      color: theme.textColor,
+                      borderRadius: theme.borderRadius,
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = theme.primaryColor;
+                      e.currentTarget.style.backgroundColor = theme.backgroundColor;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = theme.borderColor;
+                      e.currentTarget.style.backgroundColor = theme.inputBgColor;
+                    }}
+                  />
+                </div>
+              )}
             </div>
           ) : (
             /* Kontakt-Formular */
@@ -769,6 +948,7 @@ export function Funnel({
             className="mt-6 pt-4 border-t"
             style={{ borderColor: theme.borderColor }}
           >
+            {/* Fortschrittsbalken */}
             <div
               className="h-2.5 rounded-full mb-3 overflow-hidden"
               style={{ backgroundColor: theme.inputBgColor }}
@@ -782,7 +962,8 @@ export function Funnel({
               />
             </div>
 
-            <div className="flex items-center">
+            {/* Navigation: zurück links, Weiter rechts */}
+            <div className="flex items-center justify-between">
               <button
                 onClick={handleBack}
                 disabled={currentStep === 0}
@@ -800,6 +981,29 @@ export function Funnel({
                 <ArrowLeft size={16} strokeWidth={1.5} />
                 zurück
               </button>
+
+              {/* Weiter – nur für Nicht-Choice-Typen */}
+              {showWeiterButton && (
+                <button
+                  onClick={handleNext}
+                  disabled={isWeiterDisabled}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                  style={{
+                    backgroundColor: theme.primaryColor,
+                    borderRadius: theme.borderRadius,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!e.currentTarget.disabled)
+                      e.currentTarget.style.backgroundColor = theme.primaryColorHover;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.primaryColor;
+                  }}
+                >
+                  Weiter
+                  <ArrowRight size={16} strokeWidth={1.5} />
+                </button>
+              )}
             </div>
           </div>
         </div>

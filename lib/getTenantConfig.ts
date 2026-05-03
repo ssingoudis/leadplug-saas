@@ -63,9 +63,11 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
     questions: questions
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       .map((q) => ({
-        id:      q.question_key,
-        title:   q.title,
-        visible: q.visible ?? true,
+        id:           q.question_key,
+        title:        q.title,
+        questionType: q.question_type ?? 'single_choice',
+        visible:      q.visible ?? true,
+        config:       q.config ?? {},
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         options: (Array.isArray(q.options) ? q.options as Record<string, any>[] : [])
           .map((o) => ({
@@ -151,7 +153,7 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
         font, border_radius, max_width
       ),
       funnel_questions (
-        sort_order, question_key, title, visible, options
+        sort_order, question_key, title, question_type, visible, options, config
       )
     `)
     .eq('slug', slug)
