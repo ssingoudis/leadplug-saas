@@ -523,16 +523,12 @@ export function Funnel({
                 const sc = currentQuestion.config as SliderConfig;
                 const val = Number(answers[currentQuestion.id] ?? sc.default ?? sc.min);
                 return (
-                  <div
-                    className="mb-6 px-5 py-5 rounded-xl"
-                    style={{ backgroundColor: theme.inputBgColor }}
-                  >
-                    <p
-                      className="text-center text-3xl font-bold mb-5"
-                      style={{ color: theme.primaryColor }}
-                    >
+                  <div className="mb-6">
+                    <p className="text-center text-3xl font-bold mb-6"
+                      style={{ color: theme.primaryColor }}>
                       {val.toLocaleString("de-DE")} {sc.unit}
                     </p>
+
                     <input
                       type="range"
                       min={sc.min}
@@ -545,15 +541,56 @@ export function Funnel({
                           [currentQuestion.id]: e.target.value,
                         }))
                       }
-                      className="w-full"
-                      style={{ accentColor: theme.primaryColor }}
+                      className="funnel-slider"
                     />
-                    <div
-                      className="flex justify-between text-xs mt-2"
-                      style={{ color: theme.textColorMuted }}
-                    >
+                    <div className="flex justify-between text-xs mt-1 mb-5"
+                      style={{ color: theme.textColorMuted }}>
                       <span>{sc.min.toLocaleString("de-DE")} {sc.unit}</span>
                       <span>{sc.max.toLocaleString("de-DE")} {sc.unit}</span>
+                    </div>
+
+                    {/* Synced Eingabefeld */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm shrink-0"
+                        style={{ color: theme.textColorMuted }}>
+                        Alternativ eintippen:
+                      </span>
+                      <div className="relative flex-1">
+                        <input
+                          type="number"
+                          value={val}
+                          min={sc.min}
+                          max={sc.max}
+                          step={sc.step ?? 1}
+                          onChange={(e) => {
+                            const clamped = Math.min(
+                              sc.max,
+                              Math.max(sc.min, Number(e.target.value) || sc.min),
+                            );
+                            setAnswers((prev) => ({
+                              ...prev,
+                              [currentQuestion.id]: String(clamped),
+                            }));
+                          }}
+                          className="w-full px-4 py-2.5 border outline-none text-center"
+                          style={{
+                            borderColor: theme.borderColor,
+                            backgroundColor: theme.backgroundColor,
+                            color: theme.textColor,
+                            borderRadius: "9999px",
+                            paddingRight: "3.5rem",
+                          }}
+                        />
+                        <div
+                          className="absolute right-0 top-0 bottom-0 flex items-center justify-center w-12 text-white text-sm font-bold"
+                          style={{
+                            backgroundColor: theme.primaryColor,
+                            borderRadius: "0 9999px 9999px 0",
+                          }}
+                        >
+                          {sc.unit}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );
