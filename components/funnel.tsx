@@ -261,6 +261,19 @@ export function Funnel({
     setCurrentStep((prev) => prev + 1);
   }, []);
 
+  const handleToggleMultiple = useCallback(
+    (questionId: string, value: string) => {
+      setAnswers((prev) => {
+        const current = prev[questionId]?.split(",").filter(Boolean) ?? [];
+        const updated = current.includes(value)
+          ? current.filter((v) => v !== value)
+          : [...current, value];
+        return { ...prev, [questionId]: updated.join(",") };
+      });
+    },
+    [],
+  );
+
   const handleFormSubmit = (e: { preventDefault(): void }) => {
     e.preventDefault();
     setHasTriedSubmit(true);
@@ -415,15 +428,14 @@ export function Funnel({
   const gridClasses = getOptionsGridClasses(optionCount);
 
   const isChoiceType =
-    !isContactStep &&
-    (currentQuestion?.questionType === "single_choice" ||
-      currentQuestion?.questionType === "multiple_choice");
+    !isContactStep && currentQuestion?.questionType === "single_choice";
   const showWeiterButton = !isContactStep && !isChoiceType;
   const currentAnswer = currentQuestion ? (answers[currentQuestion.id] ?? "") : "";
   const isWeiterDisabled =
     showWeiterButton &&
     currentQuestion?.questionType !== "slider" &&
     !currentAnswer.trim();
+    // multiple_choice: currentAnswer ist kommagetrennte Liste → leer wenn nichts gewählt
 
   return (
     <div ref={containerRef} style={{ backgroundColor: pageBackgroundColor, width: "100%", paddingTop: `${SHADOW_PADDING.top}px`, paddingBottom: `${SHADOW_PADDING.bottom}px` }}>
@@ -459,14 +471,19 @@ export function Funnel({
                 <div className="flex items-center justify-center mb-3">
                   <div className={cn("grid gap-3 w-full", gridClasses)}>
                     {currentQuestion.options.map((option, idx) => {
-                      const isSelected =
-                        answers[currentQuestion.id] === option.value;
+                      const isMultiple = currentQuestion.questionType === "multiple_choice";
+                      const selectedValues = answers[currentQuestion.id]?.split(",").filter(Boolean) ?? [];
+                      const isSelected = isMultiple
+                        ? selectedValues.includes(option.value)
+                        : answers[currentQuestion.id] === option.value;
                       const colSpan = getOptionColSpanClasses(optionCount, idx);
                       return (
                         <button
                           key={option.value}
                           onClick={() =>
-                            handleSelect(currentQuestion.id, option.value)
+                            isMultiple
+                              ? handleToggleMultiple(currentQuestion.id, option.value)
+                              : handleSelect(currentQuestion.id, option.value)
                           }
                           className={cn(
                             "flex flex-col items-center justify-center min-h-24 p-4 transition-all duration-200 cursor-pointer",
