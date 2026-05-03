@@ -523,9 +523,12 @@ export function Funnel({
                 const sc = currentQuestion.config as SliderConfig;
                 const val = Number(answers[currentQuestion.id] ?? sc.default ?? sc.min);
                 return (
-                  <div className="mb-3">
+                  <div
+                    className="mb-6 px-5 py-5 rounded-xl"
+                    style={{ backgroundColor: theme.inputBgColor }}
+                  >
                     <p
-                      className="text-center text-2xl font-bold mb-6"
+                      className="text-center text-3xl font-bold mb-5"
                       style={{ color: theme.primaryColor }}
                     >
                       {val.toLocaleString("de-DE")} {sc.unit}
@@ -555,6 +558,39 @@ export function Funnel({
                   </div>
                 );
               })()}
+
+              {/* long_text */}
+              {currentQuestion.questionType === "long_text" && (
+                <div className="mb-3">
+                  <textarea
+                    value={answers[currentQuestion.id] ?? ""}
+                    onChange={(e) =>
+                      setAnswers((prev) => ({
+                        ...prev,
+                        [currentQuestion.id]: e.target.value,
+                      }))
+                    }
+                    placeholder={(currentQuestion.config as TextConfig).placeholder ?? ""}
+                    maxLength={(currentQuestion.config as TextConfig).maxLength}
+                    rows={4}
+                    className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base resize-none"
+                    style={{
+                      borderColor: theme.borderColor,
+                      backgroundColor: theme.inputBgColor,
+                      color: theme.textColor,
+                      borderRadius: theme.borderRadius,
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = theme.primaryColor;
+                      e.currentTarget.style.backgroundColor = theme.backgroundColor;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = theme.borderColor;
+                      e.currentTarget.style.backgroundColor = theme.inputBgColor;
+                    }}
+                  />
+                </div>
+              )}
 
               {/* short_text */}
               {currentQuestion.questionType === "short_text" && (
