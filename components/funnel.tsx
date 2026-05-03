@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { renderIcon } from "@/components/icons";
+import { resolveAnswer } from "@/lib/resolveAnswer";
 import type {
   FunnelTheme,
   FunnelFont,
@@ -394,13 +395,13 @@ export function Funnel({
               Ihre Angaben im Überblick:
             </p>
             {visibleQuestions.map((q) => {
-              const selected = q.options.find((o) => o.value === answers[q.id])
-              if (!selected) return null
+              const display = resolveAnswer(q, answers)
+              if (!display) return null
               return (
                 <p key={q.id} className="mb-1" style={{ color: theme.textColorMuted }}>
                   {q.title.replace("?", "")}:{" "}
                   <span style={{ color: theme.textColor, fontWeight: 500 }}>
-                    {selected.label}
+                    {display}
                   </span>
                 </p>
               )

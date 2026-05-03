@@ -11,6 +11,7 @@ import {
   Text,
 } from '@react-email/components'
 import type { ContactData, TenantConfig } from '@/types'
+import { resolveAnswer } from '@/lib/resolveAnswer'
 
 export type CustomerConfirmationProps = {
   contact: ContactData
@@ -58,14 +59,14 @@ export function CustomerConfirmation({
                 Ihre Angaben im Überblick
               </Heading>
               {visibleQuestions.map((q) => {
-                const selected = q.options.find((o) => o.value === answers[q.id])
-                if (!selected) return null
+                const display = resolveAnswer(q, answers)
+                if (!display) return null
                 return (
                   <Text key={q.id} style={styles.answerRow}>
                     <span style={styles.answerLabel}>
                       {q.title.replace('?', '')}:
                     </span>{' '}
-                    <strong>{selected.label}</strong>
+                    <strong>{display}</strong>
                   </Text>
                 )
               })}
