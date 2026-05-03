@@ -449,8 +449,9 @@ export function Funnel({
                 </h1>
               </div>
 
-              {/* single_choice */}
-              {currentQuestion.questionType === "single_choice" && (
+              {/* single_choice / multiple_choice */}
+              {(currentQuestion.questionType === "single_choice" ||
+                currentQuestion.questionType === "multiple_choice") && (
                 <div className="flex items-center justify-center mb-3">
                   <div className={cn("grid gap-3 w-full", gridClasses)}>
                     {currentQuestion.options.map((option, idx) => {
@@ -814,13 +815,27 @@ export function Funnel({
             className="mt-6 pt-4 border-t"
             style={{ borderColor: theme.borderColor }}
           >
-            <div className="flex items-center gap-3">
-              {/* Zurück */}
+            {/* Fortschrittsbalken */}
+            <div
+              className="h-2.5 rounded-full mb-3 overflow-hidden"
+              style={{ backgroundColor: theme.inputBgColor }}
+            >
+              <div
+                className="h-full rounded-full transition-all duration-300"
+                style={{
+                  width: `${progress}%`,
+                  backgroundColor: theme.primaryColor,
+                }}
+              />
+            </div>
+
+            {/* Navigation: zurück links, Weiter rechts */}
+            <div className="flex items-center justify-between">
               <button
                 onClick={handleBack}
                 disabled={currentStep === 0}
                 suppressHydrationWarning
-                className="flex items-center gap-2 text-sm transition-colors disabled:opacity-30 cursor-pointer disabled:cursor-default shrink-0"
+                className="flex items-center gap-2 text-sm transition-colors disabled:opacity-30 cursor-pointer disabled:cursor-default"
                 style={{ color: theme.textColorMuted }}
                 onMouseEnter={(e) => {
                   if (!e.currentTarget.disabled)
@@ -834,26 +849,12 @@ export function Funnel({
                 zurück
               </button>
 
-              {/* Fortschrittsbalken */}
-              <div
-                className="flex-1 h-2.5 rounded-full overflow-hidden"
-                style={{ backgroundColor: theme.inputBgColor }}
-              >
-                <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{
-                    width: `${progress}%`,
-                    backgroundColor: theme.primaryColor,
-                  }}
-                />
-              </div>
-
               {/* Weiter – nur für Nicht-Choice-Typen */}
               {showWeiterButton && (
                 <button
                   onClick={handleNext}
                   disabled={isWeiterDisabled}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white transition-colors shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
                   style={{
                     backgroundColor: theme.primaryColor,
                     borderRadius: theme.borderRadius,
