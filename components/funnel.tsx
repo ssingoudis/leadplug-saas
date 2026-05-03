@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { renderIcon } from "@/components/icons";
 import type {
@@ -245,7 +246,7 @@ export function Funnel({
         if (currentStep < visibleQuestions.length) {
           setCurrentStep((prev) => prev + 1);
         }
-      }, 200);
+      }, 325);
     },
     [currentStep, visibleQuestions.length],
   );
@@ -449,53 +450,47 @@ export function Funnel({
                           handleSelect(currentQuestion.id, option.value)
                         }
                         className={cn(
-                          "flex flex-col items-center min-h-20 p-3 border-2 transition-all duration-150 cursor-pointer",
+                          "flex flex-col items-center justify-center min-h-24 p-4 transition-all duration-200 cursor-pointer",
                           colSpan,
                         )}
                         style={{
-                          borderColor: isSelected
-                            ? theme.primaryColor
-                            : theme.borderColor,
-                          backgroundColor: isSelected
-                            ? `${theme.primaryColor}0a`
-                            : theme.backgroundColor,
                           borderRadius: theme.borderRadius,
-                          boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                          backgroundColor: isSelected
+                            ? theme.primaryColor
+                            : theme.backgroundColor,
+                          border: `2px solid ${isSelected ? theme.primaryColor : "transparent"}`,
+                          boxShadow: isSelected
+                            ? `0 4px 16px ${theme.primaryColor}40`
+                            : "0 2px 8px rgba(0,0,0,0.08)",
                         }}
                         onMouseEnter={(e) => {
                           if (!isSelected) {
-                            e.currentTarget.style.borderColor = theme.primaryColor;
-                            e.currentTarget.style.backgroundColor = `${theme.primaryColor}0a`;
-                            e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.12)";
+                            e.currentTarget.style.border = `2px solid ${theme.primaryColor}`;
+                            e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.14)";
                           }
                         }}
                         onMouseLeave={(e) => {
                           if (!isSelected) {
-                            e.currentTarget.style.borderColor = theme.borderColor;
-                            e.currentTarget.style.backgroundColor = theme.backgroundColor;
-                            e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)";
+                            e.currentTarget.style.border = "2px solid transparent";
+                            e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
                           }
                         }}
                       >
-                        {/* 1. Icon */}
-                        <div
-                          className="w-10 h-10 flex items-center justify-center mb-2 shrink-0 rounded-xl"
-                          style={{ backgroundColor: `${theme.primaryColor}15` }}
-                        >
+                        {/* 1. Icon – nackt, kein Pill-Container */}
+                        <div className="mb-3 shrink-0">
                           {renderIcon(
                             option.iconKey,
                             option.iconUrl,
-                            theme.primaryColor,
+                            isSelected ? "#ffffff" : theme.primaryColor,
+                            44,
                           )}
                         </div>
 
                         {/* 2. Text */}
                         <span
-                          className="text-xs font-medium text-center leading-tight hyphens-auto px-1 my-auto"
+                          className="text-xs font-medium text-center leading-tight hyphens-auto px-1"
                           style={{
-                            color: isSelected
-                              ? theme.primaryColor
-                              : theme.textColor,
+                            color: isSelected ? "#ffffff" : theme.textColor,
                           }}
                         >
                           {option.label}
@@ -792,7 +787,7 @@ export function Funnel({
                 onClick={handleBack}
                 disabled={currentStep === 0}
                 suppressHydrationWarning
-                className="flex items-center gap-1 text-sm transition-colors disabled:opacity-30 cursor-pointer disabled:cursor-default"
+                className="flex items-center gap-2 text-sm transition-colors disabled:opacity-30 cursor-pointer disabled:cursor-default"
                 style={{ color: theme.textColorMuted }}
                 onMouseEnter={(e) => {
                   if (!e.currentTarget.disabled)
@@ -802,19 +797,7 @@ export function Funnel({
                   e.currentTarget.style.color = theme.textColorMuted;
                 }}
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
+                <ArrowLeft size={16} strokeWidth={1.5} />
                 zurück
               </button>
             </div>

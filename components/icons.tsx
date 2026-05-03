@@ -48,6 +48,7 @@ export function renderIcon(
   iconKey: string,
   iconUrl?: string,
   color?: string,
+  size?: number,
 ) {
   if (iconUrl) {
     return (
@@ -60,5 +61,5 @@ export function renderIcon(
     )
   }
   const IconComponent = ICON_MAP[iconKey] ?? HelpCircle
-  return <IconComponent size={24} color={color ?? "#6b7280"} strokeWidth={1.5} />
+  return <IconComponent size={size ?? 24} color={color ?? "#6b7280"} strokeWidth={1.5} />
 }
