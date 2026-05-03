@@ -117,20 +117,37 @@ CREATE TABLE IF NOT EXISTS funnels (
 -- ============================================================
 -- FUNNEL QUESTIONS (inkl. Antwortoptionen als JSONB)
 --
--- options-Format (Array, Reihenfolge = Anzeigereihenfolge):
+-- question_type-Werte:
+--   'single_choice'   – Auswahl aus Karten (1 Option)
+--   'multiple_choice' – Auswahl aus Karten (mehrere Optionen)
+--   'short_text'      – Einzeiliges Textfeld
+--   'long_text'       – Mehrzeiliges Textfeld (Textarea)
+--   'slider'          – Schieberegler für Zahlenwerte
+--
+-- options-Format (nur für single_choice / multiple_choice):
 -- [
---   { "label": "Einfamilienhaus", "value": "einfamilienhaus", "icon_key": "House" },
+--   { "label": "Einfamilienhaus", "value": "einfamilienhaus", "icon_key": "Home" },
 --   { "label": "Mehrfamilienhaus", "value": "mehrfamilienhaus", "icon_url": "https://..." }
 -- ]
+--
+-- config-Format (typ-spezifisch, für alle anderen Typen):
+--   short_text / long_text: { "placeholder": "Ihre Antwort...", "maxLength": 500 }
+--   slider:                 { "min": 0, "max": 50000, "step": 1000, "unit": "€", "default": 10000 }
 -- ============================================================
 CREATE TABLE IF NOT EXISTS funnel_questions (
-  question_key TEXT NOT NULL,
-  title        TEXT NOT NULL,
-  options      JSONB NOT NULL DEFAULT '[]',
-  sort_order   INTEGER NOT NULL DEFAULT 0,
-  visible      BOOLEAN DEFAULT TRUE,
-  funnel_slug  TEXT NOT NULL REFERENCES funnels(slug) ON DELETE CASCADE,
-  id           UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  question_key  TEXT NOT NULL,
+  title         TEXT NOT NULL,
+  question_type TEXT NOT NULL DEFAULT 'single_choice'
+                  CHECK (question_type IN (
+                    'single_choice', 'multiple_choice',
+                    'short_text', 'long_text', 'slider'
+                  )),
+  options       JSONB NOT NULL DEFAULT '[]',
+  config        JSONB NOT NULL DEFAULT '{}',
+  sort_order    INTEGER NOT NULL DEFAULT 0,
+  visible       BOOLEAN DEFAULT TRUE,
+  funnel_slug   TEXT NOT NULL REFERENCES funnels(slug) ON DELETE CASCADE,
+  id            UUID DEFAULT gen_random_uuid() PRIMARY KEY,
 
   UNIQUE (funnel_slug, question_key)
 );
