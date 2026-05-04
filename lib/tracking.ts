@@ -23,6 +23,26 @@ function getSupabase(): SupabaseClient | null {
 }
 
 // neue Datenbank widget-funnel
+export async function isRateLimited(ip: string): Promise<boolean> {
+  const supabase = getSupabase()
+  if (!supabase) return false // fail-open wenn DB nicht erreichbar
+
+  try {
+    const since = new Date(Date.now() - 10 * 60 * 1000).toISOString()
+    const { count, error } = await supabase
+      .from('submissions')
+      .select('id', { count: 'exact', head: true })
+      .eq('ip_address', ip)
+      .eq('honeypot_triggered', false)
+      .gte('created_at', since)
+
+    if (error) return false // fail-open
+    return (count ?? 0) >= 3
+  } catch {
+    return false // fail-open
+  }
+}
+
 export async function logSubmission(params: {
   funnelSlug: string
   tenantSlug: string
@@ -31,6 +51,7 @@ export async function logSubmission(params: {
   leadPrice: number
   sourceUrl: string
   userAgent: string
+  ipAddress?: string
 }): Promise<void> {
   const supabase = getSupabase()
   if (!supabase) return
@@ -47,6 +68,7 @@ export async function logSubmission(params: {
       emails_sent:   true,
       source_url:    params.sourceUrl,
       user_agent:    params.userAgent,
+      ip_address:    params.ipAddress ?? null,
     })
     if (error) console.error('Supabase logging error:', error)
   } catch (err) {
