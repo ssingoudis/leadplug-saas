@@ -37,6 +37,7 @@ export interface SliderConfig {
   step?: number
   unit?: string
   default?: number
+  openMax?: boolean
 }
 
 export interface QuestionConfig {
