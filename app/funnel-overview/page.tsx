@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js'
-import { Power } from 'lucide-react'
 import FunnelGrid from './FunnelGrid'
 import MonthlyStats, { type MonthlyRow } from './MonthlyStats'
 
@@ -95,16 +94,7 @@ export default async function FunnelOverviewPage() {
   return (
     <div className="min-h-screen bg-gray-100" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <div className="max-w-6xl mx-auto px-8 py-12">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-4xl font-extrabold text-gray-900">Funnel-Übersicht</h1>
-          <a
-            href="/logout"
-            title="Abmelden"
-            className="p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-white transition-colors"
-          >
-            <Power size={22} />
-          </a>
-        </div>
+        <h1 className="text-4xl font-extrabold text-gray-900 mb-8">Funnel-Übersicht</h1>
         <FunnelGrid funnels={funnels} />
         <MonthlyStats rows={monthlyRows} />
       </div>
