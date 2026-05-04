@@ -9,10 +9,11 @@ export function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  const cookie = req.cookies.get('site-auth')
   const password = process.env.SITE_PASSWORD
+  const cookie = req.cookies.get('site-auth')
 
-  if (!password || (cookie?.value === password)) {
+  // Kein SITE_PASSWORD gesetzt → trotzdem blocken (fail-closed)
+  if (password && cookie?.value === password) {
     return NextResponse.next()
   }
 
