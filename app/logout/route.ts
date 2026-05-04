@@ -3,6 +3,12 @@ import { redirect } from 'next/navigation'
 
 export async function GET() {
   const cookieStore = await cookies()
-  cookieStore.delete('site-auth')
+  cookieStore.set('site-auth', '', {
+    maxAge: 0,
+    path: '/',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+  })
   redirect('/locked')
 }
