@@ -540,11 +540,15 @@ export function Funnel({
               {currentQuestion.questionType === "slider" && (() => {
                 const sc = currentQuestion.config as SliderConfig;
                 const val = Number(answers[currentQuestion.id] ?? sc.default ?? sc.min);
+                const atMax = sc.openMax && val === sc.max;
+                const displayVal = atMax
+                  ? `> ${(sc.max - (sc.step ?? 1)).toLocaleString("de-DE")}`
+                  : val.toLocaleString("de-DE");
                 return (
                   <div className="mb-6">
                     <p className="text-center text-3xl font-bold mb-6"
                       style={{ color: theme.primaryColor }}>
-                      {val.toLocaleString("de-DE")} {sc.unit}
+                      {displayVal} {sc.unit}
                     </p>
 
                     <input
@@ -564,7 +568,7 @@ export function Funnel({
                     <div className="flex justify-between text-xs mt-1 mb-5"
                       style={{ color: theme.textColorMuted }}>
                       <span>{sc.min.toLocaleString("de-DE")} {sc.unit}</span>
-                      <span>{sc.max.toLocaleString("de-DE")} {sc.unit}</span>
+                      <span>{sc.openMax ? `> ${(sc.max - (sc.step ?? 1)).toLocaleString("de-DE")}` : sc.max.toLocaleString("de-DE")} {sc.unit}</span>
                     </div>
 
                     {/* Synced Eingabefeld */}
