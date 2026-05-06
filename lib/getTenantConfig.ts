@@ -20,7 +20,7 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tenant: Record<string, any> = row.tenants ?? {}
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const theme: Record<string, any>  = row.themes  ?? {}
+  const theme: Record<string, any>  = row
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const questions: Record<string, any>[] = Array.isArray(row.funnel_questions)
     ? row.funnel_questions
@@ -144,13 +144,11 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
       funnel_title, submit_button_label, success_message,
       response_time_text, contact_form_subtitle, privacy_policy_url,
       email_sender_local,
+      primary_color, text_color, background_color, page_background_color,
+      font, border_radius, max_width,
       tenants (
         id, slug, company_name, public_email, notification_email, public_phone, address, website, is_active,
         billing_model, lead_price_base, flat_monthly_price, flat_monthly_lead_limit
-      ),
-      themes (
-        primary_color, text_color, background_color, page_background_color,
-        font, border_radius, max_width
       ),
       funnel_questions (
         sort_order, question_key, title, question_type, visible, options, config
