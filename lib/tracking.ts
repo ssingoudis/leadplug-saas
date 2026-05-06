@@ -32,7 +32,6 @@ export async function isRateLimited(ip: string): Promise<boolean> {
       .from('submissions')
       .select('id', { count: 'exact', head: true })
       .eq('ip_address', ip)
-      .eq('honeypot_triggered', false)
       .gte('created_at', since)
 
     if (error) return false

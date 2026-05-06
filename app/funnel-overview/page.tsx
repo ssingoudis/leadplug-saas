@@ -36,12 +36,10 @@ async function getAllData(): Promise<{ funnels: FunnelCard[]; monthlyRows: Month
       .order('slug'),
     supabase
       .from('submissions')
-      .select('funnel_slug, created_at')
-      .eq('honeypot_triggered', false),
+      .select('funnel_slug, created_at'),
     supabase
       .from('submissions')
       .select('created_at')
-      .eq('honeypot_triggered', false)
       .gte('created_at', since.toISOString()),
   ])
 
