@@ -14,53 +14,6 @@ function relativeTime(iso: string): string {
   return 'gerade eben'
 }
 
-function buildEmbedSnippet(slug: string, url: string, companyName: string): string {
-  return `<iframe
-  id="funnel-${slug}"
-  src="${url}"
-  style="width:100%;border:none;display:block;height:500px"
-  loading="lazy"
-  title="${companyName}"
-></iframe>
-<script>
-window.addEventListener('message', function(e) {
-  if (!e.data || e.data.type !== 'funnel-resize') return;
-  var f = document.getElementById('funnel-${slug}');
-  if (!f || e.source !== f.contentWindow) return;
-  var h = parseInt(e.data.height, 10);
-  if (h > 0) f.style.height = h + 'px';
-});
-<\/script>`
-}
-
-function CopyButton({ slug, url, companyName }: { slug: string; url: string; companyName: string }) {
-  const [copied, setCopied] = useState(false)
-
-  function handleCopy(e: React.MouseEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    const snippet = buildEmbedSnippet(slug, url, companyName)
-    navigator.clipboard.writeText(snippet).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
-  }
-
-  return (
-    <button
-      onClick={handleCopy}
-      className="text-xs font-medium px-3 py-1.5 rounded-lg border transition-all"
-      style={
-        copied
-          ? { borderColor: '#22c55e', color: '#16a34a', backgroundColor: '#f0fdf4' }
-          : { borderColor: '#e5e7eb', color: '#6b7280', backgroundColor: 'white' }
-      }
-    >
-      {copied ? '✓ Kopiert' : 'Embed kopieren'}
-    </button>
-  )
-}
-
 export default function FunnelGrid({ funnels }: { funnels: FunnelCard[] }) {
   const [query, setQuery] = useState('')
 
@@ -99,13 +52,11 @@ export default function FunnelGrid({ funnels }: { funnels: FunnelCard[] }) {
           {filtered.map((f) => (
             <a
               key={f.slug}
-              href={f.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-200 hover:-translate-y-1 flex flex-col"
+              href={`/funnel-overview/${f.slug}`}
+              className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-200 hover:-translate-y-1 flex flex-row"
             >
               <div
-                className="h-14 w-full flex-shrink-0"
+                className="w-1 shrink-0 rounded-l-2xl"
                 style={{ backgroundColor: f.primaryColor }}
               />
               <div className="px-5 pt-4 pb-3 flex flex-col gap-1 flex-1">
@@ -129,7 +80,9 @@ export default function FunnelGrid({ funnels }: { funnels: FunnelCard[] }) {
                       <span className="text-sm text-gray-400">Noch keine Leads</span>
                     )}
                   </div>
-                  <CopyButton slug={f.slug} url={f.url} companyName={f.companyName} />
+                  <span className="text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 group-hover:border-indigo-300 group-hover:text-indigo-600 transition-colors">
+                    Details ansehen
+                  </span>
                 </div>
               </div>
             </a>
