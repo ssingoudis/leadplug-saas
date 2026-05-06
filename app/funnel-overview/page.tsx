@@ -39,7 +39,7 @@ async function getAllData(): Promise<{ funnels: FunnelCard[]; monthlyRows: Month
       .select('funnel_slug, created_at'),
     supabase
       .from('submissions')
-      .select('created_at')
+      .select('funnel_slug, created_at')
       .gte('created_at', since.toISOString()),
   ])
 
@@ -74,14 +74,25 @@ async function getAllData(): Promise<{ funnels: FunnelCard[]; monthlyRows: Month
   })
 
   // --- monthly stats ---
-  const monthMap = new Map<string, number>()
-  for (const row of (monthData ?? []) as { created_at: string }[]) {
+  const companyBySlug = new Map<string, string>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (funnelData ?? []).map((row: any) => [row.slug as string, (row.tenants?.company_name as string) ?? row.slug])
+  )
+
+  const monthMap = new Map<string, MonthlyRow>()
+  for (const row of (monthData ?? []) as { funnel_slug: string; created_at: string }[]) {
     const d = new Date(row.created_at)
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
-    monthMap.set(key, (monthMap.get(key) ?? 0) + 1)
+    const entry = monthMap.get(key) ?? { month: key, leads: 0, submissions: [] }
+    entry.leads++
+    entry.submissions.push({
+      created_at: row.created_at,
+      funnel_slug: row.funnel_slug,
+      company_name: companyBySlug.get(row.funnel_slug) ?? row.funnel_slug,
+    })
+    monthMap.set(key, entry)
   }
-  const monthlyRows: MonthlyRow[] = Array.from(monthMap.entries())
-    .map(([month, leads]) => ({ month, leads }))
+  const monthlyRows: MonthlyRow[] = Array.from(monthMap.values())
     .sort((a, b) => b.month.localeCompare(a.month))
 
   return { funnels, monthlyRows }
@@ -91,19 +102,22 @@ export default async function FunnelOverviewPage() {
   const { funnels, monthlyRows } = await getAllData()
 
   return (
-    <div className="min-h-screen bg-gray-100" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      <div className="max-w-6xl mx-auto px-8 py-12">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-4xl font-extrabold text-gray-900">Funnel-Übersicht</h1>
+    <div className="min-h-screen bg-gray-100">
+      {/* Header */}
+      <div className="bg-white sticky top-0 z-10 border-b-2 border-[#4648d4]">
+        <div className="max-w-7xl mx-auto px-8 py-4 flex items-center justify-between">
+          <h1 className="text-base font-bold text-gray-900">Funnel-Übersicht</h1>
           <a
             href="/logout"
-            title="Abmelden"
-            className="flex flex-col items-center gap-1 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-2xl px-4 py-3 transition-colors shadow-sm cursor-pointer"
+            className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
           >
-            <Power size={20} />
-            <span className="text-xs font-semibold tracking-wide">Logout</span>
+            <Power size={14} />
+            Logout
           </a>
         </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-8 py-8">
         <FunnelGrid funnels={funnels} />
         <MonthlyStats rows={monthlyRows} />
       </div>
