@@ -31,7 +31,7 @@ async function getAllData(): Promise<{ funnels: FunnelCard[]; monthlyRows: Month
   ] = await Promise.all([
     supabase
       .from('funnels')
-      .select(`slug, tenants ( company_name ), themes ( primary_color )`)
+      .select(`slug, primary_color, tenants ( company_name )`)
       .eq('is_active', true)
       .order('slug'),
     supabase
@@ -68,7 +68,7 @@ async function getAllData(): Promise<{ funnels: FunnelCard[]; monthlyRows: Month
     return {
       slug,
       companyName: (row.tenants?.company_name as string) ?? slug,
-      primaryColor: (row.themes?.primary_color as string) ?? '#22c55e',
+      primaryColor: (row.primary_color as string) ?? '#22c55e',
       url: `${base}/${slug}`,
       submissionCount: s.count,
       lastSubmissionAt: s.lastAt,
