@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getTenantConfig } from '@/lib/getTenantConfig'
-import { logSubmission, isRateLimited } from '@/lib/tracking'
+import { logSubmission, isRateLimited, updateEmailStatus, logHoneypot } from '@/lib/tracking'
 import { sendAllEmails } from '@/lib/sendEmails'
 import type { ContactData } from '@/types'
 
@@ -44,16 +44,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  // 1. Honeypot – sofortiges Ende, kein DB-Eintrag, keine Mail
+  const ip = getIp(req)
+
+  // 1. Honeypot – loggen + sofortiges Ende, keine Mail
   const raw = body as Record<string, unknown>
   if (typeof raw?.honeypot === 'string' && raw.honeypot.length > 0) {
+    await logHoneypot({
+      funnelSlug: typeof raw.tenant === 'string' ? raw.tenant : undefined,
+      ipAddress:  ip ?? undefined,
+    })
     return NextResponse.json({ success: true })
   }
 
   // 2. Rate Limiting – max. 3 Submissions pro IP in 10 Minuten
-  const ip = getIp(req)
   if (ip && await isRateLimited(ip)) {
-    return NextResponse.json({ success: true }) // silent reject wie Honeypot
+    return NextResponse.json({ success: true })
   }
 
   // 3. Payload-Shape-Check
@@ -76,22 +81,7 @@ export async function POST(req: Request) {
     tenantConfig.billingModel === 'per_lead' ? tenantConfig.leadPriceBase : 0
 
   // 6. Submission loggen
-  /* alte Datenbank solar-widget
-  await logSubmission({
-    tenantSlug: tenant,
-    tenantId: tenantConfig.id,
-    contact,
-    answers,
-    leadPrice,
-    billingModel: tenantConfig.billingModel,
-    startedAt,
-    sourceUrl,
-    userAgent,
-  })
-  */
-
-  // neue Datenbank widget-funnel
-  await logSubmission({
+  const submissionId = await logSubmission({
     funnelSlug: tenant,
     tenantSlug: tenantConfig.tenantSlug,
     contact,
@@ -103,8 +93,9 @@ export async function POST(req: Request) {
   })
 
   // 7. E-Mails senden (Fehler loggen, nicht werfen – Endkunde bekommt immer success:true)
+  let emailResults = { customer: false, tenant: false }
   try {
-    await sendAllEmails({
+    emailResults = await sendAllEmails({
       contact,
       answers,
       tenantConfig,
@@ -112,6 +103,11 @@ export async function POST(req: Request) {
     })
   } catch (err) {
     console.error('submit route: email pipeline failed', err)
+  }
+
+  // 8. Email-Status in DB schreiben
+  if (submissionId) {
+    await updateEmailStatus(submissionId, emailResults.customer, emailResults.tenant)
   }
 
   return NextResponse.json({ success: true })
