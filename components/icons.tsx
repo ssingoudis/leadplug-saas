@@ -1,48 +1,8 @@
-import {
-  Home,
-  Building2,
-  Factory,
-  Building,
-  Sun,
-  Thermometer,
-  Flame,
-  Wind,
-  Droplets,
-  Snowflake,
-  Wrench,
-  Zap,
-  Star,
-  Check,
-  X,
-  HelpCircle,
-  Euro,
-  FileText,
-  Calendar,
-  type LucideProps,
-} from "lucide-react"
-import type { ComponentType } from "react"
+'use client'
 
-export const ICON_MAP: Record<string, ComponentType<LucideProps>> = {
-  Home,
-  Building2,
-  Factory,
-  Building,
-  Sun,
-  Thermometer,
-  Flame,
-  Wind,
-  Droplets,
-  Snowflake,
-  Wrench,
-  Zap,
-  Star,
-  Check,
-  X,
-  HelpCircle,
-  Euro,
-  FileText,
-  Calendar,
-}
+import * as LucideIcons from 'lucide-react'
+import { HelpCircle, type LucideProps } from 'lucide-react'
+import type { ComponentType } from 'react'
 
 export function renderIcon(
   iconKey: string,
@@ -60,6 +20,6 @@ export function renderIcon(
       />
     )
   }
-  const IconComponent = ICON_MAP[iconKey] ?? HelpCircle
-  return <IconComponent size={size ?? 24} color={color ?? "#6b7280"} strokeWidth={1.5} />
+  const IconComponent = (LucideIcons[iconKey as keyof typeof LucideIcons] as ComponentType<LucideProps>) ?? HelpCircle
+  return <IconComponent size={size ?? 24} color={color ?? '#6b7280'} strokeWidth={1.5} />
 }
