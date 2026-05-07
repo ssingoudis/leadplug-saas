@@ -29,6 +29,7 @@ export interface Option {
 export interface TextConfig {
   placeholder?: string
   maxLength?: number
+  required?: boolean
 }
 
 export interface SliderConfig {
