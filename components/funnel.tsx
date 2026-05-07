@@ -573,7 +573,7 @@ export function Funnel({
                               )}
                             </div>
                             <span
-                              className="text-xs font-medium text-center leading-tight hyphens-auto px-1"
+                              className="text-xs font-medium text-center leading-tight px-1"
                               style={{ color: isSelected ? "#ffffff" : theme.textColor }}
                             >
                               {option.label}
@@ -930,7 +930,7 @@ export function Funnel({
           {/* Progress bar + navigation */}
           <div className="mt-6 pt-4 border-t" style={{ borderColor: theme.borderColor }}>
 
-            <div className="h-2.5 rounded-full mb-3 overflow-hidden" style={{ backgroundColor: theme.inputBgColor }}>
+            <div className="h-2.5 rounded-full mb-5 overflow-hidden" style={{ backgroundColor: theme.inputBgColor }}>
               <div
                 className="h-full rounded-full transition-all duration-300"
                 style={{ width: `${progress}%`, backgroundColor: theme.primaryColor }}
