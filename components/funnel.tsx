@@ -23,30 +23,29 @@ import type {
 // Padding wird automatisch aus dem maximalen Extent aller Layer abgeleitet.
 const CARD_SHADOW_LAYERS = [
   { offsetY: 8, blur: 20, spread: -16, alpha: 0.28 }, // Haupt-Shadow: starker Bottom, Seiten ~4px
-  { offsetY: 0, blur: 10, spread:  -3, alpha: 0.16 }, // Ambient-Layer: gleichmäßiger Glow rundum
+  { offsetY: 0, blur: 10, spread: -3, alpha: 0.16 }, // Ambient-Layer: gleichmäßiger Glow rundum
 ] as const;
 
 const _extent = CARD_SHADOW_LAYERS.reduce(
   (acc, { offsetY, blur, spread }) => {
     const base = blur + spread;
     return {
-      top:    Math.max(acc.top,    Math.max(0, base - offsetY)),
+      top: Math.max(acc.top, Math.max(0, base - offsetY)),
       bottom: Math.max(acc.bottom, base + offsetY),
-      sides:  Math.max(acc.sides,  Math.max(0, base)),
+      sides: Math.max(acc.sides, Math.max(0, base)),
     };
   },
   { top: 0, bottom: 0, sides: 0 },
 );
 const SHADOW_PADDING = {
-  top:    Math.ceil(_extent.top) + 4,
+  top: Math.ceil(_extent.top) + 4,
   bottom: Math.ceil(_extent.bottom),
-  sides:  Math.ceil(_extent.sides),
+  sides: Math.ceil(_extent.sides),
 };
-const CARD_SHADOW_STRING = CARD_SHADOW_LAYERS
-  .map(({ offsetY, blur, spread, alpha }) =>
-    `0 ${offsetY}px ${blur}px ${spread}px rgba(0,0,0,${alpha})`
-  )
-  .join(", ");
+const CARD_SHADOW_STRING = CARD_SHADOW_LAYERS.map(
+  ({ offsetY, blur, spread, alpha }) =>
+    `0 ${offsetY}px ${blur}px ${spread}px rgba(0,0,0,${alpha})`,
+).join(", ");
 
 const THEME_DEFAULTS = {
   primaryColor: "#22c55e",
@@ -127,7 +126,6 @@ function getOptionsGridClasses(count: number): string {
   }
 }
 
-
 // 5 Optionen: grid-cols-6 als Basis → erste 2 Cards spannen 3 Spalten
 // (oben 2), letzte 3 Cards spannen 2 Spalten (unten 3). Ab @[660px] alles 1-spaltig.
 function getOptionColSpanClasses(count: number, idx: number): string {
@@ -163,15 +161,11 @@ export function Funnel({
   onSubmit,
 }: FunnelProps) {
   // Nur primaryColor ist pflicht; alles andere hat Defaults oder wird abgeleitet.
-  const primaryColor =
-    themeOverrides?.primaryColor ?? THEME_DEFAULTS.primaryColor;
+  const primaryColor = themeOverrides?.primaryColor ?? THEME_DEFAULTS.primaryColor;
   const textColor = themeOverrides?.textColor ?? THEME_DEFAULTS.textColor;
-  const backgroundColor =
-    themeOverrides?.backgroundColor ?? THEME_DEFAULTS.backgroundColor;
-  const pageBackgroundColor =
-    themeOverrides?.pageBackgroundColor ?? THEME_DEFAULTS.pageBackgroundColor;
-  const borderRadius =
-    themeOverrides?.borderRadius ?? THEME_DEFAULTS.borderRadius;
+  const backgroundColor = themeOverrides?.backgroundColor ?? THEME_DEFAULTS.backgroundColor;
+  const pageBackgroundColor = themeOverrides?.pageBackgroundColor ?? THEME_DEFAULTS.pageBackgroundColor;
+  const borderRadius = themeOverrides?.borderRadius ?? THEME_DEFAULTS.borderRadius;
   const maxWidth = themeOverrides?.maxWidth ?? THEME_DEFAULTS.maxWidth;
   const font = themeOverrides?.font ?? THEME_DEFAULTS.font;
 
@@ -226,9 +220,10 @@ export function Funnel({
           ? "Bitte geben Sie eine gültige E-Mail-Adresse ein."
           : "";
       case "telefon": {
-        const onlyAllowed = /^[+\d\s\-()\/]+$/.test(value)
-        const digitCount = (value.match(/\d/g) ?? []).length
-        return !onlyAllowed || digitCount < 7
+        const onlyAllowed = /^[+\d\s\-()\/]+$/.test(value);
+        const digitCount = (value.match(/\d/g) ?? []).length;
+        const startsCorrectly = /^[0+]/.test(value.trim());
+        return !onlyAllowed || digitCount < 7 || !startsCorrectly
           ? "Bitte geben Sie eine gültige Telefonnummer ein."
           : "";
       }
@@ -331,96 +326,113 @@ export function Funnel({
 
   if (isSubmitted) {
     return (
-      <div ref={containerRef} style={{ backgroundColor: pageBackgroundColor, width: "100%", paddingTop: `${SHADOW_PADDING.top}px`, paddingBottom: `${SHADOW_PADDING.bottom}px` }}>
       <div
-        className="mx-auto overflow-hidden"
+        ref={containerRef}
         style={{
-          ...cssVars,
-          maxWidth: theme.maxWidth,
-          backgroundColor: theme.backgroundColor,
-          fontFamily: theme.fontFamily,
-          borderRadius: theme.borderRadius,
-          boxShadow: CARD_SHADOW_STRING,
+          backgroundColor: pageBackgroundColor,
+          width: "100%",
+          paddingTop: `${SHADOW_PADDING.top}px`,
+          paddingBottom: `${SHADOW_PADDING.bottom}px`,
         }}
       >
-        {/* Header Banner */}
         <div
-          className="px-8 py-5"
-          style={{ backgroundColor: theme.primaryColor }}
-        >
-          <p className="text-white font-bold text-base m-0">{companyName}</p>
-        </div>
-
-        {/* Content */}
-        <div className="p-8 text-center">
-          <div
-            className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5"
-            style={{ backgroundColor: `${theme.primaryColor}20` }}
-          >
-            <svg
-              className="w-8 h-8"
-              fill="none"
-              stroke={theme.primaryColor}
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </div>
-
-          <h2
-            className="text-2xl font-bold mb-2 leading-snug"
-            style={{ color: theme.textColor }}
-          >
-            {funnel.successMessage}
-          </h2>
-
-          <p className="text-sm mb-6" style={{ color: theme.textColorMuted }}>
-            Wir melden uns {funnel.responseTimeText} bei Ihnen.
-          </p>
-
-          {/* Antworten-Box */}
-          <div
-            className="rounded-lg text-left text-sm p-4"
-            style={{
-              backgroundColor: theme.inputBgColor,
-              borderLeft: `4px solid ${theme.primaryColor}`,
-            }}
-          >
-            <p className="font-semibold mb-3" style={{ color: theme.textColor }}>
-              Ihre Angaben im Überblick:
-            </p>
-            {visibleQuestions.map((q) => {
-              const display = resolveAnswer(q, answers)
-              if (!display) return null
-              return (
-                <p key={q.id} className="mb-1" style={{ color: theme.textColorMuted }}>
-                  {q.title.replace("?", "")}:{" "}
-                  <span style={{ color: theme.textColor, fontWeight: 500 }}>
-                    {display}
-                  </span>
-                </p>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div
-          className="px-8 py-4 border-t text-xs"
+          className="mx-auto overflow-hidden"
           style={{
-            backgroundColor: theme.inputBgColor,
-            borderColor: theme.borderColor,
-            color: theme.textColorMuted,
+            ...cssVars,
+            maxWidth: theme.maxWidth,
+            backgroundColor: theme.backgroundColor,
+            fontFamily: theme.fontFamily,
+            borderRadius: theme.borderRadius,
+            boxShadow: CARD_SHADOW_STRING,
           }}
         >
-          <p className="m-0">{companyName} · {publicEmail}</p>
+          {/* Header Banner */}
+          <div
+            className="px-8 py-5"
+            style={{ backgroundColor: theme.primaryColor }}
+          >
+            <p className="text-white font-bold text-base m-0">{companyName}</p>
+          </div>
+
+          {/* Content */}
+          <div className="p-8 text-center">
+            <div
+              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5"
+              style={{ backgroundColor: `${theme.primaryColor}20` }}
+            >
+              <svg
+                className="w-8 h-8"
+                fill="none"
+                stroke={theme.primaryColor}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+
+            <h2
+              className="text-2xl font-bold mb-2 leading-snug"
+              style={{ color: theme.textColor }}
+            >
+              {funnel.successMessage}
+            </h2>
+
+            <p className="text-sm mb-6" style={{ color: theme.textColorMuted }}>
+              Wir melden uns {funnel.responseTimeText} bei Ihnen.
+            </p>
+
+            {/* Antworten-Box */}
+            <div
+              className="rounded-lg text-left text-sm p-4"
+              style={{
+                backgroundColor: theme.inputBgColor,
+                borderLeft: `4px solid ${theme.primaryColor}`,
+              }}
+            >
+              <p
+                className="font-semibold mb-3"
+                style={{ color: theme.textColor }}
+              >
+                Ihre Angaben im Überblick:
+              </p>
+              {visibleQuestions.map((q) => {
+                const display = resolveAnswer(q, answers);
+                if (!display) return null;
+                return (
+                  <p
+                    key={q.id}
+                    className="mb-1"
+                    style={{ color: theme.textColorMuted }}
+                  >
+                    {q.title.replace("?", "")}:{" "}
+                    <span style={{ color: theme.textColor, fontWeight: 500 }}>
+                      {display}
+                    </span>
+                  </p>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div
+            className="px-8 py-4 border-t text-xs"
+            style={{
+              backgroundColor: theme.inputBgColor,
+              borderColor: theme.borderColor,
+              color: theme.textColorMuted,
+            }}
+          >
+            <p className="m-0">
+              {companyName} · {publicEmail}
+            </p>
+          </div>
         </div>
-      </div>
       </div>
     );
   }
@@ -431,15 +443,27 @@ export function Funnel({
   const isChoiceType =
     !isContactStep && currentQuestion?.questionType === "single_choice";
   const showWeiterButton = !isContactStep && !isChoiceType;
-  const currentAnswer = currentQuestion ? (answers[currentQuestion.id] ?? "") : "";
+  const currentAnswer = currentQuestion
+    ? (answers[currentQuestion.id] ?? "")
+    : "";
+  const isQuestionRequired =
+    (currentQuestion?.config as TextConfig)?.required !== false;
   const isWeiterDisabled =
     showWeiterButton &&
     currentQuestion?.questionType !== "slider" &&
+    isQuestionRequired &&
     !currentAnswer.trim();
-    // multiple_choice: currentAnswer ist kommagetrennte Liste → leer wenn nichts gewählt
 
   return (
-    <div ref={containerRef} style={{ backgroundColor: pageBackgroundColor, width: "100%", paddingTop: `${SHADOW_PADDING.top}px`, paddingBottom: `${SHADOW_PADDING.bottom}px` }}>
+    <div
+      ref={containerRef}
+      style={{
+        backgroundColor: pageBackgroundColor,
+        width: "100%",
+        paddingTop: `${SHADOW_PADDING.top}px`,
+        paddingBottom: `${SHADOW_PADDING.bottom}px`,
+      }}
+    >
       <div
         lang="de"
         className="@container mx-auto w-full"
@@ -455,492 +479,573 @@ export function Funnel({
       >
         <div className="p-4 @md:p-8">
           <div key={currentStep} className="funnel-step-enter">
-          {!isContactStep ? (
-            <div>
-              <div className="mb-6 @lg:mb-8">
-                <h1
-                  className="text-lg md:text-xl lg:text-2xl font-bold leading-tight text-center"
-                  style={{ color: theme.textColor }}
-                >
-                  {currentQuestion.title}
-                </h1>
-              </div>
+            {!isContactStep ? (
+              <div>
+                <div className="mb-6 @lg:mb-8">
+                  <h1
+                    className="text-lg md:text-xl lg:text-2xl font-bold leading-tight text-center"
+                    style={{ color: theme.textColor }}
+                  >
+                    {currentQuestion.title}
+                  </h1>
+                </div>
 
-              {/* single_choice / multiple_choice */}
-              {(currentQuestion.questionType === "single_choice" ||
-                currentQuestion.questionType === "multiple_choice") && (
-                <div className="flex items-center justify-center mb-3">
-                  <div className={cn("grid gap-3 w-full", gridClasses)}>
-                    {currentQuestion.options.map((option, idx) => {
-                      const isMultiple = currentQuestion.questionType === "multiple_choice";
-                      const selectedValues = answers[currentQuestion.id]?.split(",").filter(Boolean) ?? [];
-                      const isSelected = isMultiple
-                        ? selectedValues.includes(option.value)
-                        : answers[currentQuestion.id] === option.value;
-                      const colSpan = getOptionColSpanClasses(optionCount, idx);
-                      return (
-                        <button
-                          key={option.value}
-                          onClick={() =>
-                            isMultiple
-                              ? handleToggleMultiple(currentQuestion.id, option.value)
-                              : handleSelect(currentQuestion.id, option.value)
-                          }
-                          className={cn(
-                            "flex flex-col items-center justify-center min-h-24 p-4 transition-all duration-200 cursor-pointer",
-                            colSpan,
-                          )}
-                          style={{
-                            borderRadius: theme.borderRadius,
-                            backgroundColor: isSelected
-                              ? theme.primaryColor
-                              : theme.backgroundColor,
-                            border: `2px solid ${isSelected ? theme.primaryColor : "transparent"}`,
-                            boxShadow: isSelected
-                              ? `0 4px 16px ${theme.primaryColor}40`
-                              : "0 2px 8px rgba(0,0,0,0.08)",
-                          }}
-                          onMouseEnter={(e) => {
-                            if (!isSelected) {
-                              e.currentTarget.style.border = `2px solid ${theme.primaryColor}`;
-                              e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.14)";
+                {/* single_choice / multiple_choice */}
+                {(currentQuestion.questionType === "single_choice" ||
+                  currentQuestion.questionType === "multiple_choice") && (
+                  <div className="flex items-center justify-center mb-3">
+                    <div className={cn("grid gap-3 w-full", gridClasses)}>
+                      {currentQuestion.options.map((option, idx) => {
+                        const isMultiple =
+                          currentQuestion.questionType === "multiple_choice";
+                        const selectedValues =
+                          answers[currentQuestion.id]
+                            ?.split(",")
+                            .filter(Boolean) ?? [];
+                        const isSelected = isMultiple
+                          ? selectedValues.includes(option.value)
+                          : answers[currentQuestion.id] === option.value;
+                        const colSpan = getOptionColSpanClasses(
+                          optionCount,
+                          idx,
+                        );
+                        return (
+                          <button
+                            key={option.value}
+                            onClick={() =>
+                              isMultiple
+                                ? handleToggleMultiple(
+                                    currentQuestion.id,
+                                    option.value,
+                                  )
+                                : handleSelect(currentQuestion.id, option.value)
                             }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!isSelected) {
-                              e.currentTarget.style.border = "2px solid transparent";
-                              e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
-                            }
-                          }}
-                        >
-                          <div className="mb-3 shrink-0">
-                            {renderIcon(
-                              option.iconKey,
-                              option.iconUrl,
-                              isSelected ? "#ffffff" : theme.primaryColor,
-                              44,
+                            className={cn(
+                              "flex flex-col items-center justify-center min-h-24 p-4 transition-all duration-200 cursor-pointer",
+                              colSpan,
                             )}
-                          </div>
-                          <span
-                            className="text-xs font-medium text-center leading-tight hyphens-auto px-1"
                             style={{
-                              color: isSelected ? "#ffffff" : theme.textColor,
+                              borderRadius: theme.borderRadius,
+                              backgroundColor: isSelected
+                                ? theme.primaryColor
+                                : theme.backgroundColor,
+                              border: `2px solid ${isSelected ? theme.primaryColor : "transparent"}`,
+                              boxShadow: isSelected
+                                ? `0 4px 16px ${theme.primaryColor}40`
+                                : "0 2px 8px rgba(0,0,0,0.08)",
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isSelected) {
+                                e.currentTarget.style.border = `2px solid ${theme.primaryColor}`;
+                                e.currentTarget.style.boxShadow =
+                                  "0 8px 24px rgba(0,0,0,0.14)";
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isSelected) {
+                                e.currentTarget.style.border =
+                                  "2px solid transparent";
+                                e.currentTarget.style.boxShadow =
+                                  "0 2px 8px rgba(0,0,0,0.08)";
+                              }
                             }}
                           >
-                            {option.label}
-                          </span>
-                        </button>
-                      );
-                    })}
+                            <div className="mb-3 shrink-0">
+                              {renderIcon(
+                                option.iconKey,
+                                option.iconUrl,
+                                isSelected ? "#ffffff" : theme.primaryColor,
+                                44,
+                              )}
+                            </div>
+                            <span
+                              className="text-xs font-medium text-center leading-tight hyphens-auto px-1"
+                              style={{
+                                color: isSelected ? "#ffffff" : theme.textColor,
+                              }}
+                            >
+                              {option.label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* slider */}
-              {currentQuestion.questionType === "slider" && (() => {
-                const sc = currentQuestion.config as SliderConfig;
-                const val = Number(answers[currentQuestion.id] ?? sc.default ?? sc.min);
-                return (
-                  <div className="mb-6">
-                    <p className="text-center text-3xl font-bold mb-6"
-                      style={{ color: theme.primaryColor }}>
-                      {val.toLocaleString("de-DE")} {sc.unit}
-                    </p>
+                {/* slider */}
+                {currentQuestion.questionType === "slider" &&
+                  (() => {
+                    const sc = currentQuestion.config as SliderConfig;
+                    const val = Number(
+                      answers[currentQuestion.id] ?? sc.default ?? sc.min,
+                    );
+                    return (
+                      <div className="mb-6">
+                        <p
+                          className="text-center text-3xl font-bold mb-6"
+                          style={{ color: theme.primaryColor }}
+                        >
+                          {val.toLocaleString("de-DE")} {sc.unit}
+                        </p>
 
-                    <input
-                      type="range"
-                      min={sc.min}
-                      max={sc.max}
-                      step={sc.step ?? 1}
-                      value={val}
+                        <input
+                          type="range"
+                          min={sc.min}
+                          max={sc.max}
+                          step={sc.step ?? 1}
+                          value={val}
+                          onChange={(e) =>
+                            setAnswers((prev) => ({
+                              ...prev,
+                              [currentQuestion.id]: e.target.value,
+                            }))
+                          }
+                          className="funnel-slider"
+                        />
+                        <div
+                          className="flex justify-between text-xs mt-1 mb-5"
+                          style={{ color: theme.textColorMuted }}
+                        >
+                          <span>
+                            {sc.min.toLocaleString("de-DE")} {sc.unit}
+                          </span>
+                          <span>
+                            {sc.max.toLocaleString("de-DE")} {sc.unit}
+                          </span>
+                        </div>
+
+                        {/* Synced Eingabefeld */}
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="text-sm shrink-0"
+                            style={{ color: theme.textColorMuted }}
+                          >
+                            Alternativ eintippen:
+                          </span>
+                          <div className="relative flex-1">
+                            <input
+                              type="number"
+                              value={val}
+                              min={sc.min}
+                              max={sc.max}
+                              step={sc.step ?? 1}
+                              onChange={(e) => {
+                                const clamped = Math.min(
+                                  sc.max,
+                                  Math.max(
+                                    sc.min,
+                                    Number(e.target.value) || sc.min,
+                                  ),
+                                );
+                                setAnswers((prev) => ({
+                                  ...prev,
+                                  [currentQuestion.id]: String(clamped),
+                                }));
+                              }}
+                              className="w-full px-4 py-2.5 border outline-none text-center"
+                              style={{
+                                borderColor: theme.borderColor,
+                                backgroundColor: theme.backgroundColor,
+                                color: theme.textColor,
+                                borderRadius: "9999px",
+                                paddingRight: "3.5rem",
+                              }}
+                            />
+                            <div
+                              className="absolute right-0 top-0 bottom-0 flex items-center justify-center w-12 text-white text-sm font-bold"
+                              style={{
+                                backgroundColor: theme.primaryColor,
+                                borderRadius: "0 9999px 9999px 0",
+                              }}
+                            >
+                              {sc.unit}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                {/* long_text */}
+                {currentQuestion.questionType === "long_text" && (
+                  <div className="mb-3">
+                    <textarea
+                      value={answers[currentQuestion.id] ?? ""}
                       onChange={(e) =>
                         setAnswers((prev) => ({
                           ...prev,
                           [currentQuestion.id]: e.target.value,
                         }))
                       }
-                      className="funnel-slider"
+                      placeholder={
+                        (currentQuestion.config as TextConfig).placeholder ?? ""
+                      }
+                      maxLength={
+                        (currentQuestion.config as TextConfig).maxLength
+                      }
+                      rows={4}
+                      className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base resize-none"
+                      style={{
+                        borderColor: theme.borderColor,
+                        backgroundColor: theme.inputBgColor,
+                        color: theme.textColor,
+                        borderRadius: theme.borderRadius,
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = theme.primaryColor;
+                        e.currentTarget.style.backgroundColor =
+                          theme.backgroundColor;
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = theme.borderColor;
+                        e.currentTarget.style.backgroundColor =
+                          theme.inputBgColor;
+                      }}
                     />
-                    <div className="flex justify-between text-xs mt-1 mb-5"
-                      style={{ color: theme.textColorMuted }}>
-                      <span>{sc.min.toLocaleString("de-DE")} {sc.unit}</span>
-                      <span>{sc.max.toLocaleString("de-DE")} {sc.unit}</span>
-                    </div>
-
-                    {/* Synced Eingabefeld */}
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm shrink-0"
-                        style={{ color: theme.textColorMuted }}>
-                        Alternativ eintippen:
-                      </span>
-                      <div className="relative flex-1">
-                        <input
-                          type="number"
-                          value={val}
-                          min={sc.min}
-                          max={sc.max}
-                          step={sc.step ?? 1}
-                          onChange={(e) => {
-                            const clamped = Math.min(
-                              sc.max,
-                              Math.max(sc.min, Number(e.target.value) || sc.min),
-                            );
-                            setAnswers((prev) => ({
-                              ...prev,
-                              [currentQuestion.id]: String(clamped),
-                            }));
-                          }}
-                          className="w-full px-4 py-2.5 border outline-none text-center"
-                          style={{
-                            borderColor: theme.borderColor,
-                            backgroundColor: theme.backgroundColor,
-                            color: theme.textColor,
-                            borderRadius: "9999px",
-                            paddingRight: "3.5rem",
-                          }}
-                        />
-                        <div
-                          className="absolute right-0 top-0 bottom-0 flex items-center justify-center w-12 text-white text-sm font-bold"
-                          style={{
-                            backgroundColor: theme.primaryColor,
-                            borderRadius: "0 9999px 9999px 0",
-                          }}
-                        >
-                          {sc.unit}
-                        </div>
-                      </div>
-                    </div>
                   </div>
-                );
-              })()}
+                )}
 
-              {/* long_text */}
-              {currentQuestion.questionType === "long_text" && (
-                <div className="mb-3">
-                  <textarea
-                    value={answers[currentQuestion.id] ?? ""}
-                    onChange={(e) =>
-                      setAnswers((prev) => ({
-                        ...prev,
-                        [currentQuestion.id]: e.target.value,
-                      }))
-                    }
-                    placeholder={(currentQuestion.config as TextConfig).placeholder ?? ""}
-                    maxLength={(currentQuestion.config as TextConfig).maxLength}
-                    rows={4}
-                    className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base resize-none"
-                    style={{
-                      borderColor: theme.borderColor,
-                      backgroundColor: theme.inputBgColor,
-                      color: theme.textColor,
-                      borderRadius: theme.borderRadius,
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = theme.primaryColor;
-                      e.currentTarget.style.backgroundColor = theme.backgroundColor;
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = theme.borderColor;
-                      e.currentTarget.style.backgroundColor = theme.inputBgColor;
-                    }}
-                  />
-                </div>
-              )}
-
-              {/* short_text */}
-              {currentQuestion.questionType === "short_text" && (
-                <div className="mb-3">
-                  <input
-                    type="text"
-                    value={answers[currentQuestion.id] ?? ""}
-                    onChange={(e) =>
-                      setAnswers((prev) => ({
-                        ...prev,
-                        [currentQuestion.id]: e.target.value,
-                      }))
-                    }
-                    placeholder={(currentQuestion.config as TextConfig).placeholder ?? ""}
-                    maxLength={(currentQuestion.config as TextConfig).maxLength}
-                    className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
-                    style={{
-                      borderColor: theme.borderColor,
-                      backgroundColor: theme.inputBgColor,
-                      color: theme.textColor,
-                      borderRadius: theme.borderRadius,
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = theme.primaryColor;
-                      e.currentTarget.style.backgroundColor = theme.backgroundColor;
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = theme.borderColor;
-                      e.currentTarget.style.backgroundColor = theme.inputBgColor;
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-          ) : (
-            /* Kontakt-Formular */
-            <form onSubmit={handleFormSubmit}>
-              <h1
-                className="text-lg md:text-xl lg:text-2xl font-bold mb-2 leading-tight"
-                style={{ color: theme.textColor }}
-              >
-                {funnel.title}
-              </h1>
-
-              <p
-                className="font-semibold mb-4"
-                style={{ color: theme.primaryColor }}
-              >
-                {funnel.contactFormSubtitle}
-              </p>
-
-              {/* Honeypot – für Menschen unsichtbar, Bots füllen es aus */}
-              <input
-                type="text"
-                name="website"
-                value={honeypot}
-                onChange={(e) => setHoneypot(e.target.value)}
-                tabIndex={-1}
-                autoComplete="off"
-                aria-hidden="true"
-                style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 0, height: 0 }}
-              />
-
-              {/* Anrede */}
-              <div className="mb-4">
-                <div className="flex gap-5">
-                  {["Herr", "Frau"].map((anrede) => (
-                    <label
-                      key={anrede}
-                      className="flex items-center gap-2 cursor-pointer min-h-11"
-                    >
-                      <div
-                        className="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors"
-                        style={{
-                          borderColor:
-                            contactData.anrede === anrede
-                              ? theme.primaryColor
-                              : theme.borderColor,
-                        }}
-                      >
-                        {contactData.anrede === anrede && (
-                          <div
-                            className="w-2 h-2 rounded-full"
-                            style={{ backgroundColor: theme.primaryColor }}
-                          />
-                        )}
-                      </div>
-                      <span style={{ color: theme.textColor }}>{anrede}</span>
-                      <input
-                        type="radio"
-                        name="anrede"
-                        value={anrede}
-                        checked={contactData.anrede === anrede}
-                        onChange={(e) => {
-                          setContactData((prev) => ({
-                            ...prev,
-                            anrede: e.target.value,
-                          }));
-                          setErrors((prev) => ({ ...prev, anrede: "" }));
-                        }}
-                        className="sr-only"
-                      />
-                    </label>
-                  ))}
-                </div>
-                {errors.anrede && (
-                  <p className="text-xs mt-1" style={{ color: "#ef4444" }}>
-                    {errors.anrede}
-                  </p>
+                {/* short_text */}
+                {currentQuestion.questionType === "short_text" && (
+                  <div className="mb-3">
+                    <input
+                      type="text"
+                      value={answers[currentQuestion.id] ?? ""}
+                      onChange={(e) =>
+                        setAnswers((prev) => ({
+                          ...prev,
+                          [currentQuestion.id]: e.target.value,
+                        }))
+                      }
+                      placeholder={
+                        (currentQuestion.config as TextConfig).placeholder ?? ""
+                      }
+                      maxLength={
+                        (currentQuestion.config as TextConfig).maxLength
+                      }
+                      className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
+                      style={{
+                        borderColor: theme.borderColor,
+                        backgroundColor: theme.inputBgColor,
+                        color: theme.textColor,
+                        borderRadius: theme.borderRadius,
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = theme.primaryColor;
+                        e.currentTarget.style.backgroundColor =
+                          theme.backgroundColor;
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = theme.borderColor;
+                        e.currentTarget.style.backgroundColor =
+                          theme.inputBgColor;
+                      }}
+                    />
+                  </div>
                 )}
               </div>
-
-              {/* Form Fields */}
-              <div className="space-y-3 mb-4">
-                <div>
-                  <input
-                    type="text"
-                    placeholder="Vor- und Nachname"
-                    value={contactData.name}
-                    onChange={(e) =>
-                      setContactData((prev) => ({
-                        ...prev,
-                        name: e.target.value,
-                      }))
-                    }
-                    className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
-                    style={{
-                      borderColor: errors.name ? "#ef4444" : theme.borderColor,
-                      backgroundColor: theme.inputBgColor,
-                      color: theme.textColor,
-                      borderRadius: theme.borderRadius,
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = theme.primaryColor;
-                      e.currentTarget.style.backgroundColor =
-                        theme.backgroundColor;
-                    }}
-                    onBlur={(e) => {
-                      if (hasTriedSubmit) {
-                        const error = validateField("name", e.currentTarget.value);
-                        setErrors((prev) => ({ ...prev, name: error }));
-                        e.currentTarget.style.borderColor = error ? "#ef4444" : theme.borderColor;
-                      } else {
-                        e.currentTarget.style.borderColor = theme.borderColor;
-                      }
-                      e.currentTarget.style.backgroundColor = theme.inputBgColor;
-                    }}
-                  />
-                  {errors.name && (
-                    <p className="text-xs mt-1" style={{ color: "#ef4444" }}>
-                      {errors.name}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <input
-                    type="tel"
-                    placeholder="Telefonnummer"
-                    value={contactData.telefon}
-                    onChange={(e) =>
-                      setContactData((prev) => ({
-                        ...prev,
-                        telefon: e.target.value,
-                      }))
-                    }
-                    className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
-                    style={{
-                      borderColor: errors.telefon
-                        ? "#ef4444"
-                        : theme.borderColor,
-                      backgroundColor: theme.inputBgColor,
-                      color: theme.textColor,
-                      borderRadius: theme.borderRadius,
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = theme.primaryColor;
-                      e.currentTarget.style.backgroundColor =
-                        theme.backgroundColor;
-                    }}
-                    onBlur={(e) => {
-                      if (hasTriedSubmit) {
-                        const error = validateField("telefon", e.currentTarget.value);
-                        setErrors((prev) => ({ ...prev, telefon: error }));
-                        e.currentTarget.style.borderColor = error ? "#ef4444" : theme.borderColor;
-                      } else {
-                        e.currentTarget.style.borderColor = theme.borderColor;
-                      }
-                      e.currentTarget.style.backgroundColor = theme.inputBgColor;
-                    }}
-                  />
-                  {errors.telefon && (
-                    <p className="text-xs mt-1" style={{ color: "#ef4444" }}>
-                      {errors.telefon}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <input
-                    type="email"
-                    placeholder="E-Mail"
-                    value={contactData.email}
-                    onChange={(e) =>
-                      setContactData((prev) => ({
-                        ...prev,
-                        email: e.target.value,
-                      }))
-                    }
-                    className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
-                    style={{
-                      borderColor: errors.email ? "#ef4444" : theme.borderColor,
-                      backgroundColor: theme.inputBgColor,
-                      color: theme.textColor,
-                      borderRadius: theme.borderRadius,
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = theme.primaryColor;
-                      e.currentTarget.style.backgroundColor =
-                        theme.backgroundColor;
-                    }}
-                    onBlur={(e) => {
-                      if (hasTriedSubmit) {
-                        const error = validateField("email", e.currentTarget.value);
-                        setErrors((prev) => ({ ...prev, email: error }));
-                        e.currentTarget.style.borderColor = error ? "#ef4444" : theme.borderColor;
-                      } else {
-                        e.currentTarget.style.borderColor = theme.borderColor;
-                      }
-                      e.currentTarget.style.backgroundColor = theme.inputBgColor;
-                    }}
-                  />
-                  {errors.email && (
-                    <p className="text-xs mt-1" style={{ color: "#ef4444" }}>
-                      {errors.email}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Datenschutz */}
-              <p
-                className="text-xs mb-4 leading-relaxed"
-                style={{ color: theme.textColorMuted }}
-              >
-                Mit dem Absenden stimme ich zu, per E-Mail und Telefon zu meiner Anfrage kontaktiert zu werden
-                {funnel.privacyPolicyUrl ? (
-                  <> (siehe <a
-                    href={funnel.privacyPolicyUrl.startsWith('http') ? funnel.privacyPolicyUrl : `https://${funnel.privacyPolicyUrl}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: theme.primaryColor }}
-                    className="underline"
-                  >Datenschutzhinweise</a>)</>
-                ) : null}
-                . Widerruf jederzeit möglich.
-              </p>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                className="flex items-center justify-center gap-2 w-full text-white px-5 py-3 rounded-lg font-semibold transition-colors"
-                style={{
-                  backgroundColor: theme.primaryColor,
-                  borderRadius: theme.borderRadius,
-                  cursor: isValid ? "pointer" : "not-allowed",
-                  opacity: isValid ? 1 : 0.5,
-                }}
-                onMouseEnter={(e) => {
-                  if (isValid) {
-                    e.currentTarget.style.backgroundColor =
-                      theme.primaryColorHover;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.primaryColor;
-                }}
-              >
-                <span className="text-sm sm:text-base">
-                  {funnel.submitButtonLabel}
-                </span>
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+            ) : (
+              /* Kontakt-Formular */
+              <form onSubmit={handleFormSubmit}>
+                <h1
+                  className="text-lg md:text-xl lg:text-2xl font-bold mb-2 leading-tight"
+                  style={{ color: theme.textColor }}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </button>
-            </form>
-          )}
+                  {funnel.title}
+                </h1>
+
+                <p
+                  className="font-semibold mb-4"
+                  style={{ color: theme.primaryColor }}
+                >
+                  {funnel.contactFormSubtitle}
+                </p>
+
+                {/* Honeypot – für Menschen unsichtbar, Bots füllen es aus */}
+                <input
+                  type="text"
+                  name="website"
+                  value={honeypot}
+                  onChange={(e) => setHoneypot(e.target.value)}
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    opacity: 0,
+                    pointerEvents: "none",
+                    width: 0,
+                    height: 0,
+                  }}
+                />
+
+                {/* Anrede */}
+                <div className="mb-4">
+                  <div className="flex gap-5">
+                    {["Herr", "Frau"].map((anrede) => (
+                      <label
+                        key={anrede}
+                        className="flex items-center gap-2 cursor-pointer min-h-11"
+                      >
+                        <div
+                          className="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors"
+                          style={{
+                            borderColor:
+                              contactData.anrede === anrede
+                                ? theme.primaryColor
+                                : theme.borderColor,
+                          }}
+                        >
+                          {contactData.anrede === anrede && (
+                            <div
+                              className="w-2 h-2 rounded-full"
+                              style={{ backgroundColor: theme.primaryColor }}
+                            />
+                          )}
+                        </div>
+                        <span style={{ color: theme.textColor }}>{anrede}</span>
+                        <input
+                          type="radio"
+                          name="anrede"
+                          value={anrede}
+                          checked={contactData.anrede === anrede}
+                          onChange={(e) => {
+                            setContactData((prev) => ({
+                              ...prev,
+                              anrede: e.target.value,
+                            }));
+                            setErrors((prev) => ({ ...prev, anrede: "" }));
+                          }}
+                          className="sr-only"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                  {errors.anrede && (
+                    <p className="text-xs mt-1" style={{ color: "#ef4444" }}>
+                      {errors.anrede}
+                    </p>
+                  )}
+                </div>
+
+                {/* Form Fields */}
+                <div className="space-y-3 mb-4">
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Vor- und Nachname"
+                      value={contactData.name}
+                      onChange={(e) =>
+                        setContactData((prev) => ({
+                          ...prev,
+                          name: e.target.value,
+                        }))
+                      }
+                      className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
+                      style={{
+                        borderColor: errors.name
+                          ? "#ef4444"
+                          : theme.borderColor,
+                        backgroundColor: theme.inputBgColor,
+                        color: theme.textColor,
+                        borderRadius: theme.borderRadius,
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = theme.primaryColor;
+                        e.currentTarget.style.backgroundColor =
+                          theme.backgroundColor;
+                      }}
+                      onBlur={(e) => {
+                        if (hasTriedSubmit) {
+                          const error = validateField(
+                            "name",
+                            e.currentTarget.value,
+                          );
+                          setErrors((prev) => ({ ...prev, name: error }));
+                          e.currentTarget.style.borderColor = error
+                            ? "#ef4444"
+                            : theme.borderColor;
+                        } else {
+                          e.currentTarget.style.borderColor = theme.borderColor;
+                        }
+                        e.currentTarget.style.backgroundColor =
+                          theme.inputBgColor;
+                      }}
+                    />
+                    {errors.name && (
+                      <p className="text-xs mt-1" style={{ color: "#ef4444" }}>
+                        {errors.name}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <input
+                      type="tel"
+                      placeholder="Telefonnummer"
+                      value={contactData.telefon}
+                      onChange={(e) =>
+                        setContactData((prev) => ({
+                          ...prev,
+                          telefon: e.target.value,
+                        }))
+                      }
+                      className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
+                      style={{
+                        borderColor: errors.telefon
+                          ? "#ef4444"
+                          : theme.borderColor,
+                        backgroundColor: theme.inputBgColor,
+                        color: theme.textColor,
+                        borderRadius: theme.borderRadius,
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = theme.primaryColor;
+                        e.currentTarget.style.backgroundColor =
+                          theme.backgroundColor;
+                      }}
+                      onBlur={(e) => {
+                        if (hasTriedSubmit) {
+                          const error = validateField(
+                            "telefon",
+                            e.currentTarget.value,
+                          );
+                          setErrors((prev) => ({ ...prev, telefon: error }));
+                          e.currentTarget.style.borderColor = error
+                            ? "#ef4444"
+                            : theme.borderColor;
+                        } else {
+                          e.currentTarget.style.borderColor = theme.borderColor;
+                        }
+                        e.currentTarget.style.backgroundColor =
+                          theme.inputBgColor;
+                      }}
+                    />
+                    {errors.telefon && (
+                      <p className="text-xs mt-1" style={{ color: "#ef4444" }}>
+                        {errors.telefon}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <input
+                      type="email"
+                      placeholder="E-Mail"
+                      value={contactData.email}
+                      onChange={(e) =>
+                        setContactData((prev) => ({
+                          ...prev,
+                          email: e.target.value,
+                        }))
+                      }
+                      className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
+                      style={{
+                        borderColor: errors.email
+                          ? "#ef4444"
+                          : theme.borderColor,
+                        backgroundColor: theme.inputBgColor,
+                        color: theme.textColor,
+                        borderRadius: theme.borderRadius,
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = theme.primaryColor;
+                        e.currentTarget.style.backgroundColor =
+                          theme.backgroundColor;
+                      }}
+                      onBlur={(e) => {
+                        if (hasTriedSubmit) {
+                          const error = validateField(
+                            "email",
+                            e.currentTarget.value,
+                          );
+                          setErrors((prev) => ({ ...prev, email: error }));
+                          e.currentTarget.style.borderColor = error
+                            ? "#ef4444"
+                            : theme.borderColor;
+                        } else {
+                          e.currentTarget.style.borderColor = theme.borderColor;
+                        }
+                        e.currentTarget.style.backgroundColor =
+                          theme.inputBgColor;
+                      }}
+                    />
+                    {errors.email && (
+                      <p className="text-xs mt-1" style={{ color: "#ef4444" }}>
+                        {errors.email}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Datenschutz */}
+                <p
+                  className="text-xs mb-4 leading-relaxed"
+                  style={{ color: theme.textColorMuted }}
+                >
+                  Mit dem Absenden stimme ich zu, per E-Mail und Telefon zu
+                  meiner Anfrage kontaktiert zu werden
+                  {funnel.privacyPolicyUrl ? (
+                    <>
+                      {" "}
+                      (siehe{" "}
+                      <a
+                        href={
+                          funnel.privacyPolicyUrl.startsWith("http")
+                            ? funnel.privacyPolicyUrl
+                            : `https://${funnel.privacyPolicyUrl}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: theme.primaryColor }}
+                        className="underline"
+                      >
+                        Datenschutzhinweise
+                      </a>
+                      )
+                    </>
+                  ) : null}
+                  . Widerruf jederzeit möglich.
+                </p>
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  className="flex items-center justify-center gap-2 w-full text-white px-5 py-3 rounded-lg font-semibold transition-colors"
+                  style={{
+                    backgroundColor: theme.primaryColor,
+                    borderRadius: theme.borderRadius,
+                    cursor: isValid ? "pointer" : "not-allowed",
+                    opacity: isValid ? 1 : 0.5,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (isValid) {
+                      e.currentTarget.style.backgroundColor =
+                        theme.primaryColorHover;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.primaryColor;
+                  }}
+                >
+                  <span className="text-sm sm:text-base">
+                    {funnel.submitButtonLabel}
+                  </span>
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </button>
+              </form>
+            )}
           </div>
 
           {/* Progress Bar & Navigation */}
@@ -994,7 +1099,8 @@ export function Funnel({
                   }}
                   onMouseEnter={(e) => {
                     if (!e.currentTarget.disabled)
-                      e.currentTarget.style.backgroundColor = theme.primaryColorHover;
+                      e.currentTarget.style.backgroundColor =
+                        theme.primaryColorHover;
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.backgroundColor = theme.primaryColor;
