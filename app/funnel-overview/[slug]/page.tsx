@@ -7,9 +7,9 @@ import SubmissionsTable from './SubmissionsTable'
 function Row({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null
   return (
-    <div className="flex gap-3 py-2 border-b border-gray-100 last:border-0">
-      <span className="text-sm text-gray-500 w-44 shrink-0">{label}</span>
-      <span className="text-sm text-gray-900 break-all">{value}</span>
+    <div className="flex flex-col sm:flex-row sm:gap-4 py-2 border-b border-gray-100 last:border-0">
+      <span className="text-xs sm:text-sm text-gray-400 sm:text-gray-500 sm:w-44 sm:shrink-0">{label}</span>
+      <span className="text-sm text-gray-900 wrap-break-word">{value}</span>
     </div>
   )
 }
@@ -81,32 +81,32 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
       <div className="bg-white sticky top-0 z-10 border-b-2 border-[#4648d4]">
-        <div className="max-w-7xl mx-auto px-8 py-4 flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex items-center gap-3 min-w-0">
           <a
             href="/funnel-overview"
-            className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+            className="flex shrink-0 items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
           >
             <ArrowLeft size={16} />
-            Übersicht
+            <span className="hidden sm:inline">Übersicht</span>
           </a>
-          <span className="text-gray-300">/</span>
-          <span className="text-sm font-semibold text-gray-900">{slug}</span>
-          <div className="ml-auto flex items-center gap-3">
+          <span className="text-gray-300 shrink-0">/</span>
+          <span className="text-sm font-semibold text-gray-900 truncate min-w-0">{slug}</span>
+          <div className="ml-auto shrink-0 flex items-center gap-2 sm:gap-3">
             <a
               href={funnelUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-2 text-sm font-medium px-3 sm:px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
             >
               <ExternalLink size={14} />
-              Live öffnen
+              <span className="hidden sm:inline">Live öffnen</span>
             </a>
             <a
               href="/logout"
-              className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+              className="flex items-center gap-2 text-sm font-medium px-3 sm:px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
             >
               <Power size={14} />
-              Logout
+              <span className="hidden sm:inline">Logout</span>
             </a>
           </div>
         </div>
@@ -163,20 +163,20 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
           {/* Theme */}
           <div className="bg-white rounded-2xl shadow-sm p-6">
             <h2 className="text-base font-bold text-gray-900 mb-3">Theme</h2>
-            <div className="flex gap-3 py-2 border-b border-gray-100">
-              <span className="text-sm text-gray-500 w-44 shrink-0">Primärfarbe</span>
+            <div className="flex flex-col sm:flex-row sm:gap-4 py-2 border-b border-gray-100">
+              <span className="text-xs sm:text-sm text-gray-400 sm:text-gray-500 sm:w-44 sm:shrink-0">Primärfarbe</span>
               <ColorSwatch color={funnel.primary_color} />
             </div>
-            <div className="flex gap-3 py-2 border-b border-gray-100">
-              <span className="text-sm text-gray-500 w-44 shrink-0">Textfarbe</span>
+            <div className="flex flex-col sm:flex-row sm:gap-4 py-2 border-b border-gray-100">
+              <span className="text-xs sm:text-sm text-gray-400 sm:text-gray-500 sm:w-44 sm:shrink-0">Textfarbe</span>
               <ColorSwatch color={funnel.text_color} />
             </div>
-            <div className="flex gap-3 py-2 border-b border-gray-100">
-              <span className="text-sm text-gray-500 w-44 shrink-0">Hintergrund</span>
+            <div className="flex flex-col sm:flex-row sm:gap-4 py-2 border-b border-gray-100">
+              <span className="text-xs sm:text-sm text-gray-400 sm:text-gray-500 sm:w-44 sm:shrink-0">Hintergrund</span>
               <ColorSwatch color={funnel.background_color} />
             </div>
-            <div className="flex gap-3 py-2 border-b border-gray-100">
-              <span className="text-sm text-gray-500 w-44 shrink-0">Seiten-BG</span>
+            <div className="flex flex-col sm:flex-row sm:gap-4 py-2 border-b border-gray-100">
+              <span className="text-xs sm:text-sm text-gray-400 sm:text-gray-500 sm:w-44 sm:shrink-0">Seiten-BG</span>
               <ColorSwatch color={funnel.page_background_color} />
             </div>
             <Row label="Font" value={funnel.font} />
