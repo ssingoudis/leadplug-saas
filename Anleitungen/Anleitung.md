@@ -11,24 +11,24 @@ Einbettbares iFrame-Widget für Handwerksbetriebe. Jeder Tenant bekommt seinen e
 3. [Lokale Entwicklungsumgebung einrichten](#3-lokale-entwicklungsumgebung-einrichten)
 4. [Supabase einrichten](#4-supabase-einrichten)
 5. [Resend einrichten](#5-resend-einrichten)
-6. [Neuen Tenant anlegen](#6-neuen-tenant-anlegen)
+6. [Neuen Tenant & Funnel anlegen](#6-neuen-tenant--funnel-anlegen)
 7. [Widget beim Kunden einbetten](#7-widget-beim-kunden-einbetten)
 8. [Auf Vercel deployen](#8-auf-vercel-deployen)
 9. [Projektstruktur](#9-projektstruktur)
-10. [Icons hinzufügen](#10-icons-hinzufügen)
-11. [Abrechnung & Billing](#11-abrechnung--billing)
+10. [Icons](#10-icons)
+11. [Billing](#11-billing)
 
 ---
 
 ## 1. Was ist dieses Projekt?
 
-Ein mehrstufiger Sales-Funnel, der als `<iframe>` auf der Website eines Handwerksbetriebs eingebettet wird. Der Endkunde klickt sich durch konfigurierbare Fragen (z.B. Gebäudetyp, Fläche, Wunschtermin) und gibt am Ende seine Kontaktdaten ein. Das System:
+Ein mehrstufiger Sales-Funnel, der als `<iframe>` auf der Website eines Handwerksbetriebs eingebettet wird. Der Endkunde klickt sich durch konfigurierbare Fragen und gibt am Ende seine Kontaktdaten ein. Das System:
 
 - Speichert die Anfrage in Supabase
 - Schickt eine Dankes-Mail an den Endkunden
 - Schickt eine Lead-Benachrichtigung an den Betreiber
 
-**Multi-Tenant:** Jeder Kunde (Tenant) hat einen eindeutigen Slug. Die URL `https://domain.de/musterfirma` zeigt den Funnel mit der Konfiguration von `musterfirma`. Fragen, Farben, Texte und Preise werden komplett aus Supabase geladen – kein Code-Deployment für neue Tenants nötig.
+**Multi-Tenant:** Jeder Kunde hat einen eindeutigen Slug. Die URL `https://domain.de/musterfirma` zeigt den Funnel mit der Konfiguration von `musterfirma`. Fragen, Farben und Texte werden komplett aus Supabase geladen – kein Code-Deployment für neue Tenants nötig.
 
 ---
 
@@ -36,10 +36,10 @@ Ein mehrstufiger Sales-Funnel, der als `<iframe>` auf der Website eines Handwerk
 
 | Schicht | Technologie |
 |---|---|
-| Framework | Next.js 14+ (App Router) |
-| Sprache | TypeScript (strict) |
+| Framework | Next.js (App Router) |
+| Sprache | TypeScript |
 | Styling | TailwindCSS |
-| Datenbank / Config | Supabase (Postgres) |
+| Datenbank | Supabase (Postgres) |
 | E-Mail | Resend + React Email |
 | Deployment | Vercel |
 
@@ -47,208 +47,129 @@ Ein mehrstufiger Sales-Funnel, der als `<iframe>` auf der Website eines Handwerk
 
 ## 3. Lokale Entwicklungsumgebung einrichten
 
-### Voraussetzungen
-
-- Node.js 18+
-- Ein Supabase-Projekt (kostenloser Free Tier reicht)
-- Ein Resend-Account (kostenloser Free Tier reicht)
-
-### Schritt-für-Schritt
-
-**1. Repository klonen und Dependencies installieren:**
-
+**1. Dependencies installieren:**
 ```bash
-git clone <repo-url>
-cd solar-widget
 npm install
 ```
 
 **2. Umgebungsvariablen anlegen:**
-
 ```bash
 cp .env.example .env.local
 ```
 
-`.env.local` befüllen (Details in Abschnitt 4 und 5):
-
+`.env.local` befüllen:
 ```env
 RESEND_API_KEY=re_xxxxx
 EMAIL_FROM=noreply@deine-domain.de
+EMAIL_DOMAIN=deine-domain.de
 SUPABASE_URL=https://xxxx.supabase.co
 SUPABASE_SERVICE_KEY=eyJxxxxx
 NEXT_PUBLIC_BASE_URL=http://localhost:3000
+SITE_PASSWORD=geheim
 ```
 
 **3. Entwicklungsserver starten:**
-
 ```bash
 npm run dev
 ```
-
-Erreichbar unter `http://localhost:3000/demo` (sofern Demo-Daten in Supabase eingespielt).
 
 ---
 
 ## 4. Supabase einrichten
 
-### Schema erstellen
+Schema aus `context/supabase-schema.sql` im Supabase SQL-Editor ausführen. Erstellt die Tabellen `tenants`, `funnels`, `funnel_questions`, `submissions`, `honeypot_triggers`.
 
-Im [Supabase SQL-Editor](https://supabase.com/dashboard) das komplette Schema einspielen:
-
-1. Datei `context/supabase-schema.sql` öffnen
-2. Inhalt kopieren und im SQL-Editor ausführen
-
-Erstellt die Tabellen `tenants`, `funnel_questions`, `funnel_options`, `submissions` sowie die View `monthly_billing`. Das Script ist idempotent (beliebig oft ausführbar ohne Fehler).
-
-### Demo-Daten einspielen
-
-Für lokale Tests zwei Demo-Tenants laden:
-
-1. Datei `context/supabase-seed.sql` öffnen
-2. Inhalt kopieren und im SQL-Editor ausführen
-
-Erstellt:
-- **`demo`** – Solar-Funnel, 6 Fragen, Billing `per_lead` à 3,00 €
-- **`demo-waermepumpe`** – Wärmepumpen-Funnel, 3 Fragen, Billing `flat_monthly` 20 €/Monat
-
-Erreichbar unter `localhost:3000/demo` und `localhost:3000/demo-waermepumpe`.
-
-### Supabase-Zugangsdaten holen
-
-Im Supabase Dashboard unter **Project Settings → API**:
-
+**Zugangsdaten** unter Project Settings → API:
 - `SUPABASE_URL` = Project URL
-- `SUPABASE_SERVICE_KEY` = `service_role`-Key (nicht der `anon`-Key)
-
-> **Wichtig:** Den Service Key niemals mit `NEXT_PUBLIC_`-Prefix versehen – er darf nur server-side verwendet werden.
-
-### Hinweis: Free Tier
-
-Supabase Free Tier pausiert das Projekt nach ~10 Minuten Inaktivität. Beim nächsten Aufruf gibt es einen Cold-Start von bis zu 30 Sekunden. Für Produktiv-Einsatz auf den Pro-Plan upgraden oder einen Keep-Alive-Ping einrichten.
+- `SUPABASE_SERVICE_KEY` = `service_role`-Key (nie mit `NEXT_PUBLIC_` versehen)
 
 ---
 
 ## 5. Resend einrichten
 
-1. Account anlegen auf [resend.com](https://resend.com)
-2. API-Key erstellen unter **API Keys**
-3. Domain verifizieren unter **Domains** (für Produktion)
-4. `RESEND_API_KEY` und `EMAIL_FROM` in `.env.local` eintragen
+1. Account auf [resend.com](https://resend.com)
+2. API-Key unter **API Keys** erstellen
+3. Domain unter **Domains** verifizieren
+4. `RESEND_API_KEY`, `EMAIL_FROM` und `EMAIL_DOMAIN` in `.env.local` eintragen
 
-Für lokale Tests kann `EMAIL_FROM` eine beliebige Adresse sein – Resend liefert im Free Tier an verifizierte Adressen.
+> `EMAIL_FROM` muss von einer in Resend verifizierten Domain kommen.
+> `EMAIL_DOMAIN` = nur die Domain ohne Protokoll, z.B. `anfragebestaetigung.de`
 
 ---
 
-## 6. Neuen Tenant anlegen
+## 6. Neuen Tenant & Funnel anlegen
 
-Neuen Tenant ausschließlich über Supabase anlegen – kein Code-Deployment nötig.
+Alles über Supabase – kein Code-Deployment nötig. Vollständige Feldübersicht: `Anleitungen/Funnel-Konfigurationsreferenz.md`
 
-### 1. Tenant-Eintrag erstellen
-
-Im Supabase SQL-Editor oder direkt in der `tenants`-Tabelle:
+### 1. Tenant anlegen
 
 ```sql
-INSERT INTO tenants (
-  slug, industry, is_active,
-  company_name, contact_email,
-  primary_color, text_color, background_color, page_background_color,
-  font, border_radius, max_width,
-  funnel_title, submit_button_label, success_message,
-  response_time_text, contact_form_subtitle,
-  billing_model, lead_price_base
-) VALUES (
-  'musterfirma',        -- eindeutiger Slug (URL: /musterfirma)
-  'solar',              -- Branche: solar | waermepumpe | heizung | sanitaer | elektro
-  TRUE,
-  'Musterfirma GmbH', 'anfragen@musterfirma.de',
-  '#22c55e', '#1f2937', '#ffffff', '#f0fdf4',
-  'inter', '0.5rem', '720px',
-  'Jetzt kostenloses Angebot anfordern',
-  'Anfrage absenden',
-  'Vielen Dank! Wir melden uns in Kürze bei Ihnen.',
-  '24 Stunden',
-  'Wer soll das Angebot erhalten?',
-  'per_lead', 3.00    -- oder: 'flat_monthly', dann flat_monthly_price + flat_monthly_lead_limit setzen
+INSERT INTO tenants (slug, company_name, public_email, notification_email)
+VALUES (
+  'musterfirma',
+  'Musterfirma GmbH',
+  'info@musterfirma.de',         -- öffentlich, sichtbar für Anfragenden
+  'anfragen@musterfirma.de'      -- intern, nur für Lead-Benachrichtigungen
 );
 ```
 
-Texte die nicht gesetzt werden (`NULL`) bekommen automatisch generische Defaults.
-
-### 2. Fragen anlegen
+### 2. Funnel anlegen
 
 ```sql
-WITH q AS (
-  INSERT INTO funnel_questions (tenant_id, sort_order, question_key, title)
-  VALUES (
-    (SELECT id FROM tenants WHERE slug = 'musterfirma'),
-    1, 'gebaeudetyp', 'Was für ein Gebäude haben Sie?'
-  )
-  RETURNING id
-)
-INSERT INTO funnel_options (question_id, sort_order, label, value, icon_key)
-SELECT q.id, s.sort_order, s.label, s.value, s.icon_key
-FROM q, (VALUES
-  (1, 'Einfamilienhaus', 'efh',     'House'),
-  (2, 'Mehrfamilienhaus','mfh',     'Apartment'),
-  (3, 'Gewerbe',         'gewerbe', 'Factory')
-) AS s(sort_order, label, value, icon_key);
+INSERT INTO funnels (slug, tenant_slug, primary_color, privacy_policy_url)
+VALUES (
+  'musterfirma',
+  'musterfirma',
+  '#4648d4',
+  'https://musterfirma.de/datenschutz'
+);
 ```
 
-Weitere Fragen analog mit `sort_order = 2, 3, ...` hinzufügen.
-
-### 3. Testen
-
-`http://localhost:3000/musterfirma` aufrufen – der Funnel lädt die Konfiguration aus Supabase.
-
-### Tenant deaktivieren
+### 3. Fragen anlegen
 
 ```sql
-UPDATE tenants SET is_active = FALSE WHERE slug = 'musterfirma';
+INSERT INTO funnel_questions (funnel_slug, sort_order, question_key, question_type, title, options)
+VALUES (
+  'musterfirma', 0, 'gebaeudetyp', 'single_choice',
+  'Was für ein Gebäude haben Sie?',
+  '[
+    {"label": "Einfamilienhaus", "value": "efh",     "icon_key": "Home"},
+    {"label": "Mehrfamilienhaus", "value": "mfh",    "icon_key": "Building2"},
+    {"label": "Gewerbe",          "value": "gewerbe","icon_key": "Factory"}
+  ]'::jsonb
+);
 ```
 
-Der Funnel zeigt dann eine 404-Seite.
+Weitere Fragen mit `sort_order = 1, 2, ...` hinzufügen.
+
+### 4. Testen
+
+`http://localhost:3000/musterfirma` aufrufen.
+
+### Funnel deaktivieren
+
+```sql
+UPDATE funnels SET is_active = FALSE WHERE slug = 'musterfirma';
+```
 
 ---
 
 ## 7. Widget beim Kunden einbetten
 
-Vollständige Anleitung inkl. WordPress, Webflow und lokalem Test:
+Vollständige Anleitung: → **[Widget-Einbetten.md](Widget-Einbetten.md)**
 
-→ **[Widget-Einbetten.md](Widget-Einbetten.md)**
-
-**Kurzfassung – ein Script-Tag genügt:**
-
+**Kurzfassung:**
 ```html
 <script src="https://deine-domain.de/embed.js" data-slug="musterfirma"></script>
 ```
-
-Das Widget passt seine Höhe automatisch an (Desktop & Mobil) – kein festes `height` nötig.
 
 ---
 
 ## 8. Auf Vercel deployen
 
-**1. Repository mit Vercel verbinden:**
-
-Im [Vercel Dashboard](https://vercel.com) → New Project → GitHub-Repo auswählen.
-
-**2. Umgebungsvariablen in Vercel eintragen:**
-
-Unter **Settings → Environment Variables** alle Werte aus `.env.local` eintragen:
-
-```
-RESEND_API_KEY
-EMAIL_FROM
-SUPABASE_URL
-SUPABASE_SERVICE_KEY
-NEXT_PUBLIC_BASE_URL    # = https://deine-vercel-domain.vercel.app
-```
-
-**3. Deploy:**
-
-Vercel deployed automatisch bei jedem Push auf `main`. Danach ist der Funnel unter der Vercel-URL erreichbar.
-
-**Custom Domain:** Unter **Settings → Domains** eine eigene Domain hinzufügen.
+1. Repo mit Vercel verbinden (GitHub → New Project)
+2. Alle Werte aus `.env.local` unter **Settings → Environment Variables** eintragen
+3. Vercel deployed automatisch bei jedem Push auf `main`
 
 ---
 
@@ -256,114 +177,51 @@ Vercel deployed automatisch bei jedem Push auf `main`. Danach ist der Funnel unt
 
 ```
 app/
-  [tenant]/
-    page.tsx          # Lädt Tenant-Config, rendert Funnel oder 404
-    layout.tsx        # Minimales Layout (kein Header/Footer) – iFrame-optimiert
-  api/
-    submit/
-      route.ts        # POST-Endpunkt: Honeypot → Validierung → DB → 2 Mails
+  [slug]/
+    page.tsx              # Lädt Config aus Supabase, rendert Funnel oder 404
+  api/submit/route.ts     # POST: Honeypot → DB → 2 Mails
+  funnel-overview/        # Admin-Übersicht (passwortgeschützt)
 
 components/
-  funnel.tsx          # Generischer Funnel (alle Branchen), enthält Icon-Bibliothek
-  TenantFunnelClient.tsx  # Client-Wrapper (startedAt, referrer, userAgent)
+  funnel.tsx              # Generischer Funnel-Client
+  TenantFunnelClient.tsx  # Client-Wrapper für Submit
 
 emails/
-  CustomerConfirmation.tsx    # Mail 1 – Danke-Mail an Endkunden
-  TenantLeadNotification.tsx  # Mail 2 – Lead-Benachrichtigung an Betreiber
+  CustomerConfirmation.tsx      # Danke-Mail an Endkunden
+  TenantLeadNotification.tsx    # Lead-Benachrichtigung an Betreiber
 
 lib/
-  getTenantConfig.ts  # Supabase-Loader mit JSON-Fallback
-  sendEmails.ts       # Resend: 2 Mails parallel via Promise.all
-  tracking.ts         # Supabase: logSubmission()
+  getTenantConfig.ts      # Lädt Funnel-Config aus Supabase
+  sendEmails.ts           # Resend: 2 Mails parallel
+  tracking.ts             # Supabase: logSubmission, updateEmailStatus, logHoneypot
 
-tenants/
-  demo.json           # Fallback-Config für Demo-Tenant (nur bei DB-Ausfall)
-  _template.json      # Vorlage für neue JSON-Fallbacks
-
-types/
-  index.ts            # Alle TypeScript-Interfaces (TenantConfig, QuestionConfig, …)
-
+types/index.ts            # TypeScript-Interfaces
 context/
-  supabase-schema.sql # DB-Schema – im Supabase SQL-Editor ausführen
-  supabase-seed.sql   # Demo-Daten – optional, für lokale Tests
-  project-overview.md # Architektur & Design-Entscheidungen
-  Anleitung.md        # Diese Datei
+  supabase-schema.sql     # Aktuelles DB-Schema
+  supabase-schema.md      # Tabellenübersicht
 
-public/
-  fonts/              # Self-hosted Fonts (Inter, Poppins, Roboto) – DSGVO-konform
+Anleitungen/
+  Funnel-Konfigurationsreferenz.md  # Alle konfigurierbaren Felder
+  Widget-Einbetten.md               # Einbettung beim Kunden
+  Icon-Prompt.md                    # KI-Prompt für Icon-Auswahl
 ```
 
 ---
 
-## 10. Icons hinzufügen
+## 10. Icons
 
-Alle Icons sind SVG-Komponenten im `Icons`-Objekt in `components/funnel.tsx`. Referenziert werden sie per `icon_key` (String) in der Datenbank.
+Jeder [Lucide-Icon-Name](https://lucide.dev/icons/) funktioniert direkt als `icon_key` in der DB – kein Eintrag im Code nötig.
 
-**Aktuell verfügbare Icons:**
-
-| Key | Verwendung |
-|---|---|
-| `House` | Einfamilienhaus, Gebäude |
-| `Apartment` | Mehrfamilienhaus |
-| `Factory` | Gewerbe, Fabrik |
-| `HousePartial` | Teilweise, gemischt |
-| `SolarPanel` | Solaranlage, Dachfläche |
-| `Thermometer` | Temperatur, Heizung |
-| `Flame` | Gas, Öl, Feuer |
-| `HeatPump` | Wärmepumpe |
-| `Drop` | Wasser, Sanitär |
-| `Snowflake` | Kälte, Klimaanlage |
-| `Wrench` | Handwerk, Gewerbe |
-| `Lightning` | Strom, Stromspeicher |
-| `Star` | Favorit, Empfehlung |
-| `Check` | Ja, bestätigt |
-| `Cross` | Nein, abgelehnt |
-| `Question` | Weiß nicht, sonstiges |
-| `Calendar` | Zeitraum, Termin |
-| `Euro` | Kauf, Preis |
-| `Document` | Vertrag, Miete |
-
-**Neues Icon hinzufügen:**
-
-In `components/funnel.tsx` im `Icons`-Objekt einen neuen Eintrag ergänzen:
-
-```typescript
-const Icons = {
-  // ... bestehende Icons ...
-  MeinIcon: ({ color = "#444" }: { color?: string }) => (
-    <svg viewBox="0 0 64 64" className="w-full h-full" fill={color}>
-      {/* SVG-Pfade */}
-    </svg>
-  ),
-};
+```json
+{ "label": "Einfamilienhaus", "value": "efh", "icon_key": "Home" }
 ```
 
-Danach ist `"MeinIcon"` als `icon_key` in der Datenbank verwendbar.
+Icon-Namen sind PascalCase, z.B. `Home`, `Building2`, `TrendingDown`. Alle verfügbaren Icons unter `/icons` im laufenden Projekt einsehbar.
 
-**Externes Bild statt Icon:**
-
-In `funnel_options` das Feld `icon_url` setzen (z.B. `https://cdn.../logo.png`). Hat Vorrang über `icon_key`.
+Prompt zur Icon-Auswahl per KI: → **[Icon-Prompt.md](Icon-Prompt.md)**
 
 ---
 
-## 11. Abrechnung & Billing
+## 11. Billing
 
-### Billing-Modelle
-
-**`per_lead`:** Für jeden eingegangenen Lead wird `tenants.lead_price_base` (z.B. 3,00 €) in der Submission gespeichert.
-
-**`flat_monthly`:** Für jeden Lead wird `lead_price = 0` gespeichert. Die Abrechnung erfolgt pauschal über `flat_monthly_price` pro Monat. `flat_monthly_lead_limit` begrenzt die inkludierten Leads – Leads darüber erscheinen als `overage_leads` in der `monthly_billing`-View.
-
-### Monatsauswertung
-
-```sql
-SELECT * FROM monthly_billing
-WHERE tenant_slug = 'musterfirma'
-ORDER BY month DESC;
-```
-
-Gibt pro Tenant und Monat: Anzahl Submissions, Summe der Lead-Preise (nur legitime Submissions, kein Honeypot).
-
-### Preisänderung
-
-`lead_price` wird zum Zeitpunkt der Submission gespeichert und ist historisch unveränderlich. Eine Änderung von `lead_price_base` wirkt sich nur auf neue Submissions aus.
+Abrechnung erfolgt als monatlicher Retainer – wird intern eingestellt, kein Kundenkontakt. Die Felder `billing_model`, `lead_price_base`, `flat_monthly_price`, `flat_monthly_lead_limit` in der `tenants`-Tabelle sind vorhanden aber aktuell nicht aktiv genutzt.

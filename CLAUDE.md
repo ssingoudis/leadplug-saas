@@ -21,8 +21,8 @@ Nach erfolgreichem Test: Branch in `main` mergen. Bei Problemen: Branch verwerfe
 
 ## Wichtige Regeln
 
-- **Kein Hardcode** – alle tenant-spezifischen Werte (Texte, Farben, Fragen, Preise) kommen aus Supabase (`tenants`, `funnel_questions`, `funnel_options`). JSON-Dateien in `tenants/` sind nur Fallback.
-- **Primärquelle ist Supabase.** `getTenantConfig()` fragt zuerst die DB ab, fällt bei Fehler auf die entsprechende JSON-Datei zurück.
+- **Kein Hardcode** – alle tenant-spezifischen Werte (Texte, Farben, Fragen, Preise) kommen aus Supabase (`tenants`, `funnel_questions`).
+- **Primärquelle ist Supabase.** `getTenantConfig()` lädt ausschließlich aus der DB – kein JSON-Fallback.
 - **Supabase Service Key** nur server-side; niemals mit `NEXT_PUBLIC_`-Prefix.
 - **Billing-Reihenfolge in `/api/submit`:** erst `logSubmission()` (Supabase), dann E-Mails.
 - **Nur 2 E-Mails pro Submission:** Danke-Mail an den Anfragenden (kein PDF, keine Preisschätzung) + Lead-Benachrichtigung an den Tenant.

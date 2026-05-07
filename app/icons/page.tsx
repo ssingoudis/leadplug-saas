@@ -1,6 +1,14 @@
-import { ICON_MAP } from '@/components/icons'
+import * as LucideIcons from 'lucide-react'
+import type { ComponentType } from 'react'
+import type { LucideProps } from 'lucide-react'
+
+export const dynamic = 'force-dynamic'
 
 export default function IconsPage() {
+  const icons = Object.entries(LucideIcons).filter(
+    ([, v]) => typeof v === 'function'
+  ) as [string, ComponentType<LucideProps>][]
+
   return (
     <div className="p-8 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-2">Icon-Bibliothek</h1>
@@ -8,7 +16,7 @@ export default function IconsPage() {
         Alle verfügbaren Icons – <code>icon_key</code> in der DB entspricht dem Namen unten.
       </p>
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
-        {Object.entries(ICON_MAP).map(([key, IconComponent]) => (
+        {icons.map(([key, IconComponent]) => (
           <div
             key={key}
             className="flex flex-col items-center gap-2 p-3 border rounded-lg hover:bg-gray-50"

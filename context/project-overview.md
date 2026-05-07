@@ -12,7 +12,6 @@ Einbettbarer **Sales-Funnel als iFrame-Widget** für Handwerksbetriebe aller Bra
 - URL pro Funnel: `https://domain.de/[slug]` – Slug ist global eindeutig und kundenwählbar
 - Ein Tenant-Eintrag = ein Funnel. Braucht ein Kunde zwei Branchen → zwei Slugs, z.B. `musterfirma-solar` und `musterfirma-waermepumpe`
 - Alle Werte (Farben, Texte, Fragen, Preise) konfigurierbar in Supabase
-- JSON-Dateien in `tenants/[slug].json` bleiben als Notfall-Fallback
 - Integration per `<iframe>` auf der Kundenseite
 
 **Geschäftsmodell:** Pro erfolgreicher Submission zahlt der Tenant eine **individuell verhandelte Gebühr** (`tenants.lead_price_base`, z.B. 3,00 €). Jede Submission wird in Supabase geloggt, Monatsabrechnung über die `monthly_billing`-View.
@@ -27,7 +26,7 @@ Einbettbarer **Sales-Funnel als iFrame-Widget** für Handwerksbetriebe aller Bra
 | Sprache | TypeScript (strict) |
 | Styling | TailwindCSS |
 | E-Mail | Resend + React Email |
-| Tenant-Config | Supabase (primär) + JSON-Dateien (Fallback) |
+| Tenant-Config | Supabase |
 | Tracking-DB | Supabase (Postgres) |
 | Deployment | Vercel |
 
@@ -48,12 +47,9 @@ components/TenantFunnelClient.tsx  # Client-Wrapper (startedAt, referrer, userAg
 emails/CustomerConfirmation.tsx    # Mail 1 – Endkunde (Danke, kein PDF, kein Preis)
 emails/TenantLeadNotification.tsx  # Mail 2 – Betreiber (Kontaktdaten + Antworten)
 
-lib/getTenantConfig.ts   # Supabase-Loader mit JSON-Fallback
+lib/getTenantConfig.ts   # Supabase-Loader
 lib/sendEmails.ts        # Resend, 2 Mails via Promise.all
 lib/tracking.ts          # Supabase: logSubmission
-
-tenants/_template.json   # Fallback-Vorlage (wird nicht aktiv gepflegt)
-tenants/demo.json        # Demo-Tenant Fallback
 
 types/index.ts                      # Alle TypeScript-Interfaces
 context/supabase-schema-v2.sql      # DB-Schema v2 (idempotent, aktuelle DB)
@@ -117,10 +113,6 @@ tenants           → Wer ist der Kunde? (Stammdaten, Billing)
 - `billed`, `billed_at`
 
 **View `monthly_billing`** – Eine Zeile pro Tenant/Monat, aggregiert über alle Funnels des Tenants.
-
-### Fallback-Verhalten
-
-`getTenantConfig(slug)` fragt zuerst die `funnels`-Tabelle ab (joined mit `tenants`, `themes`, `funnel_questions`). Bei DB-Fehler oder fehlendem Eintrag: JSON-Datei `tenants/[slug].json` laden. JSON-Dateien werden nicht aktiv gepflegt – sie dienen nur als Notfall-Fallback.
 
 > **Supabase Free Tier Warnung:** Pausiert nach Inaktivität (~10 Min Cold Start). Für Produktiv-Einsatz auf Pro upgraden oder Keep-Alive-Ping einrichten.
 
@@ -247,7 +239,6 @@ NEXT_PUBLIC_BASE_URL=https://domain.de
 |---|---|
 | Ein Slug = ein Funnel | Einfaches Routing, stabile iFrame-URLs; zwei Branchen = zwei Slugs |
 | Supabase als primäre Config | Tenant-Management ohne Code-Deployment |
-| JSON-Fallback behalten | Kein harter Ausfall bei DB-Problemen; Migrations-Pfad |
 | Supabase ZUERST loggen | Billing darf nie durch E-Mail-Fehler verloren gehen |
 | Kein PDF, keine Preisschätzung | Branchenunabhängig; vereinfachte Architektur |
 | 2 Mails via `Promise.all` | Paralleler Versand, minimale Latenz |

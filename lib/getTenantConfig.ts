@@ -1,6 +1,4 @@
 import { createClient } from '@supabase/supabase-js'
-import { promises as fs } from 'fs'
-import path from 'path'
 import type { TenantConfig, FunnelFont } from '@/types'
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-_]*$/
@@ -80,53 +78,6 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
   }
 }
 
-// JSON-Datei → TenantConfig (mit Defaults für fehlende neue Felder)
-async function fetchFromJson(slug: string): Promise<TenantConfig | null> {
-  const filePath = path.join(process.cwd(), 'tenants', `${slug}.json`)
-  try {
-    const raw = await fs.readFile(filePath, 'utf-8')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const j: Record<string, any> = JSON.parse(raw)
-    return {
-      slug:              j.slug              ?? slug,
-      tenantSlug:        j.tenantSlug        ?? slug,
-      industry:          j.industry          ?? 'general',
-      companyName:       j.companyName       ?? '',
-      publicEmail:       j.publicEmail       ?? '',
-      notificationEmail: j.notificationEmail ?? j.publicEmail ?? '',
-      phone:             j.phone,
-      address:      j.address,
-      website:      j.website,
-      theme: {
-        primaryColor:        j.theme?.primaryColor        ?? '#22c55e',
-        textColor:           j.theme?.textColor,
-        backgroundColor:     j.theme?.backgroundColor,
-        pageBackgroundColor: j.theme?.pageBackgroundColor,
-        font:                j.theme?.font,
-        borderRadius:        j.theme?.borderRadius,
-        maxWidth:            j.theme?.maxWidth,
-      },
-      funnel: {
-        title:               j.funnel?.title              ?? TEXT_DEFAULTS.funnelTitle,
-        subtitle:            j.funnel?.subtitle,
-        submitButtonLabel:   j.funnel?.submitButtonLabel  ?? TEXT_DEFAULTS.submitButtonLabel,
-        successMessage:      j.funnel?.successMessage     ?? TEXT_DEFAULTS.successMessage,
-        responseTimeText:    j.funnel?.responseTimeText   ?? TEXT_DEFAULTS.responseTimeText,
-        contactFormSubtitle: j.funnel?.contactFormSubtitle ?? TEXT_DEFAULTS.contactFormSubtitle,
-        privacyPolicyUrl:    j.funnel?.privacyPolicyUrl   ?? undefined,
-      },
-      billingModel:         j.billingModel         ?? 'per_lead',
-      leadPriceBase:        Number(j.leadPriceBase ?? j.billing?.pricePerLead ?? 0),
-      flatMonthlyPrice:     j.flatMonthlyPrice,
-      flatMonthlyLeadLimit: j.flatMonthlyLeadLimit,
-      questions: j.questions ?? [],
-    }
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null
-    throw err
-  }
-}
-
 class TenantInactiveError extends Error {}
 
 // neue Datenbank widget-funnel
@@ -158,7 +109,7 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
     .maybeSingle()
 
   if (error) throw error
-  if (!data) return null  // Funnel nicht in DB → JSON-Fallback
+  if (!data) return null
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tenantActive = (data.tenants as Record<string, any>)?.is_active !== false
@@ -171,13 +122,10 @@ export async function getTenantConfig(slug: string): Promise<TenantConfig | null
   if (!slug || slug.startsWith('_') || !SLUG_PATTERN.test(slug)) return null
 
   try {
-    const config = await fetchFromSupabase(slug)
-    if (config !== null) return config
-    // config === null heißt: nicht in DB gefunden → JSON-Fallback
+    return await fetchFromSupabase(slug)
   } catch (err) {
     if (err instanceof TenantInactiveError) return null
-    console.error('getTenantConfig: Supabase-Fehler, fallback auf JSON', err)
+    console.error('getTenantConfig: Supabase-Fehler', err)
+    return null
   }
-
-  return fetchFromJson(slug)
 }
