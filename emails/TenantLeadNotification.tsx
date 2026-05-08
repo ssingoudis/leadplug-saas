@@ -91,10 +91,6 @@ export function TenantLeadNotification({
           })}
 
           <Hr style={styles.hr} />
-
-          <Text style={styles.hint}>
-            Kontaktieren Sie den Kunden zeitnah für maximale Abschlussrate.
-          </Text>
         </Container>
       </Body>
     </Html>

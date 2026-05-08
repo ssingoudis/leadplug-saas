@@ -30,7 +30,7 @@ export function CustomerConfirmation({
   return (
     <Html>
       <Head />
-      <Preview>Ihre Anfrage bei {tenantConfig.companyName}</Preview>
+      <Preview>{tenantConfig.funnel.responseMessage}</Preview>
       <Body style={styles.body}>
         <Container style={styles.container}>
 
@@ -50,7 +50,7 @@ export function CustomerConfirmation({
             </Text>
 
             <Text style={{ ...styles.text, color: '#6b7280' }}>
-              Wir melden uns {tenantConfig.funnel.responseTimeText} bei Ihnen.
+              {tenantConfig.funnel.responseMessage}
             </Text>
 
             {/* Antworten */}
@@ -100,19 +100,6 @@ export function CustomerConfirmation({
             </Text>
           </Section>
 
-          {/* Footer */}
-          <Section style={styles.footer}>
-            <Text style={styles.footerText}>
-              {tenantConfig.companyName}
-              {tenantConfig.address && ` · ${tenantConfig.address}`}
-            </Text>
-            <Text style={styles.footerText}>
-              Diese E-Mail wurde automatisch generiert. Bitte antworten Sie direkt an{' '}
-              <Link href={`mailto:${tenantConfig.publicEmail}`} style={styles.footerLink}>
-                {tenantConfig.publicEmail}
-              </Link>
-            </Text>
-          </Section>
 
         </Container>
       </Body>

@@ -56,7 +56,7 @@ export interface FunnelConfig {
   subtitle?: string            // Nur noch optional (SEO-Fallback). Kommt nicht aus Supabase.
   submitButtonLabel: string
   successMessage: string
-  responseTimeText: string
+  responseMessage: string
   contactFormSubtitle: string
   privacyPolicyUrl?: string
 }

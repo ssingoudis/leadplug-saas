@@ -435,7 +435,7 @@ export function Funnel({
               {funnel.successMessage}
             </h2>
             <p className="text-sm mb-6" style={{ color: theme.textColorMuted }}>
-              Wir melden uns {funnel.responseTimeText} bei Ihnen.
+              {funnel.responseMessage}
             </p>
 
             {/* Summary of answers */}
