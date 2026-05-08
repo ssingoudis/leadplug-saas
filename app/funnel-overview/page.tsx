@@ -12,10 +12,10 @@ export interface FunnelCard {
   lastSubmissionAt: string | null
 }
 
-async function getAllData(): Promise<{ funnels: FunnelCard[]; monthlyRows: MonthlyRow[] }> {
+async function getAllData(): Promise<{ funnels: FunnelCard[]; monthlyRows: MonthlyRow[]; failedLast14Days: number }> {
   const supabaseUrl = process.env.SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_KEY
-  if (!supabaseUrl || !key) return { funnels: [], monthlyRows: [] }
+  if (!supabaseUrl || !key) return { funnels: [], monthlyRows: [], failedLast14Days: 0 }
 
   const supabase = createClient(supabaseUrl, key)
 
@@ -39,13 +39,13 @@ async function getAllData(): Promise<{ funnels: FunnelCard[]; monthlyRows: Month
       .select('funnel_slug, created_at'),
     supabase
       .from('submissions')
-      .select('funnel_slug, created_at')
+      .select('funnel_slug, created_at, customer_email_sent, tenant_email_sent')
       .gte('created_at', since.toISOString()),
   ])
 
   if (funnelError) {
     console.error('funnel-overview: funnels query error', funnelError)
-    return { funnels: [], monthlyRows: [] }
+    return { funnels: [], monthlyRows: [], failedLast14Days: 0 }
   }
 
   // --- per-funnel stats ---
@@ -80,7 +80,9 @@ async function getAllData(): Promise<{ funnels: FunnelCard[]; monthlyRows: Month
   )
 
   const monthMap = new Map<string, MonthlyRow>()
-  for (const row of (monthData ?? []) as { funnel_slug: string; created_at: string }[]) {
+  type MonthDataRow = { funnel_slug: string; created_at: string; customer_email_sent: boolean; tenant_email_sent: boolean }
+
+  for (const row of (monthData ?? []) as MonthDataRow[]) {
     const d = new Date(row.created_at)
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
     const entry = monthMap.get(key) ?? { month: key, leads: 0, submissions: [] }
@@ -89,23 +91,31 @@ async function getAllData(): Promise<{ funnels: FunnelCard[]; monthlyRows: Month
       created_at: row.created_at,
       funnel_slug: row.funnel_slug,
       company_name: companyBySlug.get(row.funnel_slug) ?? row.funnel_slug,
+      customer_email_sent: row.customer_email_sent ?? false,
+      tenant_email_sent: row.tenant_email_sent ?? false,
     })
     monthMap.set(key, entry)
   }
   const monthlyRows: MonthlyRow[] = Array.from(monthMap.values())
     .sort((a, b) => b.month.localeCompare(a.month))
 
-  return { funnels, monthlyRows }
+  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+  const failedLast14Days = (monthData ?? []).filter(
+    (r) => (r as MonthDataRow).created_at >= fourteenDaysAgo &&
+      (!(r as MonthDataRow).customer_email_sent || !(r as MonthDataRow).tenant_email_sent)
+  ).length
+
+  return { funnels, monthlyRows, failedLast14Days }
 }
 
 export default async function FunnelOverviewPage() {
-  const { funnels, monthlyRows } = await getAllData()
+  const { funnels, monthlyRows, failedLast14Days } = await getAllData()
 
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
       <div className="bg-white sticky top-0 z-10 border-b-2 border-[#4648d4]">
-        <div className="max-w-7xl mx-auto px-8 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex items-center justify-between">
           <h1 className="text-base font-bold text-gray-900">Funnel-Übersicht</h1>
           <a
             href="/logout"
@@ -117,8 +127,8 @@ export default async function FunnelOverviewPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-8 py-8">
-        <FunnelGrid funnels={funnels} />
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8">
+        <FunnelGrid funnels={funnels} failedLast14Days={failedLast14Days} />
         <MonthlyStats rows={monthlyRows} />
       </div>
     </div>
