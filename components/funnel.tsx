@@ -122,19 +122,17 @@ function getOptionsGridClasses(count: number): string {
     case 2:  return "grid-cols-2 max-w-[360px]";
     case 3:  return "grid-cols-3 max-w-[520px]";
     case 4:  return "grid-cols-2 @[660px]:grid-cols-4";
-    case 5:  return "grid-cols-6 @[660px]:grid-cols-5";
+    case 5:  return "grid-cols-2 @[660px]:grid-cols-5";
     case 6:  return "grid-cols-2 @[660px]:grid-cols-3";
     default: return "grid-cols-2 @[660px]:grid-cols-4";
   }
 }
 
-// For 5 options: first 2 span 3 cols (row of 2), last 3 span 2 cols (row of 3).
+// For 5 options: last card spans both columns on mobile so all cards share equal width.
 // Above @[660px] all items are equal width (col-span-1).
 function getOptionColSpanClasses(count: number, idx: number): string {
   if (count !== 5) return "";
-  return idx < 2
-    ? "col-span-3 @[660px]:col-span-1"
-    : "col-span-2 @[660px]:col-span-1";
+  return idx === 4 ? "col-span-2 max-w-[calc(50%-6px)] mx-auto @[660px]:col-span-1 @[660px]:max-w-none" : "";
 }
 
 // =============================================================================
@@ -513,7 +511,7 @@ export function Funnel({
               <div>
                 <div className="mb-6 @lg:mb-8">
                   <h1
-                    className="text-lg md:text-xl lg:text-2xl font-bold leading-tight text-center"
+                    className="text-lg @md:text-xl @lg:text-2xl font-bold leading-tight text-center"
                     style={{ color: theme.textColor }}
                   >
                     {currentQuestion.title}
@@ -604,46 +602,9 @@ export function Funnel({
                       className="funnel-slider"
                     />
 
-                    <div className="flex justify-between text-xs mt-1 mb-5" style={{ color: theme.textColorMuted }}>
+                    <div className="flex justify-between text-xs mt-1" style={{ color: theme.textColorMuted }}>
                       <span>{sliderConfig.min.toLocaleString("de-DE")} {sliderConfig.unit}</span>
                       <span>{sliderConfig.max.toLocaleString("de-DE")} {sliderConfig.unit}</span>
-                    </div>
-
-                    {/* Manual number input, synced with the slider */}
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm shrink-0" style={{ color: theme.textColorMuted }}>
-                        Alternativ eintippen:
-                      </span>
-                      <div className="relative flex-1">
-                        <input
-                          type="number"
-                          value={sliderVal}
-                          min={sliderConfig.min}
-                          max={sliderConfig.max}
-                          step={sliderConfig.step ?? 1}
-                          onChange={(e) => {
-                            const clamped = Math.min(
-                              sliderConfig.max,
-                              Math.max(sliderConfig.min, Number(e.target.value) || sliderConfig.min),
-                            );
-                            setAnswers((prev) => ({ ...prev, [currentQuestion.id]: String(clamped) }));
-                          }}
-                          className="w-full px-4 py-2.5 border outline-none text-center"
-                          style={{
-                            borderColor:     theme.borderColor,
-                            backgroundColor: theme.backgroundColor,
-                            color:           theme.textColor,
-                            borderRadius:    "9999px",
-                            paddingRight:    "3.5rem",
-                          }}
-                        />
-                        <div
-                          className="absolute right-0 top-0 bottom-0 flex items-center justify-center w-12 text-white text-sm font-bold"
-                          style={{ backgroundColor: theme.primaryColor, borderRadius: "0 9999px 9999px 0" }}
-                        >
-                          {sliderConfig.unit}
-                        </div>
-                      </div>
                     </div>
                   </div>
                 )}
@@ -716,7 +677,7 @@ export function Funnel({
               -------------------------------------------------------------- */
               <form onSubmit={handleFormSubmit}>
                 <h1
-                  className="text-lg md:text-xl lg:text-2xl font-bold mb-2 leading-tight"
+                  className="text-lg @md:text-xl @lg:text-2xl font-bold mb-2 leading-tight"
                   style={{ color: theme.textColor }}
                 >
                   {funnel.title}

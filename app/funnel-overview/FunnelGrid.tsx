@@ -14,7 +14,7 @@ function relativeTime(iso: string): string {
   return 'gerade eben'
 }
 
-export default function FunnelGrid({ funnels }: { funnels: FunnelCard[] }) {
+export default function FunnelGrid({ funnels, failedLast14Days }: { funnels: FunnelCard[]; failedLast14Days: number }) {
   const [query, setQuery] = useState('')
 
   const filtered = query.trim()
@@ -25,23 +25,30 @@ export default function FunnelGrid({ funnels }: { funnels: FunnelCard[] }) {
 
   return (
     <>
-      <div className="flex items-center justify-between mb-8 gap-4">
-        <div>
-          <p className="text-gray-600 text-base">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-0 text-base text-gray-600">
+          <span>
             <span className="font-semibold text-gray-900">{filtered.length}</span> aktive Funnels
-            {totalLeads > 0 && (
-              <span className="ml-3 text-gray-400">
-                · <span className="font-semibold text-gray-700">{totalLeads}</span> Leads gesamt
-              </span>
-            )}
-          </p>
+          </span>
+          {totalLeads > 0 && (
+            <span>
+              <span className="hidden sm:inline text-gray-400"> · </span>
+              <span className="font-semibold text-gray-700">{totalLeads}</span> Leads gesamt
+            </span>
+          )}
+          {failedLast14Days > 0 && (
+            <span className="text-red-500">
+              <span className="hidden sm:inline text-gray-400"> · </span>
+              ⚠ {failedLast14Days} fehlgeschl. {failedLast14Days === 1 ? 'Mail' : 'Mails'} (14 Tage)
+            </span>
+          )}
         </div>
         <input
           type="search"
           placeholder="Firma suchen..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-64 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 placeholder-gray-400 shadow-sm outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-400 transition"
+          className="w-full sm:w-64 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 placeholder-gray-400 shadow-sm outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-400 transition"
         />
       </div>
 
@@ -53,17 +60,17 @@ export default function FunnelGrid({ funnels }: { funnels: FunnelCard[] }) {
             <a
               key={f.slug}
               href={`/funnel-overview/${f.slug}`}
-              className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-200 hover:-translate-y-1 flex flex-row"
+              className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-row min-w-0"
             >
               <div
                 className="w-1 shrink-0 rounded-l-2xl"
                 style={{ backgroundColor: f.primaryColor }}
               />
-              <div className="px-5 pt-4 pb-3 flex flex-col gap-1 flex-1">
-                <h2 className="text-xl font-bold text-gray-900 leading-tight">
+              <div className="px-5 pt-4 pb-3 flex flex-col gap-1 flex-1 min-w-0">
+                <h2 className="text-xl font-bold text-gray-900 leading-tight wrap-break-word">
                   {f.companyName}
                 </h2>
-                <p className="text-sm font-medium text-gray-500">{f.slug}</p>
+                <p className="text-sm font-medium text-gray-500 truncate">{f.slug}</p>
                 <p className="text-sm text-gray-400 truncate mb-2">{f.url}</p>
 
                 <div className="flex items-center gap-3 mt-auto pt-3 border-t border-gray-100">

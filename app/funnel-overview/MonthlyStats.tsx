@@ -7,6 +7,8 @@ export interface MonthlySubmission {
   created_at: string
   funnel_slug: string
   company_name: string
+  customer_email_sent: boolean
+  tenant_email_sent: boolean
 }
 
 export interface MonthlyRow {
@@ -69,8 +71,8 @@ export default function MonthlyStats({ rows }: { rows: MonthlyRow[] }) {
                     .map((s, i) => {
                       const d = new Date(s.created_at)
                       return (
-                        <a key={i} href={`/funnel-overview/${s.funnel_slug}`} className="flex items-center gap-4 px-6 py-3 hover:bg-indigo-50 transition-colors group">
-                          <div className="w-36 shrink-0">
+                        <a key={i} href={`/funnel-overview/${s.funnel_slug}`} className="flex items-start sm:items-center gap-6 px-4 sm:px-6 py-3 hover:bg-indigo-50 transition-colors group">
+                          <div className="w-20 sm:w-36 shrink-0">
                             <p className="text-sm text-gray-700">
                               {d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })}
                             </p>
@@ -78,9 +80,19 @@ export default function MonthlyStats({ rows }: { rows: MonthlyRow[] }) {
                               {d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
                             </p>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-900 group-hover:text-indigo-700 truncate transition-colors">{s.company_name}</p>
-                            <p className="text-xs text-gray-400 truncate">{s.funnel_slug}</p>
+                          <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-2">
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-gray-900 group-hover:text-indigo-700 truncate transition-colors">{s.company_name}</p>
+                              <p className="text-xs text-gray-400 truncate">{s.funnel_slug}</p>
+                            </div>
+                            <div className="flex gap-1.5 shrink-0">
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.customer_email_sent ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-500'}`}>
+                                Kunde {s.customer_email_sent ? '✓' : '✗'}
+                              </span>
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.tenant_email_sent ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-500'}`}>
+                                Tenant {s.tenant_email_sent ? '✓' : '✗'}
+                              </span>
+                            </div>
                           </div>
                         </a>
                       )
