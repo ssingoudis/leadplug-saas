@@ -90,7 +90,6 @@ export function TenantLeadNotification({
             )
           })}
 
-          <Hr style={styles.hr} />
         </Container>
       </Body>
     </Html>
