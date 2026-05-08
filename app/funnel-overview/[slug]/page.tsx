@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, ExternalLink, Power } from 'lucide-react'
 import EmbedBlock from './EmbedBlock'
+import EmailPreviewBlock from './EmailPreviewBlock'
 import SubmissionsTable from './SubmissionsTable'
 
 function Row({ label, value }: { label: string; value?: string | null }) {
@@ -38,7 +39,7 @@ async function getData(slug: string) {
       .select(`
         slug, is_active, industry,
         funnel_title, submit_button_label, success_message,
-        response_time_text, contact_form_subtitle, privacy_policy_url, email_sender_local,
+        response_message, contact_form_subtitle, privacy_policy_url, email_sender_local,
         primary_color, text_color, background_color, page_background_color,
         font, border_radius, max_width,
         tenants (
@@ -124,6 +125,12 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
             />
           </div>
           <div className="mt-4">
+            <EmailPreviewBlock title="Bestätigungs-E-Mail (Anfragender)" src={`/funnel-overview/${slug}/email-preview`} />
+          </div>
+          <div className="mt-4">
+            <EmailPreviewBlock title="Lead-Benachrichtigung (Tenant)" src={`/funnel-overview/${slug}/lead-preview`} />
+          </div>
+          <div className="mt-4">
             <EmbedBlock slug={slug} url={funnelUrl} companyName={tenant.company_name ?? slug} />
           </div>
         </div>
@@ -154,7 +161,7 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
             <Row label="Titel" value={funnel.funnel_title} />
             <Row label="Button-Label" value={funnel.submit_button_label} />
             <Row label="Erfolgs-Nachricht" value={funnel.success_message} />
-            <Row label="Reaktionszeit" value={funnel.response_time_text} />
+            <Row label="Reaktionsnachricht" value={funnel.response_message} />
             <Row label="Kontakt-Untertitel" value={funnel.contact_form_subtitle} />
             <Row label="Datenschutz-URL" value={funnel.privacy_policy_url} />
             <Row label="E-Mail-Absender" value={funnel.email_sender_local} />

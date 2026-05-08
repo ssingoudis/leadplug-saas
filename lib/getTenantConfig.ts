@@ -7,7 +7,7 @@ const TEXT_DEFAULTS = {
   funnelTitle:          'Jetzt kostenloses Angebot anfordern',
   submitButtonLabel:    'Anfrage absenden',
   successMessage:       'Vielen Dank! Wir melden uns in Kürze bei Ihnen.',
-  responseTimeText:     'so schnell wie möglich',
+  responseMessage:      'Wir melden uns so schnell wie möglich bei Ihnen.',
   contactFormSubtitle:  'Wer soll das Angebot erhalten?',
 }
 
@@ -50,7 +50,7 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
       title:               row.funnel_title          ?? TEXT_DEFAULTS.funnelTitle,
       submitButtonLabel:   row.submit_button_label   ?? TEXT_DEFAULTS.submitButtonLabel,
       successMessage:      row.success_message       ?? TEXT_DEFAULTS.successMessage,
-      responseTimeText:    row.response_time_text    ?? TEXT_DEFAULTS.responseTimeText,
+      responseMessage:     row.response_message      ?? TEXT_DEFAULTS.responseMessage,
       contactFormSubtitle: row.contact_form_subtitle ?? TEXT_DEFAULTS.contactFormSubtitle,
       privacyPolicyUrl:    row.privacy_policy_url    ?? undefined,
     },
@@ -93,7 +93,7 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
     .select(`
       id, slug, industry, is_active,
       funnel_title, submit_button_label, success_message,
-      response_time_text, contact_form_subtitle, privacy_policy_url,
+      response_message, contact_form_subtitle, privacy_policy_url,
       email_sender_local,
       primary_color, text_color, background_color, page_background_color,
       font, border_radius, max_width,
