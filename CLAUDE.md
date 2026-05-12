@@ -37,6 +37,10 @@ Nach erfolgreichem Test: Branch in `main` mergen. Bei Problemen: Branch verwerfe
 
 Einzige Funnel-Komponente: `components/funnel.tsx` (generisch, nicht solar-spezifisch). Icons sind SVG-Komponenten in `components/icons.tsx`, referenziert per `icon_key` (String). Neue Icons = neuer Eintrag im `Icons`-Objekt in `icons.tsx`. Wenn `icon_url` in der DB gesetzt ist, wird das externe Bild statt des Icon-Keys gerendert.
 
+## Supabase / Datenbank
+
+Beim Arbeiten mit dem Supabase MCP Server (Datenbankabfragen, Schema-Änderungen, Migrationen) immer die Best Practices aus [`.agents/skills/supabase-postgres-best-practices/SKILL.md`](.agents/skills/supabase-postgres-best-practices/SKILL.md) anwenden.
+
 ## Dokumentationspflicht
 
 Nach jeder abgeschlossenen Aufgabe Eintrag in `context/current-feature.md` anfügen:
