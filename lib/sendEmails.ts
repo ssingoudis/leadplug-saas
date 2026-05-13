@@ -43,18 +43,27 @@ export async function sendAllEmails(
     submittedAt = new Date(),
   } = params
 
-  const emailDomain = process.env.EMAIL_DOMAIN
-  const senderLocal = tenantConfig.emailSenderLocal
-  const from =
+  const emailDomain         = process.env.EMAIL_DOMAIN
+  const emailDomainPlatform = process.env.EMAIL_DOMAIN_PLATFORM
+  const senderLocal         = tenantConfig.emailSenderLocal
+
+  // Kunden-Mail: tenant-branded (z.B. muster-solar@anfragebestaetigung.de)
+  const fromCustomer =
     senderLocal && emailDomain
       ? `${senderLocal}@${emailDomain}`
       : (process.env.EMAIL_FROM ?? 'noreply@example.com')
+
+  // Tenant-Mail: plattform-branded (z.B. leads@leadplug.de) — fällt auf fromCustomer zurück
+  // solange EMAIL_DOMAIN_PLATFORM nicht gesetzt ist (Resend Free: nur 1 Domain).
+  const fromTenant = emailDomainPlatform
+    ? `anfrage@${emailDomainPlatform}`
+    : fromCustomer
 
   // Customer-Mail nur senden wenn eine E-Mail-Adresse vorhanden (Feld kann optional sein).
   const customerPromise = contact.email
     ? resend.emails
         .send({
-          from,
+          from: fromCustomer,
           to: contact.email,
           subject: `Ihre Anfrage bei ${tenantConfig.companyName}`,
           react: CustomerConfirmation({ contact, answers, tenantConfig }),
@@ -74,7 +83,7 @@ export async function sendAllEmails(
 
   const tenantPromise = resend.emails
     .send({
-      from,
+      from: fromTenant,
       to: tenantConfig.notificationEmail,
       ...(contact.email ? { replyTo: contact.email } : {}),
       subject: `Neue Anfrage von ${contact.name ?? 'Unbekannt'}`,
