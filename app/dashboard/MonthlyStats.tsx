@@ -29,17 +29,11 @@ export default function MonthlyStats({ rows }: { rows: MonthlyRow[] }) {
   const totalLeads = rows.reduce((s, r) => s + r.leads, 0)
 
   return (
-    <div className="mt-14">
-      <h2 className="text-2xl font-bold text-gray-900 mb-1">Monatsübersicht</h2>
-      <p className="text-gray-500 text-sm mb-6">Eingegangene Leads der letzten 12 Monate</p>
-
-      <div className="rounded-2xl shadow-sm overflow-hidden border border-gray-100">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-100 grid grid-cols-[1fr_80px] px-6 py-3">
-          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Monat</span>
-          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide text-right">Leads</span>
+    <div className="mt-12">
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h2 className="text-base font-bold text-gray-900">Monatsübersicht</h2>
         </div>
-
         {rows.map((row, idx) => {
           const isOpen = openMonth === row.month
           const isLast = idx === rows.length - 1
@@ -71,7 +65,7 @@ export default function MonthlyStats({ rows }: { rows: MonthlyRow[] }) {
                     .map((s, i) => {
                       const d = new Date(s.created_at)
                       return (
-                        <a key={i} href={`/funnel-overview/${s.funnel_slug}`} className="flex items-start sm:items-center gap-6 px-4 sm:px-6 py-3 hover:bg-indigo-50 transition-colors group">
+                        <a key={i} href={`/dashboard/${s.funnel_slug}`} className="flex items-start sm:items-center gap-6 px-4 sm:px-6 py-3 hover:bg-indigo-50 transition-colors group">
                           <div className="w-20 sm:w-36 shrink-0">
                             <p className="text-sm text-gray-700">
                               {d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })}

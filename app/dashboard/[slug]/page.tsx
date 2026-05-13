@@ -84,7 +84,7 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
       <div className="bg-white sticky top-0 z-10 border-b-2 border-[#4648d4]">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex items-center gap-3 min-w-0">
           <a
-            href="/funnel-overview"
+            href="/dashboard"
             className="flex shrink-0 items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
           >
             <ArrowLeft size={16} />
@@ -125,10 +125,10 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
             />
           </div>
           <div className="mt-4">
-            <EmailPreviewBlock title="Bestätigungs-E-Mail (Anfragender)" src={`/funnel-overview/${slug}/email-preview`} />
+            <EmailPreviewBlock title="Bestätigungs-E-Mail (Anfragender)" src={`/dashboard/${slug}/email-preview`} />
           </div>
           <div className="mt-4">
-            <EmailPreviewBlock title="Lead-Benachrichtigung (Tenant)" src={`/funnel-overview/${slug}/lead-preview`} />
+            <EmailPreviewBlock title="Lead-Benachrichtigung (Tenant)" src={`/dashboard/${slug}/lead-preview`} />
           </div>
           <div className="mt-4">
             <EmbedBlock slug={slug} url={funnelUrl} companyName={tenant.company_name ?? slug} />

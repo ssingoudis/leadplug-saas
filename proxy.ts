@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const PROTECTED = ['/funnel-overview']
+const PROTECTED = ['/dashboard']
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
@@ -24,5 +24,5 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/funnel-overview/:path*'],
+  matcher: ['/dashboard/:path*'],
 }

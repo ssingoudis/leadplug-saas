@@ -233,14 +233,7 @@ export function Funnel({
 
   const [currentStep, setCurrentStep] = useState(0);
 
-  // Answers keyed by question ID. Pre-populated with defaultValue if set on the question.
-  const [answers, setAnswers] = useState<Record<string, string>>(() => {
-    const initial: Record<string, string> = {};
-    visibleQuestions.forEach((q) => {
-      if (q.defaultValue) initial[q.id] = q.defaultValue;
-    });
-    return initial;
-  });
+  const [answers, setAnswers] = useState<Record<string, string>>({});
 
   // Kontaktdaten als freies Record — Keys entsprechen ContactFieldConfig.key.
   const [contactData, setContactData] = useState<Record<string, string>>({});
