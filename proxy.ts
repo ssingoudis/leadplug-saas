@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const PROTECTED = ['/funnel-overview']
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   if (!PROTECTED.some((p) => pathname.startsWith(p))) {
