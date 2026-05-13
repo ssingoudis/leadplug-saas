@@ -10,6 +10,7 @@ export interface FunnelCard {
   url: string
   submissionCount: number
   lastSubmissionAt: string | null
+  totalViews: number
 }
 
 async function getAllData(): Promise<{ funnels: FunnelCard[]; monthlyRows: MonthlyRow[]; failedLast14Days: number }> {
@@ -31,7 +32,7 @@ async function getAllData(): Promise<{ funnels: FunnelCard[]; monthlyRows: Month
   ] = await Promise.all([
     supabase
       .from('funnels')
-      .select(`slug, primary_color, tenants ( company_name )`)
+      .select(`slug, primary_color, total_views, tenants ( company_name )`)
       .eq('is_active', true)
       .order('slug'),
     supabase
@@ -70,6 +71,7 @@ async function getAllData(): Promise<{ funnels: FunnelCard[]; monthlyRows: Month
       url: `${base}/${slug}`,
       submissionCount: s.count,
       lastSubmissionAt: s.lastAt,
+      totalViews: (row.total_views as number) ?? 0,
     }
   })
 

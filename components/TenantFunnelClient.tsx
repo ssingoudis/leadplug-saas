@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { Funnel } from '@/components/funnel'
 import type { TenantConfig } from '@/types'
 
@@ -8,6 +9,14 @@ type Props = {
 }
 
 export function TenantFunnelClient({ config }: Props) {
+  useEffect(() => {
+    fetch('/api/track-view', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: config.slug }),
+    }).catch(() => {})
+  }, [config.slug])
+
   async function handleSubmit(data: {
     answers: Record<string, string>
     contact: Record<string, string>
