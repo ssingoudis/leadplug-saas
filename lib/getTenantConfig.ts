@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { TenantConfig, FunnelFont, ContactFieldConfig } from '@/types'
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-_]*$/
@@ -94,14 +94,22 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
 
 class TenantInactiveError extends Error {}
 
-// neue Datenbank widget-funnel
-// Abfrage auf funnels (slug), joined mit tenants + themes + questions
-async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
+let cachedClient: SupabaseClient | null = null
+
+function getSupabase() {
+  if (cachedClient) return cachedClient
   const url = process.env.SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_KEY
   if (!url || !key) return null
+  cachedClient = createClient(url, key, { auth: { persistSession: false } })
+  return cachedClient
+}
 
-  const supabase = createClient(url, key)
+// neue Datenbank widget-funnel
+// Abfrage auf funnels (slug), joined mit tenants + themes + questions
+async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
+  const supabase = getSupabase()
+  if (!supabase) return null
   const { data, error } = await supabase
     .from('funnels')
     .select(`

@@ -124,13 +124,3 @@ export interface TenantConfig {
 // Dynamische Kontaktdaten — Keys entsprechen den ContactFieldConfig.key-Werten.
 // Record<string, string> erlaubt beliebige Felder (anrede, name, email, telefon + custom).
 export type ContactData = Record<string, string>
-
-
-export interface SubmitPayload {
-  tenant: string
-  answers: Record<string, string>
-  contact: ContactData
-  honeypot?: string
-  sourceUrl: string
-  userAgent: string
-}
