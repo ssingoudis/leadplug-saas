@@ -51,6 +51,18 @@ export interface QuestionConfig {
   visible: boolean
 }
 
+// Konfiguration eines einzelnen Kontaktformular-Felds (kommt aus funnels.contact_fields JSONB).
+export interface ContactFieldConfig {
+  key:          string                           // Eindeutiger Bezeichner, z.B. "name", "email", "plz"
+  type:         'radio' | 'text' | 'email' | 'tel'
+  label:        string
+  placeholder?: string                           // Nur für text/email/tel
+  required:     boolean
+  visible:      boolean
+  sort_order:   number
+  options?:     string[]                         // Nur für type "radio", z.B. ["Herr", "Frau"]
+}
+
 export interface FunnelConfig {
   title: string
   subtitle?: string            // Nur noch optional (SEO-Fallback). Kommt nicht aus Supabase.
@@ -59,6 +71,9 @@ export interface FunnelConfig {
   responseMessage: string
   contactFormSubtitle: string
   privacyPolicyUrl?: string
+  privacyText: string          // Einwilligungstext vor dem Datenschutz-Link
+  answersOverviewLabel: string // Überschrift der Antworten-Zusammenfassung
+  footerText: string           // Footer-Template mit {{company_name}}, {{public_email}}, {{public_phone}}
 }
 
 /* alte Datenbank solar-widget
@@ -103,14 +118,12 @@ export interface TenantConfig {
   flatMonthlyPrice?: number
   flatMonthlyLeadLimit?: number
   questions: QuestionConfig[]
+  contactFields: ContactFieldConfig[]
 }
 
-export interface ContactData {
-  anrede: string
-  name: string
-  telefon: string
-  email: string
-}
+// Dynamische Kontaktdaten — Keys entsprechen den ContactFieldConfig.key-Werten.
+// Record<string, string> erlaubt beliebige Felder (anrede, name, email, telefon + custom).
+export type ContactData = Record<string, string>
 
 
 export interface SubmitPayload {

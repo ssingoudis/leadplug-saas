@@ -1,9 +1,7 @@
 'use client'
 
-
-
 import { Funnel } from '@/components/funnel'
-import type { TenantConfig, ContactData } from '@/types'
+import type { TenantConfig } from '@/types'
 
 type Props = {
   config: TenantConfig
@@ -12,7 +10,7 @@ type Props = {
 export function TenantFunnelClient({ config }: Props) {
   async function handleSubmit(data: {
     answers: Record<string, string>
-    contact: ContactData
+    contact: Record<string, string>
     honeypot: string
   }) {
     try {
@@ -38,8 +36,10 @@ export function TenantFunnelClient({ config }: Props) {
       theme={config.theme}
       funnel={config.funnel}
       questions={config.questions}
+      contactFields={config.contactFields}
       companyName={config.companyName}
       publicEmail={config.publicEmail}
+      publicPhone={config.phone}
       onSubmit={handleSubmit}
     />
   )

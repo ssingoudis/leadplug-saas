@@ -56,7 +56,7 @@ export function CustomerConfirmation({
             {/* Antworten */}
             <Section style={{ ...styles.answersBox, borderLeftColor: primary }}>
               <Heading as="h2" style={styles.subheading}>
-                Ihre Angaben im Überblick
+                {tenantConfig.funnel.answersOverviewLabel}
               </Heading>
               {visibleQuestions.map((q) => {
                 const display = resolveAnswer(q, answers)

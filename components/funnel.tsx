@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { renderIcon } from "@/components/icons";
 import { resolveAnswer } from "@/lib/resolveAnswer";
+import { validateContactField } from "@/lib/validateContactField";
 import type {
   FunnelTheme,
   FunnelFont,
@@ -12,7 +13,7 @@ import type {
   QuestionConfig,
   TextConfig,
   SliderConfig,
-  ContactData,
+  ContactFieldConfig,
 } from "@/types";
 
 // =============================================================================
@@ -136,37 +137,25 @@ function getOptionColSpanClasses(count: number, idx: number): string {
 }
 
 // =============================================================================
-// VALIDATION
+// FOOTER HELPER
 // =============================================================================
 
-// Validates a single contact field. Returns an error message or "" if valid.
-// Rules: anrede must be selected; name must be non-empty after trim; email must
-// match basic format; telefon must start with 0/+, use only allowed chars, and have ≥7 digits.
-function validateField(field: keyof ContactData, value: string): string {
-  switch (field) {
-    case "anrede":
-      return !value ? "Bitte wählen Sie eine Anrede aus." : "";
-
-    case "name":
-      return !value.trim() ? "Bitte geben Sie Ihren Namen ein." : "";
-
-    case "email":
-      return !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
-        ? "Bitte geben Sie eine gültige E-Mail-Adresse ein."
-        : "";
-
-    case "telefon": {
-      const onlyAllowed     = /^[+\d\s\-()\/]+$/.test(value);
-      const digitCount      = (value.match(/\d/g) ?? []).length;
-      const startsCorrectly = /^[0+]/.test(value.trim());
-      return !onlyAllowed || digitCount < 7 || !startsCorrectly
-        ? "Bitte geben Sie eine gültige Telefonnummer ein."
-        : "";
-    }
-
-    default:
-      return "";
-  }
+// Ersetzt {{company_name}}, {{public_email}}, {{public_phone}} im Template.
+// Segmente die nach der Ersetzung leer sind, werden samt ihrem " · " Trennzeichen
+// entfernt, so dass z.B. ein fehlendes phone keine doppelten Punkte hinterlässt.
+function resolveFooterText(
+  template: string,
+  vars: { company_name: string; public_email: string; public_phone: string },
+): string {
+  const replaced = template.replace(
+    /\{\{(company_name|public_email|public_phone)\}\}/g,
+    (_, key) => vars[key as keyof typeof vars] ?? "",
+  );
+  return replaced
+    .split("·")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(" · ");
 }
 
 // =============================================================================
@@ -177,11 +166,13 @@ interface FunnelProps {
   theme?: Partial<FunnelTheme>;
   funnel: FunnelConfig;
   questions: QuestionConfig[];
+  contactFields: ContactFieldConfig[];
   companyName?: string;
   publicEmail?: string;
+  publicPhone?: string;
   onSubmit?: (data: {
     answers: Record<string, string>;
-    contact: ContactData;
+    contact: Record<string, string>;
     honeypot: string;
   }) => void;
 }
@@ -190,8 +181,10 @@ export function Funnel({
   theme: themeOverrides,
   funnel,
   questions,
+  contactFields,
   companyName,
   publicEmail,
+  publicPhone,
   onSubmit,
 }: FunnelProps) {
 
@@ -207,7 +200,7 @@ export function Funnel({
   const pageBackgroundColor = themeOverrides?.pageBackgroundColor ?? THEME_DEFAULTS.pageBackgroundColor;
   const borderRadius        = themeOverrides?.borderRadius        ?? THEME_DEFAULTS.borderRadius;
   const maxWidth            = themeOverrides?.maxWidth            ?? THEME_DEFAULTS.maxWidth;
-  const font            = themeOverrides?.font                ?? THEME_DEFAULTS.font;
+  const font                = themeOverrides?.font                ?? THEME_DEFAULTS.font;
 
   const theme = {
     primaryColor,
@@ -221,6 +214,15 @@ export function Funnel({
     maxWidth,
     fontFamily:        FONT_STACKS[font],
   };
+
+  // ---------------------------------------------------------------------------
+  // Derived contact field config
+  // Nur sichtbare Felder, sortiert nach sort_order.
+  // ---------------------------------------------------------------------------
+
+  const visibleContactFields = contactFields
+    .filter((f) => f.visible)
+    .sort((a, b) => a.sort_order - b.sort_order);
 
   // ---------------------------------------------------------------------------
   // State
@@ -240,12 +242,11 @@ export function Funnel({
     return initial;
   });
 
-  const [contactData, setContactData] = useState<ContactData>({
-    anrede: "", name: "", telefon: "", email: "",
-  });
+  // Kontaktdaten als freies Record — Keys entsprechen ContactFieldConfig.key.
+  const [contactData, setContactData] = useState<Record<string, string>>({});
 
   const [isSubmitted,    setIsSubmitted]    = useState(false);
-  const [errors,         setErrors]         = useState({ anrede: "", name: "", telefon: "", email: "" });
+  const [errors,         setErrors]         = useState<Record<string, string>>({});
   const [honeypot,       setHoneypot]       = useState("");
   const [hasTriedSubmit, setHasTriedSubmit] = useState(false);
 
@@ -258,12 +259,10 @@ export function Funnel({
   const progress        = ((currentStep + 1) / totalSteps) * 100;
   const currentQuestion = visibleQuestions[currentStep];
 
-  // Recalculated on every keystroke to drive the submit button opacity/cursor.
-  const isValid =
-    !validateField("anrede",  contactData.anrede)  &&
-    !validateField("name",    contactData.name)     &&
-    !validateField("email",   contactData.email)    &&
-    !validateField("telefon", contactData.telefon);
+  // Alle sichtbaren Pflichtfelder müssen einen gültigen Wert haben.
+  const isValid = visibleContactFields
+    .filter((f) => f.required)
+    .every((f) => !validateContactField(f, contactData[f.key] ?? ""));
 
   // single_choice auto-advances on click; all other types need an explicit Weiter button.
   const isChoiceType     = !isContactStep && currentQuestion?.questionType === "single_choice";
@@ -287,6 +286,13 @@ export function Funnel({
   const sliderVal = sliderConfig
     ? Number(answers[currentQuestion!.id] ?? sliderConfig.default ?? sliderConfig.min)
     : 0;
+
+  // Footer-Text mit aufgelösten Template-Variablen.
+  const resolvedFooter = resolveFooterText(funnel.footerText, {
+    company_name: companyName ?? "",
+    public_email: publicEmail ?? "",
+    public_phone: publicPhone ?? "",
+  });
 
   // ---------------------------------------------------------------------------
   // Handlers
@@ -330,18 +336,23 @@ export function Funnel({
     [],
   );
 
-  // Contact form submit: validates all fields, sets error state, calls handleSubmit on success.
+  // Setzt den Wert eines Kontaktfelds und löscht seinen Fehler.
+  const handleContactChange = useCallback((key: string, value: string) => {
+    setContactData((prev) => ({ ...prev, [key]: value }));
+    setErrors((prev) => ({ ...prev, [key]: "" }));
+  }, []);
+
+  // Contact form submit: validates all visible fields, sets error state, calls handleSubmit on success.
   const handleFormSubmit = (e: { preventDefault(): void }) => {
     e.preventDefault();
     setHasTriedSubmit(true);
-    const newErrors = {
-      anrede:  validateField("anrede",  contactData.anrede),
-      name:    validateField("name",    contactData.name),
-      telefon: validateField("telefon", contactData.telefon),
-      email:   validateField("email",   contactData.email),
-    };
+    const newErrors: Record<string, string> = {};
+    visibleContactFields.forEach((f) => {
+      const err = validateContactField(f, contactData[f.key] ?? "");
+      if (err) newErrors[f.key] = err;
+    });
     setErrors(newErrors);
-    if (Object.values(newErrors).every((err) => !err)) {
+    if (Object.keys(newErrors).length === 0) {
       handleSubmit();
     }
   };
@@ -444,7 +455,7 @@ export function Funnel({
               style={{ backgroundColor: theme.inputBgColor, borderLeft: `4px solid ${theme.primaryColor}` }}
             >
               <p className="font-semibold mb-3" style={{ color: theme.textColor }}>
-                Ihre Angaben im Überblick:
+                {funnel.answersOverviewLabel}
               </p>
               {visibleQuestions.map((q) => {
                 const display = resolveAnswer(q, answers);
@@ -464,7 +475,7 @@ export function Funnel({
             className="px-8 py-4 border-t text-xs"
             style={{ backgroundColor: theme.inputBgColor, borderColor: theme.borderColor, color: theme.textColorMuted }}
           >
-            <p className="m-0">{companyName} · {publicEmail}</p>
+            <p className="m-0">{resolvedFooter}</p>
           </div>
         </div>
       </div>
@@ -673,7 +684,7 @@ export function Funnel({
             ) : (
 
               /* --------------------------------------------------------------
-                  Contact form (last step)
+                  Contact form (last step) — dynamisch aus contactFields
               -------------------------------------------------------------- */
               <form onSubmit={handleFormSubmit}>
                 <h1
@@ -698,148 +709,85 @@ export function Funnel({
                   style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 0, height: 0 }}
                 />
 
-                {/* Anrede */}
-                <div className="mb-4">
-                  <div className="flex gap-5">
-                    {["Herr", "Frau"].map((anrede) => (
-                      <label key={anrede} className="flex items-center gap-2 cursor-pointer min-h-11">
-                        <div
-                          className="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors"
-                          style={{ borderColor: contactData.anrede === anrede ? theme.primaryColor : theme.borderColor }}
-                        >
-                          {contactData.anrede === anrede && (
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: theme.primaryColor }} />
+                {/* Dynamische Felder aus contact_fields DB-Config */}
+                <div className="space-y-4 mb-4">
+                  {visibleContactFields.map((field) => {
+
+                    // --- Radio (z.B. Anrede) ---
+                    if (field.type === "radio" && field.options) {
+                      return (
+                        <div key={field.key}>
+                          <div className="flex gap-5">
+                            {field.options.map((option) => (
+                              <label key={option} className="flex items-center gap-2 cursor-pointer min-h-11">
+                                <div
+                                  className="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors"
+                                  style={{ borderColor: contactData[field.key] === option ? theme.primaryColor : theme.borderColor }}
+                                >
+                                  {contactData[field.key] === option && (
+                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: theme.primaryColor }} />
+                                  )}
+                                </div>
+                                <span style={{ color: theme.textColor }}>{option}</span>
+                                <input
+                                  type="radio"
+                                  name={field.key}
+                                  value={option}
+                                  checked={contactData[field.key] === option}
+                                  onChange={(e) => handleContactChange(field.key, e.target.value)}
+                                  className="sr-only"
+                                />
+                              </label>
+                            ))}
+                          </div>
+                          {errors[field.key] && (
+                            <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors[field.key]}</p>
                           )}
                         </div>
-                        <span style={{ color: theme.textColor }}>{anrede}</span>
+                      );
+                    }
+
+                    // --- Text / Email / Tel ---
+                    return (
+                      <div key={field.key}>
                         <input
-                          type="radio"
-                          name="anrede"
-                          value={anrede}
-                          checked={contactData.anrede === anrede}
-                          onChange={(e) => {
-                            setContactData((prev) => ({ ...prev, anrede: e.target.value }));
-                            setErrors((prev) => ({ ...prev, anrede: "" }));
+                          type={field.type}
+                          placeholder={field.placeholder ?? field.label}
+                          value={contactData[field.key] ?? ""}
+                          onChange={(e) => handleContactChange(field.key, e.target.value)}
+                          className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
+                          style={{
+                            borderColor:     errors[field.key] ? "#ef4444" : theme.borderColor,
+                            backgroundColor: theme.inputBgColor,
+                            color:           theme.textColor,
+                            borderRadius:    theme.borderRadius,
                           }}
-                          className="sr-only"
+                          onFocus={(e) => {
+                            e.currentTarget.style.borderColor     = theme.primaryColor;
+                            e.currentTarget.style.backgroundColor = theme.backgroundColor;
+                          }}
+                          onBlur={(e) => {
+                            if (hasTriedSubmit) {
+                              const err = validateContactField(field, e.currentTarget.value);
+                              setErrors((prev) => ({ ...prev, [field.key]: err }));
+                              e.currentTarget.style.borderColor = err ? "#ef4444" : theme.borderColor;
+                            } else {
+                              e.currentTarget.style.borderColor = theme.borderColor;
+                            }
+                            e.currentTarget.style.backgroundColor = theme.inputBgColor;
+                          }}
                         />
-                      </label>
-                    ))}
-                  </div>
-                  {errors.anrede && (
-                    <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors.anrede}</p>
-                  )}
-                </div>
-
-                {/* Name, Telefon, E-Mail */}
-                <div className="space-y-3 mb-4">
-
-                  {/* Name */}
-                  <div>
-                    <input
-                      type="text"
-                      placeholder="Vor- und Nachname"
-                      value={contactData.name}
-                      onChange={(e) => setContactData((prev) => ({ ...prev, name: e.target.value }))}
-                      className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
-                      style={{
-                        borderColor:     errors.name ? "#ef4444" : theme.borderColor,
-                        backgroundColor: theme.inputBgColor,
-                        color:           theme.textColor,
-                        borderRadius:    theme.borderRadius,
-                      }}
-                      onFocus={(e) => {
-                        e.currentTarget.style.borderColor     = theme.primaryColor;
-                        e.currentTarget.style.backgroundColor = theme.backgroundColor;
-                      }}
-                      onBlur={(e) => {
-                        if (hasTriedSubmit) {
-                          const error = validateField("name", e.currentTarget.value);
-                          setErrors((prev) => ({ ...prev, name: error }));
-                          e.currentTarget.style.borderColor = error ? "#ef4444" : theme.borderColor;
-                        } else {
-                          e.currentTarget.style.borderColor = theme.borderColor;
-                        }
-                        e.currentTarget.style.backgroundColor = theme.inputBgColor;
-                      }}
-                    />
-                    {errors.name && (
-                      <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors.name}</p>
-                    )}
-                  </div>
-
-                  {/* Telefon */}
-                  <div>
-                    <input
-                      type="tel"
-                      placeholder="Telefonnummer"
-                      value={contactData.telefon}
-                      onChange={(e) => setContactData((prev) => ({ ...prev, telefon: e.target.value }))}
-                      className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
-                      style={{
-                        borderColor:     errors.telefon ? "#ef4444" : theme.borderColor,
-                        backgroundColor: theme.inputBgColor,
-                        color:           theme.textColor,
-                        borderRadius:    theme.borderRadius,
-                      }}
-                      onFocus={(e) => {
-                        e.currentTarget.style.borderColor     = theme.primaryColor;
-                        e.currentTarget.style.backgroundColor = theme.backgroundColor;
-                      }}
-                      onBlur={(e) => {
-                        if (hasTriedSubmit) {
-                          const error = validateField("telefon", e.currentTarget.value);
-                          setErrors((prev) => ({ ...prev, telefon: error }));
-                          e.currentTarget.style.borderColor = error ? "#ef4444" : theme.borderColor;
-                        } else {
-                          e.currentTarget.style.borderColor = theme.borderColor;
-                        }
-                        e.currentTarget.style.backgroundColor = theme.inputBgColor;
-                      }}
-                    />
-                    {errors.telefon && (
-                      <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors.telefon}</p>
-                    )}
-                  </div>
-
-                  {/* E-Mail */}
-                  <div>
-                    <input
-                      type="email"
-                      placeholder="E-Mail"
-                      value={contactData.email}
-                      onChange={(e) => setContactData((prev) => ({ ...prev, email: e.target.value }))}
-                      className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
-                      style={{
-                        borderColor:     errors.email ? "#ef4444" : theme.borderColor,
-                        backgroundColor: theme.inputBgColor,
-                        color:           theme.textColor,
-                        borderRadius:    theme.borderRadius,
-                      }}
-                      onFocus={(e) => {
-                        e.currentTarget.style.borderColor     = theme.primaryColor;
-                        e.currentTarget.style.backgroundColor = theme.backgroundColor;
-                      }}
-                      onBlur={(e) => {
-                        if (hasTriedSubmit) {
-                          const error = validateField("email", e.currentTarget.value);
-                          setErrors((prev) => ({ ...prev, email: error }));
-                          e.currentTarget.style.borderColor = error ? "#ef4444" : theme.borderColor;
-                        } else {
-                          e.currentTarget.style.borderColor = theme.borderColor;
-                        }
-                        e.currentTarget.style.backgroundColor = theme.inputBgColor;
-                      }}
-                    />
-                    {errors.email && (
-                      <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors.email}</p>
-                    )}
-                  </div>
+                        {errors[field.key] && (
+                          <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors[field.key]}</p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Privacy notice */}
                 <p className="text-xs mb-4 leading-relaxed" style={{ color: theme.textColorMuted }}>
-                  Mit dem Absenden stimme ich zu, per E-Mail und Telefon zu meiner Anfrage kontaktiert zu werden
+                  {funnel.privacyText}
                   {funnel.privacyPolicyUrl ? (
                     <>
                       {" "}(siehe{" "}

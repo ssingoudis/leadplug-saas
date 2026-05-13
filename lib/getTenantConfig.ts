@@ -1,15 +1,25 @@
 import { createClient } from '@supabase/supabase-js'
-import type { TenantConfig, FunnelFont } from '@/types'
+import type { TenantConfig, FunnelFont, ContactFieldConfig } from '@/types'
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-_]*$/
 
 const TEXT_DEFAULTS = {
-  funnelTitle:          'Jetzt kostenloses Angebot anfordern',
-  submitButtonLabel:    'Anfrage absenden',
-  successMessage:       'Vielen Dank! Wir melden uns in Kürze bei Ihnen.',
-  responseMessage:      'Wir melden uns so schnell wie möglich bei Ihnen.',
-  contactFormSubtitle:  'Wer soll das Angebot erhalten?',
+  funnelTitle:           'Jetzt kostenloses Angebot anfordern',
+  submitButtonLabel:     'Anfrage absenden',
+  successMessage:        'Vielen Dank! Wir melden uns in Kürze bei Ihnen.',
+  responseMessage:       'Wir melden uns so schnell wie möglich bei Ihnen.',
+  contactFormSubtitle:   'Wer soll das Angebot erhalten?',
+  privacyText:           'Mit dem Absenden stimme ich zu, per E-Mail und Telefon zu meiner Anfrage kontaktiert zu werden',
+  answersOverviewLabel:  'Ihre Angaben im Überblick:',
+  footerText:            '{{company_name}} · {{public_email}}',
 }
+
+const DEFAULT_CONTACT_FIELDS: ContactFieldConfig[] = [
+  { key: 'anrede',  type: 'radio',  label: 'Anrede',           options: ['Herr', 'Frau'], required: true,  visible: true, sort_order: 0 },
+  { key: 'name',    type: 'text',   label: 'Vor- und Nachname', placeholder: 'Vor- und Nachname', required: true,  visible: true, sort_order: 1 },
+  { key: 'telefon', type: 'tel',    label: 'Telefonnummer',     placeholder: 'Telefonnummer',     required: true,  visible: true, sort_order: 2 },
+  { key: 'email',   type: 'email',  label: 'E-Mail',            placeholder: 'E-Mail',            required: true,  visible: true, sort_order: 3 },
+]
 
 // neue Datenbank widget-funnel
 // funnels-Zeile mit joins auf tenants, themes, funnel_questions → TenantConfig
@@ -47,17 +57,21 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
       maxWidth:            theme.max_width            ?? '720px',
     },
     funnel: {
-      title:               row.funnel_title          ?? TEXT_DEFAULTS.funnelTitle,
-      submitButtonLabel:   row.submit_button_label   ?? TEXT_DEFAULTS.submitButtonLabel,
-      successMessage:      row.success_message       ?? TEXT_DEFAULTS.successMessage,
-      responseMessage:     row.response_message      ?? TEXT_DEFAULTS.responseMessage,
-      contactFormSubtitle: row.contact_form_subtitle ?? TEXT_DEFAULTS.contactFormSubtitle,
-      privacyPolicyUrl:    row.privacy_policy_url    ?? undefined,
+      title:               row.funnel_title           ?? TEXT_DEFAULTS.funnelTitle,
+      submitButtonLabel:   row.submit_button_label    ?? TEXT_DEFAULTS.submitButtonLabel,
+      successMessage:      row.success_message        ?? TEXT_DEFAULTS.successMessage,
+      responseMessage:     row.response_message       ?? TEXT_DEFAULTS.responseMessage,
+      contactFormSubtitle: row.contact_form_subtitle  ?? TEXT_DEFAULTS.contactFormSubtitle,
+      privacyPolicyUrl:    row.privacy_policy_url     ?? undefined,
+      privacyText:         row.privacy_text           ?? TEXT_DEFAULTS.privacyText,
+      answersOverviewLabel: row.answers_overview_label ?? TEXT_DEFAULTS.answersOverviewLabel,
+      footerText:          row.footer_text            ?? TEXT_DEFAULTS.footerText,
     },
     billingModel:         tenant.billing_model         ?? 'per_lead',
     leadPriceBase:        Number(tenant.lead_price_base ?? 0),
     flatMonthlyPrice:     tenant.flat_monthly_price     != null ? Number(tenant.flat_monthly_price)     : undefined,
     flatMonthlyLeadLimit: tenant.flat_monthly_lead_limit != null ? Number(tenant.flat_monthly_lead_limit) : undefined,
+    contactFields: Array.isArray(row.contact_fields) ? row.contact_fields as ContactFieldConfig[] : DEFAULT_CONTACT_FIELDS,
     questions: questions
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       .map((q) => ({
@@ -94,6 +108,8 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
       id, slug, industry, is_active,
       funnel_title, submit_button_label, success_message,
       response_message, contact_form_subtitle, privacy_policy_url,
+      privacy_text, answers_overview_label, footer_text,
+      contact_fields,
       email_sender_local,
       primary_color, text_color, background_color, page_background_color,
       font, border_radius, max_width,

@@ -50,31 +50,34 @@ export async function sendAllEmails(
       ? `${senderLocal}@${emailDomain}`
       : (process.env.EMAIL_FROM ?? 'noreply@example.com')
 
-  const customerPromise = resend.emails
-    .send({
-      from,
-      to: contact.email,
-      subject: `Ihre Anfrage bei ${tenantConfig.companyName}`,
-      react: CustomerConfirmation({ contact, answers, tenantConfig }),
-    })
-    .then(({ error }) => {
-      if (error) {
-        console.error('sendEmails: customer mail failed', error)
-        return false
-      }
-      return true
-    })
-    .catch((err) => {
-      console.error('sendEmails: customer mail threw', err)
-      return false
-    })
+  // Customer-Mail nur senden wenn eine E-Mail-Adresse vorhanden (Feld kann optional sein).
+  const customerPromise = contact.email
+    ? resend.emails
+        .send({
+          from,
+          to: contact.email,
+          subject: `Ihre Anfrage bei ${tenantConfig.companyName}`,
+          react: CustomerConfirmation({ contact, answers, tenantConfig }),
+        })
+        .then(({ error }) => {
+          if (error) {
+            console.error('sendEmails: customer mail failed', error)
+            return false
+          }
+          return true
+        })
+        .catch((err) => {
+          console.error('sendEmails: customer mail threw', err)
+          return false
+        })
+    : Promise.resolve(false)
 
   const tenantPromise = resend.emails
     .send({
       from,
       to: tenantConfig.notificationEmail,
-      replyTo: contact.email,
-      subject: `Neue Anfrage von ${contact.name}`,
+      ...(contact.email ? { replyTo: contact.email } : {}),
+      subject: `Neue Anfrage von ${contact.name ?? 'Unbekannt'}`,
       react: TenantLeadNotification({ contact, answers, tenantConfig, submittedAt }),
     })
     .then(({ error }) => {

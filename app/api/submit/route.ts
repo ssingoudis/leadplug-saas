@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getTenantConfig } from '@/lib/getTenantConfig'
 import { logSubmission, isRateLimited, updateEmailStatus, logHoneypot } from '@/lib/tracking'
 import { sendAllEmails } from '@/lib/sendEmails'
-import type { ContactData } from '@/types'
+import { validateContactField } from '@/lib/validateContactField'
 
 function getIp(req: Request): string | null {
   const forwarded = req.headers.get('x-forwarded-for')
@@ -12,10 +12,12 @@ function getIp(req: Request): string | null {
 
 export const runtime = 'nodejs'
 
-function isValidPayload(value: unknown): value is {
+// Grundcheck: body hat die erwartete Struktur (kein Typ-Prüfung der Felder — das macht
+// die dynamische Feldvalidierung nach dem Laden der tenantConfig).
+function isValidShape(value: unknown): value is {
   tenant: string
   answers: Record<string, string>
-  contact: ContactData
+  contact: Record<string, string>
   honeypot?: string
   sourceUrl?: string
   userAgent?: string
@@ -25,15 +27,7 @@ function isValidPayload(value: unknown): value is {
   if (typeof v.tenant !== 'string' || v.tenant.length === 0) return false
   if (!v.answers || typeof v.answers !== 'object') return false
   if (!v.contact || typeof v.contact !== 'object') return false
-  const c = v.contact as Record<string, unknown>
-  return (
-    typeof c.name === 'string' &&
-    c.name.length > 0 &&
-    typeof c.email === 'string' &&
-    c.email.includes('@') &&
-    typeof c.telefon === 'string' &&
-    typeof c.anrede === 'string'
-  )
+  return true
 }
 
 export async function POST(req: Request) {
@@ -61,8 +55,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true })
   }
 
-  // 3. Payload-Shape-Check
-  if (!isValidPayload(body)) {
+  // 3. Struktur-Check
+  if (!isValidShape(body)) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
   }
 
@@ -76,11 +70,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Tenant not found' }, { status: 404 })
   }
 
-  // 5. lead_price server-side aus Tenant-Config ableiten – niemals vom Client vertrauen
+  // 5. Dynamische Feldvalidierung gegen contact_fields aus der DB
+  const visibleRequired = tenantConfig.contactFields.filter((f) => f.visible && f.required)
+  for (const field of visibleRequired) {
+    const err = validateContactField(field, contact[field.key] ?? '')
+    if (err) {
+      return NextResponse.json({ error: `Validation failed: ${field.key}` }, { status: 400 })
+    }
+  }
+
+  // 6. lead_price server-side aus Tenant-Config ableiten – niemals vom Client vertrauen
   const leadPrice =
     tenantConfig.billingModel === 'per_lead' ? tenantConfig.leadPriceBase : 0
 
-  // 6. Submission loggen
+  // 7. Submission loggen
   const submissionId = await logSubmission({
     funnelSlug: tenant,
     tenantSlug: tenantConfig.tenantSlug,
@@ -92,7 +95,7 @@ export async function POST(req: Request) {
     ipAddress: ip ?? undefined,
   })
 
-  // 7. E-Mails senden (Fehler loggen, nicht werfen – Endkunde bekommt immer success:true)
+  // 8. E-Mails senden (Fehler loggen, nicht werfen – Endkunde bekommt immer success:true)
   let emailResults = { customer: false, tenant: false }
   try {
     emailResults = await sendAllEmails({
@@ -105,7 +108,7 @@ export async function POST(req: Request) {
     console.error('submit route: email pipeline failed', err)
   }
 
-  // 8. Email-Status in DB schreiben
+  // 9. Email-Status in DB schreiben
   if (submissionId) {
     await updateEmailStatus(submissionId, emailResults.customer, emailResults.tenant)
   }

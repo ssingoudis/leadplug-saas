@@ -54,26 +54,27 @@ export function TenantLeadNotification({
             <Heading as="h2" style={styles.subheading}>
               Kontaktdaten
             </Heading>
-            <Text style={styles.contactRow}>
-              <span style={styles.label}>Anrede:</span>{' '}
-              <strong>{contact.anrede || '-'}</strong>
-            </Text>
-            <Text style={styles.contactRow}>
-              <span style={styles.label}>Name:</span>{' '}
-              <strong>{contact.name}</strong>
-            </Text>
-            <Text style={styles.contactRow}>
-              <span style={styles.label}>E-Mail:</span>{' '}
-              <Link href={`mailto:${contact.email}`} style={{ color: primary }}>
-                {contact.email}
-              </Link>
-            </Text>
-            <Text style={styles.contactRow}>
-              <span style={styles.label}>Telefon:</span>{' '}
-              <Link href={`tel:${contact.telefon}`} style={{ color: primary }}>
-                {contact.telefon}
-              </Link>
-            </Text>
+            {tenantConfig.contactFields
+              .filter((f) => f.visible)
+              .sort((a, b) => a.sort_order - b.sort_order)
+              .map((field) => {
+                const value = contact[field.key] ?? '-'
+                const isEmail = field.type === 'email' && contact[field.key]
+                const isTel   = field.type === 'tel'   && contact[field.key]
+                return (
+                  <Text key={field.key} style={styles.contactRow}>
+                    <span style={styles.label}>{field.label}:</span>{' '}
+                    {isEmail ? (
+                      <Link href={`mailto:${value}`} style={{ color: primary }}>{value}</Link>
+                    ) : isTel ? (
+                      <Link href={`tel:${value}`} style={{ color: primary }}>{value}</Link>
+                    ) : (
+                      <strong>{value}</strong>
+                    )}
+                  </Text>
+                )
+              })
+            }
           </Section>
 
           <Heading as="h2" style={styles.subheading}>
