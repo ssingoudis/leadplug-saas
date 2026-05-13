@@ -74,31 +74,15 @@ export default function FunnelGrid({ funnels, failedLast14Days }: { funnels: Fun
                 <div className="flex items-center gap-3 mt-auto pt-3 border-t border-gray-100">
                   <div className="flex-1 min-w-0">
                     {f.submissionCount > 0 ? (
-                      <div className="flex items-center gap-2 text-sm flex-wrap">
+                      <div className="flex items-center gap-2 text-sm">
                         <span className="font-semibold text-gray-900">{f.submissionCount} Lead{f.submissionCount !== 1 ? 's' : ''}</span>
-                        {f.totalViews > 0 && (
-                          <>
-                            <span className="text-gray-400">·</span>
-                            <span className="text-gray-500">{f.totalViews} Aufrufe</span>
-                            <span className="text-gray-400">·</span>
-                            <span className="text-gray-500">{Math.round((f.submissionCount / f.totalViews) * 100)} % Conv.</span>
-                          </>
-                        )}
                         <span className="text-gray-400">·</span>
                         <span className="text-gray-500 truncate">
                           {f.lastSubmissionAt ? relativeTime(f.lastSubmissionAt) : ''}
                         </span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-gray-400">Noch keine Leads</span>
-                        {f.totalViews > 0 && (
-                          <>
-                            <span className="text-gray-400">·</span>
-                            <span className="text-gray-500">{f.totalViews} Aufrufe</span>
-                          </>
-                        )}
-                      </div>
+                      <span className="text-sm text-gray-400">Noch keine Leads</span>
                     )}
                   </div>
                   <span className="text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 group-hover:border-indigo-300 group-hover:text-indigo-600 transition-colors">

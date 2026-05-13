@@ -37,7 +37,7 @@ async function getData(slug: string) {
     supabase
       .from('funnels')
       .select(`
-        slug, is_active, industry,
+        slug, is_active, industry, total_views,
         funnel_title, submit_button_label, success_message,
         response_message, contact_form_subtitle, privacy_policy_url, email_sender_local,
         primary_color, text_color, background_color, page_background_color,
@@ -141,6 +141,7 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
           {/* Tenant */}
           <div className="bg-white rounded-2xl shadow-sm p-6">
             <h2 className="text-base font-bold text-gray-900 mb-3">Kunde</h2>
+
             <Row label="Firma" value={tenant.company_name} />
             <Row label="Öffentliche E-Mail" value={tenant.public_email} />
             <Row label="Benachrichtigung" value={tenant.notification_email} />
@@ -152,6 +153,24 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
                 ? `Flat Monthly · ${tenant.flat_monthly_price} € · max. ${tenant.flat_monthly_lead_limit} Leads`
                 : `Per Lead · ${tenant.lead_price_base} € / Lead`
             } />
+
+            {/* Stats: Aufrufe · Leads · Conversion */}
+            <div className="grid grid-cols-3 gap-3 mt-4">
+              <div className="bg-gray-50 rounded-xl px-3 py-3 text-center">
+                <p className="text-xl font-bold text-gray-900">{funnel.total_views ?? 0}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Aufrufe</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl px-3 py-3 text-center">
+                <p className="text-xl font-bold text-gray-900">{submissions.length}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Leads</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl px-3 py-3 text-center">
+                <p className="text-xl font-bold text-gray-900">
+                  {funnel.total_views > 0 ? Math.round((submissions.length / funnel.total_views) * 100) : 0} %
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">Conversion</p>
+              </div>
+            </div>
           </div>
 
           {/* Funnel config */}
