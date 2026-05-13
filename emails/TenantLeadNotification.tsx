@@ -91,6 +91,14 @@ export function TenantLeadNotification({
             )
           })}
 
+          <Hr style={styles.hr} />
+          <Text style={styles.footer}>
+            Übermittelt von{' '}
+            <Link href="https://leadplug.de" style={{ color: '#9ca3af' }}>
+              leadplug.de
+            </Link>
+          </Text>
+
         </Container>
       </Body>
     </Html>
@@ -155,10 +163,10 @@ const styles = {
     borderColor: '#e5e7eb',
     margin: '20px 0',
   },
-  hint: {
-    fontSize: '12px',
-    color: '#6b7280',
-    fontStyle: 'italic' as const,
-    margin: '12px 0 0',
+  footer: {
+    fontSize: '11px',
+    color: '#9ca3af',
+    margin: '0',
+    textAlign: 'center' as const,
   },
 }

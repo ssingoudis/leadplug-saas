@@ -66,6 +66,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
     <h2 style="font-size:15px;font-weight:bold;margin:16px 0 8px;color:#1f2937">Antworten</h2>
     ${answerRows}
 
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0">
+    <p style="font-size:11px;color:#9ca3af;text-align:center;margin:0">
+      Übermittelt von <a href="https://leadplug.de" style="color:#9ca3af">leadplug.de</a>
+    </p>
+
   </div>
   <script>
     window.addEventListener('load', function() {
