@@ -411,8 +411,11 @@ export function Funnel({
         style={{
           backgroundColor: pageBackgroundColor,
           width: "100%",
-          paddingTop: `${SHADOW_PADDING.top}px`,
+          paddingTop:    `${SHADOW_PADDING.top}px`,
           paddingBottom: `${SHADOW_PADDING.bottom}px`,
+          paddingLeft:   `${SHADOW_PADDING.sides}px`,
+          paddingRight:  `${SHADOW_PADDING.sides}px`,
+          overflowX: "hidden",
         }}
       >
         <div
@@ -495,8 +498,11 @@ export function Funnel({
       style={{
         backgroundColor: pageBackgroundColor,
         width: "100%",
-        paddingTop: `${SHADOW_PADDING.top}px`,
+        paddingTop:    `${SHADOW_PADDING.top}px`,
         paddingBottom: `${SHADOW_PADDING.bottom}px`,
+        paddingLeft:   `${SHADOW_PADDING.sides}px`,
+        paddingRight:  `${SHADOW_PADDING.sides}px`,
+        overflowX: "hidden",
       }}
     >
       <div
