@@ -4,9 +4,14 @@ import { createClient } from '@supabase/supabase-js'
 export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
-  const { slug } = await req.json().catch(() => ({}))
+  const { slug, referrer } = await req.json().catch(() => ({}))
   if (!slug || typeof slug !== 'string') {
     return NextResponse.json({ ok: false }, { status: 400 })
+  }
+
+  // Admin-Dashboard öffnet den Funnel in einem iframe — nicht mitzählen.
+  if (typeof referrer === 'string' && referrer.includes('/funnel-overview/')) {
+    return NextResponse.json({ ok: true })
   }
 
   const supabaseUrl = process.env.SUPABASE_URL

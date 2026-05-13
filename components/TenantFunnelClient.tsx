@@ -13,7 +13,10 @@ export function TenantFunnelClient({ config }: Props) {
     fetch('/api/track-view', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slug: config.slug }),
+      body: JSON.stringify({
+        slug: config.slug,
+        referrer: typeof document !== 'undefined' ? document.referrer : '',
+      }),
     }).catch(() => {})
   }, [config.slug])
 
