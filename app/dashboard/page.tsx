@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { Power } from 'lucide-react'
 import FunnelGrid from './FunnelGrid'
 import MonthlyStats, { type MonthlyRow } from './MonthlyStats'
+import DailyLeadsChart, { type DayData } from './DailyLeadsChart'
 
 export interface FunnelCard {
   slug: string
@@ -13,10 +14,10 @@ export interface FunnelCard {
   totalViews: number
 }
 
-async function getAllData(): Promise<{ funnels: FunnelCard[]; monthlyRows: MonthlyRow[]; failedLast14Days: number }> {
+async function getAllData(): Promise<{ funnels: FunnelCard[]; monthlyRows: MonthlyRow[]; dailyData: DayData[] }> {
   const supabaseUrl = process.env.SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_KEY
-  if (!supabaseUrl || !key) return { funnels: [], monthlyRows: [], failedLast14Days: 0 }
+  if (!supabaseUrl || !key) return { funnels: [], monthlyRows: [], dailyData: [] }
 
   const supabase = createClient(supabaseUrl, key)
 
@@ -45,8 +46,8 @@ async function getAllData(): Promise<{ funnels: FunnelCard[]; monthlyRows: Month
   ])
 
   if (funnelError) {
-    console.error('funnel-overview: funnels query error', funnelError)
-    return { funnels: [], monthlyRows: [], failedLast14Days: 0 }
+    console.error('dashboard: funnels query error', funnelError)
+    return { funnels: [], monthlyRows: [], dailyData: [] }
   }
 
   // --- per-funnel stats ---
@@ -101,24 +102,30 @@ async function getAllData(): Promise<{ funnels: FunnelCard[]; monthlyRows: Month
   const monthlyRows: MonthlyRow[] = Array.from(monthMap.values())
     .sort((a, b) => b.month.localeCompare(a.month))
 
-  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
-  const failedLast14Days = (monthData ?? []).filter(
-    (r) => (r as MonthDataRow).created_at >= fourteenDaysAgo &&
-      (!(r as MonthDataRow).customer_email_sent || !(r as MonthDataRow).tenant_email_sent)
-  ).length
+  // --- daily data: last 21 days ---
+  const dailyMap = new Map<string, number>()
+  for (let i = 20; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000)
+    dailyMap.set(d.toISOString().slice(0, 10), 0)
+  }
+  for (const row of (monthData ?? []) as MonthDataRow[]) {
+    const key = new Date(row.created_at).toISOString().slice(0, 10)
+    if (dailyMap.has(key)) dailyMap.set(key, (dailyMap.get(key) ?? 0) + 1)
+  }
+  const dailyData: DayData[] = Array.from(dailyMap.entries()).map(([date, count]) => ({ date, count }))
 
-  return { funnels, monthlyRows, failedLast14Days }
+  return { funnels, monthlyRows, dailyData }
 }
 
-export default async function FunnelOverviewPage() {
-  const { funnels, monthlyRows, failedLast14Days } = await getAllData()
+export default async function DashboardPage() {
+  const { funnels, monthlyRows, dailyData } = await getAllData()
 
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
       <div className="bg-white sticky top-0 z-10 border-b-2 border-[#4648d4]">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex items-center justify-between">
-          <h1 className="text-base font-bold text-gray-900">Funnel-Übersicht</h1>
+          <h1 className="text-base font-bold text-gray-900">Dashboard</h1>
           <a
             href="/logout"
             className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
@@ -130,7 +137,10 @@ export default async function FunnelOverviewPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8">
-        <FunnelGrid funnels={funnels} failedLast14Days={failedLast14Days} />
+        <DailyLeadsChart data={dailyData} />
+        <div className="mt-12">
+          <FunnelGrid funnels={funnels} />
+        </div>
         <MonthlyStats rows={monthlyRows} />
       </div>
     </div>

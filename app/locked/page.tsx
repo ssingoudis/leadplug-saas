@@ -13,7 +13,7 @@ async function unlock(formData: FormData) {
       path: '/',
     })
     const from = formData.get('from') as string | null
-    redirect(from && from.startsWith('/') ? from : '/funnel-overview')
+    redirect(from && from.startsWith('/') ? from : '/dashboard')
   }
 }
 

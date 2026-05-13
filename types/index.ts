@@ -47,7 +47,6 @@ export interface QuestionConfig {
   questionType: QuestionType
   options: Option[]
   config: TextConfig | SliderConfig | Record<string, never>
-  defaultValue?: string
   visible: boolean
 }
 
