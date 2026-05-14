@@ -23,8 +23,8 @@ import type {
 // Multi-layer shadow: strong bottom offset + soft ambient glow.
 // SHADOW_PADDING reserves space around the card so the shadow isn't clipped.
 const CARD_SHADOW_LAYERS = [
-  { offsetY: 8, blur: 20, spread: -16, alpha: 0.28 },
-  { offsetY: 0, blur: 10, spread: -3,  alpha: 0.16 },
+  { offsetY: 0, blur: 16, spread: -4,  alpha: 0.10 },
+  { offsetY: 10, blur: 32, spread: -10, alpha: 0.18 },
 ] as const;
 
 const shadowExtent = CARD_SHADOW_LAYERS.reduce(
@@ -557,18 +557,18 @@ export function Funnel({
                               borderRadius:    theme.borderRadius,
                               backgroundColor: isSelected ? theme.primaryColor : theme.backgroundColor,
                               border:          `2px solid ${isSelected ? theme.primaryColor : "transparent"}`,
-                              boxShadow:       isSelected ? `0 4px 16px ${theme.primaryColor}40` : "0 2px 8px rgba(0,0,0,0.08)",
+                              boxShadow:       isSelected ? `0 4px 16px ${theme.primaryColor}40` : "0 1px 3px rgba(0,0,0,0.07), 0 3px 10px rgba(0,0,0,0.07)",
                             }}
                             onMouseEnter={(e) => {
                               if (!isSelected) {
                                 e.currentTarget.style.border     = `2px solid ${theme.primaryColor}`;
-                                e.currentTarget.style.boxShadow  = "0 8px 24px rgba(0,0,0,0.14)";
+                                e.currentTarget.style.boxShadow  = "0 2px 6px rgba(0,0,0,0.10), 0 6px 20px rgba(0,0,0,0.12)";
                               }
                             }}
                             onMouseLeave={(e) => {
                               if (!isSelected) {
                                 e.currentTarget.style.border     = "2px solid transparent";
-                                e.currentTarget.style.boxShadow  = "0 2px 8px rgba(0,0,0,0.08)";
+                                e.currentTarget.style.boxShadow  = "0 1px 3px rgba(0,0,0,0.07), 0 3px 10px rgba(0,0,0,0.07)";
                               }
                             }}
                           >
@@ -838,7 +838,7 @@ export function Funnel({
           {/* Progress bar + navigation */}
           <div className="mt-6 pt-4 border-t" style={{ borderColor: theme.borderColor }}>
 
-            <div className="h-2.5 rounded-full mb-5 overflow-hidden" style={{ backgroundColor: theme.inputBgColor }}>
+            <div className="h-2 rounded-full mb-5 overflow-hidden" style={{ backgroundColor: mix(theme.backgroundColor, theme.textColor, 0.08) }}>
               <div
                 className="h-full rounded-full transition-all duration-300"
                 style={{ width: `${progress}%`, backgroundColor: theme.primaryColor }}

@@ -229,7 +229,7 @@
   border-radius: 50%;
   background: var(--funnel-primary);
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 3px 10px rgba(0,0,0,0.18), 0 0 0 4px color-mix(in srgb, var(--funnel-primary) 20%, transparent);
 }
 .funnel-slider::-moz-range-thumb {
   width: 26px;
@@ -238,7 +238,7 @@
   background: var(--funnel-primary);
   cursor: pointer;
   border: none;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 3px 10px rgba(0,0,0,0.18), 0 0 0 4px color-mix(in srgb, var(--funnel-primary) 20%, transparent);
 }
 
 @layer base {
