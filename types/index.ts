@@ -53,7 +53,7 @@ export interface QuestionConfig {
 // Konfiguration eines einzelnen Kontaktformular-Felds (kommt aus funnels.contact_fields JSONB).
 export interface ContactFieldConfig {
   key:          string                           // Eindeutiger Bezeichner, z.B. "name", "email", "plz"
-  type:         'radio' | 'text' | 'email' | 'tel'
+  type:         'radio' | 'text' | 'email' | 'tel' | 'plz'
   label:        string
   placeholder?: string                           // Nur für text/email/tel
   required:     boolean
@@ -88,10 +88,10 @@ export interface TenantConfig {
   website?: string
   theme: FunnelTheme
   funnel: FunnelConfig
-  billingModel: 'per_lead' | 'flat_monthly'
-  leadPriceBase: number
-  flatMonthlyPrice?: number
-  flatMonthlyLeadLimit?: number
+  billingModel: 'per_lead' | 'per_month' | 'per_year'
+  leadPrice: number
+  billingPrice?: number
+
   questions: QuestionConfig[]
 }
 */
@@ -102,7 +102,6 @@ export interface TenantConfig {
   funnelId?: string    // funnel ID
   slug: string         // funnel slug (URL-Identifier)
   tenantSlug: string   // tenant slug (lesbarer Identifier des Kunden)
-  industry: string
   companyName: string
   publicEmail: string          // Wird dem Kunden angezeigt (z.B. im Success-Screen)
   notificationEmail: string    // Wohin neue Leads gesendet werden
@@ -112,10 +111,10 @@ export interface TenantConfig {
   website?: string
   theme: FunnelTheme
   funnel: FunnelConfig
-  billingModel: 'per_lead' | 'flat_monthly'
-  leadPriceBase: number
-  flatMonthlyPrice?: number
-  flatMonthlyLeadLimit?: number
+  billingModel: 'per_lead' | 'per_month' | 'per_year'
+  leadPrice: number
+  billingPrice?: number
+
   questions: QuestionConfig[]
   contactFields: ContactFieldConfig[]
 }

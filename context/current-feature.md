@@ -12,8 +12,10 @@ Kuratierter Font-Enum: `FunnelFont = "system" | "inter" | "poppins" | "roboto"`.
 
 ### Billing-Logik
 
-- `per_lead`: `lead_price` = `tenants.lead_price_base` pro Submission
-- `flat_monthly`: `lead_price` = `0` pro Submission; Abrechnung = `flat_monthly_price` pauschal/Monat; Leads über `flat_monthly_lead_limit` erscheinen als `overage_leads` in der View
+- `per_lead`: `lead_price` aus `tenants.lead_price` pro Submission
+- `per_month`: `lead_price` = `0`; Pauschale in `tenants.billing_price`
+- `per_year`: `lead_price` = `0`; Jahrespreis in `tenants.billing_price`
+- `billing_model` ist PostgreSQL-Enum `billing_model_type`, Default `per_month`
 
 ---
 
@@ -44,4 +46,6 @@ Kuratierter Font-Enum: `FunnelFont = "system" | "inter" | "poppins" | "roboto"`.
 - **Aufgabe 11 – Dashboard-Rename & Redesign** – `/funnel-overview` → `/dashboard` (Route, Middleware, alle Links). Toten Code entfernt: `defaultValue` in `QuestionConfig` + `failedLast14Days`-Warnung. Neues Dashboard-Layout: `DailyLeadsChart` (21 Tage, reines CSS, kein Chart-Library) oben → Aktive Funnels (Suchfeld als Inline-Header) → Monatsübersicht (White-Card, kein Tabellenkopf). Stats-Leiste komplett entfernt. (`proxy.ts`, `app/page.tsx`, `app/dashboard/page.tsx`, `app/dashboard/FunnelGrid.tsx`, `app/dashboard/MonthlyStats.tsx`, `app/dashboard/DailyLeadsChart.tsx`, `components/funnel.tsx`, `types/index.ts`)
 
 - **Admin: E-Mail-Vorschauen** – Zwei zugeklappte Vorschau-Blöcke auf der Funnel-Detail-Seite: "Bestätigungs-E-Mail (Anfragender)" und "Lead-Benachrichtigung (Tenant)". Iframes laden lazy (erst beim Öffnen), Höhe dynamisch per postMessage. Route Handlers `email-preview/route.tsx` + `lead-preview/route.tsx` bauen HTML als String (Next.js App Router blockiert `react-dom/server` — Vorschauen sind manuelle Kopien der echten Templates, müssen bei Design-Änderungen synchron gehalten werden). (`app/funnel-overview/[slug]/EmailPreviewBlock.tsx`, `app/funnel-overview/[slug]/email-preview/route.tsx`, `app/funnel-overview/[slug]/lead-preview/route.tsx`, `app/funnel-overview/[slug]/page.tsx`)
+- **Aufgabe 13 – Dashboard-Previews, DB-Cleanup & Billing-Enum** – Dashboard `/dashboard/[slug]`: Funnel-Vorschau, Kontaktformular-Vorschau und Success-Screen-Vorschau als einklappbare Blöcke (auto-Höhe via `funnel-resize` postMessage). `initialSubmitted` + `initialStep` Props in `funnel.tsx`. Neuer `plz`-Typ in `ContactFieldConfig` + Validierung (5 Ziffern). DB: `industry`-Spalte aus `funnels` entfernt. `billing_model` von `text`+CHECK auf PostgreSQL-Enum `billing_model_type` (`per_lead`, `per_month`, `per_year`) umgestellt, Default `per_month`. `flat_monthly_price` → `billing_price`, `flat_monthly_lead_limit` entfernt, `lead_price_base` → `lead_price`. `contact` JSONB-Spalte in `submissions` für alle dynamischen Kontaktfelder (PLZ etc.). `SubmissionsTable` zeigt extra Felder automatisch. Dashboard-Labels zeigen DB-Feldnamen statt deutsche Bezeichner. (`components/funnel.tsx`, `lib/validateContactField.ts`, `lib/getTenantConfig.ts`, `lib/tracking.ts`, `types/index.ts`, `app/api/submit/route.ts`, `app/dashboard/[slug]/page.tsx`, `app/dashboard/[slug]/SubmissionsTable.tsx`, `app/dashboard/[slug]/SuccessPreviewBlock.tsx`, `app/dashboard/[slug]/FunnelPreviewIframe.tsx`, `app/dashboard/[slug]/success-preview/page.tsx`, `app/dashboard/[slug]/contact-preview/page.tsx`)
+
 - **Aufgabe 12 – Shadow-System** – Kacheln (single/multiple choice): zweischichtiger weicher Shadow im Default-State, harmonischerer Hover-Anstieg, Farbglow bei Selected wiederhergestellt. Outer Card: Shadow-System auf gleiches "weiches" Prinzip umgestellt (ambient Layer offsetY:0 + direktionaler Layer), Alpha von 0.28 auf 0.14/0.10 reduziert — Padding passt sich automatisch an. Progress Bar: `h-2.5` → `h-2`, Track-Sichtbarkeit von 3% auf 8% erhöht. Slider-Thumb: zweischichtiger Shadow + Farbring. (`components/funnel.tsx`, `app/globals.css`)

@@ -81,7 +81,7 @@ export async function POST(req: Request) {
 
   // 6. lead_price server-side aus Tenant-Config ableiten – niemals vom Client vertrauen
   const leadPrice =
-    tenantConfig.billingModel === 'per_lead' ? tenantConfig.leadPriceBase : 0
+    tenantConfig.billingModel === 'per_lead' ? tenantConfig.leadPrice : 0
 
   // 7. Submission loggen
   const submissionId = await logSubmission({

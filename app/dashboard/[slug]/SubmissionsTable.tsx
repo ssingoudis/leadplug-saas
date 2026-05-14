@@ -96,6 +96,15 @@ export default function SubmissionsTable({ submissions, questions }: { submissio
                       <p className="text-sm text-gray-800 font-medium">{value}</p>
                     </div>
                   ) : null)}
+                  {s.contact && Object.entries(s.contact as Record<string, string>)
+                    .filter(([key]) => !['anrede', 'name', 'email', 'telefon'].includes(key))
+                    .map(([key, value]) => value ? (
+                      <div key={key}>
+                        <p className="text-xs text-gray-400">{key}</p>
+                        <p className="text-sm text-gray-800 font-medium">{value}</p>
+                      </div>
+                    ) : null)
+                  }
                 </div>
 
                 {/* Answers */}

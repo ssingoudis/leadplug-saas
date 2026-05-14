@@ -17,6 +17,11 @@ export function validateContactField(field: ContactFieldConfig, value: string): 
         ? "Bitte geben Sie eine gültige E-Mail-Adresse ein."
         : ""
 
+    case "plz":
+      return !/^\d{5}$/.test(value.trim())
+        ? "Bitte geben Sie eine gültige Postleitzahl ein (5 Ziffern)."
+        : ""
+
     case "tel": {
       const onlyAllowed     = /^[+\d\s\-()\/]+$/.test(value)
       const digitCount      = (value.match(/\d/g) ?? []).length

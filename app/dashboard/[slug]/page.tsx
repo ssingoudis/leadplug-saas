@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, ExternalLink, Power } from 'lucide-react'
 import EmbedBlock from './EmbedBlock'
+import SuccessPreviewBlock from './SuccessPreviewBlock'
 import EmailPreviewBlock from './EmailPreviewBlock'
 import SubmissionsTable from './SubmissionsTable'
 
@@ -37,15 +38,14 @@ async function getData(slug: string) {
     supabase
       .from('funnels')
       .select(`
-        slug, is_active, industry, total_views,
+        slug, is_active, total_views,
         funnel_title, submit_button_label, success_message,
         response_message, contact_form_subtitle, privacy_policy_url, email_sender_local,
         primary_color, text_color, background_color, page_background_color,
         font, border_radius, max_width,
         tenants (
           slug, company_name, public_email, notification_email, public_phone,
-          address, website, billing_model, lead_price_base,
-          flat_monthly_price, flat_monthly_lead_limit
+          address, website, billing_model, lead_price, billing_price
         ),
         funnel_questions (
           sort_order, question_key, title, question_type, visible, options, config
@@ -55,7 +55,7 @@ async function getData(slug: string) {
       .maybeSingle(),
     supabase
       .from('submissions')
-      .select('id, created_at, contact_anrede, contact_name, contact_email, contact_phone, answers, customer_email_sent, tenant_email_sent')
+      .select('id, created_at, contact_anrede, contact_name, contact_email, contact_phone, contact, answers, customer_email_sent, tenant_email_sent')
       .eq('funnel_slug', slug)
       .order('created_at', { ascending: false })
       .limit(30),
@@ -117,12 +117,12 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
 
         {/* LEFT: iframe preview */}
         <div className="lg:col-span-3">
-          <div className="bg-white rounded-2xl overflow-hidden shadow-sm p-4">
-            <iframe
-              src={funnelUrl}
-              className="w-full border-0 block h-170"
-              title={slug}
-            />
+          <SuccessPreviewBlock src={funnelUrl} title="Funnel-Vorschau" defaultOpen />
+          <div className="mt-4">
+            <SuccessPreviewBlock src={`/dashboard/${slug}/contact-preview`} title="Kontaktformular" />
+          </div>
+          <div className="mt-4">
+            <SuccessPreviewBlock src={`/dashboard/${slug}/success-preview`} />
           </div>
           <div className="mt-4">
             <EmailPreviewBlock title="Bestätigungs-E-Mail (Anfragender)" src={`/dashboard/${slug}/email-preview`} />
@@ -149,9 +149,11 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
             <Row label="Adresse" value={tenant.address} />
             <Row label="Website" value={tenant.website} />
             <Row label="Billing" value={
-              tenant.billing_model === 'flat_monthly'
-                ? `Flat Monthly · ${tenant.flat_monthly_price} € · max. ${tenant.flat_monthly_lead_limit} Leads`
-                : `Per Lead · ${tenant.lead_price_base} € / Lead`
+              tenant.billing_model === 'per_lead'
+                ? `Per Lead · ${tenant.lead_price} € / Lead`
+                : tenant.billing_model === 'per_month'
+                  ? `Per Month${tenant.billing_price != null ? ` · ${tenant.billing_price} €` : ''}`
+                  : `Per Year${tenant.billing_price != null ? ` · ${tenant.billing_price} €` : ''}`
             } />
 
             {/* Stats: Aufrufe · Leads · Conversion */}
@@ -176,14 +178,13 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
           {/* Funnel config */}
           <div className="bg-white rounded-2xl shadow-sm p-6">
             <h2 className="text-base font-bold text-gray-900 mb-3">Funnel-Konfiguration</h2>
-            <Row label="Branche" value={funnel.industry} />
-            <Row label="Titel" value={funnel.funnel_title} />
-            <Row label="Button-Label" value={funnel.submit_button_label} />
-            <Row label="Erfolgs-Nachricht" value={funnel.success_message} />
-            <Row label="Reaktionsnachricht" value={funnel.response_message} />
-            <Row label="Kontakt-Untertitel" value={funnel.contact_form_subtitle} />
-            <Row label="Datenschutz-URL" value={funnel.privacy_policy_url} />
-            <Row label="E-Mail-Absender" value={funnel.email_sender_local} />
+            <Row label="funnel_title" value={funnel.funnel_title} />
+            <Row label="submit_button_label" value={funnel.submit_button_label} />
+            <Row label="success_message" value={funnel.success_message} />
+            <Row label="response_message" value={funnel.response_message} />
+            <Row label="contact_form_subtitle" value={funnel.contact_form_subtitle} />
+            <Row label="privacy_policy_url" value={funnel.privacy_policy_url} />
+            <Row label="email_sender_local" value={funnel.email_sender_local} />
           </div>
 
           {/* Theme */}

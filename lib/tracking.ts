@@ -62,6 +62,7 @@ export async function logSubmission(params: {
       contact_name:   params.contact.name    ?? '',
       contact_email:  params.contact.email   ?? null,
       contact_phone:  params.contact.telefon ?? null,
+      contact:        params.contact,
       answers:        params.answers,
       lead_price:     params.leadPrice,
       source_url:     params.sourceUrl,

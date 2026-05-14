@@ -170,6 +170,8 @@ interface FunnelProps {
   companyName?: string;
   publicEmail?: string;
   publicPhone?: string;
+  initialSubmitted?: boolean;
+  initialStep?: number;
   onSubmit?: (data: {
     answers: Record<string, string>;
     contact: Record<string, string>;
@@ -185,6 +187,8 @@ export function Funnel({
   companyName,
   publicEmail,
   publicPhone,
+  initialSubmitted,
+  initialStep,
   onSubmit,
 }: FunnelProps) {
 
@@ -231,14 +235,14 @@ export function Funnel({
   const containerRef     = useRef<HTMLDivElement>(null);
   const visibleQuestions = questions.filter((q) => q.visible);
 
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState(initialStep ?? 0);
 
   const [answers, setAnswers] = useState<Record<string, string>>({});
 
   // Kontaktdaten als freies Record — Keys entsprechen ContactFieldConfig.key.
   const [contactData, setContactData] = useState<Record<string, string>>({});
 
-  const [isSubmitted,    setIsSubmitted]    = useState(false);
+  const [isSubmitted,    setIsSubmitted]    = useState(initialSubmitted ?? false);
   const [errors,         setErrors]         = useState<Record<string, string>>({});
   const [honeypot,       setHoneypot]       = useState("");
   const [hasTriedSubmit, setHasTriedSubmit] = useState(false);
@@ -750,7 +754,7 @@ export function Funnel({
                     return (
                       <div key={field.key}>
                         <input
-                          type={field.type}
+                          type={field.type === "plz" ? "text" : field.type}
                           placeholder={field.placeholder ?? field.label}
                           value={contactData[field.key] ?? ""}
                           onChange={(e) => handleContactChange(field.key, e.target.value)}

@@ -39,7 +39,6 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
     funnelId:          row.id,
     slug:              row.slug,
     tenantSlug:        tenant.slug,
-    industry:          row.industry    ?? 'general',
     companyName:       tenant.company_name,
     publicEmail:       tenant.public_email,
     notificationEmail: tenant.notification_email,
@@ -67,10 +66,9 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
       answersOverviewLabel: row.answers_overview_label ?? TEXT_DEFAULTS.answersOverviewLabel,
       footerText:          row.footer_text            ?? TEXT_DEFAULTS.footerText,
     },
-    billingModel:         tenant.billing_model         ?? 'per_lead',
-    leadPriceBase:        Number(tenant.lead_price_base ?? 0),
-    flatMonthlyPrice:     tenant.flat_monthly_price     != null ? Number(tenant.flat_monthly_price)     : undefined,
-    flatMonthlyLeadLimit: tenant.flat_monthly_lead_limit != null ? Number(tenant.flat_monthly_lead_limit) : undefined,
+    billingModel:         tenant.billing_model,
+    leadPrice:    Number(tenant.lead_price ?? 0),
+    billingPrice: tenant.billing_price != null ? Number(tenant.billing_price) : undefined,
     contactFields: Array.isArray(row.contact_fields) ? row.contact_fields as ContactFieldConfig[] : DEFAULT_CONTACT_FIELDS,
     questions: questions
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
@@ -113,7 +111,7 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
   const { data, error } = await supabase
     .from('funnels')
     .select(`
-      id, slug, industry, is_active,
+      id, slug, is_active,
       funnel_title, submit_button_label, success_message,
       response_message, contact_form_subtitle, privacy_policy_url,
       privacy_text, answers_overview_label, footer_text,
@@ -123,7 +121,7 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
       font, border_radius, max_width,
       tenants (
         id, slug, company_name, public_email, notification_email, public_phone, address, website, is_active,
-        billing_model, lead_price_base, flat_monthly_price, flat_monthly_lead_limit
+        billing_model, lead_price, billing_price
       ),
       funnel_questions (
         sort_order, question_key, title, question_type, visible, options, config
