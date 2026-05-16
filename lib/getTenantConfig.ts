@@ -75,6 +75,7 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
       .map((q) => ({
         id:           q.question_key,
         title:        q.title,
+        subtitle:     q.subtitle ?? undefined,
         questionType: q.question_type ?? 'single_choice',
         visible:      q.visible ?? true,
         config:       q.config ?? {},
@@ -124,7 +125,7 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
         billing_model, lead_price, billing_price
       ),
       funnel_questions (
-        sort_order, question_key, title, question_type, visible, options, config
+        sort_order, question_key, title, subtitle, question_type, visible, options, config
       )
     `)
     .eq('slug', slug)

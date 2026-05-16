@@ -525,11 +525,19 @@ export function Funnel({
               <div>
                 <div className="mb-6 @lg:mb-8">
                   <h1
-                    className="text-lg @md:text-xl @lg:text-2xl font-bold leading-tight text-center"
+                    className="text-lg @md:text-xl @lg:text-2xl font-bold leading-tight text-center text-balance"
                     style={{ color: theme.textColor }}
                   >
                     {currentQuestion.title}
                   </h1>
+                  {currentQuestion.subtitle && (
+                    <p
+                      className="mt-2 text-sm @md:text-base leading-relaxed text-center"
+                      style={{ color: theme.textColorMuted }}
+                    >
+                      {currentQuestion.subtitle}
+                    </p>
+                  )}
                 </div>
 
                 {/* single_choice / multiple_choice */}
@@ -755,7 +763,7 @@ export function Funnel({
                       <div key={field.key}>
                         <input
                           type={field.type === "plz" ? "text" : field.type}
-                          placeholder={field.placeholder ?? field.label}
+                          placeholder={`${field.placeholder ?? field.label}${!field.required ? " (optional)" : ""}`}
                           value={contactData[field.key] ?? ""}
                           onChange={(e) => handleContactChange(field.key, e.target.value)}
                           className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"

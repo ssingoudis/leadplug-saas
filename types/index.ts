@@ -44,6 +44,7 @@ export interface SliderConfig {
 export interface QuestionConfig {
   id: string
   title: string
+  subtitle?: string
   questionType: QuestionType
   options: Option[]
   config: TextConfig | SliderConfig | Record<string, never>
