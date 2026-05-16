@@ -40,7 +40,7 @@ export function TenantLeadNotification({
   return (
     <Html>
       <Head />
-      <Preview>Kontaktdaten und Antworten ansehen.</Preview>
+      <Preview>Details zur Anfrage.</Preview>
       <Body style={styles.body}>
         <Container style={styles.container}>
           <Heading as="h1" style={{ ...styles.heading, color: primary }}>
