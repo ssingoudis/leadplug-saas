@@ -639,7 +639,7 @@ export function Funnel({
                       onChange={(e) =>
                         setAnswers((prev) => ({ ...prev, [currentQuestion.id]: e.target.value }))
                       }
-                      placeholder={(currentQuestion.config as TextConfig).placeholder ?? ""}
+                      placeholder={`${(currentQuestion.config as TextConfig).placeholder ?? ""}${(currentQuestion.config as TextConfig).required === false ? " (optional)" : ""}`}
                       maxLength={(currentQuestion.config as TextConfig).maxLength}
                       rows={4}
                       className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base resize-none"
@@ -670,7 +670,7 @@ export function Funnel({
                       onChange={(e) =>
                         setAnswers((prev) => ({ ...prev, [currentQuestion.id]: e.target.value }))
                       }
-                      placeholder={(currentQuestion.config as TextConfig).placeholder ?? ""}
+                      placeholder={`${(currentQuestion.config as TextConfig).placeholder ?? ""}${(currentQuestion.config as TextConfig).required === false ? " (optional)" : ""}`}
                       maxLength={(currentQuestion.config as TextConfig).maxLength}
                       className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
                       style={{
