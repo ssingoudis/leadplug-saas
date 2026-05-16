@@ -47,16 +47,17 @@ export async function sendAllEmails(
   const emailDomainPlatform = process.env.EMAIL_DOMAIN_PLATFORM
   const senderLocal         = tenantConfig.emailSenderLocal
 
-  // Kunden-Mail: tenant-branded (z.B. muster-solar@anfragebestaetigung.de)
-  const fromCustomer =
+  // Kunden-Mail: tenant-branded mit Display-Name (z.B. "Muster Solar <muster-solar@anfragebestaetigung.de>")
+  const customerEmail =
     senderLocal && emailDomain
       ? `${senderLocal}@${emailDomain}`
       : (process.env.EMAIL_FROM ?? 'noreply@example.com')
+  const fromCustomer = `${tenantConfig.companyName} <${customerEmail}>`
 
-  // Tenant-Mail: plattform-branded (z.B. leads@leadplug.de) — fällt auf fromCustomer zurück
+  // Tenant-Mail: plattform-branded (z.B. "LeadPlug <anfrage@leadplug.de>") — fällt auf fromCustomer zurück
   // solange EMAIL_DOMAIN_PLATFORM nicht gesetzt ist.
   const fromTenant = emailDomainPlatform
-    ? `anfrage@${emailDomainPlatform}`
+    ? `LeadPlug <anfrage@${emailDomainPlatform}>`
     : fromCustomer
 
   // Customer-Mail nur senden wenn eine E-Mail-Adresse vorhanden (Feld kann optional sein).
