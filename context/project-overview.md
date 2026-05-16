@@ -114,7 +114,6 @@ tenants           → Wer ist der Kunde? (Stammdaten, Billing)
 
 **View `monthly_billing`** – Eine Zeile pro Tenant/Monat, aggregiert über alle Funnels des Tenants.
 
-> **Supabase Free Tier Warnung:** Pausiert nach Inaktivität (~10 Min Cold Start). Für Produktiv-Einsatz auf Pro upgraden oder Keep-Alive-Ping einrichten.
 
 ---
 

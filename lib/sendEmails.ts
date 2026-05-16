@@ -54,7 +54,7 @@ export async function sendAllEmails(
       : (process.env.EMAIL_FROM ?? 'noreply@example.com')
 
   // Tenant-Mail: plattform-branded (z.B. leads@leadplug.de) — fällt auf fromCustomer zurück
-  // solange EMAIL_DOMAIN_PLATFORM nicht gesetzt ist (Resend Free: nur 1 Domain).
+  // solange EMAIL_DOMAIN_PLATFORM nicht gesetzt ist.
   const fromTenant = emailDomainPlatform
     ? `anfrage@${emailDomainPlatform}`
     : fromCustomer
