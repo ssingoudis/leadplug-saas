@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>SaaS Architektur – Funnel Widget Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #f8f7f4;
+      font-family: 'Caveat', cursive;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px 60px;
+      min-height: 100vh;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 36px;
+      color: #1a1a1a;
+      letter-spacing: 0.5px;
+    }
+
+    .diagram {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      width: 100%;
+      max-width: 860px;
+    }
+
+    /* ── Boxes ── */
+    .box {
+      border: 2.5px solid #1a1a1a;
+      border-radius: 14px;
+      background: #fff;
+      padding: 14px 18px;
+      position: relative;
+    }
+
+    .box-label {
+      position: absolute;
+      top: -14px;
+      left: 18px;
+      background: #f8f7f4;
+      padding: 0 8px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #555;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* ── Vercel wrapper ── */
+    .vercel-wrap {
+      width: 100%;
+      border: 2.5px dashed #aaa;
+      border-radius: 18px;
+      padding: 24px 20px 20px;
+      position: relative;
+      background: #fafafa;
+    }
+    .vercel-wrap .box-label { color: #888; }
+
+    /* ── Next.js inner box ── */
+    .nextjs-box {
+      border: 2.5px solid #1a1a1a;
+      border-radius: 12px;
+      background: #fff;
+      padding: 16px;
+      position: relative;
+    }
+    .nextjs-logo {
+      position: absolute;
+      top: -15px;
+      left: 18px;
+      background: #fff;
+      padding: 0 8px;
+      font-size: 17px;
+      font-weight: 700;
+      color: #1a1a1a;
+    }
+
+    .modules {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .module {
+      border: 2px solid #1a1a1a;
+      border-radius: 10px;
+      padding: 12px 8px;
+      text-align: center;
+      font-size: 15px;
+      line-height: 1.4;
+    }
+    .module .route {
+      font-size: 13px;
+      color: #777;
+      display: block;
+      margin-top: 2px;
+    }
+    .module .name { font-weight: 700; font-size: 16px; }
+
+    /* ── Arrow ── */
+    .arrow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      height: 52px;
+      position: relative;
+    }
+    .arrow::before {
+      content: '';
+      width: 2.5px;
+      height: 38px;
+      background: #1a1a1a;
+      display: block;
+    }
+    .arrow::after {
+      content: '▼';
+      font-size: 18px;
+      color: #1a1a1a;
+      margin-top: -4px;
+    }
+    .arrow-label {
+      position: absolute;
+      left: calc(50% + 8px);
+      top: 8px;
+      font-size: 13px;
+      color: #888;
+      white-space: nowrap;
+      font-family: 'Caveat', cursive;
+    }
+
+    /* ── Supabase box ── */
+    .supabase-box {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .supa-section {
+      border: 2.5px solid #3ecf8e;
+      border-radius: 12px;
+      padding: 14px 16px;
+      position: relative;
+      background: #f0fdf8;
+    }
+    .supa-section .box-label { color: #3ecf8e; background: #f0fdf8; }
+    .supa-section h3 { font-size: 17px; font-weight: 700; margin-top: 6px; margin-bottom: 8px; }
+    .supa-section ul { list-style: none; font-size: 15px; line-height: 1.7; }
+
+    /* ── External services row ── */
+    .services-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 14px;
+      width: 100%;
+    }
+
+    .service {
+      border: 2.5px solid #1a1a1a;
+      border-radius: 12px;
+      background: #fff;
+      padding: 14px 10px;
+      text-align: center;
+      font-size: 15px;
+    }
+    .service .svc-name { font-size: 18px; font-weight: 700; display: block; margin-bottom: 4px; }
+    .service .svc-detail { font-size: 13px; color: #666; line-height: 1.5; }
+
+    /* ── Status colors ── */
+    .done   { background: #f0fdf4; border-color: #22c55e; }
+    .new    { background: #fffbeb; border-color: #f59e0b; }
+    .later  { background: #f5f3ff; border-color: #a78bfa; }
+
+    .badge {
+      display: inline-block;
+      font-size: 12px;
+      padding: 1px 7px;
+      border-radius: 20px;
+      margin-top: 4px;
+      font-weight: 600;
+    }
+    .badge-done  { background: #dcfce7; color: #166534; }
+    .badge-new   { background: #fef3c7; color: #92400e; }
+    .badge-later { background: #ede9fe; color: #5b21b6; }
+
+    /* ── Legend ── */
+    .legend {
+      margin-top: 40px;
+      border: 2px solid #ccc;
+      border-radius: 12px;
+      padding: 16px 24px;
+      background: #fff;
+      display: flex;
+      gap: 32px;
+      align-items: center;
+      font-size: 16px;
+    }
+    .legend-title { font-weight: 700; font-size: 17px; margin-right: 8px; }
+    .legend-item { display: flex; align-items: center; gap: 8px; }
+    .legend-dot {
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      border: 2px solid;
+      flex-shrink: 0;
+    }
+    .dot-done  { background: #dcfce7; border-color: #22c55e; }
+    .dot-new   { background: #fef3c7; border-color: #f59e0b; }
+    .dot-later { background: #ede9fe; border-color: #a78bfa; }
+
+    /* ── Multi-arrow from supabase to services ── */
+    .multi-arrow-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      width: 100%;
+      height: 52px;
+    }
+    .sub-arrow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding-top: 0;
+    }
+    .sub-arrow::before {
+      content: '';
+      width: 2.5px;
+      height: 38px;
+      background: #1a1a1a;
+      display: block;
+    }
+    .sub-arrow::after {
+      content: '▼';
+      font-size: 18px;
+      color: #1a1a1a;
+      margin-top: -4px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>SaaS Architektur – Funnel Widget Platform</h1>
+
+<div class="diagram">
+
+  <!-- VERCEL -->
+  <div class="vercel-wrap" style="width:100%">
+    <span class="box-label">☁️ Vercel (Hosting)</span>
+
+    <!-- NEXT.JS -->
+    <div class="nextjs-box">
+      <span class="nextjs-logo">▲ Next.js App</span>
+      <div class="modules">
+
+        <div class="module done">
+          <span class="name">Public Widget</span>
+          <span class="route">/[slug]</span>
+          <span class="route">iFrame, öffentlich</span>
+          <br><span class="badge badge-done">✅ fertig</span>
+        </div>
+
+        <div class="module new">
+          <span class="name">Tenant Portal</span>
+          <span class="route">/app/dashboard</span>
+          <span class="route">Leads, Account, Embed-Code</span>
+          <br><span class="badge badge-new">🔧 neu</span>
+        </div>
+
+        <div class="module later">
+          <span class="name">Funnel Editor</span>
+          <span class="route">/app/editor</span>
+          <span class="route">Fragen, Theme, Felder</span>
+          <br><span class="badge badge-later">🔜 später</span>
+        </div>
+
+        <div class="module done">
+          <span class="name">Superadmin</span>
+          <span class="route">/dashboard</span>
+          <span class="route">Alle Tenants, Stats</span>
+          <br><span class="badge badge-done">✅ fertig</span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Arrow down to Supabase -->
+  <div class="arrow">
+    <span class="arrow-label">API Calls</span>
+  </div>
+
+  <!-- SUPABASE -->
+  <div class="box" style="width:100%; padding-top:24px;">
+    <span class="box-label" style="color:#3ecf8e; font-size:16px;">⚡ Supabase (Backend)</span>
+    <div class="supabase-box">
+
+      <div class="supa-section">
+        <span class="box-label">Datenbank</span>
+        <h3>PostgreSQL</h3>
+        <ul>
+          <li>✅ Schema (tenants, funnels, submissions …)</li>
+          <li>✅ Seed-Daten, Migrationen</li>
+          <li>🔧 RLS Policies (Datentrennung)</li>
+          <li>🔧 auth_user_id in tenants</li>
+        </ul>
+      </div>
+
+      <div class="supa-section">
+        <span class="box-label">Auth</span>
+        <h3>Authentication</h3>
+        <ul>
+          <li>🔧 Email + Passwort</li>
+          <li>🔧 Google OAuth</li>
+          <li>🔧 Apple OAuth</li>
+          <li>🔧 Session-Management (SSR)</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Multi arrows down to services -->
+  <div class="multi-arrow-row">
+    <div class="sub-arrow"></div>
+    <div class="sub-arrow"></div>
+    <div class="sub-arrow"></div>
+    <div class="sub-arrow"></div>
+  </div>
+
+  <!-- External Services -->
+  <div class="services-row">
+
+    <div class="service new">
+      <span class="svc-name">💳 Stripe</span>
+      <span class="svc-detail">
+        Checkout<br>
+        Subscriptions<br>
+        Webhooks<br>
+        Customer Portal
+      </span>
+      <br><span class="badge badge-new">🔧 neu</span>
+    </div>
+
+    <div class="service done">
+      <span class="svc-name">✉️ Resend</span>
+      <span class="svc-detail">
+        Kunden-Bestätigung<br>
+        Lead-Benachrichtigung<br>
+        React Email Templates
+      </span>
+      <br><span class="badge badge-done">✅ fertig</span>
+    </div>
+
+    <div class="service new">
+      <span class="svc-name">G Google</span>
+      <span class="svc-detail">
+        OAuth Login<br>
+        für Tenants
+      </span>
+      <br><span class="badge badge-new">🔧 neu</span>
+    </div>
+
+    <div class="service new">
+      <span class="svc-name"> Apple</span>
+      <span class="svc-detail">
+        OAuth Login<br>
+        für Tenants
+      </span>
+      <br><span class="badge badge-new">🔧 neu</span>
+    </div>
+
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <span class="legend-title">Legende:</span>
+    <div class="legend-item">
+      <div class="legend-dot dot-done"></div>
+      <span>✅ Bereits fertig</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot dot-new"></div>
+      <span>🔧 Muss gebaut werden</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot dot-later"></div>
+      <span>🔜 Phase 2 (nach ersten Kunden)</span>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
