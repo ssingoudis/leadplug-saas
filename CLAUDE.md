@@ -33,6 +33,40 @@ Nach erfolgreichem Test: Branch in `main` mergen. Bei Problemen: Branch verwerfe
 - `lead_price` server-side aus `tenants.lead_price_base` lesen – nicht vom Client vertrauen.
 - Umgebungsvariablen: `.env.local` (Vorlage `.env.example`).
 
+## Design System (Admin-Dashboard & zukünftiges Tenant-Portal)
+
+Die UI-Komponenten unter `components/ui/` sind die einzige Quelle für Dashboard-UI-Bausteine. **Nie inline Tailwind-Klassen für diese Patterns verwenden — immer die Komponenten nutzen.**
+
+### Komponenten
+
+| Komponente | Verwendung |
+|---|---|
+| `<Card title="…">` | Jede weiße Inhalts-Box im Dashboard |
+| `<Badge variant="green|red|amber|purple|gray">` | Status-Anzeigen, E-Mail-Badges |
+| `<Button variant="primary|secondary|ghost">` | Alle klickbaren Aktionen |
+| `<Input value onChange placeholder>` | Texteingaben, Suche |
+| `<Select value onChange options>` | Dropdowns (mit custom Arrow) |
+| `<StatTile value label>` | Kennzahlen-Kacheln (Leads, Aufrufe, Conversion) |
+
+### Design-Token (nie abweichen)
+
+```
+Primärfarbe:      #4648d4  (Indigo — Header-Border, aktiver Tab, Links)
+Card:             bg-white rounded-2xl shadow-sm p-6
+Seiten-BG:        bg-gray-100
+Header:           bg-white sticky top-0 border-b-2 border-[#4648d4]
+Tab aktiv:        text-[#4648d4] border-b-2 border-[#4648d4] font-semibold
+Tab inaktiv:      text-gray-500 border-b-2 border-transparent
+Heading:          text-base font-bold text-gray-900
+Subtext:          text-sm text-gray-400
+Monospace-Info:   font-mono text-xs text-gray-400
+```
+
+### Zwei getrennte Design-Welten
+
+- **`components/ui/`** → Dashboard & Tenant-Portal (dieses System)
+- **`components/funnel.tsx`** → Widget-UI (Farben aus DB, komplett eigenständig — nie anfassen)
+
 ## Icon-System
 
 Einzige Funnel-Komponente: `components/funnel.tsx` (generisch, nicht solar-spezifisch). Icons sind SVG-Komponenten in `components/icons.tsx`, referenziert per `icon_key` (String). Neue Icons = neuer Eintrag im `Icons`-Objekt in `icons.tsx`. Wenn `icon_url` in der DB gesetzt ist, wird das externe Bild statt des Icon-Keys gerendert.
