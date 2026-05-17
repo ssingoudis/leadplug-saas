@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Submission Flow – Funnel Widget Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #f1f5f9;
+      font-family: 'Inter', system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 32px 64px;
+      color: #0f172a;
+    }
+
+    .page-header { text-align: center; margin-bottom: 44px; }
+    .page-header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.3px; }
+    .page-header p  { font-size: 14px; color: #64748b; margin-top: 6px; }
+
+    /* ── Main two-column layout ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 460px 220px;
+      gap: 0 32px;
+      align-items: start;
+      width: 100%;
+      max-width: 720px;
+    }
+
+    /* ── Flow column (left) ── */
+    .flow { display: flex; flex-direction: column; align-items: center; gap: 0; }
+
+    /* ── Step card ── */
+    .step {
+      width: 100%;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 14px 18px;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+    .step-num {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 1.5px solid #cbd5e1;
+      background: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      flex-shrink: 0;
+    }
+    .step-title  { font-size: 14px; font-weight: 700; }
+    .step-detail {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.6;
+      padding-left: 38px;
+    }
+    .step-code {
+      margin-top: 8px;
+      margin-left: 38px;
+      background: #0f172a;
+      color: #94a3b8;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1.7;
+    }
+    .hl { color: #86efac; }
+
+    /* Step color variants */
+    .step-check { border-color: #fca5a5; background: #fff8f8; }
+    .step-check .step-num { border-color: #ef4444; color: #dc2626; }
+
+    .step-db    { border-color: #93c5fd; background: #f8fbff; }
+    .step-db    .step-num { border-color: #3b82f6; color: #2563eb; }
+
+    .step-critical { border-color: #3b82f6; border-width: 2px; background: #f8fbff; }
+    .step-critical .step-num { border-color: #3b82f6; color: #2563eb; }
+
+    .step-ok    { border-color: #86efac; background: #f8fdf9; }
+    .step-ok    .step-num { border-color: #22c55e; color: #16a34a; }
+
+    /* ── Arrow ── */
+    .arr {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 36px;
+      width: 100%;
+    }
+    .arr::before { content: ''; width: 2px; height: 22px; background: #94a3b8; display: block; }
+    .arr::after  { content: '▼'; font-size: 13px; color: #94a3b8; margin-top: -2px; }
+
+    /* ── Parallel email boxes ── */
+    .parallel {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      width: 100%;
+    }
+    .par-box {
+      border: 1.5px solid #c4b5fd;
+      border-radius: 10px;
+      padding: 12px 14px;
+      background: #faf9ff;
+    }
+    .par-title  { font-size: 13px; font-weight: 700; color: #5b21b6; margin-bottom: 6px; }
+    .par-detail { font-size: 11.5px; color: #64748b; line-height: 1.7; }
+
+    /* ── Side notes column (right) ── */
+    .sidenotes {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding-top: 4px;
+    }
+
+    .sidenote {
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px 14px;
+      background: #fff;
+      font-size: 11.5px;
+      line-height: 1.6;
+      color: #475569;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .sidenote strong { display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+    .sidenote.sn-bot     { border-color: #fca5a5; background: #fff8f8; }
+    .sidenote.sn-bot strong { color: #b91c1c; }
+    .sidenote.sn-critical { border-color: #3b82f6; background: #f8fbff; }
+    .sidenote.sn-critical strong { color: #1e40af; }
+
+    .sn-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #94a3b8;
+      margin-bottom: 8px;
+    }
+
+    /* ── Legend ── */
+    .legend {
+      margin-top: 36px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 14px 24px;
+      background: #fff;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      font-size: 12px;
+      flex-wrap: wrap;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .legend strong { font-size: 13px; font-weight: 700; }
+    .legend-item { display: flex; align-items: center; gap: 7px; color: #475569; }
+    .ld { width: 20px; height: 10px; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Submission Flow</h1>
+  <p>Was passiert serverseitig, wenn ein Lead das Formular abschickt?</p>
+</div>
+
+<div class="layout">
+
+  <!-- LEFT: main flow -->
+  <div class="flow">
+
+    <div class="step">
+      <div class="step-header"><div class="step-num">1</div><div class="step-title">POST /api/submit</div></div>
+      <div class="step-detail">Browser sendet Formulardaten an die Next.js API-Route.</div>
+      <div class="step-code"><span class="hl">{ slug, answers, contact, honeypot }</span></div>
+    </div>
+
+    <div class="arr"></div>
+
+    <div class="step step-check">
+      <div class="step-header"><div class="step-num">2</div><div class="step-title">Honeypot-Check</div></div>
+      <div class="step-detail">Ist das versteckte Feld ausgefüllt? Menschen sehen es nicht. Bots füllen es automatisch aus.</div>
+    </div>
+
+    <div class="arr"></div>
+
+    <div class="step step-check">
+      <div class="step-header"><div class="step-num">3</div><div class="step-title">Rate Limit-Check</div></div>
+      <div class="step-detail">Max. 3 Submissions pro IP in 10 Minuten. Bei Überschreitung: stiller Reject — identisch wie Honeypot.</div>
+    </div>
+
+    <div class="arr"></div>
+
+    <div class="step step-check">
+      <div class="step-header"><div class="step-num">4</div><div class="step-title">Payload-Validierung</div></div>
+      <div class="step-detail">Sind alle Pflichtfelder vorhanden? Stimmt die Datenstruktur? Fehler → HTTP 400.</div>
+    </div>
+
+    <div class="arr"></div>
+
+    <div class="step step-db">
+      <div class="step-header"><div class="step-num">5</div><div class="step-title">getTenantConfig(slug)</div></div>
+      <div class="step-detail">Supabase: Tenant + Funnel + Fragen laden. Funnel oder Tenant inaktiv → HTTP 404.</div>
+      <div class="step-code"><span class="hl">lead_price</span> ← tenants.lead_price&nbsp;&nbsp;<span style="color:#475569;">// immer server-side!</span></div>
+    </div>
+
+    <div class="arr"></div>
+
+    <div class="step step-critical">
+      <div class="step-header"><div class="step-num">6</div><div class="step-title">logSubmission() — <span style="color:#dc2626;">ZUERST</span></div></div>
+      <div class="step-detail">Submission in Supabase speichern, bevor E-Mails versendet werden. Billing darf nie durch einen E-Mail-Fehler verloren gehen.</div>
+      <div class="step-code">submissions: <span class="hl">contact, answers, lead_price, ip_address</span></div>
+    </div>
+
+    <div class="arr"></div>
+
+    <div class="parallel">
+      <div class="par-box">
+        <div class="par-title">✉ Kunden-Mail</div>
+        <div class="par-detail">An: contact.email<br/>Danke-Nachricht + Antwortzeit<br/>Kein Preis, kein PDF</div>
+      </div>
+      <div class="par-box">
+        <div class="par-title">📬 Tenant-Mail</div>
+        <div class="par-detail">An: tenants.contact_email<br/>Kontaktdaten + Antworten<br/>replyTo = contact.email</div>
+      </div>
+    </div>
+    <div style="font-size: 11px; color: #94a3b8; margin-top: 6px; width: 100%; text-align: center;">
+      Promise.all() — beide parallel, in try/catch — Fehler werden geloggt, nicht geworfen
+    </div>
+
+    <div class="arr"></div>
+
+    <div class="step step-ok">
+      <div class="step-header"><div class="step-num">8</div><div class="step-title">{ success: true }</div></div>
+      <div class="step-detail">Widget zeigt den Danke-Screen. Der Endkunde erhält immer eine Erfolgsantwort — auch wenn eine E-Mail fehlschlägt.</div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: side notes -->
+  <div class="sidenotes">
+
+    <div class="sn-label">Hinweise zu den Schritten</div>
+
+    <div class="sidenote sn-bot">
+      <strong>Schritt 2 — Bot erkannt</strong>
+      Gibt <code style="background:#fee2e2; padding:1px 5px; border-radius:3px; font-size:11px;">{success: true}</code> zurück — ohne DB-Eintrag.<br/>
+      Bots dürfen nicht erkennen, dass sie abgelehnt wurden, sonst passen sie ihr Verhalten an.
+    </div>
+
+    <div class="sidenote">
+      <strong>Schritt 3 — Rate Limit</strong>
+      Fail-Open: Bei einem DB-Fehler beim Prüfen wird der Request durchgelassen. Schutz vor Spam, aber kein Blockieren bei Infrastrukturproblemen.
+    </div>
+
+    <div class="sidenote sn-critical">
+      <strong>Schritt 6 — Reihenfolge kritisch</strong>
+      Die Submission muss in die DB, bevor E-Mails versendet werden. Fällt Resend aus, ist der Lead trotzdem gespeichert und wird abgerechnet.
+    </div>
+
+    <div class="sidenote">
+      <strong>Schritt 7 — E-Mail-Fehler</strong>
+      Schlägt eine E-Mail fehl, wird dies in <code style="background:#f1f5f9; padding:1px 4px; border-radius:3px; font-size:11px;">customer_email_sent</code> bzw. <code style="background:#f1f5f9; padding:1px 4px; border-radius:3px; font-size:11px;">tenant_email_sent</code> geloggt — der Endkunde bekommt trotzdem success:true.
+    </div>
+
+  </div>
+
+</div>
+
+<div class="legend">
+  <strong>Farben:</strong>
+  <div class="legend-item"><div class="ld" style="background: #fca5a5;"></div> Sicherheits- & Validierungscheck</div>
+  <div class="legend-item"><div class="ld" style="background: #93c5fd;"></div> Supabase-Datenbankoperation</div>
+  <div class="legend-item"><div class="ld" style="background: #c4b5fd;"></div> E-Mail-Versand via Resend</div>
+  <div class="legend-item"><div class="ld" style="background: #86efac;"></div> Erfolgsantwort an den Client</div>
+</div>
+
+</body>
+</html>

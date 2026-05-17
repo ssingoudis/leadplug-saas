@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>SaaS Phasenplan – Funnel Widget Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #f1f5f9;
+      font-family: 'Inter', system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 32px 64px;
+      color: #0f172a;
+    }
+
+    .page-header { text-align: center; margin-bottom: 44px; }
+    .page-header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.3px; }
+    .page-header p  { font-size: 14px; color: #64748b; margin-top: 6px; }
+
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 700px;
+    }
+
+    /* ── Phase card ── */
+    .phase {
+      width: 100%;
+      border: 2px solid;
+      border-radius: 12px;
+      background: #fff;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    }
+    .phase-1 { border-color: #22c55e; }
+    .phase-2 { border-color: #f59e0b; }
+    .phase-3 { border-color: #8b5cf6; }
+
+    /* Header strip */
+    .phase-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 22px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .phase-1 .phase-header { background: #f0fdf4; }
+    .phase-2 .phase-header { background: #fffbeb; }
+    .phase-3 .phase-header { background: #f5f3ff; }
+
+    .phase-num {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+    .phase-1 .phase-num { background: #dcfce7; color: #15803d; }
+    .phase-2 .phase-num { background: #fef3c7; color: #b45309; }
+    .phase-3 .phase-num { background: #ede9fe; color: #6d28d9; }
+
+    .phase-title { font-size: 17px; font-weight: 700; }
+    .phase-when  { font-size: 12px; font-weight: 500; margin-top: 2px; }
+    .phase-1 .phase-when { color: #16a34a; }
+    .phase-2 .phase-when { color: #d97706; }
+    .phase-3 .phase-when { color: #7c3aed; }
+
+    /* Task grid */
+    .tasks { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #f1f5f9; }
+
+    .task {
+      padding: 14px 20px;
+      background: #fff;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .task-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .task-name   { font-size: 13px; font-weight: 700; display: block; margin-bottom: 3px; }
+    .task-detail { font-size: 12px; color: #64748b; line-height: 1.55; }
+
+    /* Connector between phases */
+    .connector {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 48px;
+      position: relative;
+      width: 100%;
+    }
+    .connector::before { content: ''; width: 2px; height: 32px; background: #cbd5e1; display: block; }
+    .connector::after  { content: '▼'; font-size: 13px; color: #94a3b8; margin-top: -2px; }
+    .connector span {
+      position: absolute;
+      left: calc(50% + 10px);
+      top: 7px;
+      font-size: 11px;
+      color: #94a3b8;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    /* ── Legend ── */
+    .legend {
+      margin-top: 36px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 14px 24px;
+      background: #fff;
+      display: flex;
+      gap: 24px;
+      align-items: center;
+      font-size: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .legend strong { font-size: 13px; font-weight: 700; }
+    .legend-item { display: flex; align-items: center; gap: 8px; color: #475569; }
+    .ld { width: 28px; height: 4px; border-radius: 99px; }
+  </style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>SaaS Phasenplan</h1>
+  <p>Von den ersten Kunden zum vollständigen Self-Service SaaS</p>
+</div>
+
+<div class="timeline">
+
+  <!-- Phase 1 -->
+  <div class="phase phase-1">
+    <div class="phase-header">
+      <div class="phase-num">1</div>
+      <div>
+        <div class="phase-title">Erste echte Kunden</div>
+        <div class="phase-when">Jetzt — sofort einsatzbereit</div>
+      </div>
+    </div>
+    <div class="tasks">
+      <div class="task">
+        <span class="task-icon">✅</span>
+        <div>
+          <span class="task-name">Widget läuft</span>
+          <span class="task-detail">Funnel per iFrame einbettbar, alle Branchentypen und Fragetypen verfügbar</span>
+        </div>
+      </div>
+      <div class="task">
+        <span class="task-icon">✅</span>
+        <div>
+          <span class="task-name">E-Mail-Flow</span>
+          <span class="task-detail">Kunden-Bestätigung + Lead-Benachrichtigung via Resend</span>
+        </div>
+      </div>
+      <div class="task">
+        <span class="task-icon">🖊</span>
+        <div>
+          <span class="task-name">Manuelles Setup</span>
+          <span class="task-detail">Tenant und Funnel direkt per SQL in Supabase anlegen</span>
+        </div>
+      </div>
+      <div class="task">
+        <span class="task-icon">📊</span>
+        <div>
+          <span class="task-name">Admin-Dashboard</span>
+          <span class="task-detail">Leads, Statistiken, Conversion-Rate, E-Mail-Status im Blick</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"><span>nach 2–3 echten Kunden</span></div>
+
+  <!-- Phase 2 -->
+  <div class="phase phase-2">
+    <div class="phase-header">
+      <div class="phase-num">2</div>
+      <div>
+        <div class="phase-title">SaaS-Infrastruktur</div>
+        <div class="phase-when">ca. 5–7 Tage mit KI-Entwicklung</div>
+      </div>
+    </div>
+    <div class="tasks">
+      <div class="task">
+        <span class="task-icon">🔐</span>
+        <div>
+          <span class="task-name">Supabase Auth</span>
+          <span class="task-detail">Login per E-Mail, Google OAuth, Apple OAuth — Tenants selbstständig</span>
+        </div>
+      </div>
+      <div class="task">
+        <span class="task-icon">🛡</span>
+        <div>
+          <span class="task-name">Row Level Security</span>
+          <span class="task-detail">Jeder Tenant sieht ausschließlich seine eigenen Daten</span>
+        </div>
+      </div>
+      <div class="task">
+        <span class="task-icon">💳</span>
+        <div>
+          <span class="task-name">Stripe Billing</span>
+          <span class="task-detail">Checkout, Webhook-Handler, automatisches Abo-Management</span>
+        </div>
+      </div>
+      <div class="task">
+        <span class="task-icon">🏠</span>
+        <div>
+          <span class="task-name">Tenant Portal</span>
+          <span class="task-detail">Leads einsehen, Embed-Code kopieren, Account verwalten</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"><span>wenn Kunden es nachfragen</span></div>
+
+  <!-- Phase 3 -->
+  <div class="phase phase-3">
+    <div class="phase-header">
+      <div class="phase-num">3</div>
+      <div>
+        <div class="phase-title">Self-Service Editor</div>
+        <div class="phase-when">3–6 Wochen — vollständiges No-Code-Produkt</div>
+      </div>
+    </div>
+    <div class="tasks">
+      <div class="task">
+        <span class="task-icon">🎨</span>
+        <div>
+          <span class="task-name">Funnel-Editor</span>
+          <span class="task-detail">Fragen und Optionen anlegen, bearbeiten, per Drag & Drop sortieren</span>
+        </div>
+      </div>
+      <div class="task">
+        <span class="task-icon">🖌</span>
+        <div>
+          <span class="task-name">Theme-Editor</span>
+          <span class="task-detail">Farben, Font, Logo — mit Live-Vorschau des eigenen Funnels</span>
+        </div>
+      </div>
+      <div class="task">
+        <span class="task-icon">📋</span>
+        <div>
+          <span class="task-name">Formular-Konfigurator</span>
+          <span class="task-detail">Kontaktfelder, Pflichtfelder, Feldtypen selbst zusammenstellen</span>
+        </div>
+      </div>
+      <div class="task">
+        <span class="task-icon">🚀</span>
+        <div>
+          <span class="task-name">Vollständiges SaaS</span>
+          <span class="task-detail">Kunden konfigurieren alles selbst — kein manueller Eingriff mehr nötig</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="legend">
+  <strong>Phasen:</strong>
+  <div class="legend-item"><div class="ld" style="background: #22c55e;"></div> Phase 1 — Jetzt</div>
+  <div class="legend-item"><div class="ld" style="background: #f59e0b;"></div> Phase 2 — SaaS-Infrastruktur</div>
+  <div class="legend-item"><div class="ld" style="background: #8b5cf6;"></div> Phase 3 — Self-Service Editor</div>
+</div>
+
+</body>
+</html>

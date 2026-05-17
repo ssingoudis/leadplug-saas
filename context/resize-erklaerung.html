@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>iFrame Höhenanpassung – Funnel Widget Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #f1f5f9;
+      font-family: 'Inter', system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 32px 64px;
+      color: #0f172a;
+    }
+
+    .page-header { text-align: center; margin-bottom: 44px; }
+    .page-header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.3px; }
+    .page-header p  { font-size: 14px; color: #64748b; margin-top: 6px; }
+
+    .content { width: 100%; max-width: 940px; display: flex; flex-direction: column; gap: 36px; }
+
+    .section-label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.09em; color: #64748b; margin-bottom: 14px;
+    }
+
+    /* ── Problem / Solution ── */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+    .card {
+      border: 1.5px solid #e2e8f0; border-radius: 10px;
+      padding: 18px 20px; background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .card h3 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+    .card p  { font-size: 12px; color: #475569; line-height: 1.7; }
+    .card-problem { border-color: #fca5a5; background: #fff8f8; }
+    .card-problem h3 { color: #b91c1c; }
+    .card-solution { border-color: #86efac; background: #f8fdf9; }
+    .card-solution h3 { color: #15803d; }
+
+    /* ── 4-step grid ── */
+    .steps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+    .flow-card {
+      border: 1.5px solid #e2e8f0; border-radius: 10px;
+      padding: 16px 14px; background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .flow-num {
+      width: 28px; height: 28px; border-radius: 50%;
+      border: 1.5px solid; display: flex; align-items: center;
+      justify-content: center; font-size: 12px; font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .flow-icon  { font-size: 22px; margin-bottom: 8px; display: block; }
+    .flow-title { font-size: 13px; font-weight: 700; margin-bottom: 5px; }
+    .flow-desc  { font-size: 12px; color: #64748b; line-height: 1.55; }
+    .flow-code  {
+      margin-top: 10px; background: #0f172a; color: #94a3b8;
+      border-radius: 6px; padding: 8px 10px; font-size: 10.5px;
+      font-family: 'JetBrains Mono', monospace; line-height: 1.7;
+    }
+    .hl { color: #86efac; }
+
+    .fc-1 { border-color: #93c5fd; }
+    .fc-1 .flow-num { border-color: #3b82f6; color: #2563eb; background: #eff6ff; }
+    .fc-2 { border-color: #c4b5fd; }
+    .fc-2 .flow-num { border-color: #8b5cf6; color: #6d28d9; background: #f5f3ff; }
+    .fc-3 { border-color: #fcd34d; }
+    .fc-3 .flow-num { border-color: #f59e0b; color: #b45309; background: #fffbeb; }
+    .fc-4 { border-color: #86efac; }
+    .fc-4 .flow-num { border-color: #22c55e; color: #15803d; background: #f0fdf4; }
+
+    /* ── Visual: two browsers ── */
+    .browsers-row {
+      display: grid;
+      grid-template-columns: 1fr 160px 1fr;
+      align-items: center;
+      gap: 0;
+    }
+
+    .browser {
+      border: 1.5px solid #e2e8f0; border-radius: 10px;
+      overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    }
+    .browser-bar {
+      background: #f1f5f9; padding: 8px 12px;
+      display: flex; align-items: center; gap: 5px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .dot { width: 9px; height: 9px; border-radius: 50%; }
+    .url-bar {
+      flex: 1; background: #fff; border-radius: 4px; height: 20px;
+      display: flex; align-items: center; padding: 0 8px;
+      font-size: 10px; color: #94a3b8; border: 1px solid #e2e8f0; margin-left: 6px;
+      font-family: monospace;
+    }
+    .browser-body { background: #fff; padding: 14px; }
+    .fake-line { background: #f1f5f9; border-radius: 4px; height: 10px; margin-bottom: 7px; }
+
+    .iframe-inner { border: 2px solid #3b82f6; border-radius: 6px; overflow: hidden; margin-top: 10px; }
+    .iframe-inner-bar { background: #3b82f6; color: #fff; font-size: 10px; font-weight: 600; padding: 4px 10px; font-family: monospace; }
+    .iframe-inner-body { background: #fff; padding: 10px; }
+
+    /* Message channel */
+    .msg-channel {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 0 12px; gap: 10px;
+    }
+    .msg-bubble {
+      border: 1.5px solid; border-radius: 8px; padding: 10px 12px;
+      font-size: 11px; text-align: center; background: #fff; width: 100%;
+    }
+    .msg-out { border-color: #93c5fd; }
+    .msg-out .mb-title { color: #1e40af; font-weight: 700; font-size: 10px; margin-bottom: 4px; }
+    .msg-in  { border-color: #86efac; }
+    .msg-in .mb-title { color: #15803d; font-weight: 700; font-size: 10px; margin-bottom: 4px; }
+    .msg-arrow { font-size: 22px; color: #cbd5e1; }
+    .msg-label { font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; }
+    .msg-code { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #0f172a; }
+
+    /* ── Code block ── */
+    .code-block {
+      background: #0f172a; border-radius: 10px;
+      padding: 18px 22px; font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; line-height: 1.85; color: #94a3b8;
+    }
+    .kw  { color: #569cd6; }
+    .fn  { color: #9cdcfe; }
+    .str { color: #ce9178; }
+    .cm  { color: #608b4e; }
+    .num { color: #b5cea8; }
+
+    /* Note */
+    .note {
+      border: 1.5px solid #e2e8f0; border-radius: 10px;
+      padding: 14px 18px; background: #fff; font-size: 12.5px;
+      color: #475569; line-height: 1.65;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .note strong { color: #0f172a; }
+  </style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>iFrame Höhenanpassung</h1>
+  <p>Wie das Widget dem Parent-Frame seine Höhe mitteilt — kein Scrollbalken, nahtlose Integration</p>
+</div>
+
+<div class="content">
+
+  <!-- Problem / Solution -->
+  <div>
+    <div class="section-label">Problem & Lösung</div>
+    <div class="two-col">
+      <div class="card card-problem">
+        <h3>Das Problem</h3>
+        <p>Ein iFrame hat eine fixe Höhe (z. B. 500 px). Wenn der Funnel mehr Inhalt hat — z. B. beim mehrzeiligen Kontaktformular oder dem Danke-Screen — erscheint ein Scrollbalken <em>innerhalb</em> des iFrames. Das sieht unprofessionell aus und stört die UX.</p>
+      </div>
+      <div class="card card-solution">
+        <h3>Die Lösung</h3>
+        <p>Das Widget misst nach jedem Rendering seine eigene Höhe und sendet sie per <strong>postMessage-API</strong> an die Elternseite. Ein Script auf der Kunden-Website empfängt diese Nachricht und passt die iFrame-Höhe dynamisch an — kein Scrollbalken, kein manuelles Eingreifen.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4-step flow -->
+  <div>
+    <div class="section-label">Ablauf in 4 Schritten</div>
+    <div class="steps-grid">
+
+      <div class="flow-card fc-1">
+        <div class="flow-num">1</div>
+        <span class="flow-icon">📐</span>
+        <div class="flow-title">ResizeObserver</div>
+        <div class="flow-desc">Widget beobachtet den Container. Löst bei jeder Größenänderung aus — Schrittwechsel, Formular, Erfolgsscreen.</div>
+        <div class="flow-code"><span class="hl">new ResizeObserver</span>(<br/>  () =&gt; sendHeight()<br/>).observe(ref)</div>
+      </div>
+
+      <div class="flow-card fc-2">
+        <div class="flow-num">2</div>
+        <span class="flow-icon">📤</span>
+        <div class="flow-title">postMessage senden</div>
+        <div class="flow-desc">Widget sendet die aktuelle scrollHeight an den Parent-Frame. Funktioniert auch domain-übergreifend.</div>
+        <div class="flow-code">window.parent<br/>.postMessage({<br/>  type: <span class="hl">'funnel-resize'</span>,<br/>  height: ref.scrollHeight<br/>}, '*')</div>
+      </div>
+
+      <div class="flow-card fc-3">
+        <div class="flow-num">3</div>
+        <span class="flow-icon">👂</span>
+        <div class="flow-title">Parent hört zu</div>
+        <div class="flow-desc">Ein &lt;script&gt;-Tag auf der Kunden-Website lauscht auf message-Events und filtert nach dem Typ.</div>
+        <div class="flow-code">window.addEventListener(<br/>  'message', (e) =&gt; {<br/>  <span class="hl">if</span> (e.data.type !==<br/>  'funnel-resize') return;<br/>  // Höhe anpassen …<br/>})</div>
+      </div>
+
+      <div class="flow-card fc-4">
+        <div class="flow-num">4</div>
+        <span class="flow-icon">↕</span>
+        <div class="flow-title">iFrame angepasst</div>
+        <div class="flow-desc">Das iFrame-Element erhält die neue Höhe. Nahtloser Übergang bei jedem Schritt im Funnel.</div>
+        <div class="flow-code">iframe.style.height =<br/>  <span class="hl">e.data.height</span> + 'px'</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Visual: two browsers -->
+  <div>
+    <div class="section-label">Visualisierung — Kommunikation zwischen Parent und Widget</div>
+    <div class="browsers-row">
+
+      <!-- Parent window -->
+      <div class="browser">
+        <div class="browser-bar">
+          <div class="dot" style="background:#ef4444;"></div>
+          <div class="dot" style="background:#f59e0b;"></div>
+          <div class="dot" style="background:#22c55e;"></div>
+          <div class="url-bar">musterbetrieb.de/solar</div>
+        </div>
+        <div class="browser-body">
+          <div class="fake-line" style="width:70%;"></div>
+          <div class="fake-line" style="width:50%;"></div>
+          <div class="iframe-inner">
+            <div class="iframe-inner-bar">&lt;iframe src="domain.de/slug"&gt;</div>
+            <div class="iframe-inner-body">
+              <div style="font-size:11px; font-weight:700; color:#1e40af; margin-bottom:5px;">Widget-Inhalt</div>
+              <div style="background:#e2e8f0; border-radius:3px; height:7px; margin-bottom:4px;"></div>
+              <div style="background:#e2e8f0; border-radius:3px; height:7px; width:65%;"></div>
+              <div style="font-size:10px; color:#16a34a; font-weight:600; margin-top:8px;">↕ Höhe wird dynamisch angepasst</div>
+            </div>
+          </div>
+          <div style="font-size:10px; color:#94a3b8; margin-top:8px;">&lt;script&gt; hört auf 'funnel-resize' events</div>
+          <div class="fake-line" style="width:40%; margin-top:10px;"></div>
+        </div>
+      </div>
+
+      <!-- Message channel -->
+      <div class="msg-channel">
+        <div class="msg-bubble msg-out">
+          <div class="mb-title">Widget sendet:</div>
+          <div class="msg-code">{type: 'funnel-resize',<br/>height: 623}</div>
+        </div>
+        <div class="msg-arrow">⇄</div>
+        <div class="msg-label">postMessage</div>
+        <div class="msg-arrow">⇄</div>
+        <div class="msg-bubble msg-in">
+          <div class="mb-title">Parent setzt:</div>
+          <div class="msg-code">iframe.style<br/>.height = "623px"</div>
+        </div>
+      </div>
+
+      <!-- Widget window -->
+      <div class="browser">
+        <div class="browser-bar">
+          <div class="dot" style="background:#ef4444;"></div>
+          <div class="dot" style="background:#f59e0b;"></div>
+          <div class="dot" style="background:#22c55e;"></div>
+          <div class="url-bar">domain.de/musterbetrieb-solar</div>
+        </div>
+        <div class="browser-body">
+          <div style="font-size:11px; font-weight:700; color:#1e40af; margin-bottom:8px;">▲ Next.js Widget</div>
+          <div style="background:#e2e8f0; border-radius:3px; height:5px; margin-bottom:14px; overflow:hidden;">
+            <div style="width:60%; height:100%; background:#3b82f6;"></div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-bottom:10px;">
+            <div style="border:1.5px solid #3b82f6; background:#3b82f6; color:#fff; border-radius:6px; padding:7px 6px; font-size:11px; text-align:center;">🏠 Einfamilien&shy;haus</div>
+            <div style="border:1.5px solid #e2e8f0; border-radius:6px; padding:7px 6px; font-size:11px; text-align:center; color:#475569;">🏢 Mehrfamilien&shy;haus</div>
+          </div>
+          <div style="font-size:10px; color:#94a3b8; border-top:1px solid #f1f5f9; padding-top:8px; line-height:1.6;">
+            ResizeObserver → misst scrollHeight<br/>→ sendet postMessage an parent
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Embed code -->
+  <div>
+    <div class="section-label">Vollständiger Einbettungs-Code für Kunden</div>
+    <div class="code-block">
+<span class="cm">&lt;!-- 1. Das iFrame einbetten --&gt;</span>
+&lt;<span class="kw">iframe</span>
+  <span class="fn">src</span>=<span class="str">"https://domain.de/musterbetrieb-solar"</span>
+  <span class="fn">id</span>=<span class="str">"funnel-widget"</span>
+  <span class="fn">style</span>=<span class="str">"width:100%; border:none; display:block; height:500px;"</span>
+  <span class="fn">scrolling</span>=<span class="str">"no"</span>
+  <span class="fn">loading</span>=<span class="str">"lazy"</span>&gt;
+&lt;/<span class="kw">iframe</span>&gt;
+
+<span class="cm">&lt;!-- 2. Listener für automatische Höhenanpassung --&gt;</span>
+&lt;<span class="kw">script</span>&gt;
+  <span class="fn">window</span>.addEventListener(<span class="str">'message'</span>, <span class="kw">function</span>(e) {
+    <span class="kw">if</span> (!e.data || e.data.type !== <span class="str">'funnel-resize'</span>) <span class="kw">return</span>;
+    <span class="kw">var</span> h = parseInt(e.data.height, <span class="num">10</span>);
+    <span class="kw">if</span> (h &gt; <span class="num">0</span>) document.getElementById(<span class="str">'funnel-widget'</span>).style.height = h + <span class="str">'px'</span>;
+  });
+&lt;/<span class="kw">script</span>&gt;
+    </div>
+  </div>
+
+  <!-- Fallback note -->
+  <div class="note">
+    <strong>Ohne Listener:</strong> Das Widget funktioniert weiterhin — es behält die fixe Startgröße (500 px) und scrollt bei Bedarf intern. Kein JavaScript-Fehler, keine Unterbrechung des Funnels. Der Listener ist optional, aber empfohlen.
+  </div>
+
+</div>
+
+</body>
+</html>
