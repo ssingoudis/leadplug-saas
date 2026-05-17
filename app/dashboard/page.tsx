@@ -124,15 +124,28 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
       <div className="bg-white sticky top-0 z-10 border-b-2 border-[#4648d4]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex items-center justify-between">
-          <h1 className="text-base font-bold text-gray-900">Dashboard</h1>
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-0 flex items-stretch gap-0">
           <a
-            href="/logout"
-            className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+            href="/dashboard"
+            className="flex items-center px-4 py-4 text-sm font-semibold text-[#4648d4] border-b-2 border-[#4648d4] -mb-[2px]"
           >
-            <Power size={14} />
-            Logout
+            Funnels
           </a>
+          <a
+            href="/dashboard/leads"
+            className="flex items-center px-4 py-4 text-sm font-medium text-gray-500 hover:text-gray-900 border-b-2 border-transparent -mb-[2px] transition-colors"
+          >
+            Leads
+          </a>
+          <div className="ml-auto flex items-center py-3">
+            <a
+              href="/logout"
+              className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+            >
+              <Power size={14} />
+              Logout
+            </a>
+          </div>
         </div>
       </div>
 
