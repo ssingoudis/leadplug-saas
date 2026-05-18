@@ -27,6 +27,8 @@ Nur noch 2 aktive Tenants:
 
 ## History
 
+- **SaaS Phase 2 – Schritt 1: /dashboard → /admin** – Superadmin-Bereich von `/dashboard` nach `/admin` umgezogen. Alle 18 Dateien in `app/dashboard/` nach `app/admin/` verschoben (git erkennt Renames), interne Links angepasst, `app/page.tsx` + `app/locked/page.tsx` + `proxy.ts` + `app/api/track-view/route.ts` aktualisiert. `/dashboard` ist jetzt frei für das Tenant-Portal (Schritt 4). (`app/admin/**`, `app/page.tsx`, `app/locked/page.tsx`, `proxy.ts`, `app/api/track-view/route.ts`)
+
 - **Aufgabe 15 – Design System** – `components/ui/` mit Card, Badge, Button, Input/Select, StatTile. Design-Token und Verwendungsregeln in `CLAUDE.md` (Abschnitt "Design System"). (`components/ui/Card.tsx`, `components/ui/Badge.tsx`, `components/ui/Button.tsx`, `components/ui/Input.tsx`, `components/ui/StatTile.tsx`, `CLAUDE.md`)
 
 - **Aufgabe 14 – Globale Leads-Übersicht** – Neue Seite `/dashboard/leads`: alle Submissions aller Tenants. Tab-Navigation im Header (Funnels | Leads). Tenant-Filter, Freitextsuche, Standard-CSV-Export, einklappbare Detailzeilen. (`app/dashboard/leads/page.tsx`, `app/dashboard/leads/LeadsView.tsx`, `app/dashboard/page.tsx`)

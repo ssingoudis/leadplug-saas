@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Admin-Dashboard öffnet den Funnel in einem iframe — nicht mitzählen.
-  if (typeof referrer === 'string' && referrer.includes('/dashboard/')) {
+  if (typeof referrer === 'string' && referrer.includes('/admin/')) {
     return NextResponse.json({ ok: true })
   }
 

@@ -65,7 +65,7 @@ export default function MonthlyStats({ rows }: { rows: MonthlyRow[] }) {
                     .map((s, i) => {
                       const d = new Date(s.created_at)
                       return (
-                        <a key={i} href={`/dashboard/${s.funnel_slug}`} className="flex items-start sm:items-center gap-6 px-4 sm:px-6 py-3 hover:bg-indigo-50 transition-colors group">
+                        <a key={i} href={`/admin/${s.funnel_slug}`} className="flex items-start sm:items-center gap-6 px-4 sm:px-6 py-3 hover:bg-indigo-50 transition-colors group">
                           <div className="w-20 sm:w-36 shrink-0">
                             <p className="text-sm text-gray-700">
                               {d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })}

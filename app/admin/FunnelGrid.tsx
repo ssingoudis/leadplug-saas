@@ -41,7 +41,7 @@ export default function FunnelGrid({ funnels }: { funnels: FunnelCard[] }) {
           {filtered.map((f) => (
             <a
               key={f.slug}
-              href={`/dashboard/${f.slug}`}
+              href={`/admin/${f.slug}`}
               className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-row min-w-0"
             >
               <div
