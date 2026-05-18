@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Leadplug – Admin Funnel-Creator</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #f1f5f9;
+    color: #0f172a;
+    padding: 40px 24px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  h1 { font-size: 24px; font-weight: 800; margin-bottom: 4px; color: #0f172a; }
+  .subtitle { color: #64748b; margin-bottom: 40px; font-size: 14px; }
+  h2 { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: #0f172a; }
+  h3 { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #374151; }
+
+  .section {
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    max-width: 900px;
+  }
+  .section-label {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+  }
+  .label-blue   { background: #dbeafe; color: #1d4ed8; }
+  .label-green  { background: #d1fae5; color: #065f46; }
+  .label-purple { background: #ede9fe; color: #6d28d9; }
+  .label-amber  { background: #fef3c7; color: #92400e; }
+
+  /* Flow */
+  .flow { display: flex; align-items: flex-start; gap: 0; flex-wrap: wrap; margin-top: 8px; }
+  .flow-step { display: flex; flex-direction: column; align-items: center; max-width: 160px; }
+  .flow-box {
+    border-radius: 10px; padding: 10px 14px; font-size: 12px; font-weight: 600;
+    text-align: center; width: 140px; min-height: 48px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  }
+  .flow-sub { font-size: 11px; font-weight: 400; opacity: .75; margin-top: 2px; }
+  .flow-arrow { font-size: 18px; color: #94a3b8; margin: 0 4px; padding-top: 14px; flex-shrink: 0; }
+
+  .box-page    { background: #f8fafc; border: 1.5px solid #e2e8f0; color: #374151; }
+  .box-action  { background: #ede9fe; border: 1.5px solid #c4b5fd; color: #5b21b6; }
+  .box-supabase{ background: #dbeafe; border: 1.5px solid #93c5fd; color: #1e40af; }
+  .box-success { background: #d1fae5; border: 1.5px solid #6ee7b7; color: #065f46; }
+  .box-amber   { background: #fef3c7; border: 1.5px solid #fcd34d; color: #92400e; }
+  .box-primary { background: #4648d4; border: 1.5px solid #4648d4; color: #fff; }
+
+  /* Form mockup */
+  .form-section {
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .form-section-header {
+    background: #f8fafc;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #374151;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .form-section-body { padding: 16px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-field { display: flex; flex-direction: column; gap: 4px; }
+  .form-label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .04em; }
+  .form-input {
+    background: #fff; border: 1.5px solid #d1d5db; border-radius: 8px;
+    padding: 7px 12px; font-size: 12px; color: #374151;
+  }
+  .form-input.placeholder { color: #9ca3af; }
+  .form-select {
+    background: #fff; border: 1.5px solid #d1d5db; border-radius: 8px;
+    padding: 7px 12px; font-size: 12px; color: #374151;
+  }
+  .form-full { grid-column: 1 / -1; }
+
+  /* Question types table */
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 8px; }
+  th { background: #f8fafc; text-align: left; padding: 8px 12px; font-weight: 600; color: #374151; border-bottom: 1px solid #e2e8f0; }
+  td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+
+  .tag {
+    display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px;
+    border-radius: 20px; white-space: nowrap;
+  }
+  .tag-choice  { background: #dbeafe; color: #1d4ed8; }
+  .tag-slider  { background: #d1fae5; color: #065f46; }
+  .tag-text    { background: #ede9fe; color: #5b21b6; }
+
+  /* Question card mockup */
+  .q-card {
+    border: 1.5px solid #e2e8f0; border-radius: 10px;
+    padding: 14px; margin-bottom: 10px; background: #fff;
+  }
+  .q-card-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+  .q-title-input {
+    flex: 1; background: #f8fafc; border: 1.5px solid #e2e8f0;
+    border-radius: 8px; padding: 7px 12px; font-size: 12px; color: #374151;
+  }
+  .q-type-select {
+    background: #fff; border: 1.5px solid #e2e8f0;
+    border-radius: 8px; padding: 7px 12px; font-size: 12px; color: #374151; min-width: 140px;
+  }
+  .q-option-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .q-option-input {
+    flex: 1; background: #f8fafc; border: 1.5px solid #e2e8f0;
+    border-radius: 8px; padding: 6px 10px; font-size: 11px; color: #9ca3af;
+  }
+  .q-trash { color: #d1d5db; font-size: 13px; }
+  .q-add-link { font-size: 12px; color: #4648d4; font-weight: 600; cursor: pointer; }
+  .q-checkbox-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+  .q-checkbox { width: 13px; height: 13px; border: 1.5px solid #d1d5db; border-radius: 3px; background: #4648d4; }
+  .q-checkbox-label { font-size: 12px; color: #374151; }
+
+  /* Slider config */
+  .slider-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 8px; }
+  .slider-field { display: flex; flex-direction: column; gap: 3px; }
+  .slider-label { font-size: 10px; color: #94a3b8; font-weight: 600; }
+  .slider-input {
+    background: #f8fafc; border: 1.5px solid #e2e8f0;
+    border-radius: 6px; padding: 5px 8px; font-size: 11px; color: #374151;
+  }
+
+  /* Buttons */
+  .btn-row { display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end; }
+  .btn {
+    padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    cursor: pointer; border: none;
+  }
+  .btn-outline { background: #fff; border: 1.5px solid #4648d4; color: #4648d4; }
+  .btn-primary { background: #4648d4; color: #fff; }
+
+  /* Note / warning */
+  .note { background: #f8fafc; border-left: 3px solid #4648d4; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 12px; color: #475569; margin-top: 12px; }
+  .note-amber { background: #fffbeb; border-left: 3px solid #f59e0b; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 12px; color: #92400e; margin-top: 12px; }
+
+  .mono { font-family: monospace; font-size: 11px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; }
+  hr.divider { border: none; border-top: 1px solid #f1f5f9; margin: 20px 0; }
+
+  /* Cols */
+  .cols { display: grid; gap: 20px; }
+  .cols-2 { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 700px) { .cols-2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<h1>Admin Funnel-Creator</h1>
+<p class="subtitle">Dokumentation · /admin/new · Tenant + Funnel + Fragen ohne SQL anlegen</p>
+
+
+<!-- ═══════════════════════ ÜBERSICHT -->
+<div class="section">
+  <span class="section-label label-blue">Übersicht</span>
+  <h2>Was ist der Funnel-Creator?</h2>
+  <p style="font-size:13px;color:#475569;margin-bottom:16px;">
+    Der Admin Funnel-Creator ermöglicht es, einen neuen Kunden (Tenant) inklusive Funnel und allen Fragen
+    vollständig über ein Formular anzulegen — ohne direkten SQL-Zugriff auf Supabase.
+    Er ersetzt das manuelle Eintragen per SQL und dient gleichzeitig als Blaupause für den späteren Self-Service-Editor.
+  </p>
+
+  <div class="cols cols-2">
+    <div>
+      <h3>Erreichbar über</h3>
+      <ul style="font-size:12px;color:#475569;margin-left:16px;margin-top:6px;line-height:2;">
+        <li>URL: <span class="mono">/admin/new</span></li>
+        <li>Button "Neuer Kunde" im Admin-Header (<span class="mono">/admin</span>)</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Zwei Aktionen</h3>
+      <ul style="font-size:12px;color:#475569;margin-left:16px;margin-top:6px;line-height:2;">
+        <li><strong>Vorschau</strong> — rendert Funnel ohne DB-Schreibzugriff</li>
+        <li><strong>Speichern</strong> — schreibt in DB, öffnet <span class="mono">/admin/[slug]</span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ FLOW -->
+<div class="section">
+  <span class="section-label label-green">Ablauf</span>
+  <h2>Kompletter Creator-Flow</h2>
+
+  <h3 style="margin-bottom:10px;">Vorschau (ohne DB)</h3>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-box box-page">/admin/new<span class="flow-sub">Formular ausfüllen</span></div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-amber">Vorschau klicken<span class="flow-sub">kein Speichern</span></div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-action">localStorage<span class="flow-sub">Formular-Snapshot</span></div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-page">/admin/preview<span class="flow-sub">Neuer Tab</span></div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-success">Funnel live sehen<span class="flow-sub">Gelbes Banner</span></div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <h3 style="margin-bottom:10px;">Speichern (in DB)</h3>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-box box-page">/admin/new<span class="flow-sub">Formular fertig</span></div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-primary">Speichern klicken</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-action">POST /api/admin/create-funnel<span class="flow-sub">Service Key</span></div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-supabase">INSERT tenants<span class="flow-sub">+ funnels + questions</span></div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-success">/admin/[slug]<span class="flow-sub">Redirect</span></div>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>Reihenfolge der INSERTs:</strong> tenants → funnels → funnel_questions.
+    Bei Fehler in einem Schritt stoppt die API und gibt die Fehlermeldung zurück — die vorherigen Einträge bleiben in der DB.
+    Deshalb: Slug-Eindeutigkeit vorher prüfen, da kein automatischer Rollback.
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ FORMULAR -->
+<div class="section">
+  <span class="section-label label-purple">Formular-Aufbau</span>
+  <h2>Die 3 Sektionen</h2>
+
+  <!-- Sektion 1: Kunde -->
+  <div class="form-section">
+    <div class="form-section-header">1 — Kunde (Tenant)</div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-field form-full">
+          <span class="form-label">Firmenname *</span>
+          <div class="form-input placeholder">Muster Solar GmbH</div>
+        </div>
+        <div class="form-field">
+          <span class="form-label">Tenant-Slug * (auto-generiert)</span>
+          <div class="form-input placeholder">muster-solar</div>
+        </div>
+        <div class="form-field">
+          <span class="form-label">Öffentliche E-Mail *</span>
+          <div class="form-input placeholder">info@firma.de</div>
+        </div>
+        <div class="form-field">
+          <span class="form-label">Lead-Benachrichtigung (E-Mail)</span>
+          <div class="form-input placeholder">leer lassen = wie öffentliche E-Mail</div>
+        </div>
+        <div class="form-field">
+          <span class="form-label">Telefon</span>
+          <div class="form-input placeholder">+49 89 12345678</div>
+        </div>
+        <div class="form-field">
+          <span class="form-label">Website</span>
+          <div class="form-input placeholder">https://firma.de</div>
+        </div>
+        <div class="form-field">
+          <span class="form-label">Billing-Modell</span>
+          <div class="form-select">Pro Monat (Flatrate) ▾</div>
+        </div>
+        <div class="form-field">
+          <span class="form-label">Monatspreis (€)</span>
+          <div class="form-input placeholder">99.00</div>
+        </div>
+      </div>
+      <div class="note-amber" style="margin-top:12px;">
+        <strong>Billing-Logik:</strong>
+        Bei <em>Per Lead</em> → Feld "Preis pro Lead (€)" erscheint.
+        Bei <em>Per Monat / Per Jahr</em> → Feld "Monatspreis / Jahrespreis (€)" erscheint.
+        Tatsächliches Billing läuft manuell per Rechnung — kein Stripe nötig.
+      </div>
+    </div>
+  </div>
+
+  <!-- Sektion 2: Funnel -->
+  <div class="form-section">
+    <div class="form-section-header">2 — Funnel</div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-field">
+          <span class="form-label">Funnel-Slug * (auto = Tenant-Slug)</span>
+          <div class="form-input placeholder">muster-solar</div>
+        </div>
+        <div class="form-field">
+          <span class="form-label">Primärfarbe</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div style="width:34px;height:34px;border-radius:7px;background:#4648d4;border:1.5px solid #e2e8f0;flex-shrink:0;"></div>
+            <div class="form-input" style="flex:1;">#4648d4</div>
+          </div>
+        </div>
+        <div class="form-field">
+          <span class="form-label">Font</span>
+          <div class="form-select">System (Standard) ▾</div>
+        </div>
+        <div class="form-field">
+          <span class="form-label">E-Mail-Absender-Präfix</span>
+          <div class="form-input placeholder">muster-solar</div>
+        </div>
+      </div>
+
+      <hr class="divider" />
+      <p style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">Texte — optional (Defaults wenn leer)</p>
+
+      <div class="form-grid">
+        <div class="form-field form-full">
+          <span class="form-label">Funnel-Titel</span>
+          <div class="form-input placeholder">Jetzt kostenloses Angebot anfordern</div>
+        </div>
+        <div class="form-field">
+          <span class="form-label">Button-Beschriftung</span>
+          <div class="form-input placeholder">Anfrage absenden</div>
+        </div>
+        <div class="form-field">
+          <span class="form-label">Erfolgsmeldung</span>
+          <div class="form-input placeholder">Vielen Dank! Wir melden uns in Kürze.</div>
+        </div>
+        <div class="form-field">
+          <span class="form-label">Antwortzeit-Text</span>
+          <div class="form-input placeholder">Wir melden uns so schnell wie möglich.</div>
+        </div>
+        <div class="form-field">
+          <span class="form-label">Kontaktformular-Untertitel</span>
+          <div class="form-input placeholder">Wer soll das Angebot erhalten?</div>
+        </div>
+        <div class="form-field">
+          <span class="form-label">Datenschutz-URL</span>
+          <div class="form-input placeholder">https://firma.de/datenschutz</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sektion 3: Fragen -->
+  <div class="form-section">
+    <div class="form-section-header">3 — Fragen</div>
+    <div class="form-section-body">
+
+      <!-- Beispiel: Single Choice -->
+      <div class="q-card">
+        <div class="q-card-row">
+          <div style="display:flex;flex-direction:column;gap:2px;margin-right:4px;">
+            <span style="font-size:11px;color:#d1d5db;">∧</span>
+            <span style="font-size:11px;color:#d1d5db;">∨</span>
+          </div>
+          <div class="q-title-input">Wie groß ist die Dachfläche?</div>
+          <div class="q-type-select">Einfachauswahl ▾</div>
+          <span class="q-trash">🗑</span>
+        </div>
+        <div class="q-option-row">
+          <div class="q-option-input">Unter 30 m²</div>
+          <span class="q-trash">🗑</span>
+        </div>
+        <div class="q-option-row">
+          <div class="q-option-input">30–60 m²</div>
+          <span class="q-trash">🗑</span>
+        </div>
+        <div class="q-option-row">
+          <div class="q-option-input">Über 60 m²</div>
+          <span class="q-trash">🗑</span>
+        </div>
+        <div class="q-add-link" style="margin-top:6px;">+ Option hinzufügen</div>
+        <div class="q-checkbox-row">
+          <div class="q-checkbox"></div>
+          <span class="q-checkbox-label">Pflichtfeld</span>
+        </div>
+      </div>
+
+      <!-- Beispiel: Slider -->
+      <div class="q-card">
+        <div class="q-card-row">
+          <div style="display:flex;flex-direction:column;gap:2px;margin-right:4px;">
+            <span style="font-size:11px;color:#d1d5db;">∧</span>
+            <span style="font-size:11px;color:#d1d5db;">∨</span>
+          </div>
+          <div class="q-title-input">Wie groß ist die Wohnfläche?</div>
+          <div class="q-type-select">Slider ▾</div>
+          <span class="q-trash">🗑</span>
+        </div>
+        <div class="slider-grid">
+          <div class="slider-field"><span class="slider-label">min</span><div class="slider-input">0</div></div>
+          <div class="slider-field"><span class="slider-label">max</span><div class="slider-input">300</div></div>
+          <div class="slider-field"><span class="slider-label">step</span><div class="slider-input">5</div></div>
+          <div class="slider-field"><span class="slider-label">default</span><div class="slider-input">100</div></div>
+          <div class="slider-field"><span class="slider-label">unit</span><div class="slider-input">m²</div></div>
+        </div>
+        <div class="q-checkbox-row">
+          <div class="q-checkbox"></div>
+          <span class="q-checkbox-label">Pflichtfeld</span>
+        </div>
+      </div>
+
+      <!-- Beispiel: Freitext kurz -->
+      <div class="q-card">
+        <div class="q-card-row">
+          <div style="display:flex;flex-direction:column;gap:2px;margin-right:4px;">
+            <span style="font-size:11px;color:#d1d5db;">∧</span>
+            <span style="font-size:11px;color:#d1d5db;">∨</span>
+          </div>
+          <div class="q-title-input">Haben Sie eine Bemerkung?</div>
+          <div class="q-type-select">Freitext (lang) ▾</div>
+          <span class="q-trash">🗑</span>
+        </div>
+        <div class="q-option-row">
+          <div class="q-option-input">Placeholder-Text im Eingabefeld (optional)</div>
+        </div>
+        <div class="q-checkbox-row">
+          <div class="q-checkbox" style="background:#fff;"></div>
+          <span class="q-checkbox-label">Pflichtfeld</span>
+        </div>
+      </div>
+
+      <div class="q-add-link" style="font-size:14px;">+ Frage hinzufügen</div>
+
+      <div class="btn-row">
+        <button class="btn btn-outline">Vorschau</button>
+        <button class="btn btn-primary">Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ FRAGETYPEN -->
+<div class="section">
+  <span class="section-label label-amber">Fragetypen</span>
+  <h2>Alle unterstützten Fragetypen</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Typ (DB-Wert)</th>
+        <th>Label im Formular</th>
+        <th>Config-Felder</th>
+        <th>Optionen-Liste</th>
+        <th>Pflichtfeld</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="mono">single_choice</span></td>
+        <td><span class="tag tag-choice">Einfachauswahl</span></td>
+        <td>—</td>
+        <td>Ja — beliebig viele</td>
+        <td>Ja</td>
+      </tr>
+      <tr>
+        <td><span class="mono">multiple_choice</span></td>
+        <td><span class="tag tag-choice">Mehrfachauswahl</span></td>
+        <td>—</td>
+        <td>Ja — beliebig viele</td>
+        <td>Ja</td>
+      </tr>
+      <tr>
+        <td><span class="mono">slider</span></td>
+        <td><span class="tag tag-slider">Slider</span></td>
+        <td><span class="mono">min · max · step · default · unit</span></td>
+        <td>Nein</td>
+        <td>Ja</td>
+      </tr>
+      <tr>
+        <td><span class="mono">short_text</span></td>
+        <td><span class="tag tag-text">Freitext (kurz)</span></td>
+        <td><span class="mono">placeholder · required</span></td>
+        <td>Nein</td>
+        <td>Ja</td>
+      </tr>
+      <tr>
+        <td><span class="mono">long_text</span></td>
+        <td><span class="tag tag-text">Freitext (lang)</span></td>
+        <td><span class="mono">placeholder · required</span></td>
+        <td>Nein</td>
+        <td>Ja</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note" style="margin-top:16px;">
+    <strong>question_key</strong> wird automatisch aus dem Fragetitel generiert (<span class="mono">toKey(title)</span>) und ist nicht editierbar.
+    Er dient als Schlüssel im <span class="mono">answers</span>-JSONB der Submissions.
+    <strong>Icons</strong> (icon_key) werden aktuell nicht im Creator gesetzt — können nachträglich direkt in Supabase eingetragen werden.
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ VORSCHAU -->
+<div class="section">
+  <span class="section-label label-purple">Vorschau-System</span>
+  <h2>Vorschau ohne DB-Schreibzugriff</h2>
+
+  <div class="cols cols-2">
+    <div>
+      <h3>Wie es funktioniert</h3>
+      <ol style="font-size:12px;color:#475569;margin-left:16px;margin-top:8px;line-height:2.2;">
+        <li>Klick auf "Vorschau"</li>
+        <li>Kompletter Formular-State wird in <span class="mono">localStorage</span> unter Key <span class="mono">funnel_preview</span> gespeichert</li>
+        <li><span class="mono">/admin/preview</span> öffnet sich in neuem Tab</li>
+        <li>Preview-Seite liest aus <span class="mono">localStorage</span> und rendert <span class="mono">&lt;Funnel&gt;</span>-Komponente direkt</li>
+        <li>Gelbes Banner: "Vorschau — noch nicht gespeichert"</li>
+      </ol>
+    </div>
+    <div>
+      <h3>Was die Vorschau zeigt</h3>
+      <ul style="font-size:12px;color:#475569;margin-left:16px;margin-top:8px;line-height:2.2;">
+        <li>Alle Fragen mit Optionen/Slider/Freitext</li>
+        <li>Primärfarbe + Font</li>
+        <li>Alle konfigurierten Texte</li>
+        <li>Standard-Kontaktfelder (Anrede, Name, Telefon, E-Mail)</li>
+        <li>Submit-Button → <strong>no-op</strong> (kein echter API-Call)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note-amber">
+    <strong>Wichtig:</strong> Die Vorschau spiegelt immer den Stand zum Zeitpunkt des Klicks.
+    Änderungen nach dem Klick erfordern einen erneuten Klick auf "Vorschau" — der Tab aktualisiert sich nicht automatisch.
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ AUTO-GENERATION -->
+<div class="section">
+  <span class="section-label label-green">Auto-Generierung</span>
+  <h2>Slug- und Key-Generierung</h2>
+
+  <table>
+    <thead>
+      <tr><th>Feld</th><th>Generiert aus</th><th>Logik</th><th>Manuell überschreibbar</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="mono">tenant_slug</span></td>
+        <td>Firmenname</td>
+        <td>Kleinbuchstaben · ä→ae, ö→oe · Sonderzeichen → <span class="mono">-</span></td>
+        <td>Ja</td>
+      </tr>
+      <tr>
+        <td><span class="mono">funnel_slug</span></td>
+        <td>tenant_slug</td>
+        <td>Identisch zum Tenant-Slug (Standard: ein Funnel pro Tenant)</td>
+        <td>Ja</td>
+      </tr>
+      <tr>
+        <td><span class="mono">question_key</span></td>
+        <td>Fragetitel</td>
+        <td>Kleinbuchstaben · ä→ae · Sonderzeichen → <span class="mono">_</span></td>
+        <td>Nein (unsichtbar)</td>
+      </tr>
+      <tr>
+        <td>Option <span class="mono">value</span></td>
+        <td>Option-Label</td>
+        <td>Gleiche Logik wie question_key</td>
+        <td>Nein (unsichtbar)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note" style="margin-top:12px;">
+    Slugs werden nur beim Tippen auto-generiert solange sie noch nicht manuell verändert wurden.
+    Nach manueller Änderung wird die Auto-Generierung für das jeweilige Feld deaktiviert.
+  </div>
+</div>
+
+
+<p style="text-align:center;font-size:11px;color:#94a3b8;margin-top:8px;padding-bottom:48px;">
+  Admin Funnel-Creator · Leadplug · Stand Mai 2026
+</p>
+
+</body>
+</html>

@@ -554,6 +554,13 @@
         <td>Server (Service Key)</td>
         <td>Lead + Antworten speichern</td>
       </tr>
+      <tr>
+        <td><span class="mono">/api/admin/create-funnel</span></td>
+        <td><span class="mono">tenants · funnels · funnel_questions</span></td>
+        <td><span class="tag tag-write">INSERT</span></td>
+        <td>Server (Service Key)</td>
+        <td>Neuen Tenant + Funnel + Fragen atomisch anlegen (Admin-only)</td>
+      </tr>
     </tbody>
   </table>
 
@@ -675,6 +682,81 @@
 
   <div class="note" style="margin-top:16px;">
     <strong>Kein Login nötig</strong> für Widget-Besucher. <span class="mono">/api/submit</span> verwendet den Service Key server-seitig. Honeypot-Feld: bei Auslösung → 200 zurück, aber <strong>kein DB-Eintrag</strong>. Höhen-Sync via <span class="mono">postMessage({type:'funnel-resize', height: X})</span>.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ FUNNEL CREATOR -->
+<div class="section">
+  <span class="section-label label-auth">Workflow 7</span>
+  <h2>Admin Funnel-Creator (/admin/new)</h2>
+
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-box box-page">
+        <span>/admin/new</span>
+        <span class="flow-sub">Client Component</span>
+      </div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-action">
+        <span>Vorschau</span>
+        <span class="flow-sub">localStorage → neuer Tab</span>
+      </div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-page">
+        <span>/admin/preview</span>
+        <span class="flow-sub">Funnel live prüfen</span>
+      </div>
+    </div>
+  </div>
+
+  <span class="flow-arrow-down" style="margin-left:70px;">↓ Speichern</span>
+
+  <div class="flow" style="margin-top:8px;">
+    <div class="flow-step">
+      <div class="flow-box box-action">
+        <span>POST /api/admin/create-funnel</span>
+        <span class="flow-sub">Service Key</span>
+      </div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-supabase">
+        <span>INSERT tenants</span>
+        <span class="flow-sub">Stammdaten + Billing</span>
+      </div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-supabase">
+        <span>INSERT funnels</span>
+        <span class="flow-sub">Slug + Theme + Texte</span>
+      </div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-supabase">
+        <span>INSERT funnel_questions</span>
+        <span class="flow-sub">Fragen + Optionen + Config</span>
+      </div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-success">
+        <span>/admin/[slug]</span>
+        <span class="flow-sub">Redirect</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:16px;">
+    <strong>Fragetypen:</strong> <span class="mono">single_choice</span>, <span class="mono">multiple_choice</span>, <span class="mono">slider</span>, <span class="mono">short_text</span>, <span class="mono">long_text</span>.
+    Slider-Config (min/max/step/unit) und Freitext-Config (placeholder, required) werden als JSONB im <span class="mono">config</span>-Feld gespeichert.
+    <span class="mono">required</span> ist für alle Fragetypen verfügbar.
+    Vorschau schreibt nichts in die DB — Konfiguration wird via <span class="mono">localStorage</span> an <span class="mono">/admin/preview</span> übergeben.
   </div>
 </div>
 
