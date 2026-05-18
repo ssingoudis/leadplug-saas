@@ -102,9 +102,9 @@ async function getAllData(): Promise<{ funnels: FunnelCard[]; monthlyRows: Month
   const monthlyRows: MonthlyRow[] = Array.from(monthMap.values())
     .sort((a, b) => b.month.localeCompare(a.month))
 
-  // --- daily data: last 21 days ---
+  // --- daily data: last 14 days ---
   const dailyMap = new Map<string, number>()
-  for (let i = 20; i >= 0; i--) {
+  for (let i = 13; i >= 0; i--) {
     const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000)
     dailyMap.set(d.toISOString().slice(0, 10), 0)
   }

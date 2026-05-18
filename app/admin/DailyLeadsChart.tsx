@@ -35,7 +35,7 @@ export default function DailyLeadsChart({ data }: { data: DayData[] }) {
   return (
     <div className="bg-white rounded-2xl shadow-sm px-6 pt-6 pb-5">
       <div className="flex items-baseline justify-between mb-5">
-        <h2 className="text-base font-bold text-gray-900">Leads der letzten 21 Tage</h2>
+        <h2 className="text-base font-bold text-gray-900">Leads der letzten 14 Tage</h2>
         <span className="text-sm text-gray-400">{total} Lead{total !== 1 ? 's' : ''}</span>
       </div>
 
