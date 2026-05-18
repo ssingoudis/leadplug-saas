@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   let supabaseResponse = NextResponse.next({ request: req })
 
   const supabase = createServerClient(
@@ -23,7 +23,7 @@ export async function middleware(req: NextRequest) {
     }
   )
 
-  // Wichtig: getUser() statt getSession() — validiert den Token server-seitig
+  // getUser() statt getSession() — validiert den Token server-seitig
   const { data: { user } } = await supabase.auth.getUser()
 
   const { pathname } = req.nextUrl
@@ -37,7 +37,6 @@ export async function middleware(req: NextRequest) {
     }
     const adminEmail = process.env.SUPERADMIN_EMAIL
     if (!adminEmail || user.email !== adminEmail) {
-      // Eingeloggt, aber kein Superadmin → Tenant-Dashboard
       const url = req.nextUrl.clone()
       url.pathname = '/dashboard'
       return NextResponse.redirect(url)

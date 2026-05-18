@@ -3,9 +3,9 @@
 import { usePathname } from 'next/navigation'
 
 const TABS = [
-  { label: 'Dashboard', href: '/dashboard' },
+  { label: 'Dashboard',   href: '/dashboard' },
   { label: 'Statistiken', href: '/dashboard/statistiken' },
-  { label: 'Embed-Code', href: '/dashboard/embed' },
+  { label: 'Embed-Code',  href: '/dashboard/embed' },
 ]
 
 export default function TabNav() {

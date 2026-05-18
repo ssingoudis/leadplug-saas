@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Leadplug – Workflows & Navigation</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #f1f5f9;
+    color: #0f172a;
+    padding: 40px 24px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  h1 { font-size: 24px; font-weight: 800; margin-bottom: 4px; color: #0f172a; }
+  .subtitle { color: #64748b; margin-bottom: 40px; font-size: 14px; }
+  h2 { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: #0f172a; }
+  h3 { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #374151; }
+
+  .section {
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .section-label {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+  }
+  .label-auth    { background: #ede9fe; color: #6d28d9; }
+  .label-db      { background: #dbeafe; color: #1d4ed8; }
+  .label-nav     { background: #d1fae5; color: #065f46; }
+  .label-session { background: #fef3c7; color: #92400e; }
+
+  /* Flow rows */
+  .flow {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .flow-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 160px;
+  }
+  .flow-box {
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    width: 140px;
+    min-height: 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+  }
+  .flow-sub {
+    font-size: 11px;
+    font-weight: 400;
+    opacity: .75;
+    margin-top: 2px;
+  }
+  .flow-arrow {
+    font-size: 18px;
+    color: #94a3b8;
+    margin: 0 4px;
+    padding-top: 14px;
+    flex-shrink: 0;
+  }
+  .flow-arrow-down {
+    font-size: 18px;
+    color: #94a3b8;
+    margin: 4px 0;
+    display: block;
+    text-align: center;
+  }
+
+  /* Box color variants */
+  .box-page    { background: #f8fafc; border: 1.5px solid #e2e8f0; color: #374151; }
+  .box-action  { background: #ede9fe; border: 1.5px solid #c4b5fd; color: #5b21b6; }
+  .box-supabase{ background: #dbeafe; border: 1.5px solid #93c5fd; color: #1e40af; }
+  .box-email   { background: #fef3c7; border: 1.5px solid #fcd34d; color: #92400e; }
+  .box-success { background: #d1fae5; border: 1.5px solid #6ee7b7; color: #065f46; }
+  .box-error   { background: #fee2e2; border: 1.5px solid #fca5a5; color: #991b1b; }
+  .box-primary { background: #4648d4; border: 1.5px solid #4648d4; color: #fff; }
+
+  /* Columns layout */
+  .cols { display: grid; gap: 20px; }
+  .cols-2 { grid-template-columns: 1fr 1fr; }
+  .cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 700px) { .cols-2, .cols-3 { grid-template-columns: 1fr; } }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 8px; }
+  th { background: #f8fafc; text-align: left; padding: 8px 12px; font-weight: 600; color: #374151; border-bottom: 1px solid #e2e8f0; }
+  td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .tag {
+    display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px;
+    border-radius: 20px; white-space: nowrap;
+  }
+  .tag-read  { background: #dbeafe; color: #1d4ed8; }
+  .tag-write { background: #d1fae5; color: #065f46; }
+  .tag-rpc   { background: #ede9fe; color: #5b21b6; }
+  .tag-auth  { background: #fef3c7; color: #92400e; }
+
+  /* Nav diagram */
+  .nav-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 12.5px;
+  }
+  .nav-item.root  { background: #4648d4; color: #fff; font-weight: 700; font-size: 13px; }
+  .nav-item.child { background: #f8fafc; border: 1px solid #e2e8f0; margin-left: 28px; }
+  .nav-item.child::before { content: "└"; margin-left: -20px; margin-right: 6px; color: #94a3b8; font-size: 14px; }
+  .nav-route { font-family: monospace; font-size: 11px; margin-left: auto; color: #94a3b8; }
+  .nav-route.root-route { color: #a5b4fc; }
+  .badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; }
+  .badge-server { background: #d1fae5; color: #065f46; }
+  .badge-client { background: #fef3c7; color: #92400e; }
+  .badge-tab    { background: #ede9fe; color: #5b21b6; }
+
+  /* Condition branches */
+  .branch {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .branch-item {
+    flex: 1;
+    min-width: 180px;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 12px;
+  }
+  .branch-item .cond {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .branch-yes { background: #d1fae5; border: 1.5px solid #6ee7b7; }
+  .branch-yes .cond { color: #065f46; }
+  .branch-no  { background: #fee2e2; border: 1.5px solid #fca5a5; }
+  .branch-no  .cond { color: #991b1b; }
+
+  hr.divider { border: none; border-top: 1px solid #f1f5f9; margin: 20px 0; }
+  .note { background: #f8fafc; border-left: 3px solid #4648d4; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 12px; color: #475569; margin-top: 12px; }
+  .mono { font-family: monospace; font-size: 11px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<h1>Leadplug – Workflows &amp; Navigation</h1>
+<p class="subtitle">Registrierung · Login · Session · Dashboard-Navigation · Datenbank-Interaktionen</p>
+
+
+<!-- ═══════════════════════════════════════════════════════ REGISTRIERUNG -->
+<div class="section">
+  <span class="section-label label-auth">Workflow 1</span>
+  <h2>Registrierung (E-Mail + Passwort)</h2>
+
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-box box-page">
+        <span>/signup</span>
+        <span class="flow-sub">Client Component</span>
+      </div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-action">
+        <span>signUp()</span>
+        <span class="flow-sub">E-Mail + Passwort</span>
+      </div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-supabase">
+        <span>Supabase Auth</span>
+        <span class="flow-sub">User anlegen</span>
+      </div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-email">
+        <span>Resend SMTP</span>
+        <span class="flow-sub">Bestätigungs-Mail</span>
+      </div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-page">
+        <span>Confirmation Screen</span>
+        <span class="flow-sub">"Bitte bestätigen"</span>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+  <h3>Nach Klick auf den Bestätigungs-Link in der E-Mail</h3>
+
+  <div class="flow" style="margin-top:10px;">
+    <div class="flow-step">
+      <div class="flow-box box-email">
+        <span>E-Mail-Link</span>
+        <span class="flow-sub">token_hash + type=signup</span>
+      </div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-page">
+        <span>/auth/confirm</span>
+        <span class="flow-sub">Server Route Handler</span>
+      </div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-supabase">
+        <span>verifyOtp()</span>
+        <span class="flow-sub">Token validieren</span>
+      </div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-supabase">
+        <span>Session-Cookie</span>
+        <span class="flow-sub">im Response gesetzt</span>
+      </div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-page">
+        <span>/dashboard</span>
+        <span class="flow-sub">Redirect 307</span>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+  <h3>Tenant-Anlage beim ersten Dashboard-Aufruf</h3>
+  <p style="font-size:12px;color:#64748b;margin-bottom:10px;">Neuer User hat noch keinen Tenant-Eintrag → Dashboard-Layout legt ihn automatisch an.</p>
+
+  <div class="branch">
+    <div class="branch-item branch-yes">
+      <span class="cond">✓ Tenant existiert</span>
+      Dashboard wird geladen
+    </div>
+    <div class="branch-item branch-no">
+      <span class="cond">✗ Kein Tenant</span>
+      Admin-Client inserted neuen Tenant mit:<br/>
+      <span class="mono">auth_user_id</span>, <span class="mono">slug</span>, <span class="mono">notification_email</span>, <span class="mono">public_email</span>, <span class="mono">billing_model: free</span><br/>
+      → Redirect zurück zu /dashboard
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>Slug-Generierung:</strong> E-Mail-Präfix → Kleinbuchstaben + Zahlen. Falls Slug bereits vergeben: suffix <span class="mono">-2</span>, <span class="mono">-3</span>, … bis <span class="mono">-99</span>.
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ LOGIN -->
+<div class="section">
+  <span class="section-label label-auth">Workflow 2</span>
+  <h2>Login</h2>
+
+  <div class="cols cols-2">
+    <div>
+      <h3>Option A – E-Mail + Passwort</h3>
+      <div class="flow" style="flex-direction:column;align-items:flex-start;gap:0;">
+        <div class="flow-box box-page" style="width:100%;max-width:280px;margin-bottom:6px;">
+          /login → signInWithPassword()
+        </div>
+        <span class="flow-arrow-down">↓</span>
+        <div class="branch" style="margin-top:0;">
+          <div class="branch-item branch-yes">
+            <span class="cond">✓ Korrekt</span>
+            Session gesetzt → Redirect zu /dashboard
+          </div>
+          <div class="branch-item branch-no">
+            <span class="cond">✗ Falsch</span>
+            Fehlermeldung: "E-Mail oder Passwort falsch"
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h3>Option B – Google OAuth</h3>
+      <div class="flow" style="flex-direction:column;align-items:flex-start;gap:0;">
+        <div class="flow-box box-page" style="width:100%;max-width:280px;margin-bottom:6px;">
+          /login → signInWithOAuth(google)
+        </div>
+        <span class="flow-arrow-down">↓</span>
+        <div class="flow-box box-supabase" style="width:100%;max-width:280px;margin-bottom:6px;">
+          Google Consent Screen
+        </div>
+        <span class="flow-arrow-down">↓</span>
+        <div class="flow-box box-page" style="width:100%;max-width:280px;margin-bottom:6px;">
+          /auth/callback?code=…
+        </div>
+        <span class="flow-arrow-down">↓</span>
+        <div class="flow-box box-success" style="width:100%;max-width:280px;">
+          exchangeCodeForSession() → /dashboard
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:16px;">
+    <strong>Passwort vergessen:</strong> Noch nicht implementiert. Supabase bietet <span class="mono">resetPasswordForEmail()</span> → sendet Reset-Link, der ebenfalls über <span class="mono">/auth/confirm?type=recovery</span> abgewickelt werden kann.
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ SESSION -->
+<div class="section">
+  <span class="section-label label-session">Workflow 3</span>
+  <h2>Session-Management</h2>
+
+  <div class="cols cols-3">
+    <div>
+      <h3>Session-Cookie</h3>
+      <p style="font-size:12px;color:#64748b;">Nach erfolgreichem Login setzt Supabase einen <strong>httpOnly-Cookie</strong> mit Access- &amp; Refresh-Token. Jede Server-Anfrage liest diesen Cookie automatisch.</p>
+    </div>
+    <div>
+      <h3>Auth-Check</h3>
+      <p style="font-size:12px;color:#64748b;">Jede geschützte Seite (alle <span class="mono">/dashboard/*</span>) ruft <span class="mono">supabase.auth.getUser()</span> auf dem Server auf. Kein User → Redirect zu <span class="mono">/login</span>.</p>
+    </div>
+    <div>
+      <h3>Logout</h3>
+      <p style="font-size:12px;color:#64748b;"><span class="mono">GET /logout</span> ruft <span class="mono">signOut()</span> auf → löscht Session-Cookie → Redirect zu <span class="mono">/login</span>.</p>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <h3>Route Protection (proxy.ts)</h3>
+  <div class="branch">
+    <div class="branch-item branch-no">
+      <span class="cond">Nicht eingeloggt + geschützte Route</span>
+      Redirect → <span class="mono">/login?from=/ursprüngliche-url</span>
+    </div>
+    <div class="branch-item branch-yes">
+      <span class="cond">Eingeloggt + öffentliche Route (/login, /signup)</span>
+      Redirect → <span class="mono">/dashboard</span>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ NAVIGATION -->
+<div class="section">
+  <span class="section-label label-nav">Workflow 4</span>
+  <h2>Dashboard-Navigation</h2>
+
+  <div class="nav-tree">
+    <div class="nav-item root">
+      Dashboard
+      <span class="nav-route root-route">/dashboard</span>
+    </div>
+
+    <div class="nav-item child">
+      <span class="badge badge-tab">Tab</span>
+      <strong>Leads</strong> – Alle Anfragen der letzten 50 Submissions + 14-Tage-Chart + Stats
+      <span class="nav-route">/dashboard</span>
+    </div>
+
+    <div class="nav-item child">
+      <span class="badge badge-tab">Tab</span>
+      <strong>Statistiken</strong> – 12-Monats-Chart, Monatstabelle mit Conversion-Donut
+      <span class="nav-route">/dashboard/statistiken</span>
+    </div>
+
+    <div class="nav-item child">
+      <span class="badge badge-tab">Tab</span>
+      <strong>Embed</strong> – iFrame-Code-Generator für aktive Funnels
+      <span class="nav-route">/dashboard/embed</span>
+    </div>
+
+    <div class="nav-item child">
+      <span class="badge badge-server">Navbar</span>
+      <strong>Account</strong> – E-Mail (read-only), Anzeigename, Telefon, Passwort ändern
+      <span class="nav-route">/dashboard/account</span>
+    </div>
+
+    <div class="nav-item child">
+      <span class="badge badge-server">Navbar</span>
+      <strong>Logout</strong> – Session beenden → /login
+      <span class="nav-route">/logout</span>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <h3>Tab-Navigation (TabNav.tsx)</h3>
+  <p style="font-size:12px;color:#64748b;margin-bottom:10px;">Client Component. Aktiver Tab wird per <span class="mono">usePathname()</span> erkannt. Indigo-Unterstrich = aktiv, grau = inaktiv.</p>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+    <div style="padding:8px 16px;border-radius:8px;border-bottom:2px solid #4648d4;font-size:12px;font-weight:600;color:#4648d4;background:#fff;border:1.5px solid #e2e8f0;border-bottom:3px solid #4648d4;">Leads (aktiv)</div>
+    <div style="padding:8px 16px;border-radius:8px;font-size:12px;font-weight:500;color:#64748b;background:#fff;border:1.5px solid #e2e8f0;">Statistiken</div>
+    <div style="padding:8px 16px;border-radius:8px;font-size:12px;font-weight:500;color:#64748b;background:#fff;border:1.5px solid #e2e8f0;">Embed</div>
+    <div style="margin-left:auto;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;background:#4648d4;color:#fff;">⚙ Account</div>
+    <div style="padding:8px 16px;border-radius:8px;font-size:12px;font-weight:500;color:#64748b;background:#fff;border:1.5px solid #e2e8f0;">Logout</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ DATENBANK -->
+<div class="section">
+  <span class="section-label label-db">Workflow 5</span>
+  <h2>Datenbank-Interaktionen pro Seite</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Route</th>
+        <th>Tabelle / API</th>
+        <th>Operation</th>
+        <th>Client</th>
+        <th>Beschreibung</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="mono">/dashboard/layout</span></td>
+        <td><span class="mono">auth.users</span></td>
+        <td><span class="tag tag-auth">AUTH</span></td>
+        <td>Server (RLS)</td>
+        <td>getUser() – prüft Session</td>
+      </tr>
+      <tr>
+        <td><span class="mono">/dashboard/layout</span></td>
+        <td><span class="mono">tenants</span></td>
+        <td><span class="tag tag-read">SELECT</span></td>
+        <td>Admin (kein RLS)</td>
+        <td>Tenant für auth_user_id laden</td>
+      </tr>
+      <tr>
+        <td><span class="mono">/dashboard/layout</span></td>
+        <td><span class="mono">tenants</span></td>
+        <td><span class="tag tag-write">INSERT</span></td>
+        <td>Admin (kein RLS)</td>
+        <td>Neuen Tenant anlegen bei erstem Login</td>
+      </tr>
+      <tr>
+        <td><span class="mono">/dashboard</span> (Leads)</td>
+        <td><span class="mono">funnels</span></td>
+        <td><span class="tag tag-read">SELECT</span></td>
+        <td>Server (RLS)</td>
+        <td>slug + total_views aller aktiven Funnels</td>
+      </tr>
+      <tr>
+        <td><span class="mono">/dashboard</span> (Leads)</td>
+        <td><span class="mono">submissions</span></td>
+        <td><span class="tag tag-read">SELECT</span></td>
+        <td>Server (RLS)</td>
+        <td>Letzte 50 Leads + 14-Tage-Chart-Daten</td>
+      </tr>
+      <tr>
+        <td><span class="mono">/dashboard</span> (Leads)</td>
+        <td><span class="mono">funnel_questions</span></td>
+        <td><span class="tag tag-read">SELECT</span></td>
+        <td>Server (RLS)</td>
+        <td>Fragen für Antwort-Anzeige pro Funnel</td>
+      </tr>
+      <tr>
+        <td><span class="mono">/dashboard/statistiken</span></td>
+        <td><span class="mono">submissions</span></td>
+        <td><span class="tag tag-read">SELECT</span></td>
+        <td>Server (RLS)</td>
+        <td>created_at letzte 12 Monate</td>
+      </tr>
+      <tr>
+        <td><span class="mono">/dashboard/statistiken</span></td>
+        <td><span class="mono">funnels</span></td>
+        <td><span class="tag tag-read">SELECT</span></td>
+        <td>Server (RLS)</td>
+        <td>total_views (kumulativ) für Conversion</td>
+      </tr>
+      <tr>
+        <td><span class="mono">/dashboard/embed</span></td>
+        <td><span class="mono">funnels</span></td>
+        <td><span class="tag tag-read">SELECT</span></td>
+        <td>Server (RLS)</td>
+        <td>slug aller aktiven Funnels für Code-Generator</td>
+      </tr>
+      <tr>
+        <td><span class="mono">/dashboard/account</span></td>
+        <td><span class="mono">auth.users</span></td>
+        <td><span class="tag tag-auth">AUTH</span></td>
+        <td>Browser (RLS)</td>
+        <td>getUser() → email, user_metadata laden</td>
+      </tr>
+      <tr>
+        <td><span class="mono">/dashboard/account</span></td>
+        <td><span class="mono">auth.users</span></td>
+        <td><span class="tag tag-write">UPDATE</span></td>
+        <td>Browser (RLS)</td>
+        <td>updateUser() → display_name, phone, password</td>
+      </tr>
+      <tr>
+        <td><span class="mono">/auth/confirm</span></td>
+        <td><span class="mono">auth.users</span></td>
+        <td><span class="tag tag-auth">AUTH</span></td>
+        <td>Server (SSR)</td>
+        <td>verifyOtp(token_hash, type=signup) → E-Mail bestätigen</td>
+      </tr>
+      <tr>
+        <td><span class="mono">/auth/callback</span></td>
+        <td><span class="mono">auth.users</span></td>
+        <td><span class="tag tag-auth">AUTH</span></td>
+        <td>Browser</td>
+        <td>exchangeCodeForSession() → OAuth-Code eintauschen</td>
+      </tr>
+      <tr>
+        <td><span class="mono">/api/track-view</span></td>
+        <td><span class="mono">funnels</span></td>
+        <td><span class="tag tag-rpc">RPC</span></td>
+        <td>Server (Service Key)</td>
+        <td>increment_funnel_views(slug) → total_views +1</td>
+      </tr>
+      <tr>
+        <td><span class="mono">/api/submit</span></td>
+        <td><span class="mono">submissions</span></td>
+        <td><span class="tag tag-write">INSERT</span></td>
+        <td>Server (Service Key)</td>
+        <td>Lead + Antworten speichern</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note" style="margin-top:16px;">
+    <strong>RLS (Row Level Security):</strong> Supabase filtert automatisch nach <span class="mono">tenant_id</span> des eingeloggten Users. Jeder Tenant sieht nur seine eigenen Funnels, Submissions und Statistiken. Admin-Client (Service Key) umgeht RLS – wird nur server-seitig für Tenant-Management verwendet.
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ DATENTABELLEN -->
+<div class="section">
+  <span class="section-label label-db">Referenz</span>
+  <h2>Zentrale Datenbanktabellen</h2>
+
+  <div class="cols cols-2">
+    <div>
+      <h3>auth.users (Supabase-intern)</h3>
+      <table>
+        <tr><th>Feld</th><th>Beschreibung</th></tr>
+        <tr><td><span class="mono">id</span></td><td>UUID – primärer Auth-Key</td></tr>
+        <tr><td><span class="mono">email</span></td><td>Login-E-Mail, read-only nach Bestätigung</td></tr>
+        <tr><td><span class="mono">user_metadata</span></td><td>display_name, phone (frei befüllbar)</td></tr>
+        <tr><td><span class="mono">email_confirmed_at</span></td><td>Timestamp der E-Mail-Bestätigung</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3>tenants</h3>
+      <table>
+        <tr><th>Feld</th><th>Beschreibung</th></tr>
+        <tr><td><span class="mono">id</span></td><td>UUID</td></tr>
+        <tr><td><span class="mono">auth_user_id</span></td><td>FK → auth.users.id (1:1)</td></tr>
+        <tr><td><span class="mono">slug</span></td><td>Eindeutiger URL-Schlüssel</td></tr>
+        <tr><td><span class="mono">company_name</span></td><td>Firmenname</td></tr>
+        <tr><td><span class="mono">notification_email</span></td><td>Lead-Benachrichtigungen</td></tr>
+        <tr><td><span class="mono">public_email</span></td><td>Öffentliche Kontakt-E-Mail</td></tr>
+        <tr><td><span class="mono">billing_model</span></td><td>free | pro | agency</td></tr>
+        <tr><td><span class="mono">is_active</span></td><td>Zugang aktiv/gesperrt</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <div class="cols cols-2">
+    <div>
+      <h3>funnels</h3>
+      <table>
+        <tr><th>Feld</th><th>Beschreibung</th></tr>
+        <tr><td><span class="mono">slug</span></td><td>URL-Slug des Funnels (PK)</td></tr>
+        <tr><td><span class="mono">tenant_id</span></td><td>FK → tenants.id</td></tr>
+        <tr><td><span class="mono">total_views</span></td><td>Kumulierte iFrame-Aufrufe</td></tr>
+        <tr><td><span class="mono">is_active</span></td><td>Nur aktive Funnels werden geladen</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3>submissions</h3>
+      <table>
+        <tr><th>Feld</th><th>Beschreibung</th></tr>
+        <tr><td><span class="mono">id</span></td><td>UUID</td></tr>
+        <tr><td><span class="mono">funnel_slug</span></td><td>FK → funnels.slug</td></tr>
+        <tr><td><span class="mono">contact_name / email / phone</span></td><td>Kontaktdaten des Leads</td></tr>
+        <tr><td><span class="mono">answers</span></td><td>JSON – Antworten auf Funnel-Fragen</td></tr>
+        <tr><td><span class="mono">customer_email_sent</span></td><td>Danke-Mail verschickt?</td></tr>
+        <tr><td><span class="mono">tenant_email_sent</span></td><td>Lead-Benachrichtigung verschickt?</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ WIDGET FLOW -->
+<div class="section">
+  <span class="section-label label-auth">Workflow 6</span>
+  <h2>Widget / iFrame – Besucher-Flow (öffentlich)</h2>
+
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-box box-page">
+        <span>Kunden-Website</span>
+        <span class="flow-sub">&lt;iframe src="/w/[slug]"&gt;</span>
+      </div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-supabase">
+        <span>getTenantConfig()</span>
+        <span class="flow-sub">Fragen + Farben laden</span>
+      </div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-action">
+        <span>Funnel ausfüllen</span>
+        <span class="flow-sub">Schritte 1–N</span>
+      </div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-page">
+        <span>/api/submit</span>
+        <span class="flow-sub">Honeypot-Check</span>
+      </div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-supabase">
+        <span>submissions INSERT</span>
+        <span class="flow-sub">Lead gespeichert</span>
+      </div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-email">
+        <span>2 E-Mails</span>
+        <span class="flow-sub">Danke + Lead-Info</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:16px;">
+    <strong>Kein Login nötig</strong> für Widget-Besucher. <span class="mono">/api/submit</span> verwendet den Service Key server-seitig. Honeypot-Feld: bei Auslösung → 200 zurück, aber <strong>kein DB-Eintrag</strong>. Höhen-Sync via <span class="mono">postMessage({type:'funnel-resize', height: X})</span>.
+  </div>
+</div>
+
+<p style="text-align:center;font-size:11px;color:#94a3b8;margin-top:32px;">Leadplug Workflows · Stand Mai 2026</p>
+
+</body>
+</html>

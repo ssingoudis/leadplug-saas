@@ -114,6 +114,12 @@ export default function LoginPage() {
           </svg>
           Mit Google anmelden
         </button>
+        <p className="text-center text-sm text-gray-400 mt-6">
+          Noch kein Konto?{' '}
+          <a href="/signup" className="text-indigo-600 font-medium hover:underline">
+            Registrieren
+          </a>
+        </p>
       </div>
     </div>
   )
