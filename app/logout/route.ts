@@ -1,14 +1,8 @@
-import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
 export async function GET() {
-  const cookieStore = await cookies()
-  cookieStore.set('site-auth', '', {
-    maxAge: 0,
-    path: '/',
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-  })
-  redirect('/locked')
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  redirect('/login')
 }

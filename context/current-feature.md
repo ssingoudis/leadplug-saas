@@ -27,6 +27,7 @@ Nur noch 2 aktive Tenants:
 
 ## History
 
+- **SaaS Phase 2 – Schritt 2: Supabase Auth** – `@supabase/ssr` installiert. `lib/supabase/client.ts` (Browser) + `server.ts` (SSR) erstellt. `middleware.ts` ersetzt `proxy.ts` — schützt `/admin` (Superadmin-Email via `SUPERADMIN_EMAIL`) + `/dashboard` (jeder eingeloggte User). `app/login/page.tsx` (Email/Passwort + Google OAuth), `app/auth/callback/route.ts` (OAuth-Code-Exchange), `app/logout/route.ts` auf Supabase `signOut()` umgestellt. `proxy.ts` + `app/locked/` gelöscht. Neue Env-Vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPERADMIN_EMAIL`. (`middleware.ts`, `lib/supabase/**`, `app/login/**`, `app/auth/**`, `app/logout/route.ts`, `.env.example`)
 - **SaaS Phase 2 – Schritt 1: /dashboard → /admin** – Superadmin-Bereich von `/dashboard` nach `/admin` umgezogen. Alle 18 Dateien in `app/dashboard/` nach `app/admin/` verschoben (git erkennt Renames), interne Links angepasst, `app/page.tsx` + `app/locked/page.tsx` + `proxy.ts` + `app/api/track-view/route.ts` aktualisiert. `/dashboard` ist jetzt frei für das Tenant-Portal (Schritt 4). (`app/admin/**`, `app/page.tsx`, `app/locked/page.tsx`, `proxy.ts`, `app/api/track-view/route.ts`)
 
 - **Aufgabe 15 – Design System** – `components/ui/` mit Card, Badge, Button, Input/Select, StatTile. Design-Token und Verwendungsregeln in `CLAUDE.md` (Abschnitt "Design System"). (`components/ui/Card.tsx`, `components/ui/Badge.tsx`, `components/ui/Button.tsx`, `components/ui/Input.tsx`, `components/ui/StatTile.tsx`, `CLAUDE.md`)
