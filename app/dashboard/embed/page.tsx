@@ -12,17 +12,51 @@ async function getFunnels() {
   return data ?? []
 }
 
+function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
+  return (
+    <div className="flex gap-4">
+      <div className="shrink-0 w-8 h-8 rounded-full bg-[#4648d4] text-white text-sm font-bold flex items-center justify-center mt-0.5">
+        {n}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-gray-900 mb-1">{title}</p>
+        <div className="text-sm text-gray-500">{children}</div>
+      </div>
+    </div>
+  )
+}
+
 export default async function EmbedPage() {
   const funnels = await getFunnels()
   const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://app.leadplug.de'
 
   return (
     <div className="flex flex-col gap-6">
-      <Card title="Embed-Code">
-        <p className="text-sm text-gray-400 mb-6">
-          Kopiere den Code und füge ihn auf deiner Website ein. Das Widget passt seine Höhe automatisch an.
-        </p>
 
+      {/* Anleitung */}
+      <Card title="So bindest du den Funnel ein">
+        <div className="flex flex-col gap-5 mt-2">
+          <Step n={1} title="Code kopieren">
+            Klicke unten auf <span className="font-medium text-gray-700">„Kopieren"</span> um den Embed-Code in die Zwischenablage zu übernehmen.
+          </Step>
+          <Step n={2} title="Code in deine Website einfügen">
+            Füge den Code an der Stelle ein, wo der Funnel auf deiner Seite erscheinen soll — direkt im HTML-Quellcode, z.&nbsp;B. in einem Custom-HTML-Block.
+            <p className="mt-2 text-xs text-gray-400">
+              Funktioniert auf jeder Website die HTML unterstützt: WordPress, Squarespace, Wix, Webflow, Jimdo und alle anderen.
+            </p>
+          </Step>
+          <Step n={3} title="Fertig">
+            Das Widget erscheint sofort und passt seine Höhe automatisch an den Inhalt an — kein weiteres Setup nötig.
+          </Step>
+
+          <div className="mt-1 rounded-xl bg-indigo-50 border border-indigo-100 px-4 py-3 text-sm text-indigo-700">
+            <span className="font-semibold">Tipp:</span> Platziere den Funnel prominent auf deiner Startseite oder einer dedizierten Anfrage-Seite — das steigert die Conversion deutlich.
+          </div>
+        </div>
+      </Card>
+
+      {/* Embed-Code */}
+      <Card title="Dein Embed-Code">
         {funnels.length === 0 ? (
           <p className="text-sm text-gray-400">Kein aktiver Funnel gefunden.</p>
         ) : (
@@ -38,6 +72,7 @@ export default async function EmbedPage() {
           </div>
         )}
       </Card>
+
     </div>
   )
 }
