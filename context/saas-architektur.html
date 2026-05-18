@@ -417,7 +417,7 @@
         <div class="pill pill-done">
           <span class="pill-name">Superadmin</span>
           <span class="pill-route">/admin/*</span>
-          <span class="pill-desc">Alle Tenants · Leads · Monitoring</span>
+          <span class="pill-desc">Alle Tenants · Leads · Monitoring · Funnel-Creator</span>
         </div>
       </div>
     </div>
@@ -702,6 +702,14 @@
           <span class="route-path">/admin</span>
           <span class="route-desc">Superadmin — alle Tenants, Leads, Monitoring</span>
         </div>
+        <div class="route-item route-item-done">
+          <span class="route-path">/admin/new</span>
+          <span class="route-desc">Funnel-Creator — neuen Tenant + Funnel + Fragen anlegen</span>
+        </div>
+        <div class="route-item route-item-done">
+          <span class="route-path">/admin/preview</span>
+          <span class="route-desc">Vorschau-Seite — rendert Funnel aus localStorage ohne DB-Schreibzugriff</span>
+        </div>
       </div>
     </div>
 
@@ -727,6 +735,10 @@
         <div class="route-item route-item-done">
           <span class="route-path">PATCH /api/account</span>
           <span class="route-desc">Tenant-Felder updaten via Admin-Client (company_name, notification_email)</span>
+        </div>
+        <div class="route-item route-item-done">
+          <span class="route-path">POST /api/admin/create-funnel</span>
+          <span class="route-desc">Service Key — Tenant + Funnel + Fragen atomisch anlegen (Admin-only)</span>
         </div>
         <div class="route-item route-item-pending">
           <span class="route-path">POST /api/stripe/checkout</span>
