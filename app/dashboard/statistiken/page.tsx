@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import StatTile from '@/components/ui/StatTile'
 import Card from '@/components/ui/Card'
-import MonthlyLeadsChart, { type MonthData } from './MonthlyLeadsChart'
+import type { MonthData } from './MonthlyLeadsChart'
 import DonutChart from './DonutChart'
 import MonthlyTable from './MonthlyTable'
 
@@ -35,7 +35,6 @@ async function getData() {
       .gte('viewed_at', since12.toISOString()),
   ])
 
-  // Build month keys for last 12 months
   const monthKeys: string[] = []
   for (let i = 11; i >= 0; i--) {
     const d = new Date()
@@ -64,62 +63,65 @@ async function getData() {
     views: viewMap.get(month) ?? 0,
   }))
 
-  // Only show months that have at least one lead
   const filledMonths = monthlyData.filter((m) => m.count > 0)
 
-  // Overall stats
-  const totalViews   = (funnels ?? []).reduce((s, f) => s + (f.total_views ?? 0), 0)
-  const totalLeads   = (submissions ?? []).length
-  const conversion   = totalViews > 0 ? Math.round((totalLeads / totalViews) * 100) : 0
-  const activeMonths = filledMonths.length
-  const avgPerMonth  = activeMonths > 0 ? Math.round(totalLeads / activeMonths) : 0
+  const totalViews            = (funnels ?? []).reduce((s, f) => s + (f.total_views ?? 0), 0)
+  const totalLeads            = (submissions ?? []).length
+  const conversion            = totalViews > 0 ? Math.round((totalLeads / totalViews) * 100) : 0
+  const activeMonths          = filledMonths.length
+  const avgPerMonth           = activeMonths > 0 ? Math.round(totalLeads / activeMonths) : 0
+  const submissionTimestamps  = (submissions ?? []).map((s) => s.created_at as string)
+  const viewLogTimestamps     = (viewLogs ?? []).map((v) => v.viewed_at as string)
 
-  return { filledMonths, totalViews, totalLeads, conversion, avgPerMonth }
+  return { filledMonths, totalViews, totalLeads, conversion, avgPerMonth, submissionTimestamps, viewLogTimestamps }
 }
 
 export default async function StatistikenPage() {
-  const { filledMonths, totalViews, totalLeads, conversion, avgPerMonth } = await getData()
+  const { filledMonths, totalViews, totalLeads, conversion, avgPerMonth, submissionTimestamps, viewLogTimestamps } = await getData()
+
+  if (filledMonths.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm px-6 py-12 text-center text-sm text-gray-400">
+        Noch keine Leads in den letzten 12 Monaten.
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-6">
 
-      {/* Monats-Chart */}
-      {filledMonths.length > 0
-        ? <MonthlyLeadsChart data={filledMonths} />
-        : (
-          <div className="bg-white rounded-2xl shadow-sm px-6 py-10 text-center text-sm text-gray-400">
-            Noch keine Leads in den letzten 12 Monaten.
+      {/* Gesamtstatistik */}
+      <Card title="Gesamtstatistik">
+        <div className="flex flex-col sm:flex-row gap-4 items-stretch">
+          <div className="grid grid-cols-2 gap-4 flex-1">
+            <StatTile value={totalLeads} label="Leads gesamt" />
+            <StatTile value={totalViews} label="Aufrufe gesamt" />
+            <StatTile value={avgPerMonth} label="Ø Leads / Monat" />
+            <StatTile value={filledMonths.length} label="Aktive Monate" />
           </div>
-        )
-      }
-
-      {/* Gesamt-Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 items-center">
-        <StatTile value={totalLeads} label="Leads gesamt" />
-        <StatTile value={totalViews} label="Aufrufe gesamt" />
-        <div className="bg-gray-50 rounded-xl px-3 py-3 flex flex-col items-center justify-center">
-          <DonutChart
-            value={totalLeads}
-            total={totalViews}
-            centerLabel={`${conversion} %`}
-            subLabel="Conversion"
-            size="md"
-          />
+          <div className="bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center sm:w-44">
+            <DonutChart
+              value={totalLeads}
+              total={totalViews}
+              centerLabel={`${conversion} %`}
+              subLabel="Conversion"
+              tooltipLabel={`${totalLeads} Leads / ${totalViews} Aufrufe`}
+              size="md"
+            />
+          </div>
         </div>
-        <StatTile value={avgPerMonth} label="Ø Leads / Monat" />
-        <StatTile value={filledMonths.length} label="Aktive Monate" />
-      </div>
+      </Card>
 
       {/* Monatstabelle */}
-      {filledMonths.length > 0 && (
-        <Card title="Leads pro Monat">
-          <MonthlyTable data={[...filledMonths].reverse()} totalLeads={totalLeads} />
-        </Card>
-      )}
-
-      <p className="text-xs text-gray-400 text-center -mt-2">
-        Gesamtaufrufe werden kumulativ gezählt · Monatliche Aufrufe werden ab Aktivierung der Log-Tabelle erfasst
-      </p>
+      <div>
+        <h2 className="text-base font-bold text-gray-900 mb-4">Statistik pro Monat</h2>
+        <MonthlyTable
+          data={[...filledMonths].reverse()}
+          totalLeads={totalLeads}
+          submissionTimestamps={submissionTimestamps}
+          viewLogTimestamps={viewLogTimestamps}
+        />
+      </div>
 
     </div>
   )

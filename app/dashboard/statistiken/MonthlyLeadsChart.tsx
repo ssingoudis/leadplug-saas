@@ -10,6 +10,7 @@ export type MonthData = {
 const DE_MONTHS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
 
 function fmtMonth(ym: string) {
+  if (!ym || ym.startsWith('_')) return ''
   const [, m] = ym.split('-')
   return DE_MONTHS[parseInt(m, 10) - 1]
 }
@@ -26,12 +27,19 @@ function niceTicks(max: number): number[] {
   return [0, mid, max]
 }
 
+const MIN_COLS = 6
+
 export default function MonthlyLeadsChart({ data }: { data: MonthData[] }) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
 
-  const max   = Math.max(...data.map((d) => d.count), 1)
+  // Pad to at least MIN_COLS columns so single bars don't span full width
+  const padded: MonthData[] = data.length < MIN_COLS
+    ? [...data, ...Array(MIN_COLS - data.length).fill(null).map((_, i) => ({ month: `_pad_${i}`, count: 0 }))]
+    : data
+
+  const max   = Math.max(...padded.map((d) => d.count), 1)
   const total = data.reduce((s, d) => s + d.count, 0)
-  const ticks = niceTicks(Math.max(...data.map((d) => d.count)))
+  const ticks = niceTicks(Math.max(...padded.map((d) => d.count)))
 
   return (
     <div className="bg-white rounded-2xl shadow-sm px-6 pt-6 pb-5">
@@ -59,15 +67,16 @@ export default function MonthlyLeadsChart({ data }: { data: MonthData[] }) {
           ))}
 
           <div className="flex items-end gap-1 h-full relative">
-            {data.map((d, i) => {
-              const hovered = hoveredIdx === i
+            {padded.map((d, i) => {
+              const isPad  = d.month.startsWith('_')
+              const hovered = !isPad && hoveredIdx === i
               const barPct  = d.count > 0 ? Math.max((d.count / max) * 100, 8) : 0
 
               return (
                 <div
                   key={d.month}
                   className="relative flex flex-1 flex-col items-center justify-end h-full cursor-default"
-                  onMouseEnter={() => setHoveredIdx(i)}
+                  onMouseEnter={() => !isPad && setHoveredIdx(i)}
                   onMouseLeave={() => setHoveredIdx(null)}
                 >
                   {hovered && (
@@ -92,7 +101,7 @@ export default function MonthlyLeadsChart({ data }: { data: MonthData[] }) {
 
       {/* X-Achse */}
       <div className="flex mt-1.5 pl-8">
-        {data.map((d) => (
+        {padded.map((d) => (
           <div key={d.month} className="flex-1 flex items-center justify-center">
             <span className="text-[10px] text-gray-400 leading-tight">{fmtMonth(d.month)}</span>
           </div>

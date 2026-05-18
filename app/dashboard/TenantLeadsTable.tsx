@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import Badge from '@/components/ui/Badge'
+import { Input, Select } from '@/components/ui/Input'
 
 type QuestionMeta = {
   question_key: string
@@ -23,6 +24,11 @@ export type TenantSubmission = {
   tenant_email_sent: boolean
   questions: QuestionMeta[]
 }
+
+const DE_MONTHS = [
+  'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+  'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
+]
 
 function resolveAnswer(key: string, val: string, questions: QuestionMeta[]): string {
   const q = questions.find((q) => q.question_key === key)
@@ -88,65 +94,114 @@ function ExpandedDetail({ s }: { s: TenantSubmission }) {
 }
 
 export default function TenantLeadsTable({ submissions }: { submissions: TenantSubmission[] }) {
-  const [openId, setOpenId] = useState<string | null>(null)
+  const [openId, setOpenId]         = useState<string | null>(null)
+  const [query, setQuery]           = useState('')
+  const [monthFilter, setMonthFilter] = useState('')
 
-  if (submissions.length === 0) {
-    return (
-      <p className="text-sm text-gray-400 text-center py-6">
-        Noch keine Leads eingegangen.
-      </p>
-    )
-  }
+  const monthOptions = useMemo(() => {
+    const seen = Array.from(new Set(submissions.map((s) => s.created_at.slice(0, 7))))
+      .sort()
+      .reverse()
+      .map((m) => {
+        const [y, mo] = m.split('-')
+        return { value: m, label: `${DE_MONTHS[parseInt(mo, 10) - 1]} ${y}` }
+      })
+    return [{ value: '', label: 'Alle Monate' }, ...seen]
+  }, [submissions])
+
+  const filtered = useMemo(() => {
+    return submissions.filter((s) => {
+      if (monthFilter && s.created_at.slice(0, 7) !== monthFilter) return false
+      if (query) {
+        const q = query.toLowerCase()
+        if (
+          !(s.contact_name ?? '').toLowerCase().includes(q) &&
+          !(s.contact_email ?? '').toLowerCase().includes(q) &&
+          !(s.contact_phone ?? '').toLowerCase().includes(q)
+        ) return false
+      }
+      return true
+    })
+  }, [submissions, query, monthFilter])
 
   return (
-    <div className="rounded-xl overflow-hidden border border-gray-100 -mx-6 -mb-6">
-      {submissions.map((s, idx) => {
-        const isOpen = openId === s.id
-        const isLast = idx === submissions.length - 1
+    <div>
+      {/* Header: Titel + Filter in einer Zeile */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+        <h2 className="text-base font-bold text-gray-900 shrink-0">
+          Leads ({submissions.length})
+        </h2>
+        <div className="flex gap-3 flex-1 sm:justify-end">
+          <Input
+            value={query}
+            onChange={setQuery}
+            placeholder="Suchen…"
+            className="flex-1 sm:max-w-xs"
+          />
+          <Select
+            value={monthFilter}
+            onChange={setMonthFilter}
+            options={monthOptions}
+            className="shrink-0 sm:w-44"
+          />
+        </div>
+      </div>
 
-        return (
-          <div key={s.id} className={!isLast ? 'border-b border-gray-100' : ''}>
-            <div
-              onClick={() => setOpenId(isOpen ? null : s.id)}
-              className={`flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors ${isOpen ? 'bg-indigo-50' : 'bg-white hover:bg-gray-50'}`}
-            >
-              {/* Datum */}
-              <div className="w-24 shrink-0">
-                <p className="text-sm text-gray-500">
-                  {new Date(s.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })}
-                </p>
-                <p className="text-xs text-gray-400">
-                  {new Date(s.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
-                </p>
+      {filtered.length === 0 ? (
+        <p className="text-sm text-gray-400 text-center py-6">
+          {submissions.length === 0 ? 'Noch keine Leads eingegangen.' : 'Keine Ergebnisse für diese Filter.'}
+        </p>
+      ) : (
+        <div className="rounded-xl overflow-hidden border border-gray-100 -mx-6 -mb-6">
+          {filtered.map((s, idx) => {
+            const isOpen = openId === s.id
+            const isLast = idx === filtered.length - 1
+
+            return (
+              <div key={s.id} className={!isLast ? 'border-b border-gray-100' : ''}>
+                <div
+                  onClick={() => setOpenId(isOpen ? null : s.id)}
+                  className={`flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors ${isOpen ? 'bg-indigo-50' : 'bg-white hover:bg-gray-50'}`}
+                >
+                  {/* Datum */}
+                  <div className="w-24 shrink-0">
+                    <p className="text-sm text-gray-500">
+                      {new Date(s.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(s.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
+                    </p>
+                  </div>
+
+                  {/* Kontakt */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">
+                      {[s.contact_anrede, s.contact_name].filter(Boolean).join(' ')}
+                    </p>
+                    <p className="text-xs text-gray-400 truncate">{s.contact_email}</p>
+                  </div>
+
+                  {/* Badges */}
+                  <div className="hidden sm:flex gap-1.5 shrink-0">
+                    <Badge variant={s.customer_email_sent ? 'green' : 'red'}>
+                      Kunde {s.customer_email_sent ? '✓' : '✗'}
+                    </Badge>
+                    <Badge variant={s.tenant_email_sent ? 'green' : 'red'}>
+                      Info {s.tenant_email_sent ? '✓' : '✗'}
+                    </Badge>
+                  </div>
+
+                  <div className={`shrink-0 transition-colors ${isOpen ? 'text-indigo-400' : 'text-gray-300'}`}>
+                    {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </div>
+                </div>
+
+                {isOpen && <ExpandedDetail s={s} />}
               </div>
-
-              {/* Kontakt */}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 truncate">
-                  {[s.contact_anrede, s.contact_name].filter(Boolean).join(' ')}
-                </p>
-                <p className="text-xs text-gray-400 truncate">{s.contact_email}</p>
-              </div>
-
-              {/* Badges */}
-              <div className="hidden sm:flex gap-1.5 shrink-0">
-                <Badge variant={s.customer_email_sent ? 'green' : 'red'}>
-                  Kunde {s.customer_email_sent ? '✓' : '✗'}
-                </Badge>
-                <Badge variant={s.tenant_email_sent ? 'green' : 'red'}>
-                  Info {s.tenant_email_sent ? '✓' : '✗'}
-                </Badge>
-              </div>
-
-              <div className={`shrink-0 transition-colors ${isOpen ? 'text-indigo-400' : 'text-gray-300'}`}>
-                {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              </div>
-            </div>
-
-            {isOpen && <ExpandedDetail s={s} />}
-          </div>
-        )
-      })}
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

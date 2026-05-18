@@ -34,8 +34,9 @@ export default async function EmbedPage() {
     <div className="flex flex-col gap-6">
 
       {/* Anleitung */}
-      <Card title="So bindest du den Funnel ein">
-        <div className="flex flex-col gap-5 mt-2">
+      <Card>
+        <h2 className="text-base font-bold text-gray-900 mb-5">So bindest du den Funnel ein</h2>
+        <div className="flex flex-col gap-5">
           <Step n={1} title="Code kopieren">
             Klicke unten auf <span className="font-medium text-gray-700">„Kopieren"</span> um den Embed-Code in die Zwischenablage zu übernehmen.
           </Step>

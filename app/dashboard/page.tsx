@@ -99,7 +99,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Leads */}
-      <Card title={`Leads (${enrichedSubmissions.length})`}>
+      <Card>
         <TenantLeadsTable submissions={enrichedSubmissions} />
       </Card>
     </div>

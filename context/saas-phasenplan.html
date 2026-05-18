@@ -74,6 +74,19 @@
     .phase-2 .phase-when { color: #d97706; }
     .phase-3 .phase-when { color: #7c3aed; }
 
+    /* Status badge in header */
+    .phase-badge {
+      margin-left: auto;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 99px;
+      white-space: nowrap;
+    }
+    .phase-badge-done     { background: #dcfce7; color: #15803d; }
+    .phase-badge-progress { background: #fef3c7; color: #b45309; }
+    .phase-badge-todo     { background: #f1f5f9; color: #94a3b8; }
+
     /* Task grid */
     .tasks { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #f1f5f9; }
 
@@ -84,9 +97,13 @@
       gap: 12px;
       align-items: flex-start;
     }
+    .task-done {
+      background: #f0fdf4;
+    }
     .task-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
     .task-name   { font-size: 13px; font-weight: 700; display: block; margin-bottom: 3px; }
     .task-detail { font-size: 12px; color: #64748b; line-height: 1.55; }
+    .task-done .task-name   { color: #15803d; }
 
     /* Connector between phases */
     .connector {
@@ -142,36 +159,37 @@
       <div class="phase-num">1</div>
       <div>
         <div class="phase-title">Erste echte Kunden</div>
-        <div class="phase-when">Jetzt — sofort einsatzbereit</div>
+        <div class="phase-when">✓ Vollständig abgeschlossen</div>
       </div>
+      <span class="phase-badge phase-badge-done">✓ Abgeschlossen</span>
     </div>
     <div class="tasks">
-      <div class="task">
+      <div class="task task-done">
         <span class="task-icon">✅</span>
         <div>
           <span class="task-name">Widget läuft</span>
           <span class="task-detail">Funnel per iFrame einbettbar, alle Branchentypen und Fragetypen verfügbar</span>
         </div>
       </div>
-      <div class="task">
+      <div class="task task-done">
         <span class="task-icon">✅</span>
         <div>
           <span class="task-name">E-Mail-Flow</span>
           <span class="task-detail">Kunden-Bestätigung + Lead-Benachrichtigung via Resend</span>
         </div>
       </div>
-      <div class="task">
-        <span class="task-icon">🖊</span>
+      <div class="task task-done">
+        <span class="task-icon">✅</span>
         <div>
           <span class="task-name">Manuelles Setup</span>
           <span class="task-detail">Tenant und Funnel direkt per SQL in Supabase anlegen</span>
         </div>
       </div>
-      <div class="task">
-        <span class="task-icon">📊</span>
+      <div class="task task-done">
+        <span class="task-icon">✅</span>
         <div>
           <span class="task-name">Admin-Dashboard</span>
-          <span class="task-detail">Leads, Statistiken, Conversion-Rate, E-Mail-Status im Blick</span>
+          <span class="task-detail">Leads, Statistiken, Conversion-Rate, E-Mail-Status im Blick — /admin vollständig</span>
         </div>
       </div>
     </div>
@@ -185,22 +203,23 @@
       <div class="phase-num">2</div>
       <div>
         <div class="phase-title">SaaS-Infrastruktur</div>
-        <div class="phase-when">ca. 5–7 Tage mit KI-Entwicklung</div>
+        <div class="phase-when">3 von 4 Aufgaben erledigt — Stripe offen</div>
       </div>
+      <span class="phase-badge phase-badge-progress">3 / 4 erledigt</span>
     </div>
     <div class="tasks">
-      <div class="task">
-        <span class="task-icon">🔐</span>
+      <div class="task task-done">
+        <span class="task-icon">✅</span>
         <div>
           <span class="task-name">Supabase Auth</span>
-          <span class="task-detail">Login per E-Mail, Google OAuth, Apple OAuth — Tenants selbstständig</span>
+          <span class="task-detail">Login per E-Mail, Google OAuth — Tenants selbstständig einloggbar</span>
         </div>
       </div>
-      <div class="task">
-        <span class="task-icon">🛡</span>
+      <div class="task task-done">
+        <span class="task-icon">✅</span>
         <div>
           <span class="task-name">Row Level Security</span>
-          <span class="task-detail">Jeder Tenant sieht ausschließlich seine eigenen Daten</span>
+          <span class="task-detail">Jeder Tenant sieht ausschließlich seine eigenen Daten via RLS-Policies</span>
         </div>
       </div>
       <div class="task">
@@ -210,11 +229,11 @@
           <span class="task-detail">Checkout, Webhook-Handler, automatisches Abo-Management</span>
         </div>
       </div>
-      <div class="task">
-        <span class="task-icon">🏠</span>
+      <div class="task task-done">
+        <span class="task-icon">✅</span>
         <div>
           <span class="task-name">Tenant Portal</span>
-          <span class="task-detail">Leads einsehen, Embed-Code kopieren, Account verwalten</span>
+          <span class="task-detail">Leads mit Suche/Filter, Statistiken pro Monat mit Charts, Embed-Code kopieren</span>
         </div>
       </div>
     </div>
@@ -230,6 +249,7 @@
         <div class="phase-title">Self-Service Editor</div>
         <div class="phase-when">3–6 Wochen — vollständiges No-Code-Produkt</div>
       </div>
+      <span class="phase-badge phase-badge-todo">Noch ausstehend</span>
     </div>
     <div class="tasks">
       <div class="task">
@@ -267,9 +287,9 @@
 
 <div class="legend">
   <strong>Phasen:</strong>
-  <div class="legend-item"><div class="ld" style="background: #22c55e;"></div> Phase 1 — Jetzt</div>
-  <div class="legend-item"><div class="ld" style="background: #f59e0b;"></div> Phase 2 — SaaS-Infrastruktur</div>
-  <div class="legend-item"><div class="ld" style="background: #8b5cf6;"></div> Phase 3 — Self-Service Editor</div>
+  <div class="legend-item"><div class="ld" style="background: #22c55e;"></div> Phase 1 — Abgeschlossen</div>
+  <div class="legend-item"><div class="ld" style="background: #f59e0b;"></div> Phase 2 — 3/4 erledigt</div>
+  <div class="legend-item"><div class="ld" style="background: #8b5cf6;"></div> Phase 3 — Ausstehend</div>
 </div>
 
 </body>
