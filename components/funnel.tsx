@@ -562,39 +562,46 @@ export function Funnel({
                                 : handleSelect(currentQuestion.id, option.value)
                             }
                             className={cn(
-                              "flex flex-col items-center justify-center min-h-24 p-4 transition-all duration-200 cursor-pointer",
+                              "relative flex flex-col items-center justify-center min-h-24 p-4 cursor-pointer outline-none",
+                              "transition-all duration-300 active:scale-90 active:duration-200 sm:hover:scale-105",
                               colSpan,
                             )}
                             style={{
                               borderRadius:    theme.borderRadius,
-                              backgroundColor: isSelected ? theme.primaryColor : theme.backgroundColor,
-                              border:          `2px solid ${isSelected ? theme.primaryColor : "transparent"}`,
-                              boxShadow:       isSelected ? `0 4px 16px ${theme.primaryColor}40` : "0 1px 3px rgba(0,0,0,0.07), 0 3px 10px rgba(0,0,0,0.07)",
-                            }}
-                            onMouseEnter={(e) => {
-                              if (!isSelected) {
-                                e.currentTarget.style.border     = `2px solid ${theme.primaryColor}`;
-                                e.currentTarget.style.boxShadow  = "0 2px 6px rgba(0,0,0,0.10), 0 6px 20px rgba(0,0,0,0.12)";
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (!isSelected) {
-                                e.currentTarget.style.border     = "2px solid transparent";
-                                e.currentTarget.style.boxShadow  = "0 1px 3px rgba(0,0,0,0.07), 0 3px 10px rgba(0,0,0,0.07)";
-                              }
+                              backgroundColor: theme.primaryColor,
+                              border:          "2px solid transparent",
+                              boxShadow:       "0 2px 8px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08)",
                             }}
                           >
-                            <div className="mb-3 shrink-0">
+                            {/* Checkmark — nur bei multiple_choice + selected */}
+                            {isMultiple && isSelected && (
+                              <div
+                                className="absolute top-2 right-2 z-30 w-6 h-6 rounded-full flex items-center justify-center"
+                                style={{ backgroundColor: "#ffffff" }}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                  <path
+                                    d="M2 6l3 3 5-5"
+                                    stroke={theme.primaryColor}
+                                    strokeWidth="2.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              </div>
+                            )}
+
+                            <div className="mb-3 shrink-0 relative z-20">
                               {renderIcon(
                                 option.iconKey,
                                 option.iconUrl,
-                                isSelected ? "#ffffff" : theme.primaryColor,
+                                "#ffffff",
                                 44,
                               )}
                             </div>
                             <span
-                              className="text-xs font-medium text-center leading-tight px-1"
-                              style={{ color: isSelected ? "#ffffff" : theme.textColor }}
+                              className="text-xs font-medium text-center leading-tight px-1 relative z-20"
+                              style={{ color: "#ffffff" }}
                             >
                               {option.label}
                             </span>
@@ -829,7 +836,7 @@ export function Funnel({
                     backgroundColor: theme.primaryColor,
                     borderRadius:    theme.borderRadius,
                     cursor:          isValid ? "pointer" : "not-allowed",
-                    opacity:         isValid ? 1 : 0.5,
+                    opacity:         isValid ? 1 : 0.65,
                   }}
                   onMouseEnter={(e) => {
                     if (isValid) e.currentTarget.style.backgroundColor = theme.primaryColorHover;
