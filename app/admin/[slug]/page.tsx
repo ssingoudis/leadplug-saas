@@ -142,18 +142,20 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
           <div className="bg-white rounded-2xl shadow-sm p-6">
             <h2 className="text-base font-bold text-gray-900 mb-3">Kunde</h2>
 
-            <Row label="Firma" value={tenant.company_name} />
+            <Row label="Firmenname" value={tenant.company_name} />
             <Row label="Öffentliche E-Mail" value={tenant.public_email} />
-            <Row label="Benachrichtigung" value={tenant.notification_email} />
+            <Row label="Lead-Benachrichtigung (E-Mail)" value={tenant.notification_email} />
             <Row label="Telefon" value={tenant.public_phone} />
             <Row label="Adresse" value={tenant.address} />
             <Row label="Website" value={tenant.website} />
-            <Row label="Billing" value={
+            <Row label="Abrechnungsmodell" value={
               tenant.billing_model === 'per_lead'
-                ? `Per Lead · ${tenant.lead_price} € / Lead`
+                ? `Pro Lead · ${tenant.lead_price} € / Lead`
                 : tenant.billing_model === 'per_month'
-                  ? `Per Month${tenant.billing_price != null ? ` · ${tenant.billing_price} €` : ''}`
-                  : `Per Year${tenant.billing_price != null ? ` · ${tenant.billing_price} €` : ''}`
+                  ? `Pro Monat${tenant.billing_price != null ? ` · ${tenant.billing_price} €` : ''}`
+                  : tenant.billing_model === 'per_year'
+                    ? `Pro Jahr${tenant.billing_price != null ? ` · ${tenant.billing_price} €` : ''}`
+                    : 'Kostenlos'
             } />
 
             {/* Stats: Aufrufe · Leads · Conversion */}
@@ -178,13 +180,13 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
           {/* Funnel config */}
           <div className="bg-white rounded-2xl shadow-sm p-6">
             <h2 className="text-base font-bold text-gray-900 mb-3">Funnel-Konfiguration</h2>
-            <Row label="funnel_title" value={funnel.funnel_title} />
-            <Row label="submit_button_label" value={funnel.submit_button_label} />
-            <Row label="success_message" value={funnel.success_message} />
-            <Row label="response_message" value={funnel.response_message} />
-            <Row label="contact_form_subtitle" value={funnel.contact_form_subtitle} />
-            <Row label="privacy_policy_url" value={funnel.privacy_policy_url} />
-            <Row label="email_sender_local" value={funnel.email_sender_local} />
+            <Row label="Funnel-Titel" value={funnel.funnel_title} />
+            <Row label="Kontaktformular-Untertitel" value={funnel.contact_form_subtitle} />
+            <Row label="Button-Beschriftung" value={funnel.submit_button_label} />
+            <Row label="Erfolgsmeldung" value={funnel.success_message} />
+            <Row label="Antwortzeit-Text" value={funnel.response_message} />
+            <Row label="Datenschutz-URL" value={funnel.privacy_policy_url} />
+            <Row label="E-Mail-Absender-Präfix" value={funnel.email_sender_local} />
           </div>
 
           {/* Theme */}
@@ -199,11 +201,11 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
               <ColorSwatch color={funnel.text_color} />
             </div>
             <div className="flex flex-col sm:flex-row sm:gap-4 py-2 border-b border-gray-100">
-              <span className="text-xs sm:text-sm text-gray-400 sm:text-gray-500 sm:w-44 sm:shrink-0">Hintergrund</span>
+              <span className="text-xs sm:text-sm text-gray-400 sm:text-gray-500 sm:w-44 sm:shrink-0">Widget-Hintergrund</span>
               <ColorSwatch color={funnel.background_color} />
             </div>
             <div className="flex flex-col sm:flex-row sm:gap-4 py-2 border-b border-gray-100">
-              <span className="text-xs sm:text-sm text-gray-400 sm:text-gray-500 sm:w-44 sm:shrink-0">Seiten-BG</span>
+              <span className="text-xs sm:text-sm text-gray-400 sm:text-gray-500 sm:w-44 sm:shrink-0">Seiten-Hintergrund</span>
               <ColorSwatch color={funnel.page_background_color} />
             </div>
             <Row label="Font" value={funnel.font} />

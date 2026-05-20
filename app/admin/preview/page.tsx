@@ -31,7 +31,7 @@ function buildQuestions(raw: any[]): QuestionConfig[] {
         ? (q.options ?? []).filter((o: any) => o.label?.trim()).map((o: any) => ({
             label: o.label,
             value: o.value || toKey(o.label),
-            iconKey: '',
+            iconKey: o.icon_key || '',
           }))
         : [],
       config: q.question_type === 'slider'
@@ -57,8 +57,13 @@ export default function PreviewPage() {
     const { form, questions: rawQ } = JSON.parse(stored)
 
     setTheme({
-      primaryColor: form.primary_color || '#4648d4',
-      font: form.font || 'system',
+      primaryColor:        form.primary_color         || '#4648d4',
+      textColor:           form.text_color            || undefined,
+      backgroundColor:     form.background_color      || undefined,
+      pageBackgroundColor: form.page_background_color || undefined,
+      font:                form.font                  || 'system',
+      borderRadius:        form.border_radius         || undefined,
+      maxWidth:            form.max_width             || undefined,
     })
     setFunnel({
       title: form.funnel_title || 'Jetzt kostenloses Angebot anfordern',
@@ -93,7 +98,7 @@ export default function PreviewPage() {
           Schließen
         </button>
       </div>
-      <div className="max-w-2xl mx-auto pt-8 px-4 pb-16">
+      <div className="w-full pt-8 px-4 pb-16">
         <Funnel
           theme={theme}
           funnel={funnel}

@@ -50,7 +50,12 @@ type Form = {
   funnel_slug: string
 
   primary_color: string
+  text_color: string
+  background_color: string
+  page_background_color: string
   font: string
+  border_radius: string
+  max_width: string
   funnel_title: string
   submit_button_label: string
   success_message: string
@@ -115,6 +120,7 @@ export default function NewFunnelPage() {
     company_name: '', tenant_slug: '', public_email: '', notification_email: '',
     public_phone: '', website: '', billing_model: 'per_month', lead_price: '3',
     billing_price: '', funnel_slug: '', primary_color: '#4648d4',
+    text_color: '', background_color: '', page_background_color: '', border_radius: '', max_width: '',
     font: 'system', funnel_title: '', submit_button_label: '', success_message: '',
     response_message: '', contact_form_subtitle: '', privacy_policy_url: '',
     email_sender_local: '',
@@ -205,7 +211,12 @@ export default function NewFunnelPage() {
           slug: form.funnel_slug,
           tenant_slug: form.tenant_slug,
           primary_color: form.primary_color || null,
+          text_color: form.text_color || null,
+          background_color: form.background_color || null,
+          page_background_color: form.page_background_color || null,
           font: form.font || null,
+          border_radius: form.border_radius || null,
+          max_width: form.max_width || null,
           funnel_title: form.funnel_title || null,
           submit_button_label: form.submit_button_label || null,
           success_message: form.success_message || null,
@@ -248,6 +259,7 @@ export default function NewFunnelPage() {
     { value: 'per_month', label: 'Pro Monat (Flatrate)' },
     { value: 'per_year', label: 'Pro Jahr (Flatrate)' },
     { value: 'per_lead', label: 'Pro Lead' },
+    { value: 'free', label: 'Kostenlos' },
   ]
 
   const fontOptions = [
@@ -324,13 +336,15 @@ export default function NewFunnelPage() {
               </Field>
             </Grid>
             <Grid>
-              <Field label="Billing-Modell">
+              <Field label="Abrechnungsmodell">
                 <SelectNative value={form.billing_model} onChange={set('billing_model')} options={billingOptions} />
               </Field>
               {form.billing_model === 'per_lead' ? (
                 <Field label="Preis pro Lead (€)">
                   <Input value={form.lead_price} onChange={set('lead_price')} placeholder="3.00" type="number" />
                 </Field>
+              ) : form.billing_model === 'free' ? (
+                <div />
               ) : (
                 <Field label={form.billing_model === 'per_year' ? 'Jahrespreis (€)' : 'Monatspreis (€)'}>
                   <Input value={form.billing_price} onChange={set('billing_price')} placeholder="99.00" type="number" />
@@ -351,32 +365,64 @@ export default function NewFunnelPage() {
                   placeholder="muster-solar"
                 />
               </Field>
-              <Field label="Primärfarbe">
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    value={form.primary_color}
-                    onChange={e => set('primary_color')(e.target.value)}
-                    className="h-9 w-14 rounded-lg border border-gray-300 p-0.5 cursor-pointer bg-white shadow-sm"
-                  />
-                  <Input value={form.primary_color} onChange={set('primary_color')} placeholder="#4648d4" />
-                </div>
-              </Field>
-            </Grid>
-            <Grid>
-              <Field label="Font">
-                <SelectNative value={form.font} onChange={set('font')} options={fontOptions} />
-              </Field>
               <Field label="E-Mail-Absender-Präfix">
                 <Input value={form.email_sender_local} onChange={set('email_sender_local')} placeholder="z.B. muster-solar" />
               </Field>
             </Grid>
 
             <div className="border-t border-gray-100 pt-4 mt-1">
+              <p className="text-xs font-medium text-gray-400 mb-3 uppercase tracking-wide">Theme (optional — Defaults werden verwendet wenn leer)</p>
+              <div className="flex flex-col gap-4 mb-4">
+                <Field label="Font">
+                  <SelectNative value={form.font} onChange={set('font')} options={fontOptions} />
+                </Field>
+                <Grid>
+                  <Field label="Primärfarbe">
+                    <div className="flex gap-2">
+                      <input type="color" value={form.primary_color} onChange={e => set('primary_color')(e.target.value)} className="h-9 w-14 rounded-lg border border-gray-300 p-0.5 cursor-pointer bg-white shadow-sm" />
+                      <Input value={form.primary_color} onChange={set('primary_color')} placeholder="#4648d4" />
+                    </div>
+                  </Field>
+                  <Field label="Textfarbe">
+                    <div className="flex gap-2">
+                      <input type="color" value={form.text_color || '#1f2937'} onChange={e => set('text_color')(e.target.value)} className="h-9 w-14 rounded-lg border border-gray-300 p-0.5 cursor-pointer bg-white shadow-sm" />
+                      <Input value={form.text_color} onChange={set('text_color')} placeholder="#1f2937" />
+                    </div>
+                  </Field>
+                </Grid>
+                <Grid>
+                  <Field label="Widget-Hintergrund">
+                    <div className="flex gap-2">
+                      <input type="color" value={form.background_color || '#ffffff'} onChange={e => set('background_color')(e.target.value)} className="h-9 w-14 rounded-lg border border-gray-300 p-0.5 cursor-pointer bg-white shadow-sm" />
+                      <Input value={form.background_color} onChange={set('background_color')} placeholder="#ffffff" />
+                    </div>
+                  </Field>
+                  <Field label="Seiten-Hintergrund">
+                    <div className="flex gap-2">
+                      <input type="color" value={form.page_background_color || '#f3f4f6'} onChange={e => set('page_background_color')(e.target.value)} className="h-9 w-14 rounded-lg border border-gray-300 p-0.5 cursor-pointer bg-white shadow-sm" />
+                      <Input value={form.page_background_color} onChange={set('page_background_color')} placeholder="#f3f4f6" />
+                    </div>
+                  </Field>
+                </Grid>
+                <Grid>
+                  <Field label="Border-Radius">
+                    <Input value={form.border_radius} onChange={set('border_radius')} placeholder="0.5rem" />
+                  </Field>
+                  <Field label="Max-Breite">
+                    <Input value={form.max_width} onChange={set('max_width')} placeholder="720px" />
+                  </Field>
+                </Grid>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-100 pt-4 mt-1">
               <p className="text-xs font-medium text-gray-400 mb-3 uppercase tracking-wide">Texte (optional — Defaults werden verwendet wenn leer)</p>
               <div className="flex flex-col gap-4">
                 <Field label="Funnel-Titel">
                   <Input value={form.funnel_title} onChange={set('funnel_title')} placeholder="Jetzt kostenloses Angebot anfordern" />
+                </Field>
+                <Field label="Kontaktformular-Untertitel">
+                  <Input value={form.contact_form_subtitle} onChange={set('contact_form_subtitle')} placeholder="Wer soll das Angebot erhalten?" />
                 </Field>
                 <Field label="Button-Beschriftung">
                   <Input value={form.submit_button_label} onChange={set('submit_button_label')} placeholder="Anfrage absenden" />
@@ -387,14 +433,9 @@ export default function NewFunnelPage() {
                 <Field label="Antwortzeit-Text">
                   <Input value={form.response_message} onChange={set('response_message')} placeholder="Wir melden uns so schnell wie möglich bei Ihnen." />
                 </Field>
-                <Grid>
-                  <Field label="Kontaktformular-Untertitel">
-                    <Input value={form.contact_form_subtitle} onChange={set('contact_form_subtitle')} placeholder="Wer soll das Angebot erhalten?" />
-                  </Field>
-                  <Field label="Datenschutz-URL">
-                    <Input value={form.privacy_policy_url} onChange={set('privacy_policy_url')} placeholder="https://firma.de/datenschutz" />
-                  </Field>
-                </Grid>
+                <Field label="Datenschutz-URL">
+                  <Input value={form.privacy_policy_url} onChange={set('privacy_policy_url')} placeholder="https://firma.de/datenschutz" />
+                </Field>
               </div>
             </div>
           </div>
