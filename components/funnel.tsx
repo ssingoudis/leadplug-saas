@@ -57,7 +57,7 @@ const THEME_DEFAULTS = {
   pageBackgroundColor: "transparent",
   font:                "system" as FunnelFont,
   borderRadius:        "0.5rem",
-  maxWidth:            "none",
+  maxWidth:            "720px",
 };
 
 const SYSTEM_FONT =
