@@ -3,7 +3,7 @@
 import { ChevronDown } from 'lucide-react'
 
 const baseClass =
-  'w-full rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 placeholder-gray-400 shadow-sm outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-400 transition'
+  'w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 shadow-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition'
 
 interface InputProps {
   value: string
@@ -49,7 +49,7 @@ export function Select({ value, onChange, options, className = '' }: SelectProps
           <option key={o.value} value={o.value}>{o.label}</option>
         ))}
       </select>
-      <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
     </div>
   )
 }

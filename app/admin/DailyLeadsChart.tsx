@@ -33,10 +33,10 @@ export default function DailyLeadsChart({ data }: { data: DayData[] }) {
   const ticks = niceTicks(Math.max(...data.map((d) => d.count)))
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm px-6 pt-6 pb-5">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm px-6 pt-6 pb-5">
       <div className="flex items-baseline justify-between mb-5">
-        <h2 className="text-base font-bold text-gray-900">Leads der letzten 14 Tage</h2>
-        <span className="text-sm text-gray-400">{total} Lead{total !== 1 ? 's' : ''}</span>
+        <h2 className="text-base font-bold text-gray-900 dark:text-white">Leads der letzten 14 Tage</h2>
+        <span className="text-sm text-gray-400 dark:text-gray-500">{total} Lead{total !== 1 ? 's' : ''}</span>
       </div>
 
       <div className="flex gap-3">
@@ -55,7 +55,7 @@ export default function DailyLeadsChart({ data }: { data: DayData[] }) {
           {ticks.map((t) => (
             <div
               key={t}
-              className="absolute left-0 right-0 border-t border-gray-100"
+              className="absolute left-0 right-0 border-t border-gray-100 dark:border-gray-800"
               style={{ bottom: `${max > 0 ? (t / max) * 100 : 0}%` }}
             />
           ))}
@@ -83,11 +83,10 @@ export default function DailyLeadsChart({ data }: { data: DayData[] }) {
 
                   {/* Bar */}
                   <div
-                    className="w-full rounded-t-sm transition-colors duration-100"
-                    style={{
-                      height:          day.count > 0 ? `${barPct}%` : '2px',
-                      backgroundColor: day.count === 0 ? '#f3f4f6' : hovered ? '#4338ca' : '#6366f1',
-                    }}
+                    className={`w-full rounded-t-sm transition-colors duration-100 ${
+                      day.count === 0 ? 'bg-gray-100 dark:bg-gray-700' : hovered ? 'bg-primary-hover' : 'bg-primary'
+                    }`}
+                    style={{ height: day.count > 0 ? `${barPct}%` : '2px' }}
                   />
                 </div>
               )
@@ -100,8 +99,8 @@ export default function DailyLeadsChart({ data }: { data: DayData[] }) {
       <div className="hidden sm:flex mt-1.5 pl-8">
         {data.map((day) => (
           <div key={day.date} className="flex-1 flex flex-col items-center">
-            <span className="text-[10px] font-medium text-gray-500 leading-tight">{weekday(day.date)}</span>
-            <span className="text-[10px] text-gray-400 leading-tight">{fmtDate(day.date)}</span>
+            <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 leading-tight">{weekday(day.date)}</span>
+            <span className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight">{fmtDate(day.date)}</span>
           </div>
         ))}
       </div>

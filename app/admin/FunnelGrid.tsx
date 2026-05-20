@@ -24,13 +24,13 @@ export default function FunnelGrid({ funnels }: { funnels: FunnelCard[] }) {
   return (
     <>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-base font-bold text-gray-900">Aktive Funnels</h2>
+        <h2 className="text-base font-bold text-gray-900 dark:text-white">Aktive Funnels</h2>
         <input
           type="search"
           placeholder="Firma suchen..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-48 sm:w-64 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 placeholder-gray-400 shadow-sm outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-400 transition"
+          className="w-48 sm:w-64 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 shadow-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition"
         />
       </div>
 
@@ -42,34 +42,34 @@ export default function FunnelGrid({ funnels }: { funnels: FunnelCard[] }) {
             <a
               key={f.slug}
               href={`/admin/${f.slug}`}
-              className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-row min-w-0"
+              className="group bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-row min-w-0"
             >
               <div
                 className="w-1 shrink-0 rounded-l-2xl"
                 style={{ backgroundColor: f.primaryColor }}
               />
               <div className="px-5 pt-4 pb-3 flex flex-col gap-1 flex-1 min-w-0">
-                <h2 className="text-xl font-bold text-gray-900 leading-tight wrap-break-word">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white leading-tight wrap-break-word">
                   {f.companyName}
                 </h2>
-                <p className="text-sm font-medium text-gray-500 truncate">{f.slug}</p>
-                <p className="text-sm text-gray-400 truncate mb-2">{f.url}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">{f.slug}</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 truncate mb-2">{f.url}</p>
 
-                <div className="flex items-center gap-3 mt-auto pt-3 border-t border-gray-100">
+                <div className="flex items-center gap-3 mt-auto pt-3 border-t border-gray-100 dark:border-gray-800">
                   <div className="flex-1 min-w-0">
                     {f.submissionCount > 0 ? (
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="font-semibold text-gray-900">{f.submissionCount} Lead{f.submissionCount !== 1 ? 's' : ''}</span>
-                        <span className="text-gray-400">·</span>
-                        <span className="text-gray-500 truncate">
+                        <span className="font-semibold text-gray-900 dark:text-white">{f.submissionCount} Lead{f.submissionCount !== 1 ? 's' : ''}</span>
+                        <span className="text-gray-400 dark:text-gray-600">·</span>
+                        <span className="text-gray-500 dark:text-gray-400 truncate">
                           {f.lastSubmissionAt ? relativeTime(f.lastSubmissionAt) : ''}
                         </span>
                       </div>
                     ) : (
-                      <span className="text-sm text-gray-400">Noch keine Leads</span>
+                      <span className="text-sm text-gray-400 dark:text-gray-500">Noch keine Leads</span>
                     )}
                   </div>
-                  <span className="text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 group-hover:border-indigo-300 group-hover:text-indigo-600 transition-colors">
+                  <span className="text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 group-hover:border-primary/50 group-hover:text-primary transition-colors">
                     Details ansehen
                   </span>
                 </div>

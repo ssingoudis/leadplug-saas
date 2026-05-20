@@ -44,18 +44,20 @@ export default function DonutChart({ value, total, centerLabel, subLabel, toolti
           <circle
             cx={CX} cy={CY} r={R}
             fill="none"
-            stroke="#f3f4f6"
+            stroke="currentColor"
             strokeWidth={stroke}
+            className="text-gray-100 dark:text-gray-700"
           />
           {/* Filled arc */}
           <circle
             cx={CX} cy={CY} r={R}
             fill="none"
-            stroke={total === 0 ? '#f3f4f6' : '#6366f1'}
+            stroke={total === 0 ? 'currentColor' : '#6366f1'}
             strokeWidth={stroke}
             strokeDasharray={`${filled} ${CIRCUMFERENCE - filled}`}
             strokeLinecap="round"
             transform="rotate(-90 50 50)"
+            className={total === 0 ? 'text-gray-100 dark:text-gray-700' : ''}
           />
           {/* Center label */}
           <text
@@ -64,13 +66,14 @@ export default function DonutChart({ value, total, centerLabel, subLabel, toolti
             dominantBaseline="middle"
             fontSize={size === 'sm' ? 14 : 18}
             fontWeight="700"
-            fill="#111827"
+            fill="currentColor"
+            className="text-gray-900 dark:text-white"
           >
             {centerLabel}
           </text>
         </svg>
       </div>
-      {subLabel && <span className={`${subSz} text-gray-400 leading-tight text-center`}>{subLabel}</span>}
+      {subLabel && <span className={`${subSz} text-gray-400 dark:text-gray-500 leading-tight text-center`}>{subLabel}</span>}
     </div>
   )
 }

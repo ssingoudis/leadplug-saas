@@ -68,13 +68,13 @@ type Form = {
 // ── sub-components ────────────────────────────────────────────────────────────
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <p className="text-xs font-medium text-gray-500 mb-1">{children}</p>
+  return <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{children}</p>
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-6">
-      <h2 className="text-base font-bold text-gray-900 mb-5">{title}</h2>
+    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm p-6">
+      <h2 className="text-base font-bold text-gray-900 dark:text-white mb-5">{title}</h2>
       {children}
     </div>
   )
@@ -101,7 +101,7 @@ function SelectNative({
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="appearance-none w-full rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 shadow-sm outline-none focus:border-[#4648d4] focus:ring-1 focus:ring-[#4648d4]/20 transition pr-8 cursor-pointer"
+        className="appearance-none w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm text-gray-900 dark:text-white shadow-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition pr-8 cursor-pointer"
       >
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
@@ -270,27 +270,27 @@ export default function NewFunnelPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-[#0d1117]">
       {/* Header */}
-      <div className="bg-white sticky top-0 z-10 border-b-2 border-[#4648d4]">
+      <div className="bg-white dark:bg-gray-900 sticky top-0 z-10 border-b-2 border-primary">
         <div className="max-w-3xl mx-auto px-4 sm:px-8 py-4 flex items-center gap-3">
-          <a href="/admin" className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors shrink-0">
+          <a href="/admin" className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors shrink-0">
             <ArrowLeft size={16} />
             <span className="hidden sm:inline">Übersicht</span>
           </a>
-          <span className="text-gray-300">/</span>
-          <span className="text-sm font-semibold text-gray-900">Neuer Kunde</span>
+          <span className="text-gray-300 dark:text-gray-600">/</span>
+          <span className="text-sm font-semibold text-gray-900 dark:text-white">Neuer Kunde</span>
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={handlePreview}
-              className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg border border-indigo-600 text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
+              className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg border border-primary text-primary hover:bg-primary/10 transition-colors cursor-pointer"
             >
               Vorschau
             </button>
             <button
               onClick={handleSubmit}
               disabled={saving}
-              className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors cursor-pointer disabled:cursor-not-allowed"
+              className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary-hover disabled:opacity-50 transition-colors cursor-pointer disabled:cursor-not-allowed"
             >
               {saving ? 'Speichert…' : 'Speichern'}
             </button>
@@ -370,8 +370,8 @@ export default function NewFunnelPage() {
               </Field>
             </Grid>
 
-            <div className="border-t border-gray-100 pt-4 mt-1">
-              <p className="text-xs font-medium text-gray-400 mb-3 uppercase tracking-wide">Theme (optional — Defaults werden verwendet wenn leer)</p>
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-4 mt-1">
+              <p className="text-xs font-medium text-gray-400 dark:text-gray-500 mb-3 uppercase tracking-wide">Theme (optional — Defaults werden verwendet wenn leer)</p>
               <div className="flex flex-col gap-4 mb-4">
                 <Field label="Font">
                   <SelectNative value={form.font} onChange={set('font')} options={fontOptions} />
@@ -415,8 +415,8 @@ export default function NewFunnelPage() {
               </div>
             </div>
 
-            <div className="border-t border-gray-100 pt-4 mt-1">
-              <p className="text-xs font-medium text-gray-400 mb-3 uppercase tracking-wide">Texte (optional — Defaults werden verwendet wenn leer)</p>
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-4 mt-1">
+              <p className="text-xs font-medium text-gray-400 dark:text-gray-500 mb-3 uppercase tracking-wide">Texte (optional — Defaults werden verwendet wenn leer)</p>
               <div className="flex flex-col gap-4">
                 <Field label="Funnel-Titel">
                   <Input value={form.funnel_title} onChange={set('funnel_title')} placeholder="Jetzt kostenloses Angebot anfordern" />
@@ -445,7 +445,7 @@ export default function NewFunnelPage() {
         <Section title={`Fragen (${questions.length})`}>
           <div className="flex flex-col gap-4">
             {questions.map((q, qi) => (
-              <div key={q.id} className="border border-gray-200 rounded-xl p-4">
+              <div key={q.id} className="border border-gray-200 dark:border-gray-700 rounded-xl p-4">
                 <div className="flex items-start gap-3">
                   {/* sort */}
                   <div className="flex flex-col gap-0.5 pt-0.5 shrink-0">
@@ -501,7 +501,7 @@ export default function NewFunnelPage() {
                         ))}
                         <button
                           onClick={() => addOption(q.id)}
-                          className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors w-fit cursor-pointer"
+                          className="flex items-center gap-1.5 text-xs text-primary hover:text-primary-hover font-medium transition-colors w-fit cursor-pointer"
                         >
                           <Plus size={12} /> Option hinzufügen
                         </button>
@@ -513,7 +513,7 @@ export default function NewFunnelPage() {
                       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                         {(['min', 'max', 'step', 'default', 'unit'] as const).map(field => (
                           <div key={field}>
-                            <p className="text-xs text-gray-400 mb-1">{field}</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">{field}</p>
                             <Input
                               value={q.slider[field]}
                               onChange={v => updateQ(q.id, { slider: { ...q.slider, [field]: v } })}
@@ -539,9 +539,9 @@ export default function NewFunnelPage() {
                         type="checkbox"
                         checked={q.required}
                         onChange={e => updateQ(q.id, { required: e.target.checked })}
-                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        className="rounded border-gray-300 text-primary focus:ring-primary"
                       />
-                      <span className="text-sm text-gray-600">Pflichtfeld</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Pflichtfeld</span>
                     </label>
                   </div>
 
@@ -554,7 +554,7 @@ export default function NewFunnelPage() {
 
             <button
               onClick={addQuestion}
-              className="flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors w-fit cursor-pointer"
+              className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-hover transition-colors w-fit cursor-pointer"
             >
               <Plus size={16} /> Frage hinzufügen
             </button>
@@ -565,14 +565,14 @@ export default function NewFunnelPage() {
         <div className="flex justify-end gap-3 pb-8">
           <button
             onClick={handlePreview}
-            className="flex items-center gap-2 text-sm font-medium px-6 py-2.5 rounded-lg border border-indigo-600 text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
+            className="flex items-center gap-2 text-sm font-medium px-6 py-2.5 rounded-lg border border-primary text-primary hover:bg-primary/10 transition-colors cursor-pointer"
           >
             Vorschau
           </button>
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="flex items-center gap-2 text-sm font-medium px-6 py-2.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors cursor-pointer disabled:cursor-not-allowed"
+            className="flex items-center gap-2 text-sm font-medium px-6 py-2.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary-hover disabled:opacity-50 transition-colors cursor-pointer disabled:cursor-not-allowed"
           >
             {saving ? 'Speichert…' : 'Speichern'}
           </button>

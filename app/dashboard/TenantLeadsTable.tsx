@@ -47,9 +47,9 @@ function ExpandedDetail({ s }: { s: TenantSubmission }) {
   )
 
   return (
-    <div className="bg-white border-t border-indigo-100 px-5 py-5 grid grid-cols-1 sm:grid-cols-2 gap-6">
-      <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Kontakt</p>
+    <div className="bg-white dark:bg-gray-900 border-t border-primary/20 px-5 py-5 grid grid-cols-1 sm:grid-cols-2 gap-6">
+      <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 space-y-3">
+        <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Kontakt</p>
         {[
           { label: 'Anrede', value: s.contact_anrede },
           { label: 'Name', value: s.contact_name },
@@ -58,23 +58,23 @@ function ExpandedDetail({ s }: { s: TenantSubmission }) {
         ].map(({ label, value }) =>
           value ? (
             <div key={label}>
-              <p className="text-xs text-gray-400">{label}</p>
-              <p className="text-sm text-gray-800 font-medium">{value}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">{label}</p>
+              <p className="text-sm text-gray-800 dark:text-gray-200 font-medium">{value}</p>
             </div>
           ) : null
         )}
         {extraContact.map(([key, value]) =>
           value ? (
             <div key={key}>
-              <p className="text-xs text-gray-400">{key}</p>
-              <p className="text-sm text-gray-800 font-medium">{value}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">{key}</p>
+              <p className="text-sm text-gray-800 dark:text-gray-200 font-medium">{value}</p>
             </div>
           ) : null
         )}
       </div>
 
-      <div className="bg-gray-50 rounded-xl p-4">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Antworten</p>
+      <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
+        <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Antworten</p>
         <div className="space-y-2">
           {Object.entries(s.answers ?? {}).map(([key, val]) => {
             const q = s.questions.find((q) => q.question_key === key)
@@ -82,8 +82,8 @@ function ExpandedDetail({ s }: { s: TenantSubmission }) {
             const answer = resolveAnswer(key, val, s.questions)
             return (
               <div key={key}>
-                <p className="text-xs text-gray-400">{label}</p>
-                <p className="text-sm text-gray-800 font-medium">{answer}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">{label}</p>
+                <p className="text-sm text-gray-800 dark:text-gray-200 font-medium">{answer}</p>
               </div>
             )
           })}
@@ -128,7 +128,7 @@ export default function TenantLeadsTable({ submissions }: { submissions: TenantS
     <div>
       {/* Header: Titel + Filter in einer Zeile */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
-        <h2 className="text-base font-bold text-gray-900 shrink-0">
+        <h2 className="text-base font-bold text-gray-900 dark:text-white shrink-0">
           Leads ({submissions.length})
         </h2>
         <div className="flex gap-3 flex-1 sm:justify-end">
@@ -152,16 +152,16 @@ export default function TenantLeadsTable({ submissions }: { submissions: TenantS
           {submissions.length === 0 ? 'Noch keine Leads eingegangen.' : 'Keine Ergebnisse für diese Filter.'}
         </p>
       ) : (
-        <div className="rounded-xl overflow-hidden border border-gray-100 -mx-6 -mb-6">
+        <div className="rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800 -mx-6 -mb-6">
           {filtered.map((s, idx) => {
             const isOpen = openId === s.id
             const isLast = idx === filtered.length - 1
 
             return (
-              <div key={s.id} className={!isLast ? 'border-b border-gray-100' : ''}>
+              <div key={s.id} className={!isLast ? 'border-b border-gray-100 dark:border-gray-800' : ''}>
                 <div
                   onClick={() => setOpenId(isOpen ? null : s.id)}
-                  className={`flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors ${isOpen ? 'bg-indigo-50' : 'bg-white hover:bg-gray-50'}`}
+                  className={`flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors ${isOpen ? 'bg-primary/10 dark:bg-gray-800' : 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
                 >
                   {/* Datum */}
                   <div className="w-24 shrink-0">
@@ -175,7 +175,7 @@ export default function TenantLeadsTable({ submissions }: { submissions: TenantS
 
                   {/* Kontakt */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                       {[s.contact_anrede, s.contact_name].filter(Boolean).join(' ')}
                     </p>
                     <p className="text-xs text-gray-400 truncate">{s.contact_email}</p>
@@ -191,7 +191,7 @@ export default function TenantLeadsTable({ submissions }: { submissions: TenantS
                     </Badge>
                   </div>
 
-                  <div className={`shrink-0 transition-colors ${isOpen ? 'text-indigo-400' : 'text-gray-300'}`}>
+                  <div className={`shrink-0 transition-colors ${isOpen ? 'text-primary/60' : 'text-gray-300'}`}>
                     {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </div>
                 </div>

@@ -109,29 +109,28 @@ export default function EmbedBlock({ slug, url, companyName }: { slug: string; u
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm">
+    <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900 shadow-sm">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-6 py-5 hover:bg-gray-50 transition-colors cursor-pointer"
+        className="w-full flex items-center justify-between px-6 py-5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
       >
-        <span className="text-base font-bold text-gray-900">Embed-Code</span>
-        <span className="text-gray-400">
+        <span className="text-base font-bold text-gray-900 dark:text-white">Embed-Code</span>
+        <span className="text-gray-400 dark:text-gray-500">
           {open ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
         </span>
       </button>
 
       {open && (
         <>
-          <div className="flex items-center justify-between px-4 py-2 border-t border-gray-100 bg-gray-50">
-            <span className="text-xs text-gray-400 font-mono">HTML + JavaScript</span>
+          <div className="flex items-center justify-between px-4 py-2 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+            <span className="text-xs text-gray-400 dark:text-gray-500 font-mono">HTML + JavaScript</span>
             <button
               onClick={handleCopy}
-              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all cursor-pointer"
-              style={
+              className={`flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-lg border transition-all cursor-pointer ${
                 copied
-                  ? { borderColor: '#22c55e', color: '#16a34a', backgroundColor: '#f0fdf4' }
-                  : { borderColor: '#e5e7eb', color: '#6b7280', backgroundColor: 'white' }
-              }
+                  ? 'border-green-500 text-green-600 bg-green-50 dark:bg-green-900/20 dark:border-green-500 dark:text-green-400'
+                  : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-300 bg-white dark:bg-gray-700 hover:border-gray-400 hover:text-gray-700 dark:hover:bg-gray-600 dark:hover:border-gray-500'
+              }`}
             >
               {copied ? <Check size={12} /> : <Copy size={12} />}
               {copied ? 'Kopiert!' : 'Kopieren'}

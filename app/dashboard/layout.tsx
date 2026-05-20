@@ -49,15 +49,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
     return (
       <div
-        className="min-h-screen bg-gray-100 flex items-center justify-center p-4"
+        className="min-h-screen bg-gray-100 dark:bg-[#0d1117] flex items-center justify-center p-4"
         style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
       >
-        <div className="bg-white rounded-2xl shadow-sm p-8 max-w-sm w-full text-center">
-          <p className="text-base font-semibold text-gray-900 mb-2">Kein Zugang konfiguriert</p>
-          <p className="text-sm text-gray-400 mb-6">Bitte kontaktiere den Support.</p>
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm p-8 max-w-sm w-full text-center">
+          <p className="text-base font-semibold text-gray-900 dark:text-white mb-2">Kein Zugang konfiguriert</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mb-6">Bitte kontaktiere den Support.</p>
           <a
             href="/logout"
-            className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+            className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary-hover transition-colors"
           >
             <Power size={14} />
             Ausloggen
@@ -68,7 +68,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div className="min-h-screen bg-gray-100 dark:bg-[#0d1117]" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <DashboardHeader />
       <div className="max-w-5xl mx-auto px-4 sm:px-8 py-8">
         {children}

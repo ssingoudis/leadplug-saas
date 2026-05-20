@@ -42,17 +42,17 @@ export default function MonthlyLeadsChart({ data }: { data: MonthData[] }) {
   const ticks = niceTicks(Math.max(...padded.map((d) => d.count)))
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm px-6 pt-6 pb-5">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm px-6 pt-6 pb-5">
       <div className="flex items-baseline justify-between mb-5">
-        <h2 className="text-base font-bold text-gray-900">Leads der letzten 12 Monate</h2>
-        <span className="text-sm text-gray-400">{total} Lead{total !== 1 ? 's' : ''}</span>
+        <h2 className="text-base font-bold text-gray-900 dark:text-white">Leads der letzten 12 Monate</h2>
+        <span className="text-sm text-gray-400 dark:text-gray-500">{total} Lead{total !== 1 ? 's' : ''}</span>
       </div>
 
       <div className="flex gap-3">
         {/* Y-Achse */}
         <div className="flex flex-col justify-between h-32 shrink-0 text-right">
           {[...ticks].reverse().map((t) => (
-            <span key={t} className="text-xs text-gray-400 leading-none">{t}</span>
+            <span key={t} className="text-xs text-gray-400 dark:text-gray-500 leading-none">{t}</span>
           ))}
         </div>
 
@@ -61,7 +61,7 @@ export default function MonthlyLeadsChart({ data }: { data: MonthData[] }) {
           {ticks.map((t) => (
             <div
               key={t}
-              className="absolute left-0 right-0 border-t border-gray-100"
+              className="absolute left-0 right-0 border-t border-gray-100 dark:border-gray-800"
               style={{ bottom: `${max > 0 ? (t / max) * 100 : 0}%` }}
             />
           ))}
@@ -86,11 +86,10 @@ export default function MonthlyLeadsChart({ data }: { data: MonthData[] }) {
                     </div>
                   )}
                   <div
-                    className="w-full rounded-t-sm transition-colors duration-100"
-                    style={{
-                      height:          d.count > 0 ? `${barPct}%` : '2px',
-                      backgroundColor: d.count === 0 ? '#f3f4f6' : hovered ? '#4338ca' : '#6366f1',
-                    }}
+                    className={`w-full rounded-t-sm transition-colors duration-100 ${
+                      d.count === 0 ? 'bg-gray-100 dark:bg-gray-700' : hovered ? 'bg-primary-hover' : 'bg-primary'
+                    }`}
+                    style={{ height: d.count > 0 ? `${barPct}%` : '2px' }}
                   />
                 </div>
               )
@@ -103,7 +102,7 @@ export default function MonthlyLeadsChart({ data }: { data: MonthData[] }) {
       <div className="flex mt-1.5 pl-8">
         {padded.map((d) => (
           <div key={d.month} className="flex-1 flex items-center justify-center">
-            <span className="text-[10px] text-gray-400 leading-tight">{fmtMonth(d.month)}</span>
+            <span className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight">{fmtMonth(d.month)}</span>
           </div>
         ))}
       </div>

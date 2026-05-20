@@ -16,17 +16,17 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1.5">{label}</label>
+      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">{label}</label>
       <input
         type={type}
         value={value}
         onChange={onChange ? (e) => onChange(e.target.value) : undefined}
         placeholder={placeholder}
         readOnly={readOnly}
-        className={`w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-800 outline-none placeholder-gray-300 transition ${
+        className={`w-full rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 outline-none placeholder-gray-300 dark:placeholder-gray-600 transition ${
           readOnly
-            ? 'bg-gray-50 text-gray-400 cursor-default'
-            : 'focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100'
+            ? 'bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-default'
+            : 'bg-white dark:bg-gray-800 focus:border-primary focus:ring-2 focus:ring-primary/20'
         }`}
       />
     </div>
@@ -38,7 +38,7 @@ function SaveButton({ loading, saved }: { loading: boolean; saved: boolean }) {
     <button
       type="submit"
       disabled={loading}
-      className="px-5 py-2 rounded-xl bg-indigo-600 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors disabled:opacity-60"
+      className="px-5 py-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary-hover transition-colors disabled:opacity-60"
     >
       {loading ? 'Wird gespeichert…' : saved ? '✓ Gespeichert' : 'Speichern'}
     </button>

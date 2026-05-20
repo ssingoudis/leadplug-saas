@@ -55,12 +55,12 @@ function LoginForm() {
 
   return (
     <div
-      className="min-h-screen bg-indigo-50 flex items-center justify-center p-4"
+      className="min-h-screen bg-primary/5 dark:bg-[#0d1117] flex items-center justify-center p-4"
       style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
     >
-      <div className="bg-white rounded-3xl shadow-lg w-full max-w-sm px-10 py-10">
-        <h1 className="text-xl font-bold text-gray-900 mb-1 text-center">Leadplug</h1>
-        <p className="text-sm text-gray-400 text-center mb-8">Anmelden</p>
+      <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-lg w-full max-w-sm px-10 py-10">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-1 text-center">Leadplug</h1>
+        <p className="text-sm text-gray-400 dark:text-gray-500 text-center mb-8">Anmelden</p>
 
         {error && (
           <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
@@ -76,7 +76,7 @@ function LoginForm() {
             required
             autoFocus
             placeholder="E-Mail"
-            className="w-full rounded-2xl border border-gray-200 px-5 py-4 text-base text-gray-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 placeholder-gray-400 transition"
+            className="w-full rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-5 py-4 text-base text-gray-800 dark:text-gray-200 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder-gray-400 dark:placeholder-gray-500 transition"
           />
           <input
             type="password"
@@ -84,27 +84,27 @@ function LoginForm() {
             onChange={(e) => setPassword(e.target.value)}
             required
             placeholder="Passwort"
-            className="w-full rounded-2xl border border-gray-200 px-5 py-4 text-base text-gray-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 placeholder-gray-400 transition"
+            className="w-full rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-5 py-4 text-base text-gray-800 dark:text-gray-200 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder-gray-400 dark:placeholder-gray-500 transition"
           />
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-2xl bg-indigo-600 px-5 py-4 text-base font-semibold text-white hover:bg-indigo-700 active:bg-indigo-800 transition-colors tracking-wide cursor-pointer disabled:opacity-60"
+            className="w-full rounded-2xl bg-primary px-5 py-4 text-base font-semibold text-primary-foreground hover:bg-primary-hover active:bg-primary-hover transition-colors tracking-wide cursor-pointer disabled:opacity-60"
           >
             {loading ? 'Wird angemeldet…' : 'Einloggen'}
           </button>
         </form>
 
         <div className="flex items-center gap-3 my-5">
-          <div className="flex-1 h-px bg-gray-200" />
-          <span className="text-xs text-gray-400">oder</span>
-          <div className="flex-1 h-px bg-gray-200" />
+          <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+          <span className="text-xs text-gray-400 dark:text-gray-500">oder</span>
+          <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
         </div>
 
         <button
           onClick={handleGoogleLogin}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white px-5 py-4 text-base font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-60"
+          className="w-full flex items-center justify-center gap-3 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-5 py-4 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer disabled:opacity-60"
         >
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
             <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/>
@@ -114,9 +114,9 @@ function LoginForm() {
           </svg>
           Mit Google anmelden
         </button>
-        <p className="text-center text-sm text-gray-400 mt-6">
+        <p className="text-center text-sm text-gray-400 dark:text-gray-500 mt-6">
           Noch kein Konto?{' '}
-          <a href="/signup" className="text-indigo-600 font-medium hover:underline">
+          <a href="/signup" className="text-primary font-medium hover:underline">
             Registrieren
           </a>
         </p>

@@ -3,9 +3,9 @@ import type { ReactNode } from 'react'
 type ButtonVariant = 'primary' | 'secondary' | 'ghost'
 
 const styles: Record<ButtonVariant, string> = {
-  primary:   'bg-indigo-600 text-white hover:bg-indigo-700',
-  secondary: 'border border-gray-200 text-gray-700 bg-white hover:border-[#4648d4] hover:text-[#4648d4]',
-  ghost:     'text-gray-500 hover:text-[#4648d4]',
+  primary:   'bg-primary text-primary-foreground hover:bg-primary-hover',
+  secondary: 'border border-gray-200 text-gray-700 bg-white hover:border-primary hover:text-primary',
+  ghost:     'text-gray-500 hover:text-primary',
 }
 
 interface ButtonProps {

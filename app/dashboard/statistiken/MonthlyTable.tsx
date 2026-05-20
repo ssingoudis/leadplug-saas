@@ -67,17 +67,17 @@ function DailyMonthChart({
   const avg   = data.length > 0 ? (total / data.length).toFixed(1).replace('.', ',') : '0'
 
   return (
-    <div className="bg-white rounded-xl shadow-sm px-5 pt-4 pb-4">
+    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm px-5 pt-4 pb-4">
       <div className="flex items-baseline justify-between mb-4">
-        <p className="text-sm font-semibold text-gray-700">{title}</p>
-        <span className="text-xs text-gray-400">Ø {avg} / Tag</span>
+        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{title}</p>
+        <span className="text-xs text-gray-400 dark:text-gray-500">Ø {avg} / Tag</span>
       </div>
 
       <div className="flex gap-3">
         {/* Y-axis */}
         <div className="flex flex-col justify-between h-28 shrink-0 text-right">
           {[...ticks].reverse().map((t) => (
-            <span key={t} className="text-xs text-gray-400 leading-none">{t}</span>
+            <span key={t} className="text-xs text-gray-400 dark:text-gray-500 leading-none">{t}</span>
           ))}
         </div>
 
@@ -87,7 +87,7 @@ function DailyMonthChart({
           {ticks.map((t) => (
             <div
               key={t}
-              className="absolute left-0 right-0 border-t border-gray-100"
+              className="absolute left-0 right-0 border-t border-gray-100 dark:border-gray-800"
               style={{ bottom: `${max > 0 ? (t / max) * 100 : 0}%` }}
             />
           ))}
@@ -112,11 +112,11 @@ function DailyMonthChart({
                     </div>
                   )}
                   <div
-                    className="w-full rounded-t-sm transition-colors duration-100"
-                    style={{
-                      height:          d.count > 0 ? `${barPct}%` : '2px',
-                      backgroundColor: d.count === 0 ? '#f3f4f6' : isHover ? '#4338ca' : color,
-                    }}
+                    className={`w-full rounded-t-sm transition-colors duration-100 ${d.count === 0 ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
+                    style={d.count > 0 ? {
+                      height:          `${barPct}%`,
+                      backgroundColor: isHover ? '#4338ca' : color,
+                    } : { height: '2px' }}
                   />
                 </div>
               )
@@ -130,8 +130,8 @@ function DailyMonthChart({
         {data.map((d) => (
           <div key={d.day} className="flex-1 flex justify-center">
             <div className="flex flex-col items-center">
-              <span className="text-[9px] font-medium text-gray-500 leading-tight">{getWeekday(d.day, monthKey)}</span>
-              <span className="text-[9px] text-gray-400 leading-tight">{d.day}</span>
+              <span className="text-[9px] font-medium text-gray-500 dark:text-gray-400 leading-tight">{getWeekday(d.day, monthKey)}</span>
+              <span className="text-[9px] text-gray-400 dark:text-gray-500 leading-tight">{d.day}</span>
             </div>
           </div>
         ))}
@@ -164,23 +164,23 @@ function ExpandedMonth({
     .filter((d) => m.month !== currentMonthKey || d.day <= todayDay)
 
   return (
-    <div className="px-8 pb-8 pt-5 bg-gray-50 border-t border-gray-100 flex flex-col gap-5">
+    <div className="px-8 pb-8 pt-5 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 flex flex-col gap-5">
 
       {/* Row 1: Stat boxes — mirrors Gesamtstatistik layout */}
       <div className="flex gap-4">
-        <div className="flex-1 bg-white rounded-xl px-5 py-4 text-center shadow-sm">
-          <p className="text-xs text-gray-400 mb-1">Leads</p>
-          <p className="text-2xl font-bold text-gray-900">{m.count}</p>
+        <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl px-5 py-4 text-center shadow-sm">
+          <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Leads</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{m.count}</p>
         </div>
         {hasViews && (
           <>
-            <div className="flex-1 bg-white rounded-xl px-5 py-4 text-center shadow-sm">
-              <p className="text-xs text-gray-400 mb-1">Aufrufe</p>
-              <p className="text-2xl font-bold text-gray-900">{m.views}</p>
+            <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl px-5 py-4 text-center shadow-sm">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Aufrufe</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{m.views}</p>
             </div>
-            <div className="flex-1 bg-white rounded-xl px-5 py-4 text-center shadow-sm">
-              <p className="text-xs text-gray-400 mb-1">Conversion</p>
-              <p className="text-2xl font-bold text-gray-900">{conversion} %</p>
+            <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl px-5 py-4 text-center shadow-sm">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Conversion</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{conversion} %</p>
             </div>
           </>
         )}
@@ -235,17 +235,17 @@ export default function MonthlyTable({
         const isOpen = openSet.has(i)
 
         return (
-          <div key={m.month} className={`bg-white rounded-2xl shadow-sm overflow-hidden${isOpen ? ' mb-2' : ''}`}>
+          <div key={m.month} className={`bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden${isOpen ? ' mb-2' : ''}`}>
             <button
               type="button"
-              className="w-full flex items-center justify-between px-6 py-4 transition-colors text-left hover:bg-gray-50 cursor-pointer"
+              className="w-full flex items-center justify-between px-6 py-4 transition-colors text-left hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
               onClick={() => toggle(i)}
             >
-              <span className="text-sm font-semibold text-gray-900">
+              <span className="text-sm font-semibold text-gray-900 dark:text-white">
                 {fmtMonthFull(m.month)}
               </span>
               <svg
-                className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                className={`w-4 h-4 text-gray-400 dark:text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
                 fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
               >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />

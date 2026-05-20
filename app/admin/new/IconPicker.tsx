@@ -175,7 +175,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
         title={CUSTOM_ICON_LABELS[value] || value || 'Icon auswählen'}
         className={`w-9 h-9 flex items-center justify-center rounded-lg border transition-colors ${
           value
-            ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
+            ? 'border-primary/50 bg-primary/10 text-primary'
             : 'border-gray-200 bg-white text-gray-400 hover:border-gray-400 hover:text-gray-600 cursor-pointer'
         }`}
       >
@@ -202,7 +202,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                 value={search}
                 onChange={e => { setSearch(e.target.value); setActiveCategory(null) }}
                 placeholder="Suchen… z.B. house, flame, calendar"
-                className="w-full text-sm border border-gray-200 rounded-lg pl-7 pr-3 py-1.5 outline-none focus:border-indigo-400 transition-colors"
+                className="w-full text-sm border border-gray-200 rounded-lg pl-7 pr-3 py-1.5 outline-none focus:border-primary transition-colors"
               />
             </div>
             {value && (
@@ -223,7 +223,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                 type="button"
                 onClick={() => setActiveCategory(null)}
                 className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors whitespace-nowrap ${
-                  !activeCategory ? 'bg-indigo-100 border-indigo-200 text-indigo-700' : 'border-gray-200 text-gray-500 hover:border-gray-400 cursor-pointer'
+                  !activeCategory ? 'bg-primary/20 border-primary/30 text-primary' : 'border-gray-200 text-gray-500 hover:border-gray-400 cursor-pointer'
                 }`}
               >
                 Alle
@@ -234,7 +234,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                   type="button"
                   onClick={() => setActiveCategory(c.label === activeCategory ? null : c.label)}
                   className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors whitespace-nowrap ${
-                    activeCategory === c.label ? 'bg-indigo-100 border-indigo-200 text-indigo-700' : 'border-gray-200 text-gray-500 hover:border-gray-400 cursor-pointer'
+                    activeCategory === c.label ? 'bg-primary/20 border-primary/30 text-primary' : 'border-gray-200 text-gray-500 hover:border-gray-400 cursor-pointer'
                   }`}
                 >
                   {c.label}
@@ -255,7 +255,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                     onClick={() => { onChange(name); setOpen(false); setSearch(''); setActiveCategory(null) }}
                     title={CUSTOM_ICON_LABELS[name] ?? name}
                     className={`p-2 rounded-lg flex items-center justify-center transition-colors ${
-                      active ? 'bg-indigo-100 text-indigo-600' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 cursor-pointer'
+                      active ? 'bg-primary/20 text-primary' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 cursor-pointer'
                     }`}
                   >
                     <CustomIcon size={20} color="currentColor" />
@@ -271,7 +271,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                   onClick={() => { onChange(name); setOpen(false); setSearch(''); setActiveCategory(null) }}
                   title={name}
                   className={`p-2 rounded-lg flex items-center justify-center transition-colors ${
-                    active ? 'bg-indigo-100 text-indigo-600' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+                    active ? 'bg-primary/20 text-primary' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
                   }`}
                 >
                   <Icon size={20} strokeWidth={1.5} />
@@ -287,8 +287,8 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
           {value && (CustomTriggerIcon || LucideIconComponent) && (
             <div className="mt-2 pt-2 border-t border-gray-100 flex items-center gap-2">
               {CustomTriggerIcon
-                ? <CustomTriggerIcon size={13} color="currentColor" className="text-indigo-500 shrink-0" />
-                : LucideIconComponent && <LucideIconComponent size={13} strokeWidth={1.5} className="text-indigo-500 shrink-0" />
+                ? <CustomTriggerIcon size={13} color="currentColor" className="text-primary/70 shrink-0" />
+                : LucideIconComponent && <LucideIconComponent size={13} strokeWidth={1.5} className="text-primary/70 shrink-0" />
               }
               <span className="text-xs text-gray-400 font-mono truncate">
                 {CUSTOM_ICON_LABELS[value] ?? value}

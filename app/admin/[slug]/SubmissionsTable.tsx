@@ -20,8 +20,8 @@ function AnswerLines({ answers, questions }: { answers: Record<string, string>; 
     <div className="space-y-2">
       {lines.map(({ label, answer }) => (
         <div key={label}>
-          <p className="text-xs text-gray-400">{label}</p>
-          <p className="text-sm text-gray-800 font-medium">{answer}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">{label}</p>
+          <p className="text-sm text-gray-800 dark:text-gray-200 font-medium">{answer}</p>
         </div>
       ))}
     </div>
@@ -33,17 +33,17 @@ export default function SubmissionsTable({ submissions, questions }: { submissio
   const [openId, setOpenId] = useState<string | null>(null)
 
   return (
-    <div className="rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+    <div className="rounded-2xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-800">
       {submissions.map((s, idx) => {
         const isOpen = openId === s.id
         const isLast = idx === submissions.length - 1
 
         return (
-          <div key={s.id} className={!isLast ? 'border-b border-gray-100' : ''}>
+          <div key={s.id} className={!isLast ? 'border-b border-gray-100 dark:border-gray-800' : ''}>
             {/* Collapsed row */}
             <div
               onClick={() => setOpenId(isOpen ? null : s.id)}
-              className={`flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors ${isOpen ? 'bg-indigo-50' : 'bg-white hover:bg-gray-50'}`}
+              className={`flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors ${isOpen ? 'bg-primary/10 dark:bg-gray-800' : 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
             >
               {/* Date */}
               <div className="w-32 shrink-0">
@@ -57,7 +57,7 @@ export default function SubmissionsTable({ submissions, questions }: { submissio
 
               {/* Contact */}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 truncate">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                   {[s.contact_anrede, s.contact_name].filter(Boolean).join(' ')}
                 </p>
                 <p className="text-xs text-gray-400 truncate">{s.contact_email}</p>
@@ -74,17 +74,17 @@ export default function SubmissionsTable({ submissions, questions }: { submissio
               </div>
 
               {/* Chevron */}
-              <div className={`shrink-0 transition-colors ${isOpen ? 'text-indigo-400' : 'text-gray-300'}`}>
+              <div className={`shrink-0 transition-colors ${isOpen ? 'text-primary/60' : 'text-gray-300'}`}>
                 {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
               </div>
             </div>
 
             {/* Expanded detail */}
             {isOpen && (
-              <div className="bg-white border-t border-indigo-100 px-5 py-5 grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="bg-white dark:bg-gray-900 border-t border-primary/20 px-5 py-5 grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {/* Contact details */}
-                <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Kontakt</p>
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 space-y-3">
+                  <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Kontakt</p>
                   {[
                     { label: 'Anrede', value: s.contact_anrede },
                     { label: 'Name', value: s.contact_name },
@@ -92,16 +92,16 @@ export default function SubmissionsTable({ submissions, questions }: { submissio
                     { label: 'Telefon', value: s.contact_phone },
                   ].map(({ label, value }) => value ? (
                     <div key={label}>
-                      <p className="text-xs text-gray-400">{label}</p>
-                      <p className="text-sm text-gray-800 font-medium">{value}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">{label}</p>
+                      <p className="text-sm text-gray-800 dark:text-gray-200 font-medium">{value}</p>
                     </div>
                   ) : null)}
                   {s.contact && Object.entries(s.contact as Record<string, string>)
                     .filter(([key]) => !['anrede', 'name', 'email', 'telefon'].includes(key))
                     .map(([key, value]) => value ? (
                       <div key={key}>
-                        <p className="text-xs text-gray-400">{key}</p>
-                        <p className="text-sm text-gray-800 font-medium">{value}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">{key}</p>
+                        <p className="text-sm text-gray-800 dark:text-gray-200 font-medium">{value}</p>
                       </div>
                     ) : null)
                   }

@@ -81,7 +81,7 @@ export default async function StatistikenPage() {
 
   if (filledMonths.length === 0) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm px-6 py-12 text-center text-sm text-gray-400">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm px-6 py-12 text-center text-sm text-gray-400 dark:text-gray-500">
         Noch keine Leads in den letzten 12 Monaten.
       </div>
     )
@@ -99,7 +99,7 @@ export default async function StatistikenPage() {
             <StatTile value={avgPerMonth} label="Ø Leads / Monat" />
             <StatTile value={filledMonths.length} label="Aktive Monate" />
           </div>
-          <div className="bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center sm:w-44">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 flex flex-col items-center justify-center sm:w-44">
             <DonutChart
               value={totalLeads}
               total={totalViews}
@@ -114,7 +114,7 @@ export default async function StatistikenPage() {
 
       {/* Monatstabelle */}
       <div>
-        <h2 className="text-base font-bold text-gray-900 mb-4">Statistik pro Monat</h2>
+        <h2 className="text-base font-bold text-gray-900 dark:text-white mb-4">Statistik pro Monat</h2>
         <MonthlyTable
           data={[...filledMonths].reverse()}
           totalLeads={totalLeads}

@@ -35,37 +35,26 @@ Nach erfolgreichem Test: Branch in `main` mergen. Bei Problemen: Branch verwerfe
 
 ## Design System (Admin-Dashboard & zukünftiges Tenant-Portal)
 
-Die UI-Komponenten unter `components/ui/` sind die einzige Quelle für Dashboard-UI-Bausteine. **Nie inline Tailwind-Klassen für diese Patterns verwenden — immer die Komponenten nutzen.**
+**Vor dem Erstellen oder Anpassen einer UI-Komponente zwingend lesen: [`context/design-system.md`](context/design-system.md)**
 
-### Komponenten
+Die Anleitung enthält: alle Design-Token (Light + Dark Mode), Komponenten-API, Dark-Mode-Implementierung, Layout-Patterns und Verbote.
+
+### Kurzübersicht Komponenten
 
 | Komponente | Verwendung |
 |---|---|
-| `<Card title="…">` | Jede weiße Inhalts-Box im Dashboard |
+| `<Card title="…">` | Jede Inhalts-Box im Dashboard |
 | `<Badge variant="green|red|amber|purple|gray">` | Status-Anzeigen, E-Mail-Badges |
 | `<Button variant="primary|secondary|ghost">` | Alle klickbaren Aktionen |
 | `<Input value onChange placeholder>` | Texteingaben, Suche |
-| `<Select value onChange options>` | Dropdowns (mit custom Arrow) |
-| `<StatTile value label>` | Kennzahlen-Kacheln (Leads, Aufrufe, Conversion) |
-
-### Design-Token (nie abweichen)
-
-```
-Primärfarbe:      #4648d4  (Indigo — Header-Border, aktiver Tab, Links)
-Card:             bg-white rounded-2xl shadow-sm p-6
-Seiten-BG:        bg-gray-100
-Header:           bg-white sticky top-0 border-b-2 border-[#4648d4]
-Tab aktiv:        text-[#4648d4] border-b-2 border-[#4648d4] font-semibold
-Tab inaktiv:      text-gray-500 border-b-2 border-transparent
-Heading:          text-base font-bold text-gray-900
-Subtext:          text-sm text-gray-400
-Monospace-Info:   font-mono text-xs text-gray-400
-```
+| `<Select value onChange options>` | Dropdowns |
+| `<StatTile value label>` | Kennzahlen-Kacheln |
+| `<ThemeToggle>` | Dark-Mode-Schalter (nur 1× pro Header) |
 
 ### Zwei getrennte Design-Welten
 
 - **`components/ui/`** → Dashboard & Tenant-Portal (dieses System)
-- **`components/funnel.tsx`** → Widget-UI (Farben aus DB, komplett eigenständig — nie anfassen)
+- **`components/funnel.tsx`** → Widget-UI (Farben aus DB, komplett eigenständig — **nie anfassen**)
 
 ## Icon-System
 

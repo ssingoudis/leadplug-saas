@@ -121,7 +121,7 @@ export default async function DashboardPage() {
   const { funnels, monthlyRows, dailyData } = await getAllData()
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-[#0d1117]">
       <AdminHeader />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8">

@@ -9,9 +9,9 @@ import SubmissionsTable from './SubmissionsTable'
 function Row({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null
   return (
-    <div className="flex flex-col sm:flex-row sm:gap-4 py-2 border-b border-gray-100 last:border-0">
-      <span className="text-xs sm:text-sm text-gray-400 sm:text-gray-500 sm:w-44 sm:shrink-0">{label}</span>
-      <span className="text-sm text-gray-900 wrap-break-word">{value}</span>
+    <div className="flex flex-col sm:flex-row sm:gap-4 py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
+      <span className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 sm:w-44 sm:shrink-0">{label}</span>
+      <span className="text-sm text-gray-900 dark:text-gray-100 wrap-break-word">{value}</span>
     </div>
   )
 }
@@ -20,8 +20,8 @@ function ColorSwatch({ color }: { color?: string | null }) {
   if (!color) return <span className="text-gray-400 text-sm">—</span>
   return (
     <div className="flex items-center gap-2">
-      <div className="w-5 h-5 rounded border border-gray-200" style={{ backgroundColor: color }} />
-      <span className="text-sm text-gray-900 font-mono">{color}</span>
+      <div className="w-5 h-5 rounded border border-gray-200 dark:border-gray-700" style={{ backgroundColor: color }} />
+      <span className="text-sm text-gray-900 dark:text-gray-100 font-mono">{color}</span>
     </div>
   )
 }
@@ -79,9 +79,9 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
   const funnelUrl = `${base}/${slug}`
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-[#0d1117]">
       {/* Header */}
-      <div className="bg-white sticky top-0 z-10 border-b-2 border-[#4648d4]">
+      <div className="bg-white dark:bg-gray-900 sticky top-0 z-10 border-b-2 border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex items-center gap-3 min-w-0">
           <a
             href="/admin"
@@ -90,21 +90,21 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
             <ArrowLeft size={16} />
             <span className="hidden sm:inline">Übersicht</span>
           </a>
-          <span className="text-gray-300 shrink-0">/</span>
-          <span className="text-sm font-semibold text-gray-900 truncate min-w-0">{slug}</span>
+          <span className="text-gray-300 dark:text-gray-600 shrink-0">/</span>
+          <span className="text-sm font-semibold text-gray-900 dark:text-white truncate min-w-0">{slug}</span>
           <div className="ml-auto shrink-0 flex items-center gap-2 sm:gap-3">
             <a
               href={funnelUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm font-medium px-3 sm:px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:border-[#4648d4] hover:text-[#4648d4] transition-colors"
+              className="flex items-center gap-2 text-sm font-medium px-3 sm:px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-400 hover:border-primary hover:text-primary transition-colors"
             >
               <ExternalLink size={14} />
               <span className="hidden sm:inline">Live öffnen</span>
             </a>
             <a
               href="/logout"
-              className="flex items-center gap-2 text-sm font-medium px-3 sm:px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+              className="flex items-center gap-2 text-sm font-medium px-3 sm:px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary-hover transition-colors"
             >
               <Power size={14} />
               <span className="hidden sm:inline">Logout</span>
@@ -139,8 +139,8 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
         <div className="lg:col-span-2 flex flex-col gap-6">
 
           {/* Tenant */}
-          <div className="bg-white rounded-2xl shadow-sm p-6">
-            <h2 className="text-base font-bold text-gray-900 mb-3">Kunde</h2>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm p-6">
+            <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3">Kunde</h2>
 
             <Row label="Firmenname" value={tenant.company_name} />
             <Row label="Öffentliche E-Mail" value={tenant.public_email} />
@@ -160,26 +160,26 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
 
             {/* Stats: Aufrufe · Leads · Conversion */}
             <div className="grid grid-cols-3 gap-3 mt-4">
-              <div className="bg-gray-50 rounded-xl px-3 py-3 text-center">
-                <p className="text-xl font-bold text-gray-900">{funnel.total_views ?? 0}</p>
-                <p className="text-xs text-gray-400 mt-0.5">Aufrufe</p>
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-3 text-center">
+                <p className="text-xl font-bold text-gray-900 dark:text-white">{funnel.total_views ?? 0}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Aufrufe</p>
               </div>
-              <div className="bg-gray-50 rounded-xl px-3 py-3 text-center">
-                <p className="text-xl font-bold text-gray-900">{submissions.length}</p>
-                <p className="text-xs text-gray-400 mt-0.5">Leads</p>
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-3 text-center">
+                <p className="text-xl font-bold text-gray-900 dark:text-white">{submissions.length}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Leads</p>
               </div>
-              <div className="bg-gray-50 rounded-xl px-3 py-3 text-center">
-                <p className="text-xl font-bold text-gray-900">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-3 text-center">
+                <p className="text-xl font-bold text-gray-900 dark:text-white">
                   {funnel.total_views > 0 ? Math.round((submissions.length / funnel.total_views) * 100) : 0} %
                 </p>
-                <p className="text-xs text-gray-400 mt-0.5">Conversion</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Conversion</p>
               </div>
             </div>
           </div>
 
           {/* Funnel config */}
-          <div className="bg-white rounded-2xl shadow-sm p-6">
-            <h2 className="text-base font-bold text-gray-900 mb-3">Funnel-Konfiguration</h2>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm p-6">
+            <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3">Funnel-Konfiguration</h2>
             <Row label="Funnel-Titel" value={funnel.funnel_title} />
             <Row label="Kontaktformular-Untertitel" value={funnel.contact_form_subtitle} />
             <Row label="Button-Beschriftung" value={funnel.submit_button_label} />
@@ -190,22 +190,22 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
           </div>
 
           {/* Theme */}
-          <div className="bg-white rounded-2xl shadow-sm p-6">
-            <h2 className="text-base font-bold text-gray-900 mb-3">Theme</h2>
-            <div className="flex flex-col sm:flex-row sm:gap-4 py-2 border-b border-gray-100">
-              <span className="text-xs sm:text-sm text-gray-400 sm:text-gray-500 sm:w-44 sm:shrink-0">Primärfarbe</span>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm p-6">
+            <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3">Theme</h2>
+            <div className="flex flex-col sm:flex-row sm:gap-4 py-2 border-b border-gray-100 dark:border-gray-800">
+              <span className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 sm:w-44 sm:shrink-0">Primärfarbe</span>
               <ColorSwatch color={funnel.primary_color} />
             </div>
-            <div className="flex flex-col sm:flex-row sm:gap-4 py-2 border-b border-gray-100">
-              <span className="text-xs sm:text-sm text-gray-400 sm:text-gray-500 sm:w-44 sm:shrink-0">Textfarbe</span>
+            <div className="flex flex-col sm:flex-row sm:gap-4 py-2 border-b border-gray-100 dark:border-gray-800">
+              <span className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 sm:w-44 sm:shrink-0">Textfarbe</span>
               <ColorSwatch color={funnel.text_color} />
             </div>
-            <div className="flex flex-col sm:flex-row sm:gap-4 py-2 border-b border-gray-100">
-              <span className="text-xs sm:text-sm text-gray-400 sm:text-gray-500 sm:w-44 sm:shrink-0">Widget-Hintergrund</span>
+            <div className="flex flex-col sm:flex-row sm:gap-4 py-2 border-b border-gray-100 dark:border-gray-800">
+              <span className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 sm:w-44 sm:shrink-0">Widget-Hintergrund</span>
               <ColorSwatch color={funnel.background_color} />
             </div>
-            <div className="flex flex-col sm:flex-row sm:gap-4 py-2 border-b border-gray-100">
-              <span className="text-xs sm:text-sm text-gray-400 sm:text-gray-500 sm:w-44 sm:shrink-0">Seiten-Hintergrund</span>
+            <div className="flex flex-col sm:flex-row sm:gap-4 py-2 border-b border-gray-100 dark:border-gray-800">
+              <span className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 sm:w-44 sm:shrink-0">Seiten-Hintergrund</span>
               <ColorSwatch color={funnel.page_background_color} />
             </div>
             <Row label="Font" value={funnel.font} />
@@ -214,17 +214,17 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
           </div>
 
           {/* Questions */}
-          <div className="bg-white rounded-2xl shadow-sm p-6">
-            <h2 className="text-base font-bold text-gray-900 mb-3">
-              Fragen <span className="font-normal text-gray-400">({questions.length})</span>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm p-6">
+            <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3">
+              Fragen <span className="font-normal text-gray-400 dark:text-gray-500">({questions.length})</span>
             </h2>
             {questions.map((q, i) => (
-              <div key={q.question_key} className="py-2 border-b border-gray-100 last:border-0">
+              <div key={q.question_key} className="py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
                 <div className="flex items-start gap-3">
-                  <span className="text-xs font-bold text-gray-400 mt-0.5 w-5 shrink-0">{i + 1}</span>
+                  <span className="text-xs font-bold text-gray-400 dark:text-gray-500 mt-0.5 w-5 shrink-0">{i + 1}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900 font-medium">{q.title}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-sm text-gray-900 dark:text-gray-100 font-medium">{q.title}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                       {q.question_type} · {q.question_key}
                       {!q.visible && ' · ausgeblendet'}
                     </p>
@@ -234,7 +234,7 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
                         {(q.options as any[]).map((o) => (
                           <span
                             key={o.value}
-                            className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full"
+                            className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full"
                           >
                             {o.label}
                           </span>
@@ -251,12 +251,12 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
 
       {/* Submissions */}
       <div className="max-w-7xl mx-auto px-8 pb-12">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">
-          Leads <span className="font-normal text-gray-400">({submissions.length}{submissions.length === 30 ? '+' : ''})</span>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+          Leads <span className="font-normal text-gray-400 dark:text-gray-500">({submissions.length}{submissions.length === 30 ? '+' : ''})</span>
         </h2>
 
         {submissions.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-sm p-8 text-center text-gray-400 text-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm p-8 text-center text-gray-400 dark:text-gray-500 text-sm">
             Noch keine Leads eingegangen.
           </div>
         ) : (
