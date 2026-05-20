@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
+import { IconPicker } from './IconPicker'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -223,7 +224,7 @@ export default function NewFunnelPage() {
             visible: q.visible,
             sort_order: i,
             options: (q.question_type === 'single_choice' || q.question_type === 'multiple_choice')
-              ? q.options.filter(o => o.label.trim()).map(o => ({ label: o.label, value: o.value || toKey(o.label), icon_key: null }))
+              ? q.options.filter(o => o.label.trim()).map(o => ({ label: o.label, value: o.value || toKey(o.label), icon_key: o.icon_key || null }))
               : [],
             config: q.question_type === 'slider'
               ? { min: Number(q.slider.min) || 0, max: Number(q.slider.max) || 100, step: Number(q.slider.step) || 1, default: Number(q.slider.default) || 50, unit: q.slider.unit || '', required: q.required }
@@ -443,6 +444,10 @@ export default function NewFunnelPage() {
                       <div className="flex flex-col gap-2">
                         {q.options.map(o => (
                           <div key={o.id} className="flex gap-2 items-center">
+                            <IconPicker
+                              value={o.icon_key}
+                              onChange={v => updateO(q.id, o.id, 'icon_key', v)}
+                            />
                             <Input
                               value={o.label}
                               onChange={v => updateO(q.id, o.id, 'label', v)}
