@@ -176,7 +176,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
         className={`w-9 h-9 flex items-center justify-center rounded-lg border transition-colors ${
           value
             ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
-            : 'border-gray-200 bg-white text-gray-400 hover:border-gray-400 hover:text-gray-600'
+            : 'border-gray-200 bg-white text-gray-400 hover:border-gray-400 hover:text-gray-600 cursor-pointer'
         }`}
       >
         {CustomTriggerIcon
@@ -209,7 +209,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
               <button
                 type="button"
                 onClick={() => { onChange(''); setOpen(false); setSearch('') }}
-                className="text-gray-400 hover:text-red-500 transition-colors shrink-0"
+                className="text-gray-400 hover:text-red-500 transition-colors shrink-0 cursor-pointer"
                 title="Icon entfernen"
               >
                 <X size={14} />
@@ -223,7 +223,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                 type="button"
                 onClick={() => setActiveCategory(null)}
                 className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors whitespace-nowrap ${
-                  !activeCategory ? 'bg-indigo-100 border-indigo-200 text-indigo-700' : 'border-gray-200 text-gray-500 hover:border-gray-400'
+                  !activeCategory ? 'bg-indigo-100 border-indigo-200 text-indigo-700' : 'border-gray-200 text-gray-500 hover:border-gray-400 cursor-pointer'
                 }`}
               >
                 Alle
@@ -234,7 +234,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                   type="button"
                   onClick={() => setActiveCategory(c.label === activeCategory ? null : c.label)}
                   className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors whitespace-nowrap ${
-                    activeCategory === c.label ? 'bg-indigo-100 border-indigo-200 text-indigo-700' : 'border-gray-200 text-gray-500 hover:border-gray-400'
+                    activeCategory === c.label ? 'bg-indigo-100 border-indigo-200 text-indigo-700' : 'border-gray-200 text-gray-500 hover:border-gray-400 cursor-pointer'
                   }`}
                 >
                   {c.label}
@@ -255,7 +255,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                     onClick={() => { onChange(name); setOpen(false); setSearch(''); setActiveCategory(null) }}
                     title={CUSTOM_ICON_LABELS[name] ?? name}
                     className={`p-2 rounded-lg flex items-center justify-center transition-colors ${
-                      active ? 'bg-indigo-100 text-indigo-600' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+                      active ? 'bg-indigo-100 text-indigo-600' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 cursor-pointer'
                     }`}
                   >
                     <CustomIcon size={20} color="currentColor" />

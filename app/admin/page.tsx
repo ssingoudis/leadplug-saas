@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
-import { Plus, Power } from 'lucide-react'
 import FunnelGrid from './FunnelGrid'
 import MonthlyStats, { type MonthlyRow } from './MonthlyStats'
 import DailyLeadsChart, { type DayData } from './DailyLeadsChart'
+import AdminHeader from './AdminHeader'
 
 export interface FunnelCard {
   slug: string
@@ -122,47 +122,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Header */}
-      <div className="bg-white sticky top-0 z-10 border-b-2 border-[#4648d4]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-0 flex items-stretch gap-0">
-          <a
-            href="/admin"
-            className="flex items-center px-4 py-4 text-sm font-semibold text-[#4648d4] border-b-2 border-[#4648d4] -mb-[2px]"
-          >
-            Funnels
-          </a>
-          <a
-            href="/admin/leads"
-            className="flex items-center px-4 py-4 text-sm font-medium text-gray-500 hover:text-gray-900 border-b-2 border-transparent -mb-[2px] transition-colors"
-          >
-            Leads
-          </a>
-          <div className="ml-auto flex items-center gap-3 py-3">
-            <a
-              href="/admin/new"
-              className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg border border-indigo-600 text-indigo-600 hover:bg-indigo-50 transition-colors"
-            >
-              <Plus size={14} />
-              Neuer Kunde
-            </a>
-            <a
-              href="/dashboard"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
-            >
-              Mein Dashboard
-            </a>
-            <a
-              href="/logout"
-              className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg border border-indigo-600 text-indigo-600 hover:bg-indigo-50 transition-colors"
-            >
-              <Power size={14} />
-              Logout
-            </a>
-          </div>
-        </div>
-      </div>
+      <AdminHeader />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8">
         <DailyLeadsChart data={dailyData} />

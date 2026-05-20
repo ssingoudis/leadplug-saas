@@ -19,7 +19,7 @@ export default function TabNav() {
           <a
             key={tab.href}
             href={tab.href}
-            className={`flex items-center px-4 py-4 text-sm border-b-2 -mb-[2px] transition-colors ${
+            className={`flex items-center px-2.5 sm:px-4 py-4 text-sm border-b-2 -mb-0.5 transition-colors ${
               active
                 ? 'font-semibold text-[#4648d4] border-[#4648d4]'
                 : 'font-medium text-gray-500 hover:text-gray-900 border-transparent'

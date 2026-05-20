@@ -238,7 +238,7 @@ export default function MonthlyTable({
           <div key={m.month} className={`bg-white rounded-2xl shadow-sm overflow-hidden${isOpen ? ' mb-2' : ''}`}>
             <button
               type="button"
-              className="w-full flex items-center justify-between px-6 py-4 transition-colors text-left hover:bg-gray-50"
+              className="w-full flex items-center justify-between px-6 py-4 transition-colors text-left hover:bg-gray-50 cursor-pointer"
               onClick={() => toggle(i)}
             >
               <span className="text-sm font-semibold text-gray-900">

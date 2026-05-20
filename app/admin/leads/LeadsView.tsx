@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { ChevronDown, ChevronUp, Download } from 'lucide-react'
+import Badge from '@/components/ui/Badge'
 import type { SubmissionRow, TenantOption, QuestionMeta } from './page'
 
 function resolveAnswer(key: string, val: string, questions: QuestionMeta[]): string {
@@ -21,7 +22,6 @@ function exportCSV(rows: SubmissionRow[]) {
     'Datum', 'Uhrzeit', 'Tenant', 'Funnel', 'Anrede', 'Name', 'E-Mail', 'Telefon',
     'Kunde-Mail', 'Tenant-Mail', 'Antworten',
   ]
-
   const lines = rows.map((s) => {
     const d = new Date(s.created_at)
     const date = d.toLocaleDateString('de-DE')
@@ -29,7 +29,6 @@ function exportCSV(rows: SubmissionRow[]) {
     const answers = Object.entries(s.answers ?? {})
       .map(([k, v]) => `${k}: ${resolveAnswer(k, v, s.questions)}`)
       .join(' | ')
-
     return [
       date, time,
       s.company_name, s.funnel_slug,
@@ -40,7 +39,6 @@ function exportCSV(rows: SubmissionRow[]) {
       answers,
     ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')
   })
-
   const csv = [headers.map((h) => `"${h}"`).join(','), ...lines].join('\n')
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
@@ -55,7 +53,6 @@ function ExpandedDetail({ s }: { s: SubmissionRow }) {
   const extraContact = Object.entries(s.contact ?? {}).filter(
     ([key]) => !['anrede', 'name', 'email', 'telefon'].includes(key)
   )
-
   return (
     <div className="bg-white border-t border-indigo-100 px-5 py-5 grid grid-cols-1 sm:grid-cols-2 gap-6">
       <div className="bg-gray-50 rounded-xl p-4 space-y-3">
@@ -82,7 +79,6 @@ function ExpandedDetail({ s }: { s: SubmissionRow }) {
           ) : null
         )}
       </div>
-
       <div className="bg-gray-50 rounded-xl p-4">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Antworten</p>
         <div className="space-y-2">
@@ -131,7 +127,7 @@ export default function LeadsView({ submissions, tenants }: { submissions: Submi
           <select
             value={tenant}
             onChange={(e) => setTenant(e.target.value)}
-            className="appearance-none rounded-xl border border-gray-300 bg-white pl-4 pr-10 py-2 text-sm text-gray-900 shadow-sm outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-400 transition"
+            className="appearance-none rounded-xl border border-gray-300 bg-white pl-4 pr-10 py-2 text-sm text-gray-900 shadow-sm outline-none focus:border-[#4648d4] focus:ring-1 focus:ring-[#4648d4]/20 transition cursor-pointer"
           >
             <option value="all">Alle Tenants</option>
             {tenants.map((t) => (
@@ -143,10 +139,10 @@ export default function LeadsView({ submissions, tenants }: { submissions: Submi
 
         <input
           type="search"
-          placeholder="Name, E-Mail oder Funnel..."
+          placeholder="Name, E-Mail oder Funnel…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 min-w-48 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 placeholder-gray-400 shadow-sm outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-400 transition"
+          className="flex-1 min-w-48 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 placeholder-gray-400 shadow-sm outline-none focus:border-[#4648d4] focus:ring-1 focus:ring-[#4648d4]/20 transition"
         />
 
         <span className="text-sm text-gray-400 whitespace-nowrap">
@@ -155,7 +151,7 @@ export default function LeadsView({ submissions, tenants }: { submissions: Submi
 
         <button
           onClick={() => exportCSV(filtered)}
-          className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 shadow-sm transition-colors"
+          className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-xl border border-gray-200 bg-white text-gray-700 hover:border-[#4648d4] hover:text-[#4648d4] shadow-sm transition-colors cursor-pointer"
         >
           <Download size={14} />
           CSV
@@ -177,10 +173,10 @@ export default function LeadsView({ submissions, tenants }: { submissions: Submi
               <div key={s.id} className={!isLast ? 'border-b border-gray-100' : ''}>
                 <div
                   onClick={() => setOpenId(isOpen ? null : s.id)}
-                  className={`flex items-center gap-3 sm:gap-4 px-5 py-4 cursor-pointer transition-colors ${isOpen ? 'bg-indigo-50' : 'bg-white hover:bg-gray-50'}`}
+                  className={`flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors ${isOpen ? 'bg-indigo-50' : 'bg-white hover:bg-gray-50'}`}
                 >
-                  {/* Date */}
-                  <div className="w-28 shrink-0">
+                  {/* Datum */}
+                  <div className="w-24 shrink-0">
                     <p className="text-sm text-gray-500">
                       {new Date(s.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })}
                     </p>
@@ -190,12 +186,12 @@ export default function LeadsView({ submissions, tenants }: { submissions: Submi
                   </div>
 
                   {/* Tenant + Funnel */}
-                  <div className="hidden sm:block w-36 shrink-0">
+                  <div className="hidden sm:block w-32 shrink-0 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{s.company_name}</p>
                     <p className="text-xs text-gray-400 font-mono truncate">{s.funnel_slug}</p>
                   </div>
 
-                  {/* Contact */}
+                  {/* Kontakt */}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-900 truncate">
                       {[s.contact_anrede, s.contact_name].filter(Boolean).join(' ')}
@@ -203,14 +199,14 @@ export default function LeadsView({ submissions, tenants }: { submissions: Submi
                     <p className="text-xs text-gray-400 truncate">{s.contact_email}</p>
                   </div>
 
-                  {/* Mail badges */}
+                  {/* Badges */}
                   <div className="hidden sm:flex gap-1.5 shrink-0">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.customer_email_sent ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-500'}`}>
+                    <Badge variant={s.customer_email_sent ? 'green' : 'red'}>
                       Kunde {s.customer_email_sent ? '✓' : '✗'}
-                    </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.tenant_email_sent ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-500'}`}>
+                    </Badge>
+                    <Badge variant={s.tenant_email_sent ? 'green' : 'red'}>
                       Tenant {s.tenant_email_sent ? '✓' : '✗'}
-                    </span>
+                    </Badge>
                   </div>
 
                   <div className={`shrink-0 transition-colors ${isOpen ? 'text-indigo-400' : 'text-gray-300'}`}>

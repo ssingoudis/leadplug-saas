@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
-import { Power } from 'lucide-react'
 import LeadsView from './LeadsView'
+import AdminHeader from '../AdminHeader'
 
 export type QuestionMeta = {
   question_key: string
@@ -93,31 +93,7 @@ export default async function LeadsPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <div className="bg-white sticky top-0 z-10 border-b-2 border-[#4648d4]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-0 flex items-stretch gap-0">
-          <a
-            href="/admin"
-            className="flex items-center px-4 py-4 text-sm font-medium text-gray-500 hover:text-gray-900 border-b-2 border-transparent -mb-[2px] transition-colors"
-          >
-            Funnels
-          </a>
-          <a
-            href="/admin/leads"
-            className="flex items-center px-4 py-4 text-sm font-semibold text-[#4648d4] border-b-2 border-[#4648d4] -mb-[2px]"
-          >
-            Leads
-          </a>
-          <div className="ml-auto flex items-center py-3">
-            <a
-              href="/logout"
-              className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
-            >
-              <Power size={14} />
-              Logout
-            </a>
-          </div>
-        </div>
-      </div>
+      <AdminHeader />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8">
         <LeadsView submissions={submissions} tenants={tenants} />

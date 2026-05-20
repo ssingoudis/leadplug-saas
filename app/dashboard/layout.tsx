@@ -1,8 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { Power, Settings } from 'lucide-react'
-import TabNav from './TabNav'
+import { Power } from 'lucide-react'
+import DashboardHeader from './DashboardHeader'
 
 function emailToSlug(email: string): string {
   return email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').slice(0, 40)
@@ -69,27 +69,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      <div className="bg-white sticky top-0 z-10 border-b-2 border-[#4648d4]">
-        <div className="max-w-5xl mx-auto px-4 sm:px-8 py-0 flex items-stretch gap-0">
-          <TabNav />
-          <div className="ml-auto flex items-center gap-2 py-3">
-            <a
-              href="/dashboard/account"
-              className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg bg-[#4648d4] text-white hover:bg-[#3537b0] transition-colors"
-            >
-              <Settings size={14} />
-              Account
-            </a>
-            <a
-              href="/logout"
-              className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg border border-gray-300 text-gray-500 bg-white hover:border-[#4648d4] hover:text-[#4648d4] transition-colors"
-            >
-              <Power size={14} />
-              Logout
-            </a>
-          </div>
-        </div>
-      </div>
+      <DashboardHeader />
       <div className="max-w-5xl mx-auto px-4 sm:px-8 py-8">
         {children}
       </div>

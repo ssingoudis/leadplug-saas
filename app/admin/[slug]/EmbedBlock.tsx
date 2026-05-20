@@ -112,7 +112,7 @@ export default function EmbedBlock({ slug, url, companyName }: { slug: string; u
     <div className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-6 py-5 hover:bg-gray-50 transition-colors"
+        className="w-full flex items-center justify-between px-6 py-5 hover:bg-gray-50 transition-colors cursor-pointer"
       >
         <span className="text-base font-bold text-gray-900">Embed-Code</span>
         <span className="text-gray-400">
@@ -126,7 +126,7 @@ export default function EmbedBlock({ slug, url, companyName }: { slug: string; u
             <span className="text-xs text-gray-400 font-mono">HTML + JavaScript</span>
             <button
               onClick={handleCopy}
-              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all"
+              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all cursor-pointer"
               style={
                 copied
                   ? { borderColor: '#22c55e', color: '#16a34a', backgroundColor: '#f0fdf4' }

@@ -45,10 +45,10 @@ export default function MonthlyStats({ rows }: { rows: MonthlyRow[] }) {
                 onClick={() => setOpenMonth(isOpen ? null : row.month)}
                 className={`grid grid-cols-[1fr_80px_32px] items-center px-6 py-4 cursor-pointer transition-colors ${isOpen ? 'bg-indigo-50' : 'bg-white hover:bg-gray-50'}`}
               >
-                <span className={`text-sm font-medium ${isOpen ? 'text-indigo-700' : 'text-gray-900'}`}>
+                <span className="text-sm font-medium text-gray-900">
                   {formatMonth(row.month)}
                 </span>
-                <span className={`text-sm font-bold text-right ${isOpen ? 'text-indigo-700' : 'text-gray-800'}`}>
+                <span className="text-sm font-bold text-right text-gray-800">
                   {row.leads}
                 </span>
                 <span className={`flex justify-end ${isOpen ? 'text-indigo-400' : 'text-gray-300'}`}>

@@ -23,7 +23,7 @@ export default function EmailPreviewBlock({ title, src }: { title: string; src: 
     <div className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-6 py-5 hover:bg-gray-50 transition-colors"
+        className="w-full flex items-center justify-between px-6 py-5 hover:bg-gray-50 transition-colors cursor-pointer"
       >
         <span className="text-base font-bold text-gray-900">{title}</span>
         <span className="text-gray-400">

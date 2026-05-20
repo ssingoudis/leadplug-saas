@@ -101,7 +101,7 @@ function SelectNative({
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="appearance-none w-full rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 shadow-sm outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-400 transition pr-8"
+        className="appearance-none w-full rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 shadow-sm outline-none focus:border-[#4648d4] focus:ring-1 focus:ring-[#4648d4]/20 transition pr-8 cursor-pointer"
       >
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
@@ -283,14 +283,14 @@ export default function NewFunnelPage() {
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={handlePreview}
-              className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg border border-indigo-600 text-indigo-600 hover:bg-indigo-50 transition-colors"
+              className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg border border-indigo-600 text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
             >
               Vorschau
             </button>
             <button
               onClick={handleSubmit}
               disabled={saving}
-              className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors cursor-pointer disabled:cursor-not-allowed"
             >
               {saving ? 'Speichert…' : 'Speichern'}
             </button>
@@ -449,10 +449,10 @@ export default function NewFunnelPage() {
                 <div className="flex items-start gap-3">
                   {/* sort */}
                   <div className="flex flex-col gap-0.5 pt-0.5 shrink-0">
-                    <button onClick={() => moveQ(q.id, -1)} disabled={qi === 0} className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-30">
+                    <button onClick={() => moveQ(q.id, -1)} disabled={qi === 0} className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-30 cursor-pointer disabled:cursor-default">
                       <ChevronUp size={14} />
                     </button>
-                    <button onClick={() => moveQ(q.id, 1)} disabled={qi === questions.length - 1} className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-30">
+                    <button onClick={() => moveQ(q.id, 1)} disabled={qi === questions.length - 1} className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-30 cursor-pointer disabled:cursor-default">
                       <ChevronDown size={14} />
                     </button>
                   </div>
@@ -494,14 +494,14 @@ export default function NewFunnelPage() {
                               onChange={v => updateO(q.id, o.id, 'label', v)}
                               placeholder="Antwort-Option"
                             />
-                            <button onClick={() => removeO(q.id, o.id)} className="text-gray-400 hover:text-red-500 shrink-0 transition-colors">
+                            <button onClick={() => removeO(q.id, o.id)} className="text-gray-400 hover:text-red-500 shrink-0 transition-colors cursor-pointer">
                               <Trash2 size={14} />
                             </button>
                           </div>
                         ))}
                         <button
                           onClick={() => addOption(q.id)}
-                          className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors w-fit"
+                          className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors w-fit cursor-pointer"
                         >
                           <Plus size={12} /> Option hinzufügen
                         </button>
@@ -545,7 +545,7 @@ export default function NewFunnelPage() {
                     </label>
                   </div>
 
-                  <button onClick={() => removeQ(q.id)} className="text-gray-400 hover:text-red-500 shrink-0 transition-colors pt-0.5">
+                  <button onClick={() => removeQ(q.id)} className="text-gray-400 hover:text-red-500 shrink-0 transition-colors pt-0.5 cursor-pointer">
                     <Trash2 size={16} />
                   </button>
                 </div>
@@ -554,7 +554,7 @@ export default function NewFunnelPage() {
 
             <button
               onClick={addQuestion}
-              className="flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors w-fit"
+              className="flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors w-fit cursor-pointer"
             >
               <Plus size={16} /> Frage hinzufügen
             </button>
@@ -565,14 +565,14 @@ export default function NewFunnelPage() {
         <div className="flex justify-end gap-3 pb-8">
           <button
             onClick={handlePreview}
-            className="flex items-center gap-2 text-sm font-medium px-6 py-2.5 rounded-lg border border-indigo-600 text-indigo-600 hover:bg-indigo-50 transition-colors"
+            className="flex items-center gap-2 text-sm font-medium px-6 py-2.5 rounded-lg border border-indigo-600 text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
           >
             Vorschau
           </button>
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="flex items-center gap-2 text-sm font-medium px-6 py-2.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 text-sm font-medium px-6 py-2.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors cursor-pointer disabled:cursor-not-allowed"
           >
             {saving ? 'Speichert…' : 'Speichern'}
           </button>
