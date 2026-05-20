@@ -4,8 +4,13 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import * as LucideIcons from 'lucide-react'
 import { X, Search, type LucideProps } from 'lucide-react'
 import type { ComponentType } from 'react'
+import { CUSTOM_ICONS, CUSTOM_ICON_LABELS } from '@/components/icons/index'
 
 const ICON_CATEGORIES: { label: string; icons: string[] }[] = [
+  {
+    label: 'Custom',
+    icons: Object.keys(CUSTOM_ICONS),
+  },
   {
     label: 'Gebäude',
     icons: [
@@ -145,7 +150,10 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
   const displayedIcons = useMemo(() => {
     if (search.trim()) {
       const q = search.toLowerCase()
-      return ALL_ICONS.filter(name => name.toLowerCase().includes(q))
+      return ALL_ICONS.filter(name => {
+        const label = CUSTOM_ICON_LABELS[name] ?? name
+        return name.toLowerCase().includes(q) || label.toLowerCase().includes(q)
+      })
     }
     if (activeCategory) {
       return ICON_CATEGORIES.find(c => c.label === activeCategory)?.icons ?? []
@@ -153,7 +161,8 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
     return ALL_ICONS
   }, [search, activeCategory])
 
-  const IconComponent = value
+  const CustomTriggerIcon = value ? CUSTOM_ICONS[value] ?? null : null
+  const LucideIconComponent = value && !CustomTriggerIcon
     ? (LucideIcons[value as keyof typeof LucideIcons] as ComponentType<LucideProps> | undefined) ?? null
     : null
 
@@ -163,16 +172,18 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
         ref={buttonRef}
         type="button"
         onClick={handleOpen}
-        title={value || 'Icon auswählen'}
+        title={CUSTOM_ICON_LABELS[value] || value || 'Icon auswählen'}
         className={`w-9 h-9 flex items-center justify-center rounded-lg border transition-colors ${
           value
             ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
             : 'border-gray-200 bg-white text-gray-400 hover:border-gray-400 hover:text-gray-600'
         }`}
       >
-        {IconComponent
-          ? <IconComponent size={16} strokeWidth={1.5} />
-          : <span className="text-[10px] font-medium leading-none">icon</span>
+        {CustomTriggerIcon
+          ? <CustomTriggerIcon size={16} color="currentColor" />
+          : LucideIconComponent
+            ? <LucideIconComponent size={16} strokeWidth={1.5} />
+            : <span className="text-[10px] font-medium leading-none">icon</span>
         }
       </button>
 
@@ -234,9 +245,25 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
 
           <div className="grid grid-cols-10 gap-1 max-h-56 overflow-y-auto">
             {displayedIcons.map(name => {
+              const active = value === name
+              const CustomIcon = CUSTOM_ICONS[name]
+              if (CustomIcon) {
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => { onChange(name); setOpen(false); setSearch(''); setActiveCategory(null) }}
+                    title={CUSTOM_ICON_LABELS[name] ?? name}
+                    className={`p-2 rounded-lg flex items-center justify-center transition-colors ${
+                      active ? 'bg-indigo-100 text-indigo-600' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+                    }`}
+                  >
+                    <CustomIcon size={20} color="currentColor" />
+                  </button>
+                )
+              }
               const Icon = LucideIcons[name as keyof typeof LucideIcons] as ComponentType<LucideProps> | undefined
               if (!Icon) return null
-              const active = value === name
               return (
                 <button
                   key={name}
@@ -257,10 +284,15 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
             <p className="text-xs text-gray-400 text-center py-4">Kein Icon gefunden</p>
           )}
 
-          {value && IconComponent && (
+          {value && (CustomTriggerIcon || LucideIconComponent) && (
             <div className="mt-2 pt-2 border-t border-gray-100 flex items-center gap-2">
-              <IconComponent size={13} strokeWidth={1.5} className="text-indigo-500 shrink-0" />
-              <span className="text-xs text-gray-400 font-mono truncate">{value}</span>
+              {CustomTriggerIcon
+                ? <CustomTriggerIcon size={13} color="currentColor" className="text-indigo-500 shrink-0" />
+                : LucideIconComponent && <LucideIconComponent size={13} strokeWidth={1.5} className="text-indigo-500 shrink-0" />
+              }
+              <span className="text-xs text-gray-400 font-mono truncate">
+                {CUSTOM_ICON_LABELS[value] ?? value}
+              </span>
             </div>
           )}
         </div>
