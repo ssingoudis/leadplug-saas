@@ -27,6 +27,8 @@ Nur noch 2 aktive Tenants:
 
 ## History
 
+- **Icon Picker für Admin Funnel-Creator** – `app/admin/new/IconPicker.tsx` (neu): Dropdown öffnet nach oben via `position: fixed` + `getBoundingClientRect()`. Seitenscroll aktualisiert Position statt zu schließen. 11 Kategorien mit 131 kuratierten Lucide-Icons (nur handwerksrelevante). Kategorie-Filter-Tabs + Freitextsuche. `app/admin/new/page.tsx`: IconPicker je Option eingebunden, `icon_key` wird beim Speichern übergeben. (`app/admin/new/IconPicker.tsx`, `app/admin/new/page.tsx`)
+
 - **Funnel-Kacheln Redesign** – Conversion-optimiertes Kachel-Design: Unselected-State jetzt mit Primärfarbe ausgefüllt (weißes Icon + Label). Hover: Scale-up 1.05 + Active Squish 0.9 (ersetzt alten Border-Hover). Multiple-Choice Selected: weißer Checkmark-Kreis (Primärfarben-Haken) oben rechts, kein Farb-Invert. Subtile Card-Shadow für Abhebung vom weißen Hintergrund. Submit-Button Opacity 0.5→0.65. (`components/funnel.tsx`)
 
 - **Admin Funnel-Creator** – Vollständige Admin-UI zum Anlegen von Tenant + Funnel ohne SQL-Zugriff. `/admin/new`: Formular mit 3 Sektionen (Kunde, Funnel, Fragen). Alle Fragetypen: `single_choice`, `multiple_choice`, `slider`, `short_text`, `long_text`. Pflichtfeld-Toggle für alle Typen. Freitext-Typen mit Placeholder-Config. Vorschau ohne DB-Schreibzugriff via `localStorage` → `/admin/preview`. Slug-Autogenerierung aus Firmennamen. Speichern → Redirect zu `/admin/[slug]`. `POST /api/admin/create-funnel` mit Service Key für atomisches Insert. `app/admin/page.tsx`: "Neuer Kunde"-Button + "Mein Dashboard"-Link (öffnet in neuem Tab). (`app/admin/new/page.tsx`, `app/admin/preview/page.tsx`, `app/api/admin/create-funnel/route.ts`, `app/admin/page.tsx`)
