@@ -93,50 +93,50 @@
 /* ── Design tokens ───────────────────────────────────────────────────────── */
 
 :root {
-  --background:             #f3f4f6;   /* gray-100  — page background   */
-  --foreground:             #111827;   /* gray-900  — primary text       */
-  --border:                 #e5e7eb;   /* gray-200  — default borders    */
-  --ring:                   #4648d4;   /* primary   — focus rings        */
+  --color-background:             #f3f4f6;   /* gray-100  — page background   */
+  --color-foreground:             #111827;   /* gray-900  — primary text       */
+  --color-border:                 #e5e7eb;   /* gray-200  — default borders    */
+  --color-ring:                   #4648d4;
 
-  --primary:                #4648d4;
-  --primary-hover:          #3537b0;
-  --primary-foreground:     #ffffff;
+  --color-primary:                #4648d4;
+  --color-primary-hover:          #3537b0;
+  --color-primary-foreground:     #ffffff;
 
-  --destructive:            #ef4444;
-  --destructive-foreground: #ffffff;
+  --color-destructive:            #ef4444;
+  --color-destructive-foreground: #ffffff;
 
-  --radius:                 0.75rem;
+  --radius:                       0.75rem;
 }
 
 .dark {
-  --background:             #0f172a;   /* slate-900 */
-  --foreground:             #f1f5f9;   /* slate-100 */
-  --border:                 #334155;   /* slate-700 */
-  --ring:                   #5b78f5;
+  --color-background:             #0f172a;   /* slate-900 */
+  --color-foreground:             #f1f5f9;   /* slate-100 */
+  --color-border:                 #334155;   /* slate-700 */
+  --color-ring:                   #5b78f5;
 
-  --primary:                #5b78f5;   /* blue-indigo — weniger lila als indigo-500 */
-  --primary-hover:          #4a67e4;
-  --primary-foreground:     #ffffff;
+  --color-primary:                #5b78f5;   /* blue-indigo — weniger lila als indigo-500 */
+  --color-primary-hover:          #4a67e4;
+  --color-primary-foreground:     #ffffff;
 
-  --destructive:            #f87171;   /* red-400 */
-  --destructive-foreground: #ffffff;
+  --color-destructive:            #f87171;   /* red-400 */
+  --color-destructive-foreground: #ffffff;
 }
 
 @theme inline {
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, 'Cascadia Code', monospace;
 
-  --color-background:             var(--background);
-  --color-foreground:             var(--foreground);
-  --color-border:                 var(--border);
-  --color-ring:                   var(--ring);
+  --color-background:             var(--color-background);
+  --color-foreground:             var(--color-foreground);
+  --color-border:                 var(--color-border);
+  --color-ring:                   var(--color-ring);
 
-  --color-primary:                var(--primary);
-  --color-primary-hover:          var(--primary-hover);
-  --color-primary-foreground:     var(--primary-foreground);
+  --color-primary:                var(--color-primary);
+  --color-primary-hover:          var(--color-primary-hover);
+  --color-primary-foreground:     var(--color-primary-foreground);
 
-  --color-destructive:            var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive:            var(--color-destructive);
+  --color-destructive-foreground: var(--color-destructive-foreground);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

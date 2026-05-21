@@ -95,12 +95,15 @@ export default function DailyLeadsChart({ data }: { data: DayData[] }) {
         </div>
       </div>
 
-      {/* X-axis labels — nur ab sm sichtbar, auf Mobile zu eng */}
-      <div className="hidden sm:flex mt-1.5 pl-8">
-        {data.map((day) => (
+      {/* X-axis — desktop: alle Labels, mobile: jeden 3. */}
+      <div className="flex mt-1.5 pl-8">
+        {data.map((day, i) => (
           <div key={day.date} className="flex-1 flex flex-col items-center">
-            <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 leading-tight">{weekday(day.date)}</span>
-            <span className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight">{fmtDate(day.date)}</span>
+            <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 leading-tight hidden sm:block">{weekday(day.date)}</span>
+            <span className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight hidden sm:block">{fmtDate(day.date)}</span>
+            {(i % 3 === 0) && (
+              <span className="text-[9px] text-gray-400 dark:text-gray-500 leading-tight sm:hidden">{fmtDate(day.date)}</span>
+            )}
           </div>
         ))}
       </div>

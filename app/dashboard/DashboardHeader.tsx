@@ -1,9 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { Settings, Power, Menu, X } from 'lucide-react'
+import { Settings, Power, Menu, X, LayoutDashboard, BarChart2, Code2 } from 'lucide-react'
 import ThemeToggle from '@/components/ui/ThemeToggle'
-import TabNav from './TabNav'
+import TabNav, { TABS } from './TabNav'
+
+const TAB_ICONS: Record<string, React.ComponentType<{ size?: number }>> = {
+  '/dashboard':             LayoutDashboard,
+  '/dashboard/statistiken': BarChart2,
+  '/dashboard/embed':       Code2,
+}
 
 export default function DashboardHeader() {
   const [open, setOpen] = useState(false)
@@ -33,8 +39,9 @@ export default function DashboardHeader() {
           </a>
         </div>
 
-        {/* Mobile hamburger */}
-        <div className="ml-auto flex sm:hidden items-center py-3">
+        {/* Mobile: ThemeToggle + Hamburger */}
+        <div className="ml-auto flex sm:hidden items-center gap-2 py-3">
+          <ThemeToggle />
           <button
             onClick={() => setOpen(!open)}
             aria-label="Menü öffnen"
@@ -48,6 +55,22 @@ export default function DashboardHeader() {
       {/* Mobile dropdown */}
       {open && (
         <div className="sm:hidden border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 py-1">
+          {/* Navigation */}
+          {TABS.map((tab) => {
+            const Icon = TAB_ICONS[tab.href]
+            return (
+              <a
+                key={tab.href}
+                href={tab.href}
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                {Icon && <Icon size={15} />}
+                {tab.label}
+              </a>
+            )
+          })}
+          <div className="mx-6 border-t border-gray-100 dark:border-gray-800" />
           <a
             href="/dashboard/account"
             onClick={() => setOpen(false)}

@@ -52,7 +52,7 @@ export default function DonutChart({ value, total, centerLabel, subLabel, toolti
           <circle
             cx={CX} cy={CY} r={R}
             fill="none"
-            stroke={total === 0 ? 'currentColor' : '#6366f1'}
+            stroke={total === 0 ? 'currentColor' : 'var(--color-primary)'}
             strokeWidth={stroke}
             strokeDasharray={`${filled} ${CIRCUMFERENCE - filled}`}
             strokeLinecap="round"

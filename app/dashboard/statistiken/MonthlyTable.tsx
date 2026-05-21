@@ -52,12 +52,13 @@ function niceTicks(max: number): number[] {
 // ─── Full-width Daily Chart ───────────────────────────────────────────────────
 
 function DailyMonthChart({
-  data, color, title, monthKey,
+  data, color, title, monthKey, unit,
 }: {
   data:     { day: number; count: number }[]
   color:    string
   title:    string
   monthKey: string
+  unit:     string
 }) {
   const [hoveredDay, setHoveredDay] = useState<number | null>(null)
 
@@ -107,7 +108,7 @@ function DailyMonthChart({
                 >
                   {isHover && (
                     <div className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-10 whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1.5 text-white shadow-lg text-center">
-                      <span className="block text-xs font-semibold">{d.count}</span>
+                      <span className="block text-xs font-semibold">{d.count} {unit}</span>
                       <span className="block text-[10px]">{fmtDate(d.day, monthKey)}</span>
                     </div>
                   )}
@@ -115,7 +116,8 @@ function DailyMonthChart({
                     className={`w-full rounded-t-sm transition-colors duration-100 ${d.count === 0 ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
                     style={d.count > 0 ? {
                       height:          `${barPct}%`,
-                      backgroundColor: isHover ? '#4338ca' : color,
+                      backgroundColor: color,
+                      filter:          isHover ? 'brightness(0.82)' : 'none',
                     } : { height: '2px' }}
                   />
                 </div>
@@ -125,13 +127,16 @@ function DailyMonthChart({
         </div>
       </div>
 
-      {/* X-axis — every day */}
+      {/* X-axis — desktop: alle Labels, mobile: jeden 7. Tag (1,8,15,22,29) */}
       <div className="flex mt-1.5 pl-8">
         {data.map((d) => (
           <div key={d.day} className="flex-1 flex justify-center">
             <div className="flex flex-col items-center">
-              <span className="text-[9px] font-medium text-gray-500 dark:text-gray-400 leading-tight">{getWeekday(d.day, monthKey)}</span>
-              <span className="text-[9px] text-gray-400 dark:text-gray-500 leading-tight">{d.day}</span>
+              <span className="text-[9px] font-medium text-gray-500 dark:text-gray-400 leading-tight hidden sm:block">{getWeekday(d.day, monthKey)}</span>
+              <span className="text-[9px] text-gray-400 dark:text-gray-500 leading-tight hidden sm:block">{d.day}</span>
+              {(d.day % 7 === 1) && (
+                <span className="text-[9px] text-gray-400 dark:text-gray-500 leading-tight sm:hidden">{d.day}</span>
+              )}
             </div>
           </div>
         ))}
@@ -193,6 +198,7 @@ function ExpandedMonth({
           color="#6366f1"
           title="Aufrufe pro Tag"
           monthKey={m.month}
+          unit="Aufrufe"
         />
       )}
 
@@ -202,6 +208,7 @@ function ExpandedMonth({
         color="#10b981"
         title="Leads pro Tag"
         monthKey={m.month}
+        unit="Leads"
       />
 
     </div>
