@@ -129,7 +129,7 @@ export function editorStateToFunnelRow(
     slug: funnelSlug,
     tenant_slug: tenantSlug,
     funnel_name: state.funnelName || null,
-    funnel_title: state.funnelTitle || null,
+    contact_form_title: state.funnelTitle || null,
     submit_button_label: state.submitButtonLabel || null,
     success_message: state.successMessage || null,
     response_message: state.responseMessage || null,
@@ -155,20 +155,17 @@ export function editorStateToFunnelRow(
   };
 }
 
-// Generiert einen eindeutigen Slug aus einem Basis-String (prüft DB-Verfügbarkeit).
+// Generiert einen zufälligen, eindeutigen 8-Zeichen-Slug (base36, a-z0-9).
+// Lesbarkeit ist irrelevant — der Slug landet nur im Embed-Code, nie in der UI.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function generateUniqueSlug(admin: any, title: string, tenantSlug: string): Promise<string> {
-  const base = toSlug(title) || toSlug(tenantSlug) || "funnel";
-  let slug = base;
-  let i = 2;
+export async function generateRandomSlug(admin: any): Promise<string> {
   while (true) {
+    const slug = Math.random().toString(36).slice(2, 10);
     const { count } = await admin
       .from("funnels")
       .select("slug", { count: "exact", head: true })
       .eq("slug", slug);
     if ((count ?? 0) === 0) return slug;
-    slug = `${base}-${i}`;
-    i++;
   }
 }
 
@@ -269,7 +266,7 @@ export function dbToEditorState(
 
   return {
     funnelName: funnelRow.funnel_name ?? "",
-    funnelTitle: funnelRow.funnel_title ?? "",
+    funnelTitle: funnelRow.contact_form_title ?? "",
     primaryColor: funnelRow.primary_color ?? "#22c55e",
     textColor: funnelRow.text_color ?? "#1f2937",
     backgroundColor: funnelRow.background_color ?? "#ffffff",

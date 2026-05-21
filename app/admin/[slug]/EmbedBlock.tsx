@@ -95,7 +95,7 @@ function CodeBlock({ code }: { code: string }) {
   )
 }
 
-export default function EmbedBlock({ slug, url, companyName }: { slug: string; url: string; companyName: string }) {
+export default function EmbedBlock({ slug, url, companyName, funnelName }: { slug: string; url: string; companyName: string; funnelName?: string }) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
 
@@ -114,7 +114,7 @@ export default function EmbedBlock({ slug, url, companyName }: { slug: string; u
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between px-6 py-5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
       >
-        <span className="text-base font-bold text-gray-900 dark:text-white">Embed-Code</span>
+        <span className="text-base font-bold text-gray-900 dark:text-white">{funnelName ?? "Embed-Code"}</span>
         <span className="text-gray-400 dark:text-gray-500">
           {open ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
         </span>

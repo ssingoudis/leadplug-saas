@@ -719,7 +719,7 @@ export function Funnel({
               <form onSubmit={handleFormSubmit}>
                 <h1
                   className="text-lg @md:text-xl @lg:text-2xl font-bold mb-2 leading-tight"
-                  style={{ color: theme.textColor, ...hl("funnel_title") }}
+                  style={{ color: theme.textColor, ...hl("contact_form_title") }}
                 >
                   {funnel.title}
                 </h1>

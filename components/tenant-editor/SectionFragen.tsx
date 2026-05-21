@@ -42,7 +42,9 @@ function Label({ children }: { children: React.ReactNode }) {
 }
 
 function newOption(): EditorOption {
-  return { _id: uid(), label: "", value: "", iconKey: "", iconUrl: "" };
+  const id = uid();
+  // value = _id als eindeutiger Startwert; wird beim ersten Eintippen durch den Slug ersetzt
+  return { _id: id, label: "", value: id, iconKey: "", iconUrl: "" };
 }
 
 function newQuestion(): EditorQuestion {
@@ -124,12 +126,18 @@ function QuestionCard({
   }
 
   function handleOptionLabelChange(opt: EditorOption, label: string) {
-    const wasAuto = opt.value === toSlug(opt.label) || opt.value === "";
-    const newOpts = updateOption(question.options, opt._id, {
-      label,
-      value: wasAuto ? toSlug(label) : opt.value,
-    });
-    onUpdate({ options: newOpts });
+    const wasAuto = opt.value === "" || opt.value === opt._id || opt.value === toSlug(opt.label);
+    if (!wasAuto) {
+      onUpdate({ options: updateOption(question.options, opt._id, { label }) });
+      return;
+    }
+    // Eindeutigen Slug generieren: Fallback auf _id-Suffix wenn Label leer
+    const base = toSlug(label) || opt._id.slice(-6);
+    const siblings = question.options.filter((o) => o._id !== opt._id).map((o) => o.value);
+    let value = base;
+    let n = 2;
+    while (siblings.includes(value)) value = `${base}-${n++}`;
+    onUpdate({ options: updateOption(question.options, opt._id, { label, value }) });
   }
 
   function handleOptionIconChange(optId: string, iconKey: string) {
@@ -218,15 +226,22 @@ function QuestionCard({
         </button>
       </div>
 
-      {/* Card Body */}
+      {/* Card Body — onFocus per event delegation: data-field bestimmt den Highlight-Key */}
       {isOpen && (
-        <div className="px-4 pb-4 pt-3 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 space-y-4">
+        <div
+          className="px-4 pb-4 pt-3 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 space-y-4"
+          onFocus={(e) => {
+            const field = (e.target as HTMLElement).dataset.field ?? "question_title";
+            onFocus(field);
+          }}
+        >
           {/* Fragetyp */}
           <div>
             <Label>Fragetyp</Label>
             <select
               value={question.questionType}
               onChange={(e) => handleTypeChange(e.target.value as QuestionType)}
+              data-field="question_title"
               className={selectClass}
             >
               {Object.entries(QUESTION_TYPE_LABELS).map(([value, label]) => (
@@ -244,7 +259,7 @@ function QuestionCard({
               type="text"
               value={question.title}
               onChange={(e) => handleTitleChange(e.target.value)}
-              onFocus={() => onFocus("question_title")}
+              data-field="question_title"
               placeholder="Was möchten Sie wissen?"
               className={inputClass}
             />
@@ -257,7 +272,7 @@ function QuestionCard({
               type="text"
               value={question.subtitle}
               onChange={(e) => onUpdate({ subtitle: e.target.value })}
-              onFocus={() => onFocus("question_subtitle")}
+              data-field="question_subtitle"
               placeholder="Ergänzende Erklärung zur Frage"
               className={inputClass}
             />
@@ -277,10 +292,8 @@ function QuestionCard({
                     <input
                       type="text"
                       value={opt.label}
-                      onChange={(e) =>
-                        handleOptionLabelChange(opt, e.target.value)
-                      }
-                      onFocus={() => onFocus(`option_${idx}`)}
+                      onChange={(e) => handleOptionLabelChange(opt, e.target.value)}
+                      data-field={`option_${idx}`}
                       placeholder={`Option ${idx + 1}`}
                       className={cn(inputClass, "flex-1")}
                     />
@@ -315,6 +328,7 @@ function QuestionCard({
                   type="number"
                   value={question.sliderMin}
                   onChange={(e) => onUpdate({ sliderMin: e.target.value })}
+                  data-field="question_title"
                   className={inputClass}
                 />
               </div>
@@ -324,6 +338,7 @@ function QuestionCard({
                   type="number"
                   value={question.sliderMax}
                   onChange={(e) => onUpdate({ sliderMax: e.target.value })}
+                  data-field="question_title"
                   className={inputClass}
                 />
               </div>
@@ -333,6 +348,7 @@ function QuestionCard({
                   type="number"
                   value={question.sliderStep}
                   onChange={(e) => onUpdate({ sliderStep: e.target.value })}
+                  data-field="question_title"
                   className={inputClass}
                 />
               </div>
@@ -342,6 +358,7 @@ function QuestionCard({
                   type="text"
                   value={question.sliderUnit}
                   onChange={(e) => onUpdate({ sliderUnit: e.target.value })}
+                  data-field="question_title"
                   placeholder="m²"
                   className={inputClass}
                 />
@@ -352,6 +369,7 @@ function QuestionCard({
                   type="number"
                   value={question.sliderDefault}
                   onChange={(e) => onUpdate({ sliderDefault: e.target.value })}
+                  data-field="question_title"
                   className={inputClass}
                 />
               </div>

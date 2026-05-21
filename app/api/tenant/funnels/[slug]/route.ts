@@ -5,7 +5,6 @@ import {
   editorStateToFunnelRow,
   editorQuestionsToDbRows,
   dbToEditorState,
-  generateUniqueSlug,
 } from "@/lib/editorUtils";
 import type { EditorState } from "@/types";
 
@@ -121,8 +120,49 @@ export async function PUT(
     }
   }
 
-  // generateUniqueSlug wird nicht mehr benötigt, aber Import bleibt für zukünftige Nutzung
-  void generateUniqueSlug;
-
   return NextResponse.json({ slug: oldSlug });
+}
+
+// DELETE /api/tenant/funnels/[slug] — Funnel unwiderruflich löschen (nur wenn inaktiv)
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ slug: string }> },
+) {
+  const { slug } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const admin = createAdminClient();
+  const tenant = await getAuthenticatedTenant(admin, user.id);
+  if (!tenant) return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+
+  const owned = await verifyOwnership(admin, slug, tenant.slug);
+  if (!owned) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const { data: funnel } = await admin
+    .from("funnels")
+    .select("is_active")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (!funnel) return NextResponse.json({ error: "Funnel nicht gefunden" }, { status: 404 });
+  if (funnel.is_active) {
+    return NextResponse.json(
+      { error: "Funnel muss zuerst deaktiviert sein" },
+      { status: 400 },
+    );
+  }
+
+  // Alles löschen: View-Logs → Submissions → Fragen → Funnel
+  await admin.from("funnel_view_logs").delete().eq("funnel_slug", slug);
+  await admin.from("submissions").delete().eq("funnel_slug", slug);
+  await admin.from("funnel_questions").delete().eq("funnel_slug", slug);
+  const { error } = await admin.from("funnels").delete().eq("slug", slug);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json({ success: true });
 }
