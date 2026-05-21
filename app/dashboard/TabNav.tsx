@@ -1,7 +1,6 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
 
 export const TABS = [
   { label: 'Dashboard',     href: '/dashboard' },
@@ -21,23 +20,6 @@ function guardedClick(e: React.MouseEvent<HTMLAnchorElement>, href: string) {
 
 export default function TabNav() {
   const pathname = usePathname()
-
-  // Account-Seite: Breadcrumb zurück zum Dashboard
-  if (pathname === '/dashboard/account') {
-    return (
-      <div className="flex items-center gap-2 py-4">
-        <a
-          href="/dashboard"
-          className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors shrink-0"
-        >
-          <ArrowLeft size={14} />
-          Dashboard
-        </a>
-        <span className="text-gray-300 dark:text-gray-600">/</span>
-        <span className="text-sm font-semibold text-gray-900 dark:text-white">Account</span>
-      </div>
-    )
-  }
 
   // Normale Seiten: Tab-Leiste
   const activeTab = TABS.find((tab) =>
