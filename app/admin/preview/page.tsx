@@ -66,7 +66,7 @@ export default function PreviewPage() {
       maxWidth:            form.max_width             || undefined,
     })
     setFunnel({
-      title: form.funnel_title || 'Jetzt kostenloses Angebot anfordern',
+      title: form.contact_form_title || 'Jetzt kostenloses Angebot anfordern',
       submitButtonLabel: form.submit_button_label || 'Anfrage absenden',
       successMessage: form.success_message || 'Vielen Dank! Wir melden uns in Kürze bei Ihnen.',
       responseMessage: form.response_message || 'Wir melden uns so schnell wie möglich bei Ihnen.',

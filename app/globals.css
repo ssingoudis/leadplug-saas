@@ -197,4 +197,7 @@
   body {
     @apply text-foreground;
   }
+  button:not(:disabled), [role="button"], label[for], select {
+    cursor: pointer;
+  }
 }

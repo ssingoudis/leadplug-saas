@@ -76,7 +76,7 @@ export function SectionKontakt({ state, onChange, onFocus, fields, onFieldsChang
           type="text"
           value={state.funnelTitle}
           onChange={(e) => onChange({ funnelTitle: e.target.value })}
-          onFocus={() => onFocus("funnel_title")}
+          onFocus={() => onFocus("contact_form_title")}
           placeholder="Jetzt kostenloses Angebot anfordern"
           className={inputClass}
         />

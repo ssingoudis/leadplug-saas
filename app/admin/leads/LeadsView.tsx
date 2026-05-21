@@ -173,7 +173,7 @@ export default function LeadsView({ submissions, tenants }: { submissions: Submi
               <div key={s.id} className={!isLast ? 'border-b border-gray-100 dark:border-gray-800' : ''}>
                 <div
                   onClick={() => setOpenId(isOpen ? null : s.id)}
-                  className={`flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors ${isOpen ? 'bg-primary/10 dark:bg-gray-800' : 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                  className={`flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors ${isOpen ? 'bg-gray-100 dark:bg-gray-800' : 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
                 >
                   {/* Datum */}
                   <div className="w-24 shrink-0">

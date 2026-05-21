@@ -40,7 +40,7 @@ async function getData(slug: string) {
       .from('funnels')
       .select(`
         slug, is_active, total_views,
-        funnel_title, submit_button_label, success_message,
+        contact_form_title, submit_button_label, success_message,
         response_message, contact_form_subtitle, privacy_policy_url, email_sender_local,
         primary_color, text_color, background_color, page_background_color,
         font, border_radius, max_width,
@@ -182,7 +182,7 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
           {/* Funnel config */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm p-6">
             <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3">Funnel-Konfiguration</h2>
-            <Row label="Funnel-Titel" value={funnel.funnel_title} />
+            <Row label="Formular-Überschrift" value={funnel.contact_form_title} />
             <Row label="Kontaktformular-Untertitel" value={funnel.contact_form_subtitle} />
             <Row label="Button-Beschriftung" value={funnel.submit_button_label} />
             <Row label="Erfolgsmeldung" value={funnel.success_message} />

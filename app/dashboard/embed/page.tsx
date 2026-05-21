@@ -6,9 +6,9 @@ async function getFunnels() {
   const supabase = await createClient()
   const { data } = await supabase
     .from('funnels')
-    .select('slug')
+    .select('slug, funnel_name, contact_form_title')
     .eq('is_active', true)
-    .order('slug')
+    .order('created_at', { ascending: true })
   return data ?? []
 }
 
@@ -67,7 +67,8 @@ export default async function EmbedPage() {
                 key={f.slug}
                 slug={f.slug}
                 url={`${base}/${f.slug}`}
-                companyName={f.slug}
+                funnelName={f.funnel_name || f.contact_form_title || f.slug}
+                companyName={f.funnel_name || f.contact_form_title || f.slug}
               />
             ))}
           </div>

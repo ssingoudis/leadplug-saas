@@ -56,7 +56,7 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
       maxWidth:            theme.max_width            ?? '720px',
     },
     funnel: {
-      title:               row.funnel_title           ?? TEXT_DEFAULTS.funnelTitle,
+      title:               row.contact_form_title      ?? TEXT_DEFAULTS.funnelTitle,
       submitButtonLabel:   row.submit_button_label    ?? TEXT_DEFAULTS.submitButtonLabel,
       successMessage:      row.success_message        ?? TEXT_DEFAULTS.successMessage,
       responseMessage:     row.response_message       ?? TEXT_DEFAULTS.responseMessage,
@@ -113,7 +113,7 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
     .from('funnels')
     .select(`
       id, slug, is_active,
-      funnel_title, submit_button_label, success_message,
+      contact_form_title, submit_button_label, success_message,
       response_message, contact_form_subtitle, privacy_policy_url,
       privacy_text, answers_overview_label, footer_text,
       footer_company_name, footer_email, footer_phone,

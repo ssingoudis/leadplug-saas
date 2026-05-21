@@ -57,7 +57,7 @@ type Form = {
   font: string
   border_radius: string
   max_width: string
-  funnel_title: string
+  contact_form_title: string
   submit_button_label: string
   success_message: string
   response_message: string
@@ -122,7 +122,7 @@ export default function NewFunnelPage() {
     public_phone: '', website: '', billing_model: 'per_month', lead_price: '3',
     billing_price: '', funnel_slug: '', primary_color: '#4648d4',
     text_color: '', background_color: '', page_background_color: '', border_radius: '', max_width: '',
-    font: 'system', funnel_title: '', submit_button_label: '', success_message: '',
+    font: 'system', contact_form_title: '', submit_button_label: '', success_message: '',
     response_message: '', contact_form_subtitle: '', privacy_policy_url: '',
     email_sender_local: '',
   })
@@ -218,7 +218,7 @@ export default function NewFunnelPage() {
           font: form.font || null,
           border_radius: form.border_radius || null,
           max_width: form.max_width || null,
-          funnel_title: form.funnel_title || null,
+          contact_form_title: form.contact_form_title || null,
           submit_button_label: form.submit_button_label || null,
           success_message: form.success_message || null,
           response_message: form.response_message || null,
@@ -421,7 +421,7 @@ export default function NewFunnelPage() {
               <p className="text-xs font-medium text-gray-400 dark:text-gray-500 mb-3 uppercase tracking-wide">Texte (optional — Defaults werden verwendet wenn leer)</p>
               <div className="flex flex-col gap-4">
                 <Field label="Funnel-Titel">
-                  <Input value={form.funnel_title} onChange={set('funnel_title')} placeholder="Jetzt kostenloses Angebot anfordern" />
+                  <Input value={form.contact_form_title} onChange={set('contact_form_title')} placeholder="Jetzt kostenloses Angebot anfordern" />
                 </Field>
                 <Field label="Kontaktformular-Untertitel">
                   <Input value={form.contact_form_subtitle} onChange={set('contact_form_subtitle')} placeholder="Wer soll das Angebot erhalten?" />

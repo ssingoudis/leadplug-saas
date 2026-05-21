@@ -44,7 +44,7 @@ export default function MonthlyStats({ rows }: { rows: MonthlyRow[] }) {
               {/* Month row */}
               <div
                 onClick={() => setOpenMonth(isOpen ? null : row.month)}
-                className={`grid grid-cols-[1fr_80px_32px] items-center px-6 py-4 cursor-pointer transition-colors ${isOpen ? 'bg-primary/10 dark:bg-gray-800' : 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                className={`grid grid-cols-[1fr_80px_32px] items-center px-6 py-4 cursor-pointer transition-colors ${isOpen ? 'bg-gray-100 dark:bg-gray-800' : 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
               >
                 <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   {formatMonth(row.month)}
@@ -59,14 +59,14 @@ export default function MonthlyStats({ rows }: { rows: MonthlyRow[] }) {
 
               {/* Expanded: individual leads */}
               {isOpen && (
-                <div className="bg-white dark:bg-gray-900 border-t border-primary/20 divide-y divide-gray-50 dark:divide-gray-800">
+                <div className="bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800">
                   {row.submissions
                     .slice()
                     .sort((a, b) => b.created_at.localeCompare(a.created_at))
                     .map((s, i) => {
                       const d = new Date(s.created_at)
                       return (
-                        <a key={i} href={`/admin/${s.funnel_slug}`} className="flex items-start sm:items-center gap-6 px-4 sm:px-6 py-3 hover:bg-primary/10 transition-colors group">
+                        <a key={i} href={`/admin/${s.funnel_slug}`} className="flex items-start sm:items-center gap-6 px-4 sm:px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
                           <div className="w-20 sm:w-36 shrink-0">
                             <p className="text-sm text-gray-700 dark:text-gray-300">
                               {d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })}

@@ -175,7 +175,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
         title={CUSTOM_ICON_LABELS[value] || value || 'Icon auswählen'}
         className={`w-9 h-9 flex items-center justify-center rounded-lg border transition-colors ${
           value
-            ? 'border-primary/50 bg-primary/10 text-primary'
+            ? 'border-primary bg-gray-100 dark:bg-gray-800 text-primary'
             : 'border-gray-200 bg-white text-gray-400 hover:border-gray-400 hover:text-gray-600 cursor-pointer'
         }`}
       >

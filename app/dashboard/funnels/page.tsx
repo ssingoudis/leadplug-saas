@@ -2,9 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Plus, Eye, Edit3, Zap } from "lucide-react";
+import { Plus, Zap } from "lucide-react";
 import Card from "@/components/ui/Card";
-import Badge from "@/components/ui/Badge";
+import { FunnelCard } from "@/components/dashboard/FunnelCard";
 
 interface FunnelItem {
   slug: string;
@@ -33,7 +33,7 @@ async function getFunnels(): Promise<FunnelItem[]> {
 
   const { data: funnels } = await admin
     .from("funnels")
-    .select("slug, funnel_name, funnel_title, is_active, primary_color, total_views, created_at")
+    .select("slug, funnel_name, contact_form_title, is_active, primary_color, total_views, created_at")
     .eq("tenant_slug", tenant.slug)
     .order("created_at", { ascending: true });
 
@@ -51,7 +51,7 @@ async function getFunnels(): Promise<FunnelItem[]> {
 
   return (funnels ?? []).map((f) => ({
     slug: f.slug,
-    funnelName: f.funnel_name || f.funnel_title || "Unbenannter Funnel",
+    funnelName: f.funnel_name || f.contact_form_title || "Unbenannter Funnel",
     isActive: f.is_active ?? true,
     primaryColor: f.primary_color ?? "#22c55e",
     totalViews: f.total_views ?? 0,
@@ -113,65 +113,7 @@ export default async function FunnelsPage() {
       {funnels.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {funnels.map((funnel) => (
-            <div
-              key={funnel.slug}
-              className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm overflow-hidden flex flex-col"
-            >
-              {/* Farbstreifen oben */}
-              <div
-                className="h-1.5 w-full"
-                style={{ backgroundColor: funnel.primaryColor }}
-              />
-
-              <div className="p-5 flex flex-col flex-1">
-                <div className="flex items-start justify-between gap-2 mb-3">
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                      {funnel.funnelName}
-                    </h3>
-                  </div>
-                  <Badge variant={funnel.isActive ? "green" : "gray"}>
-                    {funnel.isActive ? "Aktiv" : "Inaktiv"}
-                  </Badge>
-                </div>
-
-                {/* Stats */}
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5 text-center">
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">
-                      {funnel.leadCount}
-                    </p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">Leads</p>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5 text-center">
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">
-                      {funnel.totalViews}
-                    </p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">Aufrufe</p>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2 mt-auto">
-                  <Link
-                    href={`/dashboard/funnels/${funnel.slug}/edit`}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-600 dark:text-gray-400 hover:border-primary hover:text-primary dark:hover:text-primary transition-colors"
-                  >
-                    <Edit3 size={13} />
-                    Bearbeiten
-                  </Link>
-                  <Link
-                    href={`/${funnel.slug}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-600 dark:text-gray-400 hover:border-primary hover:text-primary dark:hover:text-primary transition-colors"
-                  >
-                    <Eye size={13} />
-                    Öffnen
-                  </Link>
-                </div>
-              </div>
-            </div>
+            <FunnelCard key={funnel.slug} funnel={funnel} />
           ))}
         </div>
       )}

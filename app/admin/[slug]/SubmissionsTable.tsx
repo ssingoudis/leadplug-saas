@@ -44,7 +44,7 @@ export default function SubmissionsTable({ submissions, questions }: { submissio
             {/* Collapsed row */}
             <div
               onClick={() => setOpenId(isOpen ? null : s.id)}
-              className={`flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors ${isOpen ? 'bg-primary/10 dark:bg-gray-800' : 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+              className={`flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors ${isOpen ? 'bg-gray-100 dark:bg-gray-800' : 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
             >
               {/* Date */}
               <div className="w-32 shrink-0">

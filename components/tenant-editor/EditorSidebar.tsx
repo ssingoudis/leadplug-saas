@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Save, AlertCircle, Power, TriangleAlert, X } from "lucide-react";
+import { Loader2, Save, AlertCircle, Power, TriangleAlert, ArrowLeft } from "lucide-react";
+import { DeleteFunnelButton } from "./DeleteFunnelButton";
 import { SectionAccordion } from "./SectionAccordion";
 import { SectionDesign } from "./SectionDesign";
 import { SectionTexte } from "./SectionTexte";
@@ -18,6 +19,8 @@ interface Props {
   canSave: boolean;
   onSave: () => void;
   onFocus: (field: string, questionVisibleIndex?: number) => void;
+  hasUnsavedChanges: boolean;
+  onBack: () => void;
 }
 
 function DeactivateModal({
@@ -80,6 +83,8 @@ export function EditorSidebar({
   canSave,
   onSave,
   onFocus,
+  hasUnsavedChanges,
+  onBack,
 }: Props) {
   const [open, setOpen] = useState<Record<string, boolean>>({
     fragen: true,
@@ -117,48 +122,47 @@ export function EditorSidebar({
 
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">
-                {originalSlug ? "Funnel bearbeiten" : "Neuer Funnel"}
-              </p>
-              <input
-                type="text"
-                value={state.funnelName}
-                onChange={(e) => onChange({ funnelName: e.target.value })}
-                placeholder="Funnel-Name eingeben…"
-                className="text-sm font-bold text-gray-900 dark:text-white bg-transparent outline-none w-full placeholder-gray-400 dark:placeholder-gray-500 truncate border-b border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-primary transition-colors pb-0.5"
-              />
-              {originalSlug && (
-                <p className="text-xs text-gray-400 dark:text-gray-500 font-mono truncate mt-0.5">
-                  /{originalSlug}
-                </p>
-              )}
-              {!originalSlug && !state.funnelName && (
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                  URL wird automatisch vergeben
-                </p>
-              )}
-            </div>
-
+        <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0">
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={onSave}
-              disabled={isSaving || !canSave}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+              onClick={onBack}
+              title="Zurück zur Übersicht"
+              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
             >
-              {isSaving ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <Save size={14} />
-              )}
-              {isSaving ? "Speichert…" : "Speichern"}
+              <ArrowLeft size={16} />
             </button>
+
+            <input
+              type="text"
+              value={state.funnelName}
+              onChange={(e) => onChange({ funnelName: e.target.value })}
+              placeholder="Funnel-Name eingeben…"
+              className="flex-1 min-w-0 text-sm font-bold text-gray-900 dark:text-white bg-transparent outline-none placeholder-gray-400 dark:placeholder-gray-500 truncate border-b border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-primary transition-colors pb-0.5"
+            />
+
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={onSave}
+                disabled={isSaving || !canSave}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isSaving ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Save size={14} />
+                )}
+                {isSaving ? "Speichert…" : "Speichern"}
+              </button>
+              {hasUnsavedChanges && !isSaving && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full border-2 border-white dark:border-gray-900" />
+              )}
+            </div>
           </div>
 
           {saveError && (
-            <div className="mt-3 flex items-start gap-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/40 px-3 py-2 text-xs text-red-700 dark:text-red-400">
+            <div className="mt-2 flex items-start gap-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/40 px-3 py-2 text-xs text-red-700 dark:text-red-400">
               <AlertCircle size={13} className="shrink-0 mt-0.5" />
               {saveError}
             </div>
@@ -213,8 +217,8 @@ export function EditorSidebar({
         </div>
 
         {/* Footer — Funnel-Status */}
-        <div className="border-t border-gray-100 dark:border-gray-800 px-6 py-4 shrink-0">
-          <div className="flex items-center justify-between gap-3">
+        <div className="border-t border-gray-100 dark:border-gray-800 shrink-0">
+          <div className="px-6 py-4 flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                 Funnel-Status
@@ -238,6 +242,25 @@ export function EditorSidebar({
               {state.isActive ? "Aktiv" : "Inaktiv"}
             </button>
           </div>
+
+          {!state.isActive && originalSlug && (
+            <div className="px-6 pb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold text-red-600 dark:text-red-400">
+                  Funnel löschen
+                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                  Dauerhaft entfernen — nicht rückgängig machbar.
+                </p>
+              </div>
+              <DeleteFunnelButton
+                slug={originalSlug}
+                funnelName={state.funnelName}
+                redirectTo="/dashboard/funnels"
+                variant="badge"
+              />
+            </div>
+          )}
         </div>
       </div>
     </>

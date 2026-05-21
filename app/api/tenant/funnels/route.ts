@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   editorStateToFunnelRow,
   editorQuestionsToDbRows,
-  generateUniqueSlug,
+  generateRandomSlug,
 } from "@/lib/editorUtils";
 import type { EditorState } from "@/types";
 
@@ -28,7 +28,7 @@ export async function GET() {
   const { data: funnels, error } = await admin
     .from("funnels")
     .select(
-      "slug, funnel_name, funnel_title, is_active, primary_color, total_views, created_at",
+      "slug, funnel_name, contact_form_title, is_active, primary_color, total_views, created_at",
     )
     .eq("tenant_slug", tenant.slug)
     .order("created_at", { ascending: true });
@@ -50,7 +50,7 @@ export async function GET() {
 
   const result = (funnels ?? []).map((f) => ({
     slug: f.slug,
-    funnelName: f.funnel_name || f.funnel_title || "Unbenannter Funnel",
+    funnelName: f.funnel_name || f.contact_form_title || "Unbenannter Funnel",
     isActive: f.is_active ?? true,
     primaryColor: f.primary_color ?? "#22c55e",
     totalViews: f.total_views ?? 0,
@@ -83,8 +83,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Funnel-Name fehlt" }, { status: 400 });
   }
 
-  // Slug wird server-seitig aus dem Namen generiert und auf Eindeutigkeit geprüft
-  const slug = await generateUniqueSlug(admin, state.funnelName, tenant.slug);
+  const slug = await generateRandomSlug(admin);
 
   const funnelRow = editorStateToFunnelRow(state, tenant.slug, slug);
   const { error: funnelErr } = await admin.from("funnels").insert(funnelRow);
