@@ -172,6 +172,8 @@ interface FunnelProps {
   publicPhone?: string;
   initialSubmitted?: boolean;
   initialStep?: number;
+  previewHighlight?: string; // Editor-only: hebt das gerade bearbeitete Element hervor
+  initialAnswers?: Record<string, string>; // Editor-only: Platzhalter-Antworten für Erfolgsseiten-Preview
   onSubmit?: (data: {
     answers: Record<string, string>;
     contact: Record<string, string>;
@@ -189,8 +191,17 @@ export function Funnel({
   publicPhone,
   initialSubmitted,
   initialStep,
+  previewHighlight,
+  initialAnswers,
   onSubmit,
 }: FunnelProps) {
+
+  // Gibt einen blauen Outline-Style zurück wenn das Element gerade im Editor fokussiert ist.
+  // Nur aktiv wenn previewHighlight gesetzt ist (d.h. im Editor-Kontext).
+  const hl = (key: string): React.CSSProperties =>
+    previewHighlight === key
+      ? { outline: "2px solid #3b82f6", outlineOffset: "3px", borderRadius: "4px" }
+      : {};
 
   // ---------------------------------------------------------------------------
   // Theme resolution
@@ -237,7 +248,7 @@ export function Funnel({
 
   const [currentStep, setCurrentStep] = useState(initialStep ?? 0);
 
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>(initialAnswers ?? {});
 
   // Kontaktdaten als freies Record — Keys entsprechen ContactFieldConfig.key.
   const [contactData, setContactData] = useState<Record<string, string>>({});
@@ -442,10 +453,10 @@ export function Funnel({
               </svg>
             </div>
 
-            <h2 className="text-2xl font-bold mb-2 leading-snug" style={{ color: theme.textColor }}>
+            <h2 className="text-2xl font-bold mb-2 leading-snug" style={{ color: theme.textColor, ...hl("success_message") }}>
               {funnel.successMessage}
             </h2>
-            <p className="text-sm mb-6" style={{ color: theme.textColorMuted }}>
+            <p className="text-sm mb-6" style={{ color: theme.textColorMuted, ...hl("response_message") }}>
               {funnel.responseMessage}
             </p>
 
@@ -454,7 +465,7 @@ export function Funnel({
               className="rounded-lg text-left text-sm p-4"
               style={{ backgroundColor: theme.inputBgColor, borderLeft: `4px solid ${theme.primaryColor}` }}
             >
-              <p className="font-semibold mb-3" style={{ color: theme.textColor }}>
+              <p className="font-semibold mb-3" style={{ color: theme.textColor, ...hl("answers_overview_label") }}>
                 {funnel.answersOverviewLabel}
               </p>
               {visibleQuestions.map((q) => {
@@ -526,14 +537,14 @@ export function Funnel({
                 <div className="mb-6 @lg:mb-8">
                   <h1
                     className="text-lg @md:text-xl @lg:text-2xl font-bold leading-tight text-center text-balance"
-                    style={{ color: theme.textColor }}
+                    style={{ color: theme.textColor, ...hl("question_title") }}
                   >
                     {currentQuestion.title}
                   </h1>
                   {currentQuestion.subtitle && (
                     <p
                       className="mt-2 text-sm @md:text-base leading-relaxed text-center"
-                      style={{ color: theme.textColorMuted }}
+                      style={{ color: theme.textColorMuted, ...hl("question_subtitle") }}
                     >
                       {currentQuestion.subtitle}
                     </p>
@@ -571,6 +582,7 @@ export function Funnel({
                               backgroundColor: theme.primaryColor,
                               border:          "2px solid transparent",
                               boxShadow:       "0 2px 8px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08)",
+                              ...hl(`option_${idx}`),
                             }}
                           >
                             {/* Checkmark — nur bei multiple_choice + selected */}
@@ -707,11 +719,11 @@ export function Funnel({
               <form onSubmit={handleFormSubmit}>
                 <h1
                   className="text-lg @md:text-xl @lg:text-2xl font-bold mb-2 leading-tight"
-                  style={{ color: theme.textColor }}
+                  style={{ color: theme.textColor, ...hl("funnel_title") }}
                 >
                   {funnel.title}
                 </h1>
-                <p className="font-semibold mb-4" style={{ color: theme.primaryColor }}>
+                <p className="font-semibold mb-4" style={{ color: theme.primaryColor, ...hl("contact_form_subtitle") }}>
                   {funnel.contactFormSubtitle}
                 </p>
 
@@ -804,7 +816,7 @@ export function Funnel({
                 </div>
 
                 {/* Privacy notice */}
-                <p className="text-xs mb-4 leading-relaxed" style={{ color: theme.textColorMuted }}>
+                <p className="text-xs mb-4 leading-relaxed" style={{ color: theme.textColorMuted, ...hl("privacy_text") }}>
                   {funnel.privacyText}
                   {funnel.privacyPolicyUrl ? (
                     <>
@@ -837,6 +849,7 @@ export function Funnel({
                     borderRadius:    theme.borderRadius,
                     cursor:          isValid ? "pointer" : "not-allowed",
                     opacity:         isValid ? 1 : 0.65,
+                    ...hl("submit_button"),
                   }}
                   onMouseEnter={(e) => {
                     if (isValid) e.currentTarget.style.backgroundColor = theme.primaryColorHover;

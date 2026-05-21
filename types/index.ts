@@ -123,3 +123,71 @@ export interface TenantConfig {
 // Dynamische Kontaktdaten — Keys entsprechen den ContactFieldConfig.key-Werten.
 // Record<string, string> erlaubt beliebige Felder (anrede, name, email, telefon + custom).
 export type ContactData = Record<string, string>
+
+// =============================================================================
+// EDITOR TYPES — nur im Tenant-Editor verwendet, nie im Widget
+// =============================================================================
+
+export interface EditorOption {
+  _id: string       // temporäre React-Key-ID, wird nicht in DB gespeichert
+  label: string
+  value: string     // auto-slug aus label, stabil nach erster Erstellung
+  iconKey: string
+  iconUrl: string
+}
+
+export interface EditorQuestion {
+  _id: string          // temporäre React-Key-ID
+  dbId?: string        // UUID aus DB (vorhanden bei edit, undefined bei neu)
+  questionKey: string  // stabiler DB-Key, auto aus title; nie nachträglich ändern
+  questionType: QuestionType
+  title: string
+  subtitle: string
+  visible: boolean
+  // text-Typen:
+  required: boolean
+  placeholder: string
+  maxLength: string
+  // slider:
+  sliderMin: string
+  sliderMax: string
+  sliderStep: string
+  sliderUnit: string
+  sliderDefault: string
+  // choice-Typen:
+  options: EditorOption[]
+}
+
+export interface EditorState {
+  funnelName: string    // interner Name (Funnel-Liste & Header)
+  funnelTitle: string   // H1-Überschrift im Kontaktformular
+  // Theme
+  primaryColor: string
+  textColor: string
+  backgroundColor: string
+  pageBackgroundColor: string
+  font: FunnelFont
+  borderRadius: string
+  maxWidth: string
+  // Texte
+  contactFormSubtitle: string
+  submitButtonLabel: string
+  successMessage: string
+  responseMessage: string
+  privacyText: string
+  privacyPolicyUrl: string
+  footerText: string
+  answersOverviewLabel: string
+  // Footer-Kontaktdaten (pro Funnel)
+  footerCompanyName: string
+  footerEmail: string
+  footerPhone: string
+  // E-Mail-Einstellungen (pro Funnel)
+  notificationEmail: string   // Wohin neue Leads gesendet werden (Leer = Tenant-Standard)
+  emailSenderLocal: string    // Lokalteil der Absender-Adresse, z.B. "anfragen"
+  // Status
+  isActive: boolean
+  // Inhalte
+  questions: EditorQuestion[]
+  contactFields: ContactFieldConfig[]
+}

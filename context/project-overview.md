@@ -22,7 +22,7 @@ Einbettbarer **Sales-Funnel als iFrame-Widget** für Handwerksbetriebe aller Bra
 
 | Layer | Technologie |
 |---|---|
-| Framework | Next.js 14+ (App Router) |
+| Framework | Next.js 16 (App Router) |
 | Sprache | TypeScript (strict) |
 | Styling | TailwindCSS |
 | E-Mail | Resend + React Email |

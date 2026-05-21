@@ -3,20 +3,29 @@
 import { usePathname } from 'next/navigation'
 
 export const TABS = [
-  { label: 'Dashboard',   href: '/dashboard' },
-  { label: 'Statistiken', href: '/dashboard/statistiken' },
-  { label: 'Embed-Code',  href: '/dashboard/embed' },
+  { label: 'Dashboard',     href: '/dashboard' },
+  { label: 'Meine Funnels', href: '/dashboard/funnels' },
+  { label: 'Statistiken',   href: '/dashboard/statistiken' },
+  { label: 'Embed-Code',    href: '/dashboard/embed' },
 ]
 
 export default function TabNav() {
   const pathname = usePathname()
-  const activeTab = TABS.find((tab) => pathname === tab.href)
+  // Funnels-Tab auch bei Sub-Routen aktiv markieren (new, edit)
+  const activeTab = TABS.find((tab) =>
+    tab.href === '/dashboard/funnels'
+      ? pathname.startsWith('/dashboard/funnels')
+      : pathname === tab.href,
+  )
 
   return (
     <>
       {/* Desktop: alle Tabs */}
       {TABS.map((tab) => {
-        const active = pathname === tab.href
+        const active =
+          tab.href === '/dashboard/funnels'
+            ? pathname.startsWith('/dashboard/funnels')
+            : pathname === tab.href
         return (
           <a
             key={tab.href}
