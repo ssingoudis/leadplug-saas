@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Leadplug – Tenant Funnel-Editor</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #f1f5f9;
+    color: #0f172a;
+    padding: 40px 24px 80px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  h1 { font-size: 24px; font-weight: 800; margin-bottom: 4px; color: #0f172a; }
+  .subtitle { color: #64748b; margin-bottom: 40px; font-size: 14px; }
+  h2 { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: #0f172a; }
+  h3 { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #374151; }
+
+  .section {
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    max-width: 960px;
+  }
+  .section-label {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+  }
+  .label-blue   { background: #dbeafe; color: #1d4ed8; }
+  .label-green  { background: #d1fae5; color: #065f46; }
+  .label-purple { background: #ede9fe; color: #6d28d9; }
+  .label-amber  { background: #fef3c7; color: #92400e; }
+  .label-red    { background: #fee2e2; color: #991b1b; }
+  .label-slate  { background: #f1f5f9; color: #475569; }
+
+  /* Cols */
+  .cols { display: grid; gap: 20px; }
+  .cols-2 { grid-template-columns: 1fr 1fr; }
+  .cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 700px) { .cols-2, .cols-3 { grid-template-columns: 1fr; } }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 8px; }
+  th { background: #f8fafc; text-align: left; padding: 8px 12px; font-weight: 600; color: #374151; border-bottom: 1px solid #e2e8f0; }
+  td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafafa; }
+
+  /* Code / mono */
+  .mono { font-family: monospace; font-size: 11px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #374151; }
+  .mono-path { font-family: monospace; font-size: 11px; color: #4648d4; }
+
+  /* Tags */
+  .tag {
+    display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px;
+    border-radius: 20px; white-space: nowrap;
+  }
+  .tag-blue   { background: #dbeafe; color: #1d4ed8; }
+  .tag-green  { background: #d1fae5; color: #065f46; }
+  .tag-purple { background: #ede9fe; color: #5b21b6; }
+  .tag-amber  { background: #fef3c7; color: #92400e; }
+  .tag-red    { background: #fee2e2; color: #991b1b; }
+  .tag-gray   { background: #f1f5f9; color: #475569; }
+
+  /* Notes */
+  .note { background: #f8fafc; border-left: 3px solid #4648d4; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 12px; color: #475569; margin-top: 12px; }
+  .note-amber { background: #fffbeb; border-left: 3px solid #f59e0b; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 12px; color: #92400e; margin-top: 12px; }
+  .note-red   { background: #fef2f2; border-left: 3px solid #ef4444; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 12px; color: #991b1b; margin-top: 12px; }
+  .note-green { background: #f0fdf4; border-left: 3px solid #22c55e; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 12px; color: #166534; margin-top: 12px; }
+
+  hr.divider { border: none; border-top: 1px solid #f1f5f9; margin: 20px 0; }
+
+  /* Flow */
+  .flow { display: flex; align-items: flex-start; gap: 0; flex-wrap: wrap; margin-top: 8px; }
+  .flow-step { display: flex; flex-direction: column; align-items: center; max-width: 160px; }
+  .flow-box {
+    border-radius: 10px; padding: 10px 14px; font-size: 12px; font-weight: 600;
+    text-align: center; width: 140px; min-height: 48px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  }
+  .flow-sub { font-size: 11px; font-weight: 400; opacity: .75; margin-top: 2px; }
+  .flow-arrow { font-size: 18px; color: #94a3b8; margin: 0 4px; padding-top: 14px; flex-shrink: 0; }
+
+  .box-page    { background: #f8fafc; border: 1.5px solid #e2e8f0; color: #374151; }
+  .box-action  { background: #ede9fe; border: 1.5px solid #c4b5fd; color: #5b21b6; }
+  .box-supabase{ background: #dbeafe; border: 1.5px solid #93c5fd; color: #1e40af; }
+  .box-success { background: #d1fae5; border: 1.5px solid #6ee7b7; color: #065f46; }
+  .box-amber   { background: #fef3c7; border: 1.5px solid #fcd34d; color: #92400e; }
+  .box-primary { background: #4648d4; border: 1.5px solid #4648d4; color: #fff; }
+  .box-red     { background: #fee2e2; border: 1.5px solid #fca5a5; color: #991b1b; }
+
+  /* Layout mockup */
+  .editor-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 0;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+  .editor-sidebar-mock {
+    border-right: 1.5px solid #e2e8f0;
+    background: #fff;
+  }
+  .editor-preview-mock {
+    background: #f8fafc;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .mock-header {
+    background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .mock-header-title { font-weight: 700; font-size: 12px; color: #374151; }
+  .mock-header-slug  { font-family: monospace; font-size: 10px; color: #94a3b8; }
+  .mock-save-btn {
+    background: #4648d4; color: #fff; font-size: 11px; font-weight: 700;
+    padding: 5px 12px; border-radius: 8px;
+  }
+  .mock-section {
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .mock-section-header {
+    padding: 10px 16px; display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px; font-weight: 600; color: #374151; cursor: pointer;
+  }
+  .mock-section-body { padding: 0 16px 12px; }
+  .mock-footer {
+    border-top: 1px solid #e2e8f0;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .mock-status-active  { background: #f0fdf4; border: 1px solid #86efac; color: #15803d; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 8px; }
+  .mock-status-inactive{ background: #f1f5f9; border: 1px solid #e2e8f0; color: #94a3b8; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 8px; }
+
+  /* Preview nav mockup */
+  .preview-nav { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 0; }
+  .preview-nav-btn {
+    padding: 5px 10px; border-radius: 8px; font-size: 11px; font-weight: 600; border: 1.5px solid;
+  }
+  .nav-active   { background: #4648d4; border-color: #4648d4; color: #fff; }
+  .nav-inactive { background: #fff; border-color: #e2e8f0; color: #64748b; }
+  .nav-special  { background: #ede9fe; border-color: #c4b5fd; color: #5b21b6; }
+
+  /* Field row */
+  .field-row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f8fafc; }
+  .field-row:last-child { border-bottom: none; }
+  .field-key { font-family: monospace; font-size: 11px; min-width: 200px; color: #4648d4; font-weight: 600; }
+  .field-db  { font-family: monospace; font-size: 11px; min-width: 200px; color: #059669; font-weight: 600; }
+  .field-type { font-size: 11px; color: #94a3b8; min-width: 80px; }
+  .field-desc { font-size: 12px; color: #475569; flex: 1; }
+
+  /* File cards */
+  .file-card {
+    border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; background: #fff;
+  }
+  .file-path { font-family: monospace; font-size: 12px; font-weight: 700; color: #4648d4; margin-bottom: 4px; }
+  .file-role { font-size: 12px; color: #475569; line-height: 1.5; }
+
+  /* Section accordion mockup */
+  .accordion-item { border: 1.5px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin-bottom: 8px; }
+  .accordion-header {
+    background: #f8fafc; padding: 10px 14px; font-size: 12px; font-weight: 700; color: #374151;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .accordion-body { padding: 12px 14px; font-size: 12px; color: #475569; line-height: 1.7; }
+
+  /* Warning box */
+  .warning-box {
+    background: #fef2f2;
+    border: 2px solid #fca5a5;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-top: 12px;
+  }
+  .warning-title { font-size: 14px; font-weight: 700; color: #991b1b; margin-bottom: 6px; }
+  .warning-body  { font-size: 12px; color: #7f1d1d; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<h1>Tenant Funnel-Editor</h1>
+<p class="subtitle">Dokumentation · /dashboard/funnels/new &amp; /dashboard/funnels/[slug]/edit · Stand Mai 2026</p>
+
+
+<!-- ═══════════════════════ 01 ÜBERSICHT -->
+<div class="section">
+  <span class="section-label label-blue">01 — Übersicht</span>
+  <h2>Was ist der Funnel-Editor?</h2>
+  <p style="font-size:13px;color:#475569;margin-bottom:16px;">
+    Der Tenant Funnel-Editor ist das Self-Service-Werkzeug, mit dem ein eingeloggter Tenant (Kunde) seine
+    Funnels vollständig konfigurieren kann — ohne SQL-Zugriff auf Supabase.
+    Er besteht aus einer geteilten Ansicht: links eine konfigurierbare Sidebar, rechts eine Live-Vorschau.
+    Der Editor wird sowohl zum Erstellen neuer Funnels als auch zum Bearbeiten bestehender verwendet.
+  </p>
+
+  <div class="cols cols-2">
+    <div>
+      <h3>Routen</h3>
+      <ul style="font-size:12px;color:#475569;margin-left:16px;margin-top:6px;line-height:2.2;">
+        <li><span class="mono">/dashboard/funnels/new</span> — neuer Funnel</li>
+        <li><span class="mono">/dashboard/funnels/[slug]/edit</span> — bestehenden Funnel bearbeiten</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Zwei API-Endpunkte</h3>
+      <ul style="font-size:12px;color:#475569;margin-left:16px;margin-top:6px;line-height:2.2;">
+        <li><span class="mono">POST /api/tenant/funnels</span> — neuen Funnel anlegen</li>
+        <li><span class="mono">PUT /api/tenant/funnels/[slug]</span> — bestehenden speichern</li>
+        <li><span class="mono">GET /api/tenant/funnels/[slug]</span> — für Edit-Seite laden</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>Absolut geschützte Datei:</strong> <span class="mono">components/funnel.tsx</span> darf unter keinen Umständen durch den Editor-Code verändert werden.
+    Das Widget ist produktiv und eingebettet auf Kunden-Websites. Alle Anpassungen laufen ausschließlich über Daten (DB-Werte), nie über Code-Änderungen an funnel.tsx.
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ 02 LAYOUT -->
+<div class="section">
+  <span class="section-label label-slate">02 — Layout &amp; Komponenten-Hierarchie</span>
+  <h2>Visueller Aufbau</h2>
+
+  <div class="editor-layout">
+    <div class="editor-sidebar-mock">
+      <div class="mock-header">
+        <div>
+          <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;">Funnel bearbeiten</div>
+          <div class="mock-header-title">Solar Angebot</div>
+          <div class="mock-header-slug">/x7k2m1n</div>
+        </div>
+        <div class="mock-save-btn">Speichern</div>
+      </div>
+
+      <div class="mock-section">
+        <div class="mock-section-header">Fragen <span>▲</span></div>
+        <div class="mock-section-body" style="font-size:11px;color:#94a3b8;">
+          Frage 1: Welches Produkt? (Einfachauswahl)<br>
+          Frage 2: Wie groß ist die Fläche? (Slider)<br>
+          <span style="color:#4648d4;cursor:pointer;">+ Frage hinzufügen</span>
+        </div>
+      </div>
+      <div class="mock-section">
+        <div class="mock-section-header">Kontaktformular <span>▼</span></div>
+      </div>
+      <div class="mock-section">
+        <div class="mock-section-header">Nachrichten <span>▼</span></div>
+      </div>
+      <div class="mock-section">
+        <div class="mock-section-header">Design <span>▼</span></div>
+      </div>
+
+      <div class="mock-footer">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#374151;">Funnel-Status</div>
+          <div style="font-size:10px;color:#94a3b8;">Funnel ist öffentlich erreichbar.</div>
+        </div>
+        <div class="mock-status-active">Aktiv</div>
+      </div>
+    </div>
+
+    <div class="editor-preview-mock">
+      <div style="font-size:11px;font-weight:600;color:#94a3b8;margin-bottom:4px;">LIVE-VORSCHAU</div>
+      <div class="preview-nav">
+        <div class="preview-nav-btn nav-active">Frage 1</div>
+        <div class="preview-nav-btn nav-inactive">Frage 2</div>
+        <div class="preview-nav-btn nav-inactive">Kontaktformular</div>
+        <div class="preview-nav-btn nav-inactive">Erfolgsseite</div>
+        <div class="preview-nav-btn nav-special">Kundenbestätigung</div>
+        <div class="preview-nav-btn nav-special">Lead-Benachrichtigung</div>
+      </div>
+      <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;padding:20px;flex:1;min-height:200px;display:flex;align-items:center;justify-content:center;">
+        <div style="text-align:center;color:#94a3b8;font-size:12px;">
+          ↳ Rendert <span class="mono">&lt;Funnel&gt;</span>-Komponente<br>
+          mit Live-Daten aus EditorState
+        </div>
+      </div>
+      <div style="text-align:center;">
+        <span style="font-size:10px;background:#f1f5f9;border:1px solid #e2e8f0;padding:3px 10px;border-radius:20px;color:#64748b;">
+          Vorschau — Eingaben werden nicht gespeichert
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <h3>Komponenten-Baum</h3>
+  <div class="cols cols-2" style="margin-top:10px;">
+    <div>
+      <div class="file-card">
+        <div class="file-path">app/dashboard/funnels/new/page.tsx</div>
+        <div class="file-role">Server Component. Rendert <span class="mono">FunnelEditorShell</span> mit <span class="mono">DEFAULT_EDITOR_STATE</span>.</div>
+      </div>
+      <div class="file-card">
+        <div class="file-path">app/dashboard/funnels/[slug]/edit/page.tsx</div>
+        <div class="file-role">Server Component. Lädt State via <span class="mono">GET /api/tenant/funnels/[slug]</span>, rendert <span class="mono">FunnelEditorShell</span> mit vorbeladenem State.</div>
+      </div>
+      <div class="file-card">
+        <div class="file-path">components/tenant-editor/FunnelEditorShell.tsx</div>
+        <div class="file-role">Client Component ("use client"). Hält den gesamten <span class="mono">EditorState</span> in <span class="mono">useState</span>. Orchestriert Sidebar, PreviewPanel und den Save-Flow. Einzige Stelle mit API-Aufrufen.</div>
+      </div>
+    </div>
+    <div>
+      <div class="file-card">
+        <div class="file-path">components/tenant-editor/EditorSidebar.tsx</div>
+        <div class="file-role">Linke Spalte. Enthält Header (Name, Speichern), vier Accordion-Sektionen und einen Footer mit isActive-Toggle.</div>
+      </div>
+      <div class="file-card">
+        <div class="file-path">components/tenant-editor/PreviewPanel.tsx</div>
+        <div class="file-role">Rechte Spalte. Navigations-Tabs, Badge, rendert die echte <span class="mono">&lt;Funnel&gt;</span>-Komponente und E-Mail-Mockups.</div>
+      </div>
+      <div class="file-card">
+        <div class="file-path">lib/editorUtils.ts</div>
+        <div class="file-role">Reine Hilfsfunktionen: Konvertierung EditorState ↔ DB-Rows, Slug-Generierung.</div>
+      </div>
+      <div class="file-card">
+        <div class="file-path">components/tenant-editor/defaults.ts</div>
+        <div class="file-role">Konstanten: <span class="mono">DEFAULT_EDITOR_STATE</span>, <span class="mono">DEFAULT_QUESTION</span>, <span class="mono">DEFAULT_CONTACT_FIELDS</span>.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ 03 EDITOR STATE -->
+<div class="section">
+  <span class="section-label label-purple">03 — EditorState</span>
+  <h2>Zentraler State-Typ</h2>
+  <p style="font-size:12px;color:#475569;margin-bottom:16px;">
+    <span class="mono">EditorState</span> (definiert in <span class="mono-path">types/index.ts</span>) ist der einzige State-Speicher des Editors.
+    <span class="mono">FunnelEditorShell</span> hält ihn in <span class="mono">useState</span> und reicht ihn via Props an Sidebar und Preview durch.
+    Änderungen immer via <span class="mono">onChange(patch: Partial&lt;EditorState&gt;)</span>.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>EditorState-Feld</th>
+        <th>DB-Spalte (funnels)</th>
+        <th>Typ</th>
+        <th>Beschreibung</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><div class="field-key">funnelName</div></td>
+        <td><span class="mono">funnel_name</span></td>
+        <td><span class="tag tag-gray">string</span></td>
+        <td>Interner Name des Funnels (erscheint in der Funnel-Liste und im Editor-Header). <strong>Pflichtfeld</strong> — ohne ihn kann nicht gespeichert werden. Dient auch als Basis für die automatische Slug-Generierung.</td>
+      </tr>
+      <tr>
+        <td><div class="field-key">funnelTitle</div></td>
+        <td><span class="mono">funnel_title</span></td>
+        <td><span class="tag tag-gray">string</span></td>
+        <td>H1-Überschrift im Kontaktformular-Schritt des Widgets. Achtung: trotz ähnlichem Namen kein "Name" des Funnels, sondern der Anzeigetitel der Formular-Seite.</td>
+      </tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">Theme / Design</td></tr>
+      <tr>
+        <td><div class="field-key">primaryColor</div></td>
+        <td><span class="mono">primary_color</span></td>
+        <td><span class="tag tag-gray">string</span></td>
+        <td>Hex-Farbe. Markenfarbe des Widgets. Alle Akzente (Buttons, Hover, Border) leiten sich davon ab. Default: <span class="mono">#22c55e</span>.</td>
+      </tr>
+      <tr>
+        <td><div class="field-key">textColor</div></td>
+        <td><span class="mono">text_color</span></td>
+        <td><span class="tag tag-gray">string</span></td>
+        <td>Default: <span class="mono">#1f2937</span>.</td>
+      </tr>
+      <tr>
+        <td><div class="field-key">backgroundColor</div></td>
+        <td><span class="mono">background_color</span></td>
+        <td><span class="tag tag-gray">string</span></td>
+        <td>Card-Hintergrund des Widgets. Default: <span class="mono">#ffffff</span>.</td>
+      </tr>
+      <tr>
+        <td><div class="field-key">pageBackgroundColor</div></td>
+        <td><span class="mono">page_background_color</span></td>
+        <td><span class="tag tag-gray">string</span></td>
+        <td>Hintergrund hinter der Card (iFrame-Seite). <span class="mono">transparent</span> = Parent-Website scheint durch.</td>
+      </tr>
+      <tr>
+        <td><div class="field-key">font</div></td>
+        <td><span class="mono">font</span></td>
+        <td><span class="tag tag-gray">FunnelFont</span></td>
+        <td><span class="mono">"system" | "inter" | "poppins" | "roboto"</span>. Self-hosted unter public/fonts/.</td>
+      </tr>
+      <tr>
+        <td><div class="field-key">borderRadius</div></td>
+        <td><span class="mono">border_radius</span></td>
+        <td><span class="tag tag-gray">string</span></td>
+        <td>CSS-Wert, z. B. <span class="mono">"0.5rem"</span>.</td>
+      </tr>
+      <tr>
+        <td><div class="field-key">maxWidth</div></td>
+        <td><span class="mono">max_width</span></td>
+        <td><span class="tag tag-gray">string</span></td>
+        <td>Maximale Breite der Widget-Card. Default: <span class="mono">"720px"</span>.</td>
+      </tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">Kontaktformular-Texte</td></tr>
+      <tr>
+        <td><div class="field-key">contactFormSubtitle</div></td>
+        <td><span class="mono">contact_form_subtitle</span></td>
+        <td><span class="tag tag-gray">string</span></td>
+        <td>Untertitel unter dem H1 im Kontaktformular-Schritt.</td>
+      </tr>
+      <tr>
+        <td><div class="field-key">submitButtonLabel</div></td>
+        <td><span class="mono">submit_button_label</span></td>
+        <td><span class="tag tag-gray">string</span></td>
+        <td>Beschriftung des Absenden-Buttons.</td>
+      </tr>
+      <tr>
+        <td><div class="field-key">privacyText</div></td>
+        <td><span class="mono">privacy_text</span></td>
+        <td><span class="tag tag-gray">string</span></td>
+        <td>Einwilligungstext vor dem Datenschutz-Link.</td>
+      </tr>
+      <tr>
+        <td><div class="field-key">privacyPolicyUrl</div></td>
+        <td><span class="mono">privacy_policy_url</span></td>
+        <td><span class="tag tag-gray">string</span></td>
+        <td>URL zur Datenschutzerklärung. Leer = kein Link.</td>
+      </tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">Erfolgsseite &amp; E-Mail</td></tr>
+      <tr>
+        <td><div class="field-key">successMessage</div></td>
+        <td><span class="mono">success_message</span></td>
+        <td><span class="tag tag-gray">string</span></td>
+        <td>Überschrift auf der Erfolgsseite nach dem Absenden.</td>
+      </tr>
+      <tr>
+        <td><div class="field-key">responseMessage</div></td>
+        <td><span class="mono">response_message</span></td>
+        <td><span class="tag tag-gray">string</span></td>
+        <td>Zweiter Text auf der Erfolgsseite (z. B. Antwortzeit).</td>
+      </tr>
+      <tr>
+        <td><div class="field-key">answersOverviewLabel</div></td>
+        <td><span class="mono">answers_overview_label</span></td>
+        <td><span class="tag tag-gray">string</span></td>
+        <td>Überschrift über der Antworten-Zusammenfassung auf der Erfolgsseite.</td>
+      </tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">Kontaktdaten / Footer</td></tr>
+      <tr>
+        <td><div class="field-key">footerText</div></td>
+        <td><span class="mono">footer_text</span></td>
+        <td><span class="tag tag-gray">string</span></td>
+        <td>Template-String mit Platzhaltern: <span class="mono">{{company_name}}</span> · <span class="mono">{{public_email}}</span> · <span class="mono">{{public_phone}}</span>. Steuert welche Kontaktdaten im Widget-Footer und in E-Mails erscheinen.</td>
+      </tr>
+      <tr>
+        <td><div class="field-key">footerCompanyName</div></td>
+        <td><span class="mono">footer_company_name</span></td>
+        <td><span class="tag tag-gray">string</span></td>
+        <td>Firmenname für diesen Funnel. Überschreibt den Tenant-weiten Wert (<span class="mono">tenants.company_name</span>) wenn gesetzt.</td>
+      </tr>
+      <tr>
+        <td><div class="field-key">footerEmail</div></td>
+        <td><span class="mono">footer_email</span></td>
+        <td><span class="tag tag-gray">string</span></td>
+        <td>Öffentliche E-Mail für diesen Funnel. Überschreibt <span class="mono">tenants.public_email</span>.</td>
+      </tr>
+      <tr>
+        <td><div class="field-key">footerPhone</div></td>
+        <td><span class="mono">footer_phone</span></td>
+        <td><span class="tag tag-gray">string</span></td>
+        <td>Telefonnummer für diesen Funnel. Überschreibt <span class="mono">tenants.public_phone</span>.</td>
+      </tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">E-Mail-Einstellungen</td></tr>
+      <tr>
+        <td><div class="field-key">notificationEmail</div></td>
+        <td><span class="mono">notification_email</span></td>
+        <td><span class="tag tag-gray">string</span></td>
+        <td>Wohin neue Leads gesendet werden. Leer = Standard aus Tenant-Einstellungen (<span class="mono">tenants.notification_email</span>).</td>
+      </tr>
+      <tr>
+        <td><div class="field-key">emailSenderLocal</div></td>
+        <td><span class="mono">email_sender_local</span></td>
+        <td><span class="tag tag-gray">string</span></td>
+        <td>Lokalteil der Absender-E-Mail, z. B. <span class="mono">"anfragen"</span> → anfragen@leadplug.de. Leer = Standard-Absender.</td>
+      </tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">Status &amp; Inhalte</td></tr>
+      <tr>
+        <td><div class="field-key">isActive</div></td>
+        <td><span class="mono">is_active</span></td>
+        <td><span class="tag tag-gray">boolean</span></td>
+        <td>Steuert ob der Funnel öffentlich erreichbar ist. <span class="mono">false</span> = Widget gibt 404 zurück (oder leere Seite). Umschalten via Modal mit Bestätigung (nur bei Deaktivierung).</td>
+      </tr>
+      <tr>
+        <td><div class="field-key">questions</div></td>
+        <td><span class="mono">funnel_questions</span> (eigene Tabelle)</td>
+        <td><span class="tag tag-gray">EditorQuestion[]</span></td>
+        <td>Array aller Fragen. Werden separat in <span class="mono">funnel_questions</span> gespeichert (DELETE + INSERT bei jedem Save). Reihenfolge = sort_order.</td>
+      </tr>
+      <tr>
+        <td><div class="field-key">contactFields</div></td>
+        <td><span class="mono">contact_fields</span> (JSONB)</td>
+        <td><span class="tag tag-gray">ContactFieldConfig[]</span></td>
+        <td>Konfiguration des Kontaktformulars. Wird als JSONB-Array in der funnels-Zeile gespeichert.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+
+<!-- ═══════════════════════ 04 EDITOR-QUESTION -->
+<div class="section">
+  <span class="section-label label-purple">04 — EditorQuestion &amp; ContactFieldConfig</span>
+  <h2>Inhalts-Typen</h2>
+
+  <div class="cols cols-2">
+    <div>
+      <h3>EditorQuestion</h3>
+      <table>
+        <thead><tr><th>Feld</th><th>Beschreibung</th></tr></thead>
+        <tbody>
+          <tr><td><span class="mono">_id</span></td><td>Temporäre React-Key-ID (uuid), wird <strong>nicht</strong> in DB gespeichert</td></tr>
+          <tr><td><span class="mono">dbId</span></td><td>UUID aus DB (vorhanden bei Edit, undefined bei neu)</td></tr>
+          <tr><td><span class="mono">questionKey</span></td><td>Stabiler DB-Schlüssel, auto-generiert via <span class="mono">toKey(title)</span>. <strong>Nie nachträglich ändern</strong> — ist Schlüssel in submissions.answers JSONB</td></tr>
+          <tr><td><span class="mono">questionType</span></td><td><span class="mono">single_choice | multiple_choice | slider | short_text | long_text</span></td></tr>
+          <tr><td><span class="mono">title, subtitle</span></td><td>Frage-Text und optionaler Untertitel</td></tr>
+          <tr><td><span class="mono">visible</span></td><td>Unsichtbare Fragen werden im Widget übersprungen, aber im Editor angezeigt</td></tr>
+          <tr><td><span class="mono">options</span></td><td>Array von <span class="mono">EditorOption</span> für choice-Typen</td></tr>
+          <tr><td><span class="mono">sliderMin/Max/Step/Default/Unit</span></td><td>Konfiguration für Slider-Typ (als String im State, als Number in DB)</td></tr>
+          <tr><td><span class="mono">placeholder, maxLength, required</span></td><td>Konfiguration für Text-Typen</td></tr>
+        </tbody>
+      </table>
+      <div class="note">
+        <strong>Stabile IDs in buildQuestions():</strong> Die Funktion verwendet <span class="mono">q.questionKey || q._id</span> als ID — nie <span class="mono">uid()</span>. Sonst würde die PreviewPanel-Navigation bei jedem Render neu generierte IDs bekommen und die Fragen-Auswahl nicht funktionieren.
+      </div>
+    </div>
+    <div>
+      <h3>ContactFieldConfig</h3>
+      <table>
+        <thead><tr><th>Feld</th><th>Beschreibung</th></tr></thead>
+        <tbody>
+          <tr><td><span class="mono">key</span></td><td>Eindeutiger Bezeichner: <span class="mono">anrede | name | email | telefon | plz</span> oder custom</td></tr>
+          <tr><td><span class="mono">type</span></td><td><span class="mono">radio | text | email | tel | plz</span></td></tr>
+          <tr><td><span class="mono">label</span></td><td>Anzeige-Label im Widget</td></tr>
+          <tr><td><span class="mono">placeholder</span></td><td>Nur für text/email/tel</td></tr>
+          <tr><td><span class="mono">required</span></td><td>Pflichtfeld-Validierung im Widget</td></tr>
+          <tr><td><span class="mono">visible</span></td><td>Unsichtbare Felder erscheinen nicht im Formular</td></tr>
+          <tr><td><span class="mono">sort_order</span></td><td>Reihenfolge im Formular</td></tr>
+          <tr><td><span class="mono">options</span></td><td>Nur für type "radio" — z. B. <span class="mono">["Herr", "Frau"]</span></td></tr>
+        </tbody>
+      </table>
+      <div class="note" style="margin-top:12px;">
+        <strong>Default-Felder</strong> (<span class="mono">defaults.ts</span>): anrede (radio, unsichtbar) · name (text, sichtbar) · email (email, sichtbar) · telefon (tel, sichtbar) · plz (plz, unsichtbar).
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ 05 SIDEBAR-SEKTIONEN -->
+<div class="section">
+  <span class="section-label label-green">05 — Sidebar-Sektionen</span>
+  <h2>Die vier Accordion-Bereiche</h2>
+  <p style="font-size:12px;color:#475569;margin-bottom:16px;">
+    Alle Sektionen werden via <span class="mono">SectionAccordion</span> auf- und zugeklappt. Nur eine Sektion sollte gleichzeitig offen sein (Convention, kein Hard-Enforcement).
+    Der Header enthält den Namen-Input, den Speichern-Button und die Fehleranzeige. Der Footer enthält den isActive-Toggle.
+  </p>
+
+  <div class="accordion-item">
+    <div class="accordion-header">
+      Fragen
+      <span class="tag tag-blue">SectionFragen.tsx</span>
+    </div>
+    <div class="accordion-body">
+      Liste aller Fragen mit Drag-Reorder (↑↓ Buttons), Typ-Selector, Titel-Input, Untertitel, Optionen-Liste, Slider-Konfiguration, Sichtbarkeits-Toggle, Löschen-Button.<br>
+      <strong>Fokus-Weiterleitung:</strong> onFocus(field, visibleIndex?) — leitet den sichtbaren Index der Frage an FunnelEditorShell weiter, damit die PreviewPanel-Navigation automatisch zur richtigen Frage springt.<br>
+      Sichtbare Fragen werden gezählt (visibleIndices-Map) und der Index wird berechnet bevor onFocus aufgerufen wird.
+    </div>
+  </div>
+
+  <div class="accordion-item">
+    <div class="accordion-header">
+      Kontaktformular
+      <span class="tag tag-purple">SectionKontakt.tsx</span>
+    </div>
+    <div class="accordion-body">
+      Enthält: Formular-Überschrift (funnelTitle), Formular-Untertitel (contactFormSubtitle), Absenden-Button-Label, Formular-Felder (ContactFieldConfig — Pflicht/Anzeigen Checkboxen, ↑↓ Reorder), Datenschutz-Text, Datenschutz-URL.<br>
+      <strong>Props:</strong> state, onChange, onFocus, fields (ContactFieldConfig[]), onFieldsChange (ContactFieldConfig[] → void).
+    </div>
+  </div>
+
+  <div class="accordion-item">
+    <div class="accordion-header">
+      Nachrichten
+      <span class="tag tag-amber">SectionTexte.tsx</span>
+    </div>
+    <div class="accordion-body">
+      Enthält: Erfolgs-Nachricht, Antwortzeit-Text, Überschrift Antwort-Übersicht, E-Mail-Einstellungen (Benachrichtigungs-E-Mail, Absender-Lokalteil), Kontaktdaten-Block (Checkboxen für Firmenname / E-Mail / Telefon mit je einem Textfeld).<br>
+      <strong>Kontaktdaten-Logik:</strong> footerText enthält Platzhalter (z. B. {{company_name}}). Checkboxen togglen ob der Platzhalter im Template-String enthalten ist. Eingabefelder erscheinen nur wenn der Toggle aktiv ist. Die Werte werden als footerCompanyName, footerEmail, footerPhone gespeichert.
+    </div>
+  </div>
+
+  <div class="accordion-item">
+    <div class="accordion-header">
+      Design
+      <span class="tag tag-gray">SectionDesign.tsx</span>
+    </div>
+    <div class="accordion-body">
+      Color-Picker für primaryColor, textColor, backgroundColor, pageBackgroundColor. Font-Selector. Border-Radius und Max-Width Inputs. Alle Änderungen lösen sofort eine Live-Vorschau aus.
+    </div>
+  </div>
+
+  <div class="note-amber" style="margin-top:16px;">
+    <strong>isActive-Toggle im Footer:</strong> Beim Deaktivieren öffnet sich ein Modal (DeactivateModal) mit Amber-Warnung. Der Tenant muss explizit bestätigen. Reaktivierung passiert direkt ohne Modal. Die Änderung wird erst beim Speichern in die DB geschrieben.
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ 06 PREVIEW PANEL -->
+<div class="section">
+  <span class="section-label label-blue">06 — PreviewPanel</span>
+  <h2>Live-Vorschau &amp; Navigations-System</h2>
+
+  <div class="cols cols-2">
+    <div>
+      <h3>PreviewMode Typ</h3>
+      <table>
+        <thead><tr><th>Wert</th><th>Was wird gerendert</th></tr></thead>
+        <tbody>
+          <tr><td><span class="mono">"question"</span></td><td>Widget-Fragen-Schritt (echte Funnel-Komponente, Schritt = previewIndex)</td></tr>
+          <tr><td><span class="mono">"contact"</span></td><td>Widget-Kontaktformular-Schritt</td></tr>
+          <tr><td><span class="mono">"success"</span></td><td>Widget-Erfolgsseite</td></tr>
+          <tr><td><span class="mono">"email_customer"</span></td><td>EmailPreviewMockup — Kundenbestätigungs-E-Mail</td></tr>
+          <tr><td><span class="mono">"email_lead"</span></td><td>LeadEmailPreviewMockup — Lead-Benachrichtigungs-E-Mail</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <h3>Schritt-Generierung</h3>
+      <div style="font-size:12px;color:#475569;line-height:1.8;">
+        Steps werden aus <span class="mono">state.questions</span> direkt mit dem <strong>sidebar-Index</strong> (nicht dem sichtbaren Index) generiert:<br><br>
+        <span class="mono">state.questions.map((eq, sidebarIdx) =&gt; ...)</span><br><br>
+        Dann gefiltert nach <span class="mono">eq.visible !== false</span>. Das Label zeigt "Frage {sidebarIdx + 1}", der interne Key ist "q-{visibleIdx}". Danach folgen die fixen Schritte: Kontaktformular, Erfolgsseite, Kundenbestätigung, Lead-Benachrichtigung.
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <h3>Klick auf Frage springt in Preview</h3>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-box box-page">SectionFragen<span class="flow-sub">Input fokussiert</span></div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-amber">onFocus(field, visibleIdx)<span class="flow-sub">mit Fragen-Index</span></div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-action">FunnelEditorShell<span class="flow-sub">handleFocus()</span></div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-action">setPreviewIndex(visibleIdx)<span class="flow-sub">+ setPreviewMode("question")</span></div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-success">PreviewPanel<span class="flow-sub">zeigt Frage N</span></div>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>Footer-Platzhalter in der Preview:</strong> Die Preview kennt nicht die echten Tenant-Daten. Sie verwendet Fallbacks:
+    <span class="mono">state.footerCompanyName || companyName || "Muster GmbH"</span> — so ist im Preview immer etwas zu sehen, auch wenn der Tenant keine Kontaktdaten eingetragen hat.
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ 07 SAVE FLOW -->
+<div class="section">
+  <span class="section-label label-green">07 — Save-Flow</span>
+  <h2>Speichern: POST (Neu) &amp; PUT (Bearbeiten)</h2>
+
+  <div class="cols cols-2">
+    <div>
+      <h3>Neuer Funnel (POST)</h3>
+      <div class="flow" style="flex-direction:column;gap:0;">
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#4648d4;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
+          <span style="font-size:12px;color:#475569;">Validierung: <span class="mono">state.funnelName</span> muss gesetzt sein</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#4648d4;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
+          <span style="font-size:12px;color:#475569;"><span class="mono">generateUniqueSlug(admin, funnelName, tenantSlug)</span> — Slug aus funnelName, auf Eindeutigkeit geprüft (While-Loop + DB-Check)</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#4648d4;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div>
+          <span style="font-size:12px;color:#475569;"><span class="mono">editorStateToFunnelRow(state, tenantSlug, slug)</span> → INSERT funnels</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#4648d4;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">4</div>
+          <span style="font-size:12px;color:#475569;"><span class="mono">editorQuestionsToDbRows(questions, slug)</span> → INSERT funnel_questions</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#22c55e;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✓</div>
+          <span style="font-size:12px;color:#475569;">Redirect → <span class="mono">/dashboard/funnels/{slug}/edit</span></span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h3>Bestehender Funnel (PUT)</h3>
+      <div class="flow" style="flex-direction:column;gap:0;">
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#4648d4;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
+          <span style="font-size:12px;color:#475569;">Ownership-Check: <span class="mono">funnels.tenant_slug === tenant.slug</span></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#4648d4;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
+          <span style="font-size:12px;color:#475569;"><span class="mono">editorStateToFunnelRow(state, tenantSlug, oldSlug)</span> → UPDATE funnels WHERE slug = oldSlug</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#4648d4;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div>
+          <span style="font-size:12px;color:#475569;">DELETE funnel_questions WHERE funnel_slug = oldSlug</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#4648d4;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">4</div>
+          <span style="font-size:12px;color:#475569;">INSERT neue Fragen (atomarer als Upsert bei Reihenfolge-Änderungen)</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#f59e0b;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">!</div>
+          <span style="font-size:12px;color:#475569;"><strong>Slug ändert sich nie</strong> — Änderung würde bestehende Embed-Codes brechen</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ 08 UTILS -->
+<div class="section">
+  <span class="section-label label-slate">08 — editorUtils.ts — Hilfsfunktionen</span>
+  <h2>Konvertierungs-Funktionen</h2>
+
+  <table>
+    <thead>
+      <tr><th>Funktion</th><th>Richtung</th><th>Beschreibung</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="mono">toSlug(s)</span></td>
+        <td>—</td>
+        <td>String → URL-Slug (Kleinbuchstaben, ä→ae, Sonderzeichen → "-", Rand-Bindestriche weg)</td>
+      </tr>
+      <tr>
+        <td><span class="mono">toKey(s)</span></td>
+        <td>—</td>
+        <td>String → DB-Key (wie toSlug aber Sonderzeichen → "_"). Für question_key und option value.</td>
+      </tr>
+      <tr>
+        <td><span class="mono">uid()</span></td>
+        <td>—</td>
+        <td>7-stellige zufällige Base36-ID für temporäre React-Keys (_id in EditorQuestion/EditorOption).</td>
+      </tr>
+      <tr>
+        <td><span class="mono">buildTheme(state)</span></td>
+        <td>EditorState → FunnelTheme</td>
+        <td>Für PreviewPanel: extrahiert Theme-Felder aus State.</td>
+      </tr>
+      <tr>
+        <td><span class="mono">buildFunnelConfig(state)</span></td>
+        <td>EditorState → FunnelConfig</td>
+        <td>Für PreviewPanel: extrahiert Text-Felder mit Fallback-Defaults.</td>
+      </tr>
+      <tr>
+        <td><span class="mono">buildQuestions(questions)</span></td>
+        <td>EditorQuestion[] → QuestionConfig[]</td>
+        <td>Für PreviewPanel: filtert unsichtbare, mappt Optionen und Slider-Config. ID = <span class="mono">q.questionKey || q._id</span> (stabil!).</td>
+      </tr>
+      <tr>
+        <td><span class="mono">editorStateToFunnelRow(state, tenantSlug, funnelSlug)</span></td>
+        <td>EditorState → DB-Row</td>
+        <td>Für API-Routen (POST/PUT): vollständiger Mapping aller Felder für INSERT/UPDATE in funnels.</td>
+      </tr>
+      <tr>
+        <td><span class="mono">editorQuestionsToDbRows(questions, funnelSlug)</span></td>
+        <td>EditorQuestion[] → DB-Rows[]</td>
+        <td>Für API-Routen: mappt jede Frage auf eine funnel_questions-Zeile mit sort_order = Array-Index.</td>
+      </tr>
+      <tr>
+        <td><span class="mono">dbToEditorState(funnelRow, questionRows)</span></td>
+        <td>DB-Rows → EditorState</td>
+        <td>Für Edit-Seite (GET): rekonstruiert vollständigen EditorState aus Datenbank-Zeilen. Sortiert questionRows nach sort_order.</td>
+      </tr>
+      <tr>
+        <td><span class="mono">generateUniqueSlug(admin, title, tenantSlug)</span></td>
+        <td>—</td>
+        <td>Generiert Slug aus funnelName via toSlug(), prüft DB-Eindeutigkeit, hängt bei Konflikt "-2", "-3" usw. an.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+
+<!-- ═══════════════════════ 09 DATEN-FLOW WIDGET -->
+<div class="section">
+  <span class="section-label label-amber">09 — Daten-Flow: Editor → DB → Widget</span>
+  <h2>Wie Funnel-Daten ins Widget gelangen</h2>
+
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-box box-action">EditorState<span class="flow-sub">FunnelEditorShell</span></div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-primary">PUT/POST API<span class="flow-sub">editorStateToFunnelRow</span></div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-supabase">funnels-Tabelle<span class="flow-sub">+ funnel_questions</span></div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-page">getTenantConfig(slug)<span class="flow-sub">lib/getTenantConfig.ts</span></div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box box-success">TenantConfig<span class="flow-sub">→ Funnel-Komponente</span></div>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:16px;">
+    <strong>Per-Funnel Override-Logik in getTenantConfig:</strong><br>
+    <span class="mono">companyName = row.footer_company_name || tenant.company_name</span><br>
+    <span class="mono">publicEmail = row.footer_email || tenant.public_email</span><br>
+    <span class="mono">notificationEmail = row.notification_email || tenant.notification_email</span><br>
+    <span class="mono">phone = row.footer_phone || tenant.public_phone || undefined</span><br>
+    D. h.: Wenn der Tenant im Editor Kontaktdaten für einen spezifischen Funnel einträgt, überschreiben diese die Tenant-weiten Werte im Widget.
+  </div>
+
+  <hr class="divider" />
+
+  <h3>Slug als öffentlicher Identifier</h3>
+  <div class="cols cols-2" style="margin-top:8px;font-size:12px;color:#475569;line-height:1.7;">
+    <div>
+      Der Slug ist der URL-Identifier des Funnels. Er erscheint in:
+      <ul style="margin-left:16px;margin-top:6px;">
+        <li>Der iFrame-URL: <span class="mono">https://leadplug.de/{slug}</span></li>
+        <li>Dem Embed-Code auf der Dashboard-Embed-Seite</li>
+        <li>Der Editor-Sidebar als <span class="mono">/{slug}</span> (zur Identifikation)</li>
+      </ul>
+    </div>
+    <div>
+      <strong>Wichtig:</strong> Der Slug wird beim ersten Speichern automatisch aus dem funnelName generiert (via <span class="mono">generateUniqueSlug</span>) und danach <strong>nie mehr geändert</strong>. Ein Ändern des Slugs nach der Einbettung würde den Embed-Code des Tenants auf allen seinen Websites brechen.
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ 10 REGELN -->
+<div class="section">
+  <span class="section-label label-red">10 — Kritische Regeln</span>
+  <h2>Was niemals verändert werden darf</h2>
+
+  <div class="warning-box">
+    <div class="warning-title">funnel.tsx ist absolut geschützt</div>
+    <div class="warning-body">
+      <span class="mono">components/funnel.tsx</span> ist das eingebettete Widget, das auf Kunden-Websites läuft.
+      Jede Änderung daran — egal wie klein — kann das Widget auf allen produktiven Seiten aller Tenants brechen.
+      Der Editor kommuniziert mit dem Widget <strong>ausschließlich über Daten</strong> (DB-Werte in TenantConfig).
+      Code-Änderungen an funnel.tsx durch den Editor-Entwicklungs-Prozess sind verboten.
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <div class="cols cols-2">
+    <div>
+      <h3>Weitere Regeln</h3>
+      <ul style="font-size:12px;color:#475569;margin-left:16px;margin-top:8px;line-height:2.2;">
+        <li><strong>questionKey nie ändern</strong> nach erster Erstellung — er ist Schlüssel in submissions.answers</li>
+        <li><strong>Slug nie ändern</strong> nach erstem Save — bricht Embed-Codes</li>
+        <li><strong>canSave = Boolean(state.funnelName)</strong> — ohne Namen kein Speichern</li>
+        <li><strong>isActive-Deaktivierung</strong> nur nach Modal-Bestätigung</li>
+        <li><strong>Supabase Service Key</strong> nur server-side, nie NEXT_PUBLIC_</li>
+        <li><strong>buildQuestions IDs</strong> immer <span class="mono">q.questionKey || q._id</span>, nie <span class="mono">uid()</span></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Bekannte Architektur-Entscheidungen</h3>
+      <ul style="font-size:12px;color:#475569;margin-left:16px;margin-top:8px;line-height:2.2;">
+        <li><strong>funnel_name ≠ funnel_title:</strong> <span class="mono">funnel_name</span> ist der interne Editor-Name (Pflichtfeld, in Funnel-Liste), <span class="mono">funnel_title</span> ist die H1-Überschrift des Kontaktformulars</li>
+        <li><strong>Fragen DELETE+INSERT:</strong> bei jedem Save werden alle Fragen gelöscht und neu eingefügt — einfacher als Upsert bei Reihenfolge-Änderungen</li>
+        <li><strong>Slug aus funnelName:</strong> <span class="mono">generateUniqueSlug(admin, funnelName, tenantSlug)</span> — human-readable, DB-Eindeutigkeit geprüft (Kandidat für Umstieg auf Random-Code)</li>
+        <li><strong>contactFields als JSONB:</strong> flexibel erweiterbar ohne Schema-Migration</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ 11 DATEI-ÜBERSICHT -->
+<div class="section">
+  <span class="section-label label-slate">11 — Vollständige Datei-Übersicht</span>
+  <h2>Alle beteiligten Dateien</h2>
+
+  <table>
+    <thead><tr><th>Datei</th><th>Rolle</th></tr></thead>
+    <tbody>
+      <tr><td><span class="mono-path">types/index.ts</span></td><td>Typen: EditorState, EditorQuestion, EditorOption, ContactFieldConfig, FunnelTheme, FunnelConfig, QuestionConfig, TenantConfig</td></tr>
+      <tr><td><span class="mono-path">lib/editorUtils.ts</span></td><td>Alle Konvertierungs-Funktionen (keine UI, keine Supabase-Calls direkt)</td></tr>
+      <tr><td><span class="mono-path">lib/getTenantConfig.ts</span></td><td>DB → TenantConfig für das öffentliche Widget. Liest footer_company_name etc. als Override über Tenant-Werte.</td></tr>
+      <tr><td><span class="mono-path">components/tenant-editor/defaults.ts</span></td><td>DEFAULT_EDITOR_STATE, DEFAULT_QUESTION, DEFAULT_CONTACT_FIELDS</td></tr>
+      <tr><td><span class="mono-path">components/tenant-editor/FunnelEditorShell.tsx</span></td><td>Haupt-Client-Component. State-Halter. handleFocus, handleSave, canSave.</td></tr>
+      <tr><td><span class="mono-path">components/tenant-editor/EditorSidebar.tsx</span></td><td>Linke Spalte mit Header, Accordion-Sektionen und isActive-Footer.</td></tr>
+      <tr><td><span class="mono-path">components/tenant-editor/SectionAccordion.tsx</span></td><td>Wiederverwendbare Accordion-Wrapper-Komponente.</td></tr>
+      <tr><td><span class="mono-path">components/tenant-editor/SectionFragen.tsx</span></td><td>Fragen-Editor mit Reorder, Typ-Selector, Optionen, Slider-Config.</td></tr>
+      <tr><td><span class="mono-path">components/tenant-editor/SectionKontakt.tsx</span></td><td>Kontaktformular-Texte + Felder-Verwaltung (ContactFieldConfig).</td></tr>
+      <tr><td><span class="mono-path">components/tenant-editor/SectionTexte.tsx</span></td><td>Nachrichten-Sektion: Erfolg, E-Mail-Einstellungen, Kontaktdaten/Footer.</td></tr>
+      <tr><td><span class="mono-path">components/tenant-editor/SectionDesign.tsx</span></td><td>Design-Sektion: Color-Picker, Font, Border-Radius, Max-Width.</td></tr>
+      <tr><td><span class="mono-path">components/tenant-editor/PreviewPanel.tsx</span></td><td>Rechte Spalte. Steps, Nav, Badge, Funnel-Rendering und E-Mail-Mockups.</td></tr>
+      <tr><td><span class="mono-path">components/tenant-editor/EmailPreviewMockup.tsx</span></td><td>Mockup der Kundenbestätigungs-E-Mail mit Antworten-Übersicht.</td></tr>
+      <tr><td><span class="mono-path">components/tenant-editor/LeadEmailPreviewMockup.tsx</span></td><td>Mockup der Lead-Benachrichtigungs-E-Mail mit CTA-Button "Lead im Dashboard ansehen →".</td></tr>
+      <tr><td><span class="mono-path">app/dashboard/funnels/page.tsx</span></td><td>Funnel-Liste. Zeigt funnelName (Fallback auf funnel_title), kein Slug sichtbar.</td></tr>
+      <tr><td><span class="mono-path">app/dashboard/funnels/new/page.tsx</span></td><td>Editor-Seite für neuen Funnel (ohne Slug, lädt DEFAULT_EDITOR_STATE).</td></tr>
+      <tr><td><span class="mono-path">app/dashboard/funnels/[slug]/edit/page.tsx</span></td><td>Editor-Seite für bestehenden Funnel (lädt State via GET API).</td></tr>
+      <tr><td><span class="mono-path">app/api/tenant/funnels/route.ts</span></td><td>GET (Funnel-Liste) + POST (neuen Funnel anlegen).</td></tr>
+      <tr><td><span class="mono-path">app/api/tenant/funnels/[slug]/route.ts</span></td><td>GET (Funnel für Editor laden) + PUT (Funnel speichern).</td></tr>
+    </tbody>
+  </table>
+</div>
+
+
+<p style="text-align:center;font-size:11px;color:#94a3b8;margin-top:8px;padding-bottom:48px;">
+  Tenant Funnel-Editor · Leadplug · Stand Mai 2026
+</p>
+
+</body>
+</html>

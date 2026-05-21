@@ -6,6 +6,7 @@ Einbettbares iFrame-Widget (Next.js + TypeScript + TailwindCSS), generischer Mul
 - Aufgaben & Status: [`context/current-feature.md`](context/current-feature.md)
 - History älterer Aufgaben: [`context/history-archive.md`](context/history-archive.md)
 - Architektur-Diagramm (visuell): [`context/Ablaufdiagramm.png`](context/Ablaufdiagramm.png)
+- **Tenant Funnel-Editor** (EditorState, Sektionen, Save-Flow, PreviewPanel): [`context/tenant-funnel-editor.html`](context/tenant-funnel-editor.html)
 
 ## Git-Workflow
 
