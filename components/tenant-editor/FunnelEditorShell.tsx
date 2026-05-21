@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { TriangleAlert } from "lucide-react";
 import { EditorSidebar } from "./EditorSidebar";
@@ -33,19 +33,34 @@ export function FunnelEditorShell({
   const [previewIndex, setPreviewIndex] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [isDirty, setIsDirty] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
 
+  const isDirty = useMemo(
+    () => JSON.stringify(state) !== JSON.stringify(initialState),
+    [state, initialState],
+  );
+
+  // Register global guard so DashboardHeader / TabNav can intercept nav-link clicks
   useEffect(() => {
-    if (!isDirty) return;
-    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
+    if (isDirty) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).__editorGuard = (href: string) => {
+        setPendingHref(href);
+        setShowExitModal(true);
+      };
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).__editorGuard = null;
+    }
+    return () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).__editorGuard = null;
+    };
   }, [isDirty]);
 
   const handleChange = useCallback((patch: Partial<EditorState>) => {
     setState((prev) => ({ ...prev, ...patch }));
-    setIsDirty(true);
   }, []);
 
   const handleFocus = useCallback((field: string, questionVisibleIndex?: number) => {
@@ -107,8 +122,9 @@ export function FunnelEditorShell({
         return;
       }
 
-      setIsDirty(false);
-      router.push("/dashboard/funnels");
+      const dest = pendingHref ?? "/dashboard/funnels";
+      setPendingHref(null);
+      router.push(dest);
       router.refresh();
     } catch {
       setSaveError("Netzwerkfehler. Bitte erneut versuchen.");
@@ -119,6 +135,7 @@ export function FunnelEditorShell({
 
   function handleBack() {
     if (isDirty) {
+      setPendingHref("/dashboard/funnels");
       setShowExitModal(true);
     } else {
       router.push("/dashboard/funnels");
@@ -126,9 +143,14 @@ export function FunnelEditorShell({
   }
 
   function handleDiscardAndLeave() {
-    setIsDirty(false);
     setShowExitModal(false);
-    router.push("/dashboard/funnels");
+    router.push(pendingHref ?? "/dashboard/funnels");
+    setPendingHref(null);
+  }
+
+  function handleCancelExit() {
+    setShowExitModal(false);
+    setPendingHref(null);
   }
 
   const canSave = Boolean(state.funnelName);
@@ -155,7 +177,7 @@ export function FunnelEditorShell({
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowExitModal(false)}
+                  onClick={handleCancelExit}
                   className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                   Abbrechen
@@ -181,11 +203,11 @@ export function FunnelEditorShell({
       )}
 
     <div
-      className="fixed inset-x-0 bottom-0 flex bg-gray-100 dark:bg-[#0d1117]"
+      className="fixed inset-x-0 bottom-0 flex flex-col md:flex-row bg-gray-100 dark:bg-[#0d1117]"
       style={{ top: "64px" }}
     >
       {/* Linke Seite: Editor */}
-      <aside className="w-96 shrink-0 overflow-hidden flex flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+      <aside className="w-full md:w-96 md:shrink-0 overflow-hidden flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex-1 md:flex-none">
         <EditorSidebar
           state={state}
           onChange={handleChange}
@@ -200,8 +222,8 @@ export function FunnelEditorShell({
         />
       </aside>
 
-      {/* Rechte Seite: Preview */}
-      <main className="flex-1 overflow-y-auto p-6 lg:p-8">
+      {/* Rechte Seite: Preview (nur auf Desktop) */}
+      <main className="hidden md:block md:flex-1 overflow-y-auto p-6 lg:p-8">
         <PreviewPanel
           state={state}
           activeField={activeField}
@@ -211,6 +233,7 @@ export function FunnelEditorShell({
           companyName={companyName}
           publicEmail={publicEmail}
           publicPhone={publicPhone}
+          hasUnsavedChanges={isDirty}
         />
       </main>
     </div>

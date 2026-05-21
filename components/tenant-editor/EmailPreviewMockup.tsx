@@ -30,11 +30,11 @@ export function EmailPreviewMockup({
         <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 space-y-1">
           <div className="flex gap-2 text-xs text-gray-500 dark:text-gray-400">
             <span className="font-medium w-12 shrink-0">Von:</span>
-            <span>noreply@leadplug.de</span>
+            <span>{state.emailSenderLocal ? `${state.emailSenderLocal}@anfragebestaetigung.de` : "noreply@anfragebestaetigung.de"}</span>
           </div>
           <div className="flex gap-2 text-xs text-gray-500 dark:text-gray-400">
             <span className="font-medium w-12 shrink-0">An:</span>
-            <span>max.mustermann@beispiel.de</span>
+            <span>kunde@beispiel.de</span>
           </div>
           <div className="flex gap-2 text-xs text-gray-500 dark:text-gray-400">
             <span className="font-medium w-12 shrink-0">Betreff:</span>

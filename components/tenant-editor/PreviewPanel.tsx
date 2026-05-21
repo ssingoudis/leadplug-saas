@@ -18,6 +18,7 @@ interface Props {
   companyName: string;
   publicEmail: string;
   publicPhone: string;
+  hasUnsavedChanges: boolean;
 }
 
 interface Step {
@@ -62,6 +63,7 @@ export function PreviewPanel({
   companyName,
   publicEmail,
   publicPhone,
+  hasUnsavedChanges,
 }: Props) {
   const topRef = useRef<HTMLDivElement>(null);
 
@@ -115,14 +117,17 @@ export function PreviewPanel({
 
   const initialSubmitted = previewMode === "success";
 
-  const badgeText =
-    previewMode === "success" && noQuestions
-      ? "Vorschau — Platzhalter-Antworten (noch keine Fragen konfiguriert)"
-      : previewMode === "email_lead"
-        ? "Vorschau — Benachrichtigung an den Lead-Empfänger"
-        : previewMode === "email_customer"
-          ? "Vorschau — Bestätigungs-E-Mail an den Anfragenden"
-          : "Vorschau — Eingaben werden nicht gespeichert";
+  const isPlaceholder = previewMode === "success" && noQuestions;
+
+  const badgeText = isPlaceholder
+    ? "Vorschau — Platzhalter-Antworten (noch keine Fragen konfiguriert)"
+    : hasUnsavedChanges
+      ? "Ungespeicherte Änderungen — Vorschau zeigt aktuelle Eingaben"
+      : "Alles gespeichert — Vorschau ist aktuell";
+
+  const badgeClass = isPlaceholder || hasUnsavedChanges
+    ? "bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 text-amber-700 dark:text-amber-400"
+    : "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/40 text-green-700 dark:text-green-400";
 
   return (
     <div className="flex flex-col h-full">
@@ -152,8 +157,8 @@ export function PreviewPanel({
         </div>
       </div>
 
-      {/* Info-Badge */}
-      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 rounded-lg px-3 py-1.5 mb-4 text-xs text-amber-700 dark:text-amber-400 w-fit mx-auto">
+      {/* Status-Badge */}
+      <div className={`${badgeClass} rounded-lg px-3 py-1.5 mb-4 text-xs w-fit mx-auto`}>
         {badgeText}
       </div>
 

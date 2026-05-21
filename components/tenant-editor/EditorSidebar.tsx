@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Save, AlertCircle, Power, TriangleAlert, ArrowLeft } from "lucide-react";
+import { Loader2, Save, AlertCircle, Power, TriangleAlert, ArrowLeft, ExternalLink } from "lucide-react";
 import { DeleteFunnelButton } from "./DeleteFunnelButton";
 import { SectionAccordion } from "./SectionAccordion";
 import { SectionDesign } from "./SectionDesign";
@@ -140,6 +140,19 @@ export function EditorSidebar({
               placeholder="Funnel-Name eingeben…"
               className="flex-1 min-w-0 text-sm font-bold text-gray-900 dark:text-white bg-transparent outline-none placeholder-gray-400 dark:placeholder-gray-500 truncate border-b border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-primary transition-colors pb-0.5"
             />
+
+            {originalSlug && (
+              <a
+                href={`/${originalSlug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Live öffnen"
+                className="md:hidden flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-400 hover:border-primary hover:text-primary transition-colors shrink-0 cursor-pointer"
+              >
+                <ExternalLink size={13} />
+                <span className="hidden sm:inline">Live</span>
+              </a>
+            )}
 
             <div className="relative shrink-0">
               <button
