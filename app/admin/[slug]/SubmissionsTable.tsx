@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
+import Badge from '@/components/ui/Badge'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function AnswerLines({ answers, questions }: { answers: Record<string, string>; questions: any[] }) {
@@ -65,12 +66,12 @@ export default function SubmissionsTable({ submissions, questions }: { submissio
 
               {/* Mail badges */}
               <div className="flex gap-1.5 shrink-0">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.customer_email_sent ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-500'}`}>
+                <Badge variant={s.customer_email_sent ? 'green' : 'red'}>
                   Kunde {s.customer_email_sent ? '✓' : '✗'}
-                </span>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.tenant_email_sent ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-500'}`}>
+                </Badge>
+                <Badge variant={s.tenant_email_sent ? 'green' : 'red'}>
                   Tenant {s.tenant_email_sent ? '✓' : '✗'}
-                </span>
+                </Badge>
               </div>
 
               {/* Chevron */}

@@ -195,7 +195,7 @@ function ExpandedMonth({
       {hasViews && (
         <DailyMonthChart
           data={dailyViews}
-          color="#6366f1"
+          color="var(--color-primary)"
           title="Aufrufe pro Tag"
           monthKey={m.month}
           unit="Aufrufe"

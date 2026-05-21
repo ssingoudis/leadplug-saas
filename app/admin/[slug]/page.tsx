@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, ExternalLink, Power } from 'lucide-react'
+import ThemeToggle from '@/components/ui/ThemeToggle'
 import EmbedBlock from './EmbedBlock'
 import SuccessPreviewBlock from './SuccessPreviewBlock'
 import EmailPreviewBlock from './EmailPreviewBlock'
@@ -79,7 +80,7 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
   const funnelUrl = `${base}/${slug}`
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-[#0d1117]">
+    <div className="min-h-screen bg-gray-100 dark:bg-background">
       {/* Header */}
       <div className="bg-white dark:bg-gray-900 sticky top-0 z-10 border-b-2 border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex items-center gap-3 min-w-0">
@@ -93,6 +94,7 @@ export default async function FunnelDetailPage({ params }: { params: Promise<{ s
           <span className="text-gray-300 dark:text-gray-600 shrink-0">/</span>
           <span className="text-sm font-semibold text-gray-900 dark:text-white truncate min-w-0">{slug}</span>
           <div className="ml-auto shrink-0 flex items-center gap-2 sm:gap-3">
+            <ThemeToggle />
             <a
               href={funnelUrl}
               target="_blank"

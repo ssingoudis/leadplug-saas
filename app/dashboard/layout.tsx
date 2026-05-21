@@ -49,7 +49,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
     return (
       <div
-        className="min-h-screen bg-gray-100 dark:bg-[#0d1117] flex items-center justify-center p-4"
+        className="min-h-screen bg-gray-100 dark:bg-background flex items-center justify-center p-4"
         style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
       >
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm p-8 max-w-sm w-full text-center">
@@ -68,7 +68,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-[#0d1117]" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div className="min-h-screen bg-gray-100 dark:bg-background" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <DashboardHeader />
       <div className="max-w-5xl mx-auto px-4 sm:px-8 py-8">
         {children}

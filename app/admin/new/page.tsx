@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
+import ThemeToggle from '@/components/ui/ThemeToggle'
 import { IconPicker } from './IconPicker'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -270,7 +271,7 @@ export default function NewFunnelPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-[#0d1117]">
+    <div className="min-h-screen bg-gray-100 dark:bg-background">
       {/* Header */}
       <div className="bg-white dark:bg-gray-900 sticky top-0 z-10 border-b-2 border-primary">
         <div className="max-w-3xl mx-auto px-4 sm:px-8 py-4 flex items-center gap-3">
@@ -281,6 +282,7 @@ export default function NewFunnelPage() {
           <span className="text-gray-300 dark:text-gray-600">/</span>
           <span className="text-sm font-semibold text-gray-900 dark:text-white">Neuer Kunde</span>
           <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
             <button
               onClick={handlePreview}
               className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg border border-primary text-primary hover:bg-primary/10 transition-colors cursor-pointer"
