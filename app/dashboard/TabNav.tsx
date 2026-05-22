@@ -9,6 +9,7 @@ export const TABS = [
   { label: 'Kontakte',      href: '/dashboard/kontakte' },
   { label: 'Statistiken',   href: '/dashboard/statistiken' },
   { label: 'Embed-Code',    href: '/dashboard/embed' },
+  { label: 'Billing',       href: '/dashboard/billing' },
 ]
 
 function guardedClick(e: React.MouseEvent<HTMLAnchorElement>, href: string) {

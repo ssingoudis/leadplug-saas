@@ -25,7 +25,52 @@ Nur noch 2 aktive Tenants:
 
 ---
 
+## Stripe Billing — Erweiterungsanleitung
+
+### Neuen Plan hinzufügen (z.B. "LeadPlug Pro")
+
+1. **Stripe Dashboard:** Neues Product + Price anlegen (oder via MCP: `create_product` → `create_price`)
+2. **`.env.local` + `.env.example`:** Neue Env-Var eintragen:
+   ```
+   STRIPE_PRICE_ID_PRO=price_xxxxx
+   ```
+3. **`lib/stripe.ts`:** Export ergänzen:
+   ```ts
+   export const STRIPE_PRICE_ID_PRO = process.env.STRIPE_PRICE_ID_PRO ?? ''
+   ```
+4. **`/api/stripe/checkout/route.ts`:** Request-Body um `plan`-Parameter erweitern und je nach Wert den richtigen Price wählen.
+5. **`/dashboard/billing/BillingClient.tsx`:** Upgrade-Button für den neuen Plan ergänzen.
+6. Kein DB-Schema-Change nötig — `stripe_price_id` speichert die aktive Price-ID als String.
+
+### Webhook lokal testen
+
+```bash
+# Stripe CLI installieren: https://stripe.com/docs/stripe-cli
+stripe login
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+# Das CLI gibt einen whsec_... Key aus → in .env.local als STRIPE_WEBHOOK_SECRET eintragen
+```
+
+### Produktions-Webhook einrichten
+
+1. Stripe Dashboard → Developers → Webhooks → Add endpoint
+2. URL: `https://deine-domain.de/api/stripe/webhook`
+3. Events: `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`
+4. Signing Secret in Produktions-Env als `STRIPE_WEBHOOK_SECRET` eintragen
+
+### Free-Status für Testkunden
+
+Direkt in Supabase (Admin-Client oder SQL):
+```sql
+UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
+```
+→ Kein Stripe-Check, voller Funktionsumfang, keine Abrechnung.
+
+---
+
 ## History
+
+- **Aufgabe 22 – Stripe Billing Integration** – Vollständige Stripe-Integration für monatliche Abonnements. DB: `stripe_customer_id`, `stripe_subscription_id`, `stripe_subscription_status`, `stripe_price_id` zu `tenants` hinzugefügt. `lib/stripe.ts`: Server-seitiger Stripe-Client (API v2026-04-22.dahlia). `lib/billing.ts`: `isBillingActive()` Feature-Gate (free → immer aktiv; sonst Stripe-Status prüfen), `getSubscriptionStatus()`, `STATUS_LABELS`, `STATUS_COLORS`. API-Routen: POST `/api/stripe/checkout` (Checkout Session + auto-create Customer), POST `/api/stripe/webhook` (Signatur-Verifikation, subscription created/updated/deleted → DB), POST `/api/stripe/portal` (Customer Portal Session). Dashboard `/dashboard/billing`: zeigt Plan, Status-Badge, Upgrade-Button (→ Checkout), Abo-verwalten-Button (→ Portal), kostenlos-Hinweis bei free-Status; Billing-Tab in TabNav. Stripe Test-Produkt: `prod_UZ6u1GcNJgolwY` "LeadPlug Standard", 49€/Monat `price_1TZygpQ5RyuRWopIg2SVj4PD`. Erweiterungsanleitung für neue Pläne in `current-feature.md` dokumentiert. (`lib/stripe.ts`, `lib/billing.ts`, `app/api/stripe/checkout/route.ts`, `app/api/stripe/webhook/route.ts`, `app/api/stripe/portal/route.ts`, `app/dashboard/billing/page.tsx`, `app/dashboard/billing/BillingClient.tsx`, `app/dashboard/TabNav.tsx`, `.env.example`)
 
 - **Aufgabe 21 – Navigation & Leads/Kontakte-Umbau** – Navbar-Umbau: Account + Logout als Icon-only Buttons (Breakpoint `lg`/1024px für Hamburger-Menü), Icons für alle Tabs ergänzt (Leads: Inbox, Kontakte: Users, Funnels: Layers), Account-Farbe im Mobile-Menü korrigiert. Neue Tab-Struktur: "Leads" (detaillierte Ansicht mit aufklappbaren Antworten + Funnel-Filter/Von-Bis/Sort) + "Kontakte" (einfache Kontaktliste Name/E-Mail/Telefon/Funnel/Angelegt). TenantLeadsTable erweitert: Funnel-Filter, Von/Bis-Datum, Sortierung, Suche mit Icon, gruppierter Datumsbereich-Container. LeadsTable (Kontakte) vereinfacht: kein Status, keine PATCH-API, nur Lesezugriff. Beide Komponenten: Zähler nur bei aktivem Filter sichtbar, einheitliche Spalten-Styles, mobile Kartenreihenfolge korrigiert. DB: `notes`-Spalte gedroppt. (`app/dashboard/TabNav.tsx`, `app/dashboard/DashboardHeader.tsx`, `app/dashboard/TenantLeadsTable.tsx`, `app/dashboard/leads/page.tsx`, `app/dashboard/kontakte/page.tsx` (neu), `components/leads/LeadsTable.tsx`, `app/api/leads/[id]/route.ts`)
 
