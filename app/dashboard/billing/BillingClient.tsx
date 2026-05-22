@@ -127,16 +127,6 @@ export default function BillingClient({
               {loading === 'checkout' ? 'Weiterleitung…' : 'Jetzt abonnieren — 49 € / Monat'}
             </Button>
           )}
-          {showUpgrade && testPriceId && (
-            <Button
-              variant="secondary"
-              onClick={() => startCheckout(testPriceId)}
-              disabled={loading !== null}
-            >
-              <CreditCard size={15} />
-              Test-Abo (1 € · Sofortkündigung)
-            </Button>
-          )}
           {showPortal && (
             <Button
               variant="secondary"
@@ -154,6 +144,27 @@ export default function BillingClient({
           )}
         </div>
       </div>
+
+      {/* Test-Kachel */}
+      {showUpgrade && testPriceId && (
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 p-6 flex flex-col gap-4">
+          <div>
+            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Entwickler-Test</p>
+            <p className="text-base font-bold text-gray-900 dark:text-white">Test-Abo — 1 € / Monat</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Sofortige Kündigung — nur zum Testen des Checkout- und Webhook-Flows</p>
+          </div>
+          <div>
+            <Button
+              variant="secondary"
+              onClick={() => startCheckout(testPriceId)}
+              disabled={loading !== null}
+            >
+              <CreditCard size={15} />
+              {loading === 'checkout' ? 'Weiterleitung…' : 'Test-Abo starten'}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Info-Box: Webhook-Hinweis für Lokal-Entwicklung */}
       {process.env.NODE_ENV === 'development' && (
