@@ -25,6 +25,47 @@ Nur noch 2 aktive Tenants:
 
 ---
 
+## Aktueller Status (Stand: 2026-05-22)
+
+**Alle 3 Phasen abgeschlossen.** Das Stripe Billing ist vollständig implementiert und in Vercel deployed — aktuell im **Test-Modus** (Stripe Sandbox, `sk_test_...`).
+
+### Stripe-Setup in Vercel (Production-Umgebung)
+
+Folgende Env-Vars sind in Vercel eingetragen:
+
+| Variable | Inhalt |
+|---|---|
+| `STRIPE_SECRET_KEY` | `sk_test_51...` (Test-Key — für Production durch `sk_live_...` ersetzen) |
+| `STRIPE_PRICE_ID_STANDARD` | `price_1TZygpQ5RyuRWopIg2SVj4PD` (49€/Monat, Test-Produkt) |
+| `STRIPE_PRICE_ID_TEST` | `price_1TZzEyQ5RyuRWopIGMR2h0B4` (1€/Monat, Sofortkündigung — nur dev/staging) |
+| `STRIPE_WEBHOOK_SECRET` | `whsec_...` (Signing-Secret des Stripe Webhook-Endpoints) |
+
+Webhook-Endpoint in Stripe (Test-Modus): `https://app.leadplug.de/api/stripe/webhook`
+Lauscht auf: `customer.subscription.created`, `.updated`, `.deleted`
+
+### Wechsel auf Production (Live-Betrieb)
+
+Wenn echte Zahlungen aktiviert werden sollen:
+
+1. **Stripe Dashboard → Live-Modus** (Toggle oben links von "Test" auf "Live")
+2. Neues Live-Produkt + Price anlegen (49€/Monat)
+3. In Vercel ersetzen:
+   - `STRIPE_SECRET_KEY` → `sk_live_...` (oder Restricted Key `rk_live_...` empfohlen)
+   - `STRIPE_PRICE_ID_STANDARD` → neue `price_live_...`-ID
+   - `STRIPE_PRICE_ID_TEST` → **leer lassen** oder entfernen (Test-Kachel verschwindet dann automatisch)
+4. Neuen Live-Webhook in Stripe anlegen: `https://app.leadplug.de/api/stripe/webhook`
+5. `STRIPE_WEBHOOK_SECRET` → neues `whsec_live_...` aus dem Live-Endpoint
+6. Redeploy in Vercel
+
+> **Wichtig:** `STRIPE_PRICE_ID_TEST` nur in Test-/Staging-Umgebungen setzen. Wenn die Env-Var fehlt, wird die Test-Kachel auf der Billing-Seite automatisch ausgeblendet.
+
+### Billing-Portal-Konfiguration
+
+Portal-Config-ID: `bpc_1TZypEQ5RyuRWopI3iAIq9DL` (Test-Modus, `mode: 'immediately'` für sofortige Kündigung).
+Für Production eine neue Portal-Config im Live-Modus anlegen.
+
+---
+
 ## Stripe Billing — Erweiterungsanleitung
 
 ### Neuen Plan hinzufügen (z.B. "LeadPlug Pro")
