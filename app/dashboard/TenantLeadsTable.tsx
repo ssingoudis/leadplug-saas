@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, Search } from 'lucide-react'
 import Badge from '@/components/ui/Badge'
-import { Input, Select } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Input'
 
 type QuestionMeta = {
   question_key: string
@@ -22,13 +22,15 @@ export type TenantSubmission = {
   answers: Record<string, string> | null
   customer_email_sent: boolean
   tenant_email_sent: boolean
+  funnel_slug: string
+  funnel_name: string
   questions: QuestionMeta[]
 }
 
-const DE_MONTHS = [
-  'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-  'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
-]
+export type FunnelOption = {
+  slug: string
+  name: string
+}
 
 function resolveAnswer(key: string, val: string, questions: QuestionMeta[]): string {
   const q = questions.find((q) => q.question_key === key)
@@ -93,59 +95,126 @@ function ExpandedDetail({ s }: { s: TenantSubmission }) {
   )
 }
 
-export default function TenantLeadsTable({ submissions }: { submissions: TenantSubmission[] }) {
+const dateInputClass = "w-full rounded-lg border-0 bg-transparent px-2 py-1 text-sm text-gray-900 dark:text-white outline-none cursor-pointer"
+
+export default function TenantLeadsTable({
+  submissions,
+  funnels,
+}: {
+  submissions: TenantSubmission[]
+  funnels: FunnelOption[]
+}) {
   const [openId, setOpenId]         = useState<string | null>(null)
   const [query, setQuery]           = useState('')
-  const [monthFilter, setMonthFilter] = useState('')
+  const [funnelFilter, setFunnelFilter] = useState('alle')
+  const [dateFrom, setDateFrom]     = useState('')
+  const [dateTo, setDateTo]         = useState('')
+  const [sortBy, setSortBy]         = useState('date_desc')
 
-  const monthOptions = useMemo(() => {
-    const seen = Array.from(new Set(submissions.map((s) => s.created_at.slice(0, 7))))
-      .sort()
-      .reverse()
-      .map((m) => {
-        const [y, mo] = m.split('-')
-        return { value: m, label: `${DE_MONTHS[parseInt(mo, 10) - 1]} ${y}` }
-      })
-    return [{ value: '', label: 'Alle Monate' }, ...seen]
-  }, [submissions])
+  const funnelOptions = [
+    { value: 'alle', label: 'Alle Funnels' },
+    ...funnels.map((f) => ({ value: f.slug, label: f.name })),
+  ]
 
   const filtered = useMemo(() => {
-    return submissions.filter((s) => {
-      if (monthFilter && s.created_at.slice(0, 7) !== monthFilter) return false
-      if (query) {
-        const q = query.toLowerCase()
-        if (
-          !(s.contact_name ?? '').toLowerCase().includes(q) &&
-          !(s.contact_email ?? '').toLowerCase().includes(q) &&
-          !(s.contact_phone ?? '').toLowerCase().includes(q)
-        ) return false
+    const q = query.toLowerCase()
+    const rows = submissions.filter((s) => {
+      if (q && !(s.contact_name ?? '').toLowerCase().includes(q) &&
+               !(s.contact_email ?? '').toLowerCase().includes(q) &&
+               !(s.contact_phone ?? '').toLowerCase().includes(q)) return false
+      if (funnelFilter !== 'alle' && s.funnel_slug !== funnelFilter) return false
+      if (dateFrom) {
+        const from = new Date(dateFrom)
+        from.setHours(0, 0, 0, 0)
+        if (new Date(s.created_at) < from) return false
+      }
+      if (dateTo) {
+        const to = new Date(dateTo)
+        to.setHours(23, 59, 59, 999)
+        if (new Date(s.created_at) > to) return false
       }
       return true
     })
-  }, [submissions, query, monthFilter])
+
+    return [...rows].sort((a, b) => {
+      switch (sortBy) {
+        case 'date_asc':  return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        case 'name_asc':  return (a.contact_name ?? '').localeCompare(b.contact_name ?? '', 'de')
+        case 'name_desc': return (b.contact_name ?? '').localeCompare(a.contact_name ?? '', 'de')
+        default:          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      }
+    })
+  }, [submissions, query, funnelFilter, dateFrom, dateTo, sortBy])
+
+  const hasActiveFilters = query || funnelFilter !== 'alle' || dateFrom || dateTo
 
   return (
     <div>
-      {/* Header: Titel + Filter in einer Zeile */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
-        <h2 className="text-base font-bold text-gray-900 dark:text-white shrink-0">
+      {/* Zeile 1: Titel + Suche + Funnel */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+        <h2 className="text-base font-bold text-gray-900 dark:text-white shrink-0 mb-2 sm:mb-0">
           Leads ({submissions.length})
         </h2>
-        <div className="flex gap-3 flex-1 sm:justify-end">
-          <Input
-            value={query}
-            onChange={setQuery}
-            placeholder="Suchen…"
-            className="flex-1 sm:max-w-xs"
-          />
-          <Select
-            value={monthFilter}
-            onChange={setMonthFilter}
-            options={monthOptions}
-            className="shrink-0 sm:w-44"
-          />
+        <div className="flex flex-col sm:flex-row gap-2 flex-1 sm:justify-end">
+          <div className="relative min-w-0 sm:w-72">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Name, E-Mail oder Telefon…"
+              className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 pl-8 pr-4 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition"
+            />
+          </div>
+          {funnels.length > 1 && (
+            <Select
+              value={funnelFilter}
+              onChange={setFunnelFilter}
+              options={funnelOptions}
+              className="sm:w-40"
+            />
+          )}
         </div>
       </div>
+
+      {/* Zeile 2: Datum + Sort */}
+      <div className="flex flex-col sm:flex-row sm:justify-end sm:items-center gap-2 mb-4">
+        <div className="flex items-center rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 overflow-hidden divide-x divide-gray-200 dark:divide-gray-600">
+          <div className="flex items-center gap-1.5 px-3 py-1.5">
+            <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">Von</span>
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={dateInputClass} />
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1.5">
+            <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">Bis</span>
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={dateInputClass} />
+          </div>
+        </div>
+        <Select
+          value={sortBy}
+          onChange={setSortBy}
+          options={[
+            { value: 'date_desc', label: 'Neueste zuerst' },
+            { value: 'date_asc',  label: 'Älteste zuerst' },
+            { value: 'name_asc',  label: 'Name A → Z' },
+            { value: 'name_desc', label: 'Name Z → A' },
+          ]}
+          className="sm:w-40"
+        />
+        {hasActiveFilters && (
+          <button
+            onClick={() => { setQuery(''); setFunnelFilter('alle'); setDateFrom(''); setDateTo('') }}
+            className="px-3 py-2 rounded-xl text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition"
+          >
+            Zurücksetzen
+          </button>
+        )}
+      </div>
+
+      {hasActiveFilters && (
+        <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+          {filtered.length} von {submissions.length} Leads
+        </p>
+      )}
 
       {filtered.length === 0 ? (
         <p className="text-sm text-gray-400 text-center py-6">
@@ -180,6 +249,13 @@ export default function TenantLeadsTable({ submissions }: { submissions: TenantS
                     </p>
                     <p className="text-xs text-gray-400 truncate">{s.contact_email}</p>
                   </div>
+
+                  {/* Funnel-Name (nur wenn mehrere vorhanden) */}
+                  {funnels.length > 1 && (
+                    <p className="hidden sm:block text-xs text-gray-400 dark:text-gray-500 shrink-0 max-w-36 truncate">
+                      {s.funnel_name}
+                    </p>
+                  )}
 
                   {/* Badges */}
                   <div className="hidden sm:flex gap-1.5 shrink-0">

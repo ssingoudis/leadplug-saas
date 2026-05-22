@@ -1,12 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { Settings, Power, Menu, X, LayoutDashboard, BarChart2, Code2 } from 'lucide-react'
+import { Settings, Power, Menu, X, LayoutDashboard, BarChart2, Code2, Layers, Inbox, Users } from 'lucide-react'
 import ThemeToggle from '@/components/ui/ThemeToggle'
 import TabNav, { TABS } from './TabNav'
 
 const TAB_ICONS: Record<string, React.ComponentType<{ size?: number }>> = {
   '/dashboard':             LayoutDashboard,
+  '/dashboard/funnels':     Layers,
+  '/dashboard/leads':       Inbox,
+  '/dashboard/kontakte':    Users,
   '/dashboard/statistiken': BarChart2,
   '/dashboard/embed':       Code2,
 }
@@ -30,28 +33,28 @@ export default function DashboardHeader() {
         <TabNav />
 
         {/* Desktop actions */}
-        <div className="ml-auto hidden sm:flex items-center gap-2 py-3">
+        <div className="ml-auto hidden lg:flex items-center gap-2 py-3">
           <ThemeToggle />
           <a
             href="/dashboard/account"
             onClick={(e) => guardedClick(e, '/dashboard/account')}
-            className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary-hover transition-colors"
+            title="Account"
+            className="flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-primary hover:text-primary dark:hover:bg-gray-800 transition-colors"
           >
-            <Settings size={14} />
-            Account
+            <Settings size={16} />
           </a>
           <a
             href="/logout"
             onClick={(e) => guardedClick(e, '/logout')}
-            className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-400 hover:border-primary hover:text-primary dark:hover:bg-gray-800 transition-colors"
+            title="Logout"
+            className="flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-primary hover:text-primary dark:hover:bg-gray-800 transition-colors"
           >
-            <Power size={14} />
-            Logout
+            <Power size={16} />
           </a>
         </div>
 
         {/* Mobile: ThemeToggle + Hamburger */}
-        <div className="ml-auto flex sm:hidden items-center gap-2 py-3">
+        <div className="ml-auto flex lg:hidden items-center gap-2 py-3">
           <ThemeToggle />
           <button
             onClick={() => setOpen(!open)}
@@ -65,7 +68,7 @@ export default function DashboardHeader() {
 
       {/* Mobile dropdown */}
       {open && (
-        <div className="sm:hidden border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 py-1">
+        <div className="lg:hidden border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 py-1">
           {/* Navigation */}
           {TABS.map((tab) => {
             const Icon = TAB_ICONS[tab.href]
@@ -85,7 +88,7 @@ export default function DashboardHeader() {
           <a
             href="/dashboard/account"
             onClick={(e) => { guardedClick(e, '/dashboard/account'); setOpen(false); }}
-            className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-primary hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
             <Settings size={15} />
             Account

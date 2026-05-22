@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Card from '@/components/ui/Card'
 import StatTile from '@/components/ui/StatTile'
 import DailyLeadsChart, { type DayData } from '@/app/admin/DailyLeadsChart'
-import TenantLeadsTable, { type TenantSubmission } from './TenantLeadsTable'
+import TenantLeadsTable, { type TenantSubmission, type FunnelOption } from './TenantLeadsTable'
 
 async function getData() {
   const supabase = await createClient()
@@ -19,7 +19,7 @@ async function getData() {
   ] = await Promise.all([
     supabase
       .from('funnels')
-      .select('slug, total_views')
+      .select('slug, funnel_name, total_views')
       .eq('is_active', true),
     supabase
       .from('submissions')
@@ -47,6 +47,12 @@ async function getData() {
     questionsByFunnel.set(q.funnel_slug, list)
   }
 
+  // Funnel-Name-Map
+  const funnelNameMap: Record<string, string> = {}
+  for (const f of (funnels ?? []) as { slug: string; funnel_name: string | null }[]) {
+    funnelNameMap[f.slug] = f.funnel_name ?? f.slug
+  }
+
   // Submissions mit Questions anreichern
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const enrichedSubmissions: TenantSubmission[] = ((submissions ?? []) as any[]).map((s) => ({
@@ -60,11 +66,17 @@ async function getData() {
     answers: s.answers as Record<string, string> | null,
     customer_email_sent: (s.customer_email_sent as boolean) ?? false,
     tenant_email_sent: (s.tenant_email_sent as boolean) ?? false,
+    funnel_slug: s.funnel_slug as string,
+    funnel_name: funnelNameMap[s.funnel_slug as string] ?? (s.funnel_slug as string),
     questions: questionsByFunnel.get(s.funnel_slug as string) ?? [],
   }))
 
+  const funnelList: FunnelOption[] = (funnels ?? []).map(
+    (f) => ({ slug: (f as { slug: string }).slug, name: funnelNameMap[(f as { slug: string }).slug] ?? (f as { slug: string }).slug })
+  )
+
   // Stats
-  const totalViews = (funnels ?? []).reduce((s, f) => s + (f.total_views ?? 0), 0)
+  const totalViews = (funnels ?? []).reduce((s, f) => s + ((f as { total_views: number | null }).total_views ?? 0), 0)
   const leadsLast14 = (chartRows ?? []).length
   const conversion = totalViews > 0 ? Math.round((enrichedSubmissions.length / totalViews) * 100) : 0
 
@@ -80,11 +92,11 @@ async function getData() {
   }
   const dailyData: DayData[] = Array.from(dailyMap.entries()).map(([date, count]) => ({ date, count }))
 
-  return { enrichedSubmissions, totalViews, leadsLast14, conversion, dailyData }
+  return { enrichedSubmissions, funnelList, totalViews, leadsLast14, conversion, dailyData }
 }
 
 export default async function DashboardPage() {
-  const { enrichedSubmissions, totalViews, leadsLast14, conversion, dailyData } = await getData()
+  const { enrichedSubmissions, funnelList, totalViews, leadsLast14, conversion, dailyData } = await getData()
 
   return (
     <div className="flex flex-col gap-6">
@@ -100,7 +112,7 @@ export default async function DashboardPage() {
 
       {/* Leads */}
       <Card>
-        <TenantLeadsTable submissions={enrichedSubmissions} />
+        <TenantLeadsTable submissions={enrichedSubmissions} funnels={funnelList} />
       </Card>
     </div>
   )

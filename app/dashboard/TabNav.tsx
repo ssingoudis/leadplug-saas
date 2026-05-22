@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation'
 export const TABS = [
   { label: 'Dashboard',     href: '/dashboard' },
   { label: 'Meine Funnels', href: '/dashboard/funnels' },
+  { label: 'Leads',         href: '/dashboard/leads' },
+  { label: 'Kontakte',      href: '/dashboard/kontakte' },
   { label: 'Statistiken',   href: '/dashboard/statistiken' },
   { label: 'Embed-Code',    href: '/dashboard/embed' },
 ]
@@ -41,7 +43,7 @@ export default function TabNav() {
             key={tab.href}
             href={tab.href}
             onClick={(e) => guardedClick(e, tab.href)}
-            className={`hidden sm:flex items-center px-4 py-4 text-sm border-b-2 -mb-0.5 transition-colors ${
+            className={`hidden lg:flex items-center px-4 py-4 text-sm border-b-2 -mb-0.5 transition-colors ${
               active
                 ? 'font-semibold text-primary border-primary'
                 : 'font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border-transparent'
@@ -53,7 +55,7 @@ export default function TabNav() {
       })}
       {/* Mobile: nur aktiver Tab als Seitenname */}
       {activeTab && (
-        <span className="sm:hidden flex items-center px-4 py-4 text-sm font-semibold text-primary border-b-2 border-primary -mb-0.5">
+        <span className="lg:hidden flex items-center px-4 py-4 text-sm font-semibold text-primary border-b-2 border-primary -mb-0.5">
           {activeTab.label}
         </span>
       )}
