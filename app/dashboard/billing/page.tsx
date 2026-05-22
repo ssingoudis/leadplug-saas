@@ -42,6 +42,7 @@ export default async function BillingPage({
         successParam={params.success === '1'}
         canceledParam={params.canceled === '1'}
         hasStripeCustomer={!!tenant.stripe_customer_id}
+        testPriceId={process.env.STRIPE_PRICE_ID_TEST}
       />
     </div>
   )

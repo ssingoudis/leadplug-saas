@@ -14,6 +14,7 @@ interface BillingClientProps {
   successParam: boolean
   canceledParam: boolean
   hasStripeCustomer: boolean
+  testPriceId?: string
 }
 
 export default function BillingClient({
@@ -23,14 +24,19 @@ export default function BillingClient({
   successParam,
   canceledParam,
   hasStripeCustomer,
+  testPriceId,
 }: BillingClientProps) {
   const router = useRouter()
   const [loading, setLoading] = useState<'checkout' | 'portal' | null>(null)
 
-  async function startCheckout() {
+  async function startCheckout(priceId?: string) {
     setLoading('checkout')
     try {
-      const res = await fetch('/api/stripe/checkout', { method: 'POST' })
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(priceId ? { priceId } : {}),
+      })
       const data = await res.json()
       if (data.url) window.location.href = data.url
       else alert('Fehler beim Starten des Checkouts.')
@@ -114,11 +120,21 @@ export default function BillingClient({
           {showUpgrade && (
             <Button
               variant="primary"
-              onClick={startCheckout}
+              onClick={() => startCheckout()}
               disabled={loading !== null}
             >
               <CreditCard size={15} />
               {loading === 'checkout' ? 'Weiterleitung…' : 'Jetzt abonnieren — 49 € / Monat'}
+            </Button>
+          )}
+          {showUpgrade && testPriceId && (
+            <Button
+              variant="secondary"
+              onClick={() => startCheckout(testPriceId)}
+              disabled={loading !== null}
+            >
+              <CreditCard size={15} />
+              Test-Abo (1 € · Sofortkündigung)
             </Button>
           )}
           {showPortal && (

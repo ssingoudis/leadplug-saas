@@ -20,7 +20,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Tenant nicht gefunden' }, { status: 404 })
     }
 
-    if (!STRIPE_PRICE_ID) {
+    // Optionaler priceId-Override aus dem Request-Body (z.B. für Test-Abo)
+    const body = await req.json().catch(() => ({}))
+    const priceId: string = body.priceId || STRIPE_PRICE_ID
+
+    if (!priceId) {
       return NextResponse.json({ error: 'Kein Stripe-Plan konfiguriert' }, { status: 500 })
     }
 
@@ -45,7 +49,7 @@ export async function POST(req: NextRequest) {
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
-      line_items: [{ price: STRIPE_PRICE_ID, quantity: 1 }],
+      line_items: [{ price: priceId, quantity: 1 }],
       // Kein payment_method_types — Stripe wählt dynamisch (Best Practice)
       subscription_data: {
         metadata: { tenant_slug: tenant.slug, supabase_tenant_id: tenant.id },
