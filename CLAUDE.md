@@ -18,6 +18,12 @@ Beispiele: `feature/aufgabe-2-seed-data`, `feature/aufgabe-3-supabase-config`, `
 
 Nach erfolgreichem Test: Branch in `main` mergen. Bei Problemen: Branch verwerfen, `main` bleibt sauber.
 
+**Merge-Stil:** Immer mit `--no-ff` mergen, damit der Feature-Branch in der `main`-History als eigener Block sichtbar bleibt (atomisches Revert per Merge-Commit möglich, klare Feature-Grenzen in `git log --graph`):
+```
+git checkout main
+git merge --no-ff feature/aufgabe-[nummer]-[kurzname] -m "Merge: Aufgabe [nummer] — [Titel]"
+```
+
 **Ausnahme:** Reine Dokumentations-Änderungen (keine Code-Dateien) brauchen keinen eigenen Branch.
 
 ## Wichtige Regeln
