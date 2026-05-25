@@ -77,6 +77,7 @@ export function SectionKontakt({ state, onChange, onFocus, fields, onFieldsChang
           value={state.funnelTitle}
           onChange={(e) => onChange({ funnelTitle: e.target.value })}
           onFocus={() => onFocus("contact_form_title")}
+          data-field="contact_form_title"
           placeholder="Jetzt kostenloses Angebot anfordern"
           className={inputClass}
         />
@@ -92,6 +93,7 @@ export function SectionKontakt({ state, onChange, onFocus, fields, onFieldsChang
           value={state.contactFormSubtitle}
           onChange={(e) => onChange({ contactFormSubtitle: e.target.value })}
           onFocus={() => onFocus("contact_form_subtitle")}
+          data-field="contact_form_subtitle"
           placeholder="Wer soll das Angebot erhalten?"
           className={inputClass}
         />
@@ -107,6 +109,7 @@ export function SectionKontakt({ state, onChange, onFocus, fields, onFieldsChang
           value={state.submitButtonLabel}
           onChange={(e) => onChange({ submitButtonLabel: e.target.value })}
           onFocus={() => onFocus("submit_button")}
+          data-field="submit_button"
           placeholder="Anfrage absenden"
           className={inputClass}
         />
@@ -121,6 +124,8 @@ export function SectionKontakt({ state, onChange, onFocus, fields, onFieldsChang
           {sorted.map((field, idx) => (
             <div
               key={field.key}
+              onFocus={() => onFocus(`contact_field_${field.key}`)}
+              data-field={`contact_field_${field.key}`}
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900"
             >
               <div className="flex flex-col gap-0.5 shrink-0">
@@ -193,6 +198,7 @@ export function SectionKontakt({ state, onChange, onFocus, fields, onFieldsChang
             value={state.privacyText}
             onChange={(e) => onChange({ privacyText: e.target.value })}
             onFocus={() => onFocus("privacy_text")}
+            data-field="privacy_text"
             rows={3}
             placeholder="Mit dem Absenden stimme ich zu..."
             className={textareaClass}
@@ -207,7 +213,7 @@ export function SectionKontakt({ state, onChange, onFocus, fields, onFieldsChang
             type="text"
             value={state.privacyPolicyUrl}
             onChange={(e) => onChange({ privacyPolicyUrl: e.target.value })}
-            onFocus={() => onFocus("")}
+            onFocus={() => onFocus("privacy_text")}
             placeholder="https://beispiel.de/datenschutz"
             className={inputClass}
           />

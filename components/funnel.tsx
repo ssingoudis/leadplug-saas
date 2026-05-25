@@ -174,6 +174,8 @@ interface FunnelProps {
   initialStep?: number;
   previewHighlight?: string; // Editor-only: hebt das gerade bearbeitete Element hervor
   initialAnswers?: Record<string, string>; // Editor-only: Platzhalter-Antworten für Erfolgsseiten-Preview
+  onFieldClick?: (field: string, questionVisibleIndex?: number) => void; // Editor-only: Klick im Preview → Sidebar-Feld fokussieren
+  onStepChange?: (mode: "question" | "contact" | "success", index: number) => void; // Editor-only: Test-Modus reflektiert den aktuellen Schritt in der Step-Navigation
   onSubmit?: (data: {
     answers: Record<string, string>;
     contact: Record<string, string>;
@@ -193,15 +195,41 @@ export function Funnel({
   initialStep,
   previewHighlight,
   initialAnswers,
+  onFieldClick,
+  onStepChange,
   onSubmit,
 }: FunnelProps) {
 
-  // Gibt einen blauen Outline-Style zurück wenn das Element gerade im Editor fokussiert ist.
-  // Nur aktiv wenn previewHighlight gesetzt ist (d.h. im Editor-Kontext).
-  const hl = (key: string): React.CSSProperties =>
-    previewHighlight === key
-      ? { outline: "2px solid #3b82f6", outlineOffset: "3px", borderRadius: "4px" }
+  // Editor-Preview-Highlight (Standard): outline AUSSERHALB des Elements (offset +3px).
+  // Mit Luft zwischen Element-Kante und Rahmen → klar erkennbar, auch wenn das Element
+  // selbst die Primärfarbe verwendet (Option-Buttons).
+  const hl = (...keys: string[]): React.CSSProperties =>
+    previewHighlight && keys.includes(previewHighlight)
+      ? { outline: "2px solid var(--color-primary)", outlineOffset: "3px" }
       : {};
+
+  // Edge-Variante: outline INSIDE (offset -2px) für Elemente die direkt an der Card-Kante sitzen
+  // und sonst von overflow:hidden geclippt würden (Header-Banner, Footer, die Card selbst,
+  // der äußere Page-BG-Wrapper).
+  const hlEdge = (...keys: string[]): React.CSSProperties =>
+    previewHighlight && keys.includes(previewHighlight)
+      ? { outline: "2px solid var(--color-primary)", outlineOffset: "-2px" }
+      : {};
+
+  // Editor-only: Klick auf ein data-edit-field-Element → Callback zum Editor.
+  // preventDefault + stopPropagation verhindert, dass z.B. Optionen-Buttons den Funnel weiterschalten
+  // oder das Submit-Formular abgesendet wird.
+  const handlePreviewClick = (e: React.MouseEvent) => {
+    if (!onFieldClick) return;
+    const target = (e.target as HTMLElement).closest("[data-edit-field]") as HTMLElement | null;
+    if (!target) return;
+    e.preventDefault();
+    e.stopPropagation();
+    onFieldClick(target.dataset.editField!, currentStep);
+  };
+
+  // Im Editor-Modus signalisieren Anzeige-Elemente Klickbarkeit per Cursor.
+  const editCursor: React.CSSProperties = onFieldClick ? { cursor: "pointer" } : {};
 
   // ---------------------------------------------------------------------------
   // Theme resolution
@@ -375,6 +403,19 @@ export function Funnel({
   // Effects
   // ---------------------------------------------------------------------------
 
+  // Editor-Test-Modus: meldet aktuellen Schritt zurück an PreviewPanel,
+  // damit die Step-Navigation oben mitläuft. Im Live-Widget ist onStepChange undefined → No-Op.
+  useEffect(() => {
+    if (!onStepChange) return;
+    if (isSubmitted) {
+      onStepChange("success", 0);
+    } else if (isContactStep) {
+      onStepChange("contact", 0);
+    } else {
+      onStepChange("question", currentStep);
+    }
+  }, [currentStep, isContactStep, isSubmitted, onStepChange]);
+
   // Sends the widget height to the parent frame after every layout change via postMessage.
   // The ResizeObserver re-fires automatically on step transitions and after fonts load.
   // Only active when the widget is embedded in an iframe (window.parent !== window).
@@ -416,6 +457,7 @@ export function Funnel({
     return (
       <div
         ref={containerRef}
+        onClickCapture={onFieldClick ? handlePreviewClick : undefined}
         style={{
           backgroundColor: pageBackgroundColor,
           width: "100%",
@@ -424,6 +466,7 @@ export function Funnel({
           paddingLeft:   `${SHADOW_PADDING.sides}px`,
           paddingRight:  `${SHADOW_PADDING.sides}px`,
           overflowX: "hidden",
+          ...hlEdge("page_background_color"),
         }}
       >
         <div
@@ -435,10 +478,15 @@ export function Funnel({
             fontFamily:      theme.fontFamily,
             borderRadius:    theme.borderRadius,
             boxShadow:       CARD_SHADOW_STRING,
+            ...hlEdge("primary_color", "text_color", "background_color", "font", "border_radius", "max_width"),
           }}
         >
           {/* Header banner */}
-          <div className="px-8 py-5" style={{ backgroundColor: theme.primaryColor }}>
+          <div
+            className="px-8 py-5"
+            data-edit-field="header_banner"
+            style={{ backgroundColor: theme.primaryColor, ...editCursor, ...hlEdge("header_banner", "footer_company") }}
+          >
             <p className="text-white font-bold text-base m-0">{companyName}</p>
           </div>
 
@@ -453,10 +501,18 @@ export function Funnel({
               </svg>
             </div>
 
-            <h2 className="text-2xl font-bold mb-2 leading-snug" style={{ color: theme.textColor, ...hl("success_message") }}>
+            <h2
+              className="text-2xl font-bold mb-2 leading-snug"
+              data-edit-field="success_message"
+              style={{ color: theme.textColor, ...editCursor, ...hl("success_message") }}
+            >
               {funnel.successMessage}
             </h2>
-            <p className="text-sm mb-6" style={{ color: theme.textColorMuted, ...hl("response_message") }}>
+            <p
+              className="text-sm mb-6"
+              data-edit-field="response_message"
+              style={{ color: theme.textColorMuted, ...editCursor, ...hl("response_message") }}
+            >
               {funnel.responseMessage}
             </p>
 
@@ -465,7 +521,11 @@ export function Funnel({
               className="rounded-lg text-left text-sm p-4"
               style={{ backgroundColor: theme.inputBgColor, borderLeft: `4px solid ${theme.primaryColor}` }}
             >
-              <p className="font-semibold mb-3" style={{ color: theme.textColor, ...hl("answers_overview_label") }}>
+              <p
+                className="font-semibold mb-3"
+                data-edit-field="answers_overview_label"
+                style={{ color: theme.textColor, ...editCursor, ...hl("answers_overview_label") }}
+              >
                 {funnel.answersOverviewLabel}
               </p>
               {visibleQuestions.map((q) => {
@@ -484,7 +544,8 @@ export function Funnel({
           {/* Footer */}
           <div
             className="px-8 py-4 border-t text-xs"
-            style={{ backgroundColor: theme.inputBgColor, borderColor: theme.borderColor, color: theme.textColorMuted }}
+            data-edit-field="footer"
+            style={{ backgroundColor: theme.inputBgColor, borderColor: theme.borderColor, color: theme.textColorMuted, ...editCursor, ...hlEdge("footer", "footer_company", "footer_email", "footer_phone") }}
           >
             <p className="m-0">{resolvedFooter}</p>
           </div>
@@ -503,6 +564,7 @@ export function Funnel({
   return (
     <div
       ref={containerRef}
+      onClickCapture={onFieldClick ? handlePreviewClick : undefined}
       style={{
         backgroundColor: pageBackgroundColor,
         width: "100%",
@@ -511,6 +573,7 @@ export function Funnel({
         paddingLeft:   `${SHADOW_PADDING.sides}px`,
         paddingRight:  `${SHADOW_PADDING.sides}px`,
         overflowX: "hidden",
+        ...hlEdge("page_background_color"),
       }}
     >
       <div
@@ -524,6 +587,7 @@ export function Funnel({
           borderRadius:    theme.borderRadius,
           overflow:        "hidden",
           boxShadow:       CARD_SHADOW_STRING,
+          ...hlEdge("primary_color", "text_color", "background_color", "font", "border_radius", "max_width"),
         }}
       >
         <div className="p-4 @md:p-8">
@@ -537,16 +601,28 @@ export function Funnel({
                 <div className="mb-6 @lg:mb-8">
                   <h1
                     className="text-lg @md:text-xl @lg:text-2xl font-bold leading-tight text-center text-balance"
-                    style={{ color: theme.textColor, ...hl("question_title") }}
+                    data-edit-field="question_title"
+                    style={{
+                      color: currentQuestion.title ? theme.textColor : "#9ca3af",
+                      fontStyle: currentQuestion.title ? "normal" : "italic",
+                      ...editCursor,
+                      ...hl("question_title"),
+                    }}
                   >
-                    {currentQuestion.title}
+                    {currentQuestion.title || (onFieldClick ? "Ihre Frage?" : "")}
                   </h1>
-                  {currentQuestion.subtitle && (
+                  {(currentQuestion.subtitle || previewHighlight === "question_subtitle") && (
                     <p
                       className="mt-2 text-sm @md:text-base leading-relaxed text-center"
-                      style={{ color: theme.textColorMuted, ...hl("question_subtitle") }}
+                      data-edit-field="question_subtitle"
+                      style={{
+                        color: currentQuestion.subtitle ? theme.textColorMuted : "#9ca3af",
+                        fontStyle: currentQuestion.subtitle ? "normal" : "italic",
+                        ...editCursor,
+                        ...hl("question_subtitle"),
+                      }}
                     >
-                      {currentQuestion.subtitle}
+                      {currentQuestion.subtitle || "Untertitel (optional)"}
                     </p>
                   )}
                 </div>
@@ -567,6 +643,7 @@ export function Funnel({
                         return (
                           <button
                             key={option.value}
+                            data-edit-field={`option_${idx}`}
                             onClick={() =>
                               isMultiple
                                 ? handleToggleMultiple(currentQuestion.id, option.value)
@@ -627,25 +704,41 @@ export function Funnel({
                 {/* slider */}
                 {currentQuestion.questionType === "slider" && sliderConfig && (
                   <div className="mb-6">
-                    <p className="text-center text-3xl font-bold mb-6" style={{ color: theme.primaryColor }}>
+                    <p
+                      className="text-center text-3xl font-bold mb-6"
+                      data-edit-field="slider_default"
+                      style={{ color: theme.primaryColor, ...editCursor, ...hl("slider_default", "slider_unit") }}
+                    >
                       {sliderVal.toLocaleString("de-DE")} {sliderConfig.unit}
                     </p>
 
-                    <input
-                      type="range"
-                      min={sliderConfig.min}
-                      max={sliderConfig.max}
-                      step={sliderConfig.step ?? 1}
-                      value={sliderVal}
-                      onChange={(e) =>
-                        setAnswers((prev) => ({ ...prev, [currentQuestion.id]: e.target.value }))
-                      }
-                      className="funnel-slider"
-                    />
+                    {/* Wrapper-Div damit die Highlight-Outline den ganzen Slider-Bereich umfasst
+                        (das range-Input selbst ist nur 4px hoch → Outline kaum sichtbar). */}
+                    <div
+                      data-edit-field="slider_step"
+                      className="py-3"
+                      style={{ ...editCursor, ...hl("slider_step") }}
+                    >
+                      <input
+                        type="range"
+                        min={sliderConfig.min}
+                        max={sliderConfig.max}
+                        step={sliderConfig.step ?? 1}
+                        value={sliderVal}
+                        onChange={(e) =>
+                          setAnswers((prev) => ({ ...prev, [currentQuestion.id]: e.target.value }))
+                        }
+                        className="funnel-slider"
+                      />
+                    </div>
 
                     <div className="flex justify-between text-xs mt-1" style={{ color: theme.textColorMuted }}>
-                      <span>{sliderConfig.min.toLocaleString("de-DE")} {sliderConfig.unit}</span>
-                      <span>{sliderConfig.max.toLocaleString("de-DE")} {sliderConfig.unit}</span>
+                      <span data-edit-field="slider_min" style={{ ...editCursor, ...hl("slider_min") }}>
+                        {sliderConfig.min.toLocaleString("de-DE")} {sliderConfig.unit}
+                      </span>
+                      <span data-edit-field="slider_max" style={{ ...editCursor, ...hl("slider_max") }}>
+                        {sliderConfig.max.toLocaleString("de-DE")} {sliderConfig.unit}
+                      </span>
                     </div>
                   </div>
                 )}
@@ -661,12 +754,14 @@ export function Funnel({
                       placeholder={`${(currentQuestion.config as TextConfig).placeholder ?? ""}${(currentQuestion.config as TextConfig).required === false ? " (optional)" : ""}`}
                       maxLength={(currentQuestion.config as TextConfig).maxLength}
                       rows={4}
+                      data-edit-field="text_input"
                       className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base resize-none"
                       style={{
                         borderColor:     theme.borderColor,
                         backgroundColor: theme.inputBgColor,
                         color:           theme.textColor,
                         borderRadius:    theme.borderRadius,
+                        ...hl("text_input", "text_placeholder", "text_required"),
                       }}
                       onFocus={(e) => {
                         e.currentTarget.style.borderColor     = theme.primaryColor;
@@ -691,12 +786,14 @@ export function Funnel({
                       }
                       placeholder={`${(currentQuestion.config as TextConfig).placeholder ?? ""}${(currentQuestion.config as TextConfig).required === false ? " (optional)" : ""}`}
                       maxLength={(currentQuestion.config as TextConfig).maxLength}
+                      data-edit-field="text_input"
                       className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
                       style={{
                         borderColor:     theme.borderColor,
                         backgroundColor: theme.inputBgColor,
                         color:           theme.textColor,
                         borderRadius:    theme.borderRadius,
+                        ...hl("text_input", "text_placeholder", "text_required"),
                       }}
                       onFocus={(e) => {
                         e.currentTarget.style.borderColor     = theme.primaryColor;
@@ -719,11 +816,16 @@ export function Funnel({
               <form onSubmit={handleFormSubmit}>
                 <h1
                   className="text-lg @md:text-xl @lg:text-2xl font-bold mb-2 leading-tight"
-                  style={{ color: theme.textColor, ...hl("contact_form_title") }}
+                  data-edit-field="contact_form_title"
+                  style={{ color: theme.textColor, ...editCursor, ...hl("contact_form_title") }}
                 >
                   {funnel.title}
                 </h1>
-                <p className="font-semibold mb-4" style={{ color: theme.primaryColor, ...hl("contact_form_subtitle") }}>
+                <p
+                  className="font-semibold mb-4"
+                  data-edit-field="contact_form_subtitle"
+                  style={{ color: theme.primaryColor, ...editCursor, ...hl("contact_form_subtitle") }}
+                >
                   {funnel.contactFormSubtitle}
                 </p>
 
@@ -746,7 +848,11 @@ export function Funnel({
                     // --- Radio (z.B. Anrede) ---
                     if (field.type === "radio" && field.options) {
                       return (
-                        <div key={field.key}>
+                        <div
+                          key={field.key}
+                          data-edit-field={`contact_field_${field.key}`}
+                          style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}
+                        >
                           <div className="flex gap-5">
                             {field.options.map((option) => (
                               <label key={option} className="flex items-center gap-2 cursor-pointer min-h-11">
@@ -779,7 +885,11 @@ export function Funnel({
 
                     // --- Text / Email / Tel ---
                     return (
-                      <div key={field.key}>
+                      <div
+                        key={field.key}
+                        data-edit-field={`contact_field_${field.key}`}
+                        style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}
+                      >
                         <input
                           type={field.type === "plz" ? "text" : field.type}
                           placeholder={`${field.placeholder ?? field.label}${!field.required ? " (optional)" : ""}`}
@@ -816,7 +926,11 @@ export function Funnel({
                 </div>
 
                 {/* Privacy notice */}
-                <p className="text-xs mb-4 leading-relaxed" style={{ color: theme.textColorMuted, ...hl("privacy_text") }}>
+                <p
+                  className="text-xs mb-4 leading-relaxed"
+                  data-edit-field="privacy_text"
+                  style={{ color: theme.textColorMuted, ...editCursor, ...hl("privacy_text") }}
+                >
                   {funnel.privacyText}
                   {funnel.privacyPolicyUrl ? (
                     <>
@@ -843,6 +957,7 @@ export function Funnel({
                 {/* Submit button */}
                 <button
                   type="submit"
+                  data-edit-field="submit_button"
                   className="flex items-center justify-center gap-2 w-full text-white px-5 py-3 rounded-lg font-semibold transition-colors"
                   style={{
                     backgroundColor: theme.primaryColor,

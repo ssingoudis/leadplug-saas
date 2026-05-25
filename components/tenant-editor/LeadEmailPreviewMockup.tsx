@@ -8,6 +8,8 @@ interface Props {
   questions: QuestionConfig[];
   mockAnswers: Record<string, string>;
   companyName: string;
+  activeField?: string;
+  onFieldClick?: (field: string, questionVisibleIndex?: number) => void;
 }
 
 const MOCK_CONTACT: Record<string, string> = {
@@ -33,6 +35,8 @@ export function LeadEmailPreviewMockup({
   questions,
   mockAnswers,
   companyName,
+  activeField,
+  onFieldClick,
 }: Props) {
   const primary = state.primaryColor || "#22c55e";
   const visibleQuestions = questions.filter((q) => q.visible !== false);
@@ -40,8 +44,32 @@ export function LeadEmailPreviewMockup({
     .filter((f) => f.visible)
     .sort((a, b) => a.sort_order - b.sort_order);
 
+  // Standard-Highlight: outline AUSSERHALB des Elements (offset +3px) — klare Trennung Element/Rahmen.
+  const hl = (...keys: string[]): React.CSSProperties =>
+    activeField && keys.includes(activeField)
+      ? { outline: "2px solid var(--color-primary)", outlineOffset: "3px" }
+      : {};
+
+  // Edge-Variante: outline INSIDE für Elemente an der Email-Card-Kante (Header-Banner).
+  const hlEdge = (...keys: string[]): React.CSSProperties =>
+    activeField && keys.includes(activeField)
+      ? { outline: "2px solid var(--color-primary)", outlineOffset: "-2px" }
+      : {};
+  const editCursor: React.CSSProperties = onFieldClick ? { cursor: "pointer" } : {};
+  const handleClick = (e: React.MouseEvent) => {
+    if (!onFieldClick) return;
+    const target = (e.target as HTMLElement).closest("[data-edit-field]") as HTMLElement | null;
+    if (!target) return;
+    e.preventDefault();
+    e.stopPropagation();
+    onFieldClick(target.dataset.editField!);
+  };
+
   return (
-    <div className="max-w-145 mx-auto font-sans text-sm">
+    <div
+      className="max-w-145 mx-auto font-sans text-sm"
+      onClickCapture={onFieldClick ? handleClick : undefined}
+    >
       <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm bg-white">
 
         {/* Simulierter E-Mail-Header */}
@@ -50,7 +78,11 @@ export function LeadEmailPreviewMockup({
             <span className="font-medium w-12 shrink-0">Von:</span>
             <span>anfrage@leadplug.de</span>
           </div>
-          <div className="flex gap-2 text-xs text-gray-500 dark:text-gray-400">
+          <div
+            className="flex gap-2 text-xs text-gray-500 dark:text-gray-400"
+            data-edit-field="email_notification"
+            style={{ ...editCursor, ...hl("email_notification") }}
+          >
             <span className="font-medium w-12 shrink-0">An:</span>
             <span>{state.notificationEmail || "anfragen@ihrefirma.de"}</span>
           </div>
@@ -67,7 +99,10 @@ export function LeadEmailPreviewMockup({
           <div style={{ backgroundColor: "#ffffff", borderRadius: "8px", overflow: "hidden", maxWidth: "540px", margin: "0 auto" }}>
 
             {/* Header Banner */}
-            <div style={{ backgroundColor: primary, padding: "24px 28px" }}>
+            <div
+              data-edit-field="header_banner"
+              style={{ backgroundColor: primary, padding: "24px 28px", ...editCursor, ...hlEdge("header_banner", "footer_company") }}
+            >
               <p style={{ color: "#ffffff", fontSize: "18px", fontWeight: "bold", margin: 0 }}>
                 {companyName || "Ihre Firma"}
               </p>
@@ -94,7 +129,11 @@ export function LeadEmailPreviewMockup({
                   const isEmail = field.type === "email";
                   const isTel = field.type === "tel";
                   return (
-                    <p key={field.key} style={{ fontSize: "13px", color: "#374151", margin: "0 0 4px", lineHeight: "20px" }}>
+                    <p
+                      key={field.key}
+                      data-edit-field={`contact_field_${field.key}`}
+                      style={{ fontSize: "13px", color: "#374151", margin: "0 0 4px", lineHeight: "20px", ...editCursor, ...hl(`contact_field_${field.key}`) }}
+                    >
                       <span style={{ color: "#6b7280" }}>{field.label}:</span>{" "}
                       {isEmail || isTel ? (
                         <span style={{ color: primary }}><strong>{mockVal}</strong></span>
@@ -112,7 +151,10 @@ export function LeadEmailPreviewMockup({
 
               {/* Antworten */}
               <div style={{ backgroundColor: "#f9fafb", padding: "14px 18px", borderRadius: "6px", marginBottom: "20px" }}>
-                <p style={{ fontSize: "13px", fontWeight: "bold", margin: "0 0 10px", color: "#1f2937" }}>
+                <p
+                  data-edit-field="answers_overview_label"
+                  style={{ fontSize: "13px", fontWeight: "bold", margin: "0 0 10px", color: "#1f2937", ...editCursor, ...hl("answers_overview_label") }}
+                >
                   {state.answersOverviewLabel || "Angaben im Überblick:"}
                 </p>
                 {visibleQuestions.map((q) => {

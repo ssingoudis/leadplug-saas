@@ -62,6 +62,7 @@ function ColorField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => onFocus(fieldKey)}
+          data-field={fieldKey}
           maxLength={7}
           placeholder="#000000"
           className="flex-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm font-mono text-gray-900 dark:text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition min-w-0"
@@ -137,6 +138,7 @@ export function SectionDesign({ state, onChange, onFocus }: Props) {
                 pageBackgroundColor: e.target.checked ? "transparent" : "#f3f4f6",
               })
             }
+            onFocus={() => onFocus("page_background_color")}
             className="rounded"
           />
           <span className="text-xs text-gray-600 dark:text-gray-400">
@@ -148,11 +150,14 @@ export function SectionDesign({ state, onChange, onFocus }: Props) {
             <PageBgSwatch
               value={state.pageBackgroundColor}
               onChange={(v) => onChange({ pageBackgroundColor: v })}
+              onFocus={() => onFocus("page_background_color")}
             />
             <input
               type="text"
               value={state.pageBackgroundColor}
               onChange={(e) => onChange({ pageBackgroundColor: e.target.value })}
+              onFocus={() => onFocus("page_background_color")}
+              data-field="page_background_color"
               maxLength={7}
               placeholder="#f3f4f6"
               className="flex-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm font-mono text-gray-900 dark:text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition min-w-0"
@@ -167,6 +172,8 @@ export function SectionDesign({ state, onChange, onFocus }: Props) {
         <select
           value={state.font}
           onChange={(e) => onChange({ font: e.target.value as FunnelFont })}
+          onFocus={() => onFocus("font")}
+          data-field="font"
           className={selectClass}
         >
           {FONTS.map((f) => (
@@ -184,6 +191,8 @@ export function SectionDesign({ state, onChange, onFocus }: Props) {
           <select
             value={state.borderRadius}
             onChange={(e) => onChange({ borderRadius: e.target.value })}
+            onFocus={() => onFocus("border_radius")}
+            data-field="border_radius"
             className={selectClass}
           >
             {RADII.map((r) => (
@@ -198,6 +207,8 @@ export function SectionDesign({ state, onChange, onFocus }: Props) {
           <select
             value={state.maxWidth}
             onChange={(e) => onChange({ maxWidth: e.target.value })}
+            onFocus={() => onFocus("max_width")}
+            data-field="max_width"
             className={selectClass}
           >
             {MAX_WIDTHS.map((w) => (
@@ -212,19 +223,22 @@ export function SectionDesign({ state, onChange, onFocus }: Props) {
   );
 }
 
-// Separater Swatch für PageBg (kein fieldKey nötig)
+// Separater Swatch für PageBg
 function PageBgSwatch({
   value,
   onChange,
+  onFocus,
 }: {
   value: string;
   onChange: (v: string) => void;
+  onFocus: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   return (
     <button
       type="button"
       onClick={() => inputRef.current?.click()}
+      onFocus={onFocus}
       title="Farbe auswählen"
       className="w-10 h-10 rounded-xl border-2 border-gray-200 dark:border-gray-600 shrink-0 cursor-pointer hover:border-primary transition-colors shadow-sm overflow-hidden relative"
       style={{ backgroundColor: value }}

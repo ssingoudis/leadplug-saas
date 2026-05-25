@@ -9,6 +9,8 @@ interface Props {
   mockAnswers: Record<string, string>;
   companyName: string;
   publicEmail: string;
+  activeField?: string;
+  onFieldClick?: (field: string, questionVisibleIndex?: number) => void;
 }
 
 export function EmailPreviewMockup({
@@ -17,18 +19,49 @@ export function EmailPreviewMockup({
   mockAnswers,
   companyName,
   publicEmail,
+  activeField,
+  onFieldClick,
 }: Props) {
   const primary = state.primaryColor || "#22c55e";
   const visibleQuestions = questions.filter((q) => q.visible !== false);
 
+  // Standard-Highlight: outline AUSSERHALB des Elements (offset +3px) — klare Trennung Element/Rahmen.
+  const hl = (...keys: string[]): React.CSSProperties =>
+    activeField && keys.includes(activeField)
+      ? { outline: "2px solid var(--color-primary)", outlineOffset: "3px" }
+      : {};
+
+  // Edge-Variante: outline INSIDE für Elemente an der Email-Card-Kante (Header-Banner),
+  // wo overflow:hidden eine positive Offset clippen würde.
+  const hlEdge = (...keys: string[]): React.CSSProperties =>
+    activeField && keys.includes(activeField)
+      ? { outline: "2px solid var(--color-primary)", outlineOffset: "-2px" }
+      : {};
+  const editCursor: React.CSSProperties = onFieldClick ? { cursor: "pointer" } : {};
+  const handleClick = (e: React.MouseEvent) => {
+    if (!onFieldClick) return;
+    const target = (e.target as HTMLElement).closest("[data-edit-field]") as HTMLElement | null;
+    if (!target) return;
+    e.preventDefault();
+    e.stopPropagation();
+    onFieldClick(target.dataset.editField!);
+  };
+
   return (
-    <div className="max-w-[580px] mx-auto font-sans text-sm">
+    <div
+      className="max-w-[580px] mx-auto font-sans text-sm"
+      onClickCapture={onFieldClick ? handleClick : undefined}
+    >
       {/* E-Mail-Client-Rahmen */}
       <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm bg-white">
 
         {/* Simulated E-Mail Header */}
         <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 space-y-1">
-          <div className="flex gap-2 text-xs text-gray-500 dark:text-gray-400">
+          <div
+            className="flex gap-2 text-xs text-gray-500 dark:text-gray-400"
+            data-edit-field="email_sender"
+            style={{ ...editCursor, ...hl("email_sender") }}
+          >
             <span className="font-medium w-12 shrink-0">Von:</span>
             <span>{state.emailSenderLocal ? `${state.emailSenderLocal}@anfragebestaetigung.de` : "noreply@anfragebestaetigung.de"}</span>
           </div>
@@ -56,7 +89,10 @@ export function EmailPreviewMockup({
             }}
           >
             {/* Header Banner */}
-            <div style={{ backgroundColor: primary, padding: "24px 28px" }}>
+            <div
+              data-edit-field="header_banner"
+              style={{ backgroundColor: primary, padding: "24px 28px", ...editCursor, ...hlEdge("header_banner", "footer_company") }}
+            >
               <p
                 style={{
                   color: "#ffffff",
@@ -82,11 +118,17 @@ export function EmailPreviewMockup({
                 Vielen Dank, Max!
               </h1>
 
-              <p style={{ color: "#374151", fontSize: "14px", lineHeight: "22px", margin: "0 0 8px" }}>
+              <p
+                data-edit-field="success_message"
+                style={{ color: "#374151", fontSize: "14px", lineHeight: "22px", margin: "0 0 8px", ...editCursor, ...hl("success_message") }}
+              >
                 {state.successMessage || "Vielen Dank! Wir melden uns in Kürze bei Ihnen."}
               </p>
 
-              <p style={{ color: "#6b7280", fontSize: "14px", lineHeight: "22px", margin: "0 0 16px" }}>
+              <p
+                data-edit-field="response_message"
+                style={{ color: "#6b7280", fontSize: "14px", lineHeight: "22px", margin: "0 0 16px", ...editCursor, ...hl("response_message") }}
+              >
                 {state.responseMessage || "Wir melden uns so schnell wie möglich bei Ihnen."}
               </p>
 
@@ -100,7 +142,10 @@ export function EmailPreviewMockup({
                   margin: "0 0 16px",
                 }}
               >
-                <p style={{ fontWeight: "bold", fontSize: "13px", color: "#1f2937", margin: "0 0 10px" }}>
+                <p
+                  data-edit-field="answers_overview_label"
+                  style={{ fontWeight: "bold", fontSize: "13px", color: "#1f2937", margin: "0 0 10px", ...editCursor, ...hl("answers_overview_label") }}
+                >
                   {state.answersOverviewLabel || "Ihre Angaben im Überblick:"}
                 </p>
                 {visibleQuestions.map((q) => {

@@ -1,14 +1,58 @@
 "use client";
 
-import { useState } from "react";
-import { Loader2, Save, AlertCircle, Power, TriangleAlert, ArrowLeft, ExternalLink } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Loader2, Save, AlertCircle, Power, TriangleAlert, ArrowLeft, ExternalLink, Pencil, Play } from "lucide-react";
 import { DeleteFunnelButton } from "./DeleteFunnelButton";
 import { SectionAccordion } from "./SectionAccordion";
 import { SectionDesign } from "./SectionDesign";
 import { SectionTexte } from "./SectionTexte";
 import { SectionFragen } from "./SectionFragen";
 import { SectionKontakt } from "./SectionKontakt";
+import { HealthCheckPanel } from "./HealthCheckPanel";
 import type { EditorState, EditorQuestion, ContactFieldConfig } from "@/types";
+
+type SectionKey = "fragen" | "kontakt" | "texte" | "design";
+
+// Bildet einen Feld-Key auf die zuständige Sidebar-Sektion ab.
+// Theme-Felder → "design"; Frage-bezogene → "fragen"; Kontakt-Form → "kontakt"; Nachrichten/Footer/E-Mail → "texte".
+function fieldToSection(field: string): SectionKey | null {
+  if (
+    field === "question_title" ||
+    field === "question_subtitle" ||
+    field.startsWith("option_") ||
+    field.startsWith("slider_") ||
+    field.startsWith("text_")
+  ) return "fragen";
+  if (
+    field === "contact_form_title" ||
+    field === "contact_form_subtitle" ||
+    field === "submit_button" ||
+    field === "privacy_text" ||
+    field.startsWith("contact_field_")
+  ) return "kontakt";
+  if (
+    field === "success_message" ||
+    field === "response_message" ||
+    field === "answers_overview_label" ||
+    field === "footer" ||
+    field === "footer_company" ||
+    field === "footer_email" ||
+    field === "footer_phone" ||
+    field === "header_banner" ||
+    field === "email_notification" ||
+    field === "email_sender"
+  ) return "texte";
+  if (
+    field === "primary_color" ||
+    field === "text_color" ||
+    field === "background_color" ||
+    field === "page_background_color" ||
+    field === "font" ||
+    field === "border_radius" ||
+    field === "max_width"
+  ) return "design";
+  return null;
+}
 
 interface Props {
   state: EditorState;
@@ -19,8 +63,16 @@ interface Props {
   canSave: boolean;
   onSave: () => void;
   onFocus: (field: string, questionVisibleIndex?: number) => void;
+  onJumpToField: (field: string, questionVisibleIndex?: number) => void;
+  commandFocus: {
+    field: string;
+    questionVisibleIndex?: number;
+    ts: number;
+  } | null;
   hasUnsavedChanges: boolean;
   onBack: () => void;
+  isTestMode: boolean;
+  onExitTestMode: () => void;
 }
 
 function DeactivateModal({
@@ -83,8 +135,12 @@ export function EditorSidebar({
   canSave,
   onSave,
   onFocus,
+  onJumpToField,
+  commandFocus,
   hasUnsavedChanges,
   onBack,
+  isTestMode,
+  onExitTestMode,
 }: Props) {
   const [open, setOpen] = useState<Record<string, boolean>>({
     fragen: true,
@@ -97,6 +153,46 @@ export function EditorSidebar({
   function toggle(key: string) {
     setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
   }
+
+  // Klick im Preview → Sidebar springt: richtige Section öffnen + Input fokussieren/scrollen.
+  // SectionFragen reagiert separat auf commandFocus, um die richtige Frage-Karte aufzuklappen.
+  // 150ms Delay gibt der Akkordeon-Conditional-Render + Card-Öffnen Zeit, bevor wir per
+  // querySelector den Input suchen und fokussieren.
+  useEffect(() => {
+    if (!commandFocus) return;
+    const section = fieldToSection(commandFocus.field);
+    if (section) {
+      setOpen((prev) => (prev[section] ? prev : { ...prev, [section]: true }));
+    }
+
+    // header_banner zeigt den Firmennamen → springt zum Firmenname-Input im Footer-Block.
+    const focusField =
+      commandFocus.field === "header_banner" ? "footer_company" : commandFocus.field;
+
+    const t = setTimeout(() => {
+      const el = document.querySelector(
+        `[data-field="${focusField}"]`,
+      ) as HTMLElement | null;
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (
+        el instanceof HTMLInputElement ||
+        el instanceof HTMLTextAreaElement ||
+        el instanceof HTMLSelectElement
+      ) {
+        el.focus();
+      } else {
+        // Nicht-fokussierbares Target (z.B. Kontaktfeld-Zeile als Div): kurzer visueller Flash.
+        el.classList.remove("editor-field-flash");
+        // Force-reflow, damit die Animation auch bei Re-Trigger startet.
+        void el.offsetWidth;
+        el.classList.add("editor-field-flash");
+        setTimeout(() => el.classList.remove("editor-field-flash"), 1300);
+      }
+    }, 150);
+
+    return () => clearTimeout(t);
+  }, [commandFocus]);
 
   function handleStatusToggle() {
     if (state.isActive) {
@@ -120,7 +216,32 @@ export function EditorSidebar({
         />
       )}
 
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full relative">
+        {/* Test-Modus Overlay: blockiert Interaktion und zeigt CTA zum Verlassen des Modus. */}
+        {isTestMode && (
+          <div className="absolute inset-0 z-40 bg-white/70 dark:bg-gray-900/70 backdrop-blur-[2px] flex items-center justify-center p-6">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-5 max-w-xs text-center border border-gray-200 dark:border-gray-700">
+              <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center mx-auto mb-3">
+                <Play size={16} className="text-amber-500" fill="currentColor" />
+              </div>
+              <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">
+                Test-Modus aktiv
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">
+                Du erlebst den Funnel wie ein End-Kunde. Bearbeitung ist pausiert.
+              </p>
+              <button
+                type="button"
+                onClick={onExitTestMode}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold transition-colors"
+              >
+                <Pencil size={12} />
+                Editor öffnen
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0">
           <div className="flex items-center gap-2">
@@ -137,8 +258,9 @@ export function EditorSidebar({
               type="text"
               value={state.funnelName}
               onChange={(e) => onChange({ funnelName: e.target.value })}
+              data-field="funnel_name"
               placeholder="Funnel-Name eingeben…"
-              className="flex-1 min-w-0 text-sm font-bold text-gray-900 dark:text-white bg-transparent outline-none placeholder-gray-400 dark:placeholder-gray-500 truncate border-b border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-primary transition-colors pb-0.5"
+              className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg text-sm font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 outline-none placeholder-gray-400 dark:placeholder-gray-500 truncate hover:border-gray-300 dark:hover:border-gray-600 focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors"
             />
 
             {originalSlug && (
@@ -159,7 +281,11 @@ export function EditorSidebar({
                 type="button"
                 onClick={onSave}
                 disabled={isSaving || !canSave}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className={
+                  hasUnsavedChanges || isSaving
+                    ? "flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    : "flex items-center gap-2 px-4 py-2 rounded-xl bg-transparent border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-sm font-semibold hover:border-primary hover:text-primary dark:hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                }
               >
                 {isSaving ? (
                   <Loader2 size={14} className="animate-spin" />
@@ -182,17 +308,22 @@ export function EditorSidebar({
           )}
         </div>
 
+        {/* Funnel-Status / Validierung */}
+        <HealthCheckPanel state={state} onJumpTo={onJumpToField} />
+
         {/* Sektionen */}
         <div className="flex-1 overflow-y-auto">
           <SectionAccordion
             title="Fragen"
             isOpen={open.fragen}
             onToggle={() => toggle("fragen")}
+            emphasized
           >
             <SectionFragen
               questions={state.questions}
               onChange={(questions: EditorQuestion[]) => onChange({ questions })}
               onFocus={onFocus}
+              commandFocus={commandFocus}
             />
           </SectionAccordion>
 
