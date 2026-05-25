@@ -36,10 +36,11 @@ const FOOTER_ITEMS: Array<{
   label: string;
   stateKey: "footerCompanyName" | "footerEmail" | "footerPhone";
   inputPlaceholder: string;
+  focusKey: "footer_company" | "footer_email" | "footer_phone";
 }> = [
-  { key: "company", label: "Firmenname", stateKey: "footerCompanyName", inputPlaceholder: "z. B. Muster GmbH" },
-  { key: "email", label: "E-Mail-Adresse", stateKey: "footerEmail", inputPlaceholder: "z. B. info@firma.de" },
-  { key: "phone", label: "Telefonnummer", stateKey: "footerPhone", inputPlaceholder: "z. B. +49 123 456789" },
+  { key: "company", label: "Firmenname",     stateKey: "footerCompanyName", inputPlaceholder: "z. B. Muster GmbH",        focusKey: "footer_company" },
+  { key: "email",   label: "E-Mail-Adresse", stateKey: "footerEmail",       inputPlaceholder: "z. B. info@firma.de",      focusKey: "footer_email"   },
+  { key: "phone",   label: "Telefonnummer",  stateKey: "footerPhone",       inputPlaceholder: "z. B. +49 123 456789",     focusKey: "footer_phone"   },
 ];
 
 function buildFooterText(company: boolean, email: boolean, phone: boolean): string {
@@ -76,6 +77,7 @@ export function SectionTexte({ state, onChange, onFocus }: Props) {
           value={state.successMessage}
           onChange={(e) => onChange({ successMessage: e.target.value })}
           onFocus={() => onFocus("success_message")}
+          data-field="success_message"
           placeholder="Vielen Dank! Wir melden uns in Kürze bei Ihnen."
           className={inputClass}
         />
@@ -90,6 +92,7 @@ export function SectionTexte({ state, onChange, onFocus }: Props) {
           value={state.responseMessage}
           onChange={(e) => onChange({ responseMessage: e.target.value })}
           onFocus={() => onFocus("response_message")}
+          data-field="response_message"
           placeholder="Wir melden uns innerhalb von 24 Stunden."
           className={inputClass}
         />
@@ -104,6 +107,7 @@ export function SectionTexte({ state, onChange, onFocus }: Props) {
           value={state.answersOverviewLabel}
           onChange={(e) => onChange({ answersOverviewLabel: e.target.value })}
           onFocus={() => onFocus("answers_overview_label")}
+          data-field="answers_overview_label"
           placeholder="Ihre Angaben im Überblick:"
           className={inputClass}
         />
@@ -123,7 +127,8 @@ export function SectionTexte({ state, onChange, onFocus }: Props) {
             type="email"
             value={state.notificationEmail}
             onChange={(e) => onChange({ notificationEmail: e.target.value })}
-            onFocus={() => onFocus("")}
+            onFocus={() => onFocus("email_notification")}
+            data-field="email_notification"
             placeholder="z. B. anfragen@meinefirma.de"
             className={inputClass}
           />
@@ -137,7 +142,8 @@ export function SectionTexte({ state, onChange, onFocus }: Props) {
             type="text"
             value={state.emailSenderLocal}
             onChange={(e) => onChange({ emailSenderLocal: e.target.value })}
-            onFocus={() => onFocus("")}
+            onFocus={() => onFocus("email_sender")}
+            data-field="email_sender"
             placeholder="z. B. anfragen"
             className={inputClass}
           />
@@ -150,14 +156,19 @@ export function SectionTexte({ state, onChange, onFocus }: Props) {
           <Label tooltip="Diese Daten erscheinen als Text am unteren Rand des Widgets (auf jeder Seite), in der Bestätigungs-E-Mail an den Kunden sowie in der Lead-Benachrichtigung. Aktiviere, welche Angaben sichtbar sein sollen, und trage die Werte ein.">
             Kontaktdaten
           </Label>
-          <div className="space-y-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3">
-            {FOOTER_ITEMS.map(({ key, label, stateKey, inputPlaceholder }) => (
+          <div
+            className="space-y-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3"
+            onFocus={() => onFocus("footer")}
+            data-field="footer"
+          >
+            {FOOTER_ITEMS.map(({ key, label, stateKey, inputPlaceholder, focusKey }) => (
               <div key={key}>
                 <label className="flex items-center gap-2.5 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={footerToggles[key]}
                     onChange={() => handleFooterToggle(key)}
+                    onFocus={() => onFocus(focusKey)}
                     className="w-4 h-4 rounded accent-primary cursor-pointer"
                   />
                   <span className="text-sm text-gray-700 dark:text-gray-300">{label}</span>
@@ -167,6 +178,8 @@ export function SectionTexte({ state, onChange, onFocus }: Props) {
                     type="text"
                     value={state[stateKey]}
                     onChange={(e) => onChange({ [stateKey]: e.target.value })}
+                    onFocus={() => onFocus(focusKey)}
+                    data-field={focusKey}
                     placeholder={inputPlaceholder}
                     className="mt-1.5 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-3 py-1.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition"
                   />

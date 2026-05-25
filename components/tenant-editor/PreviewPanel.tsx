@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
+import { Pencil, Play, Monitor, Smartphone } from "lucide-react";
 import { Funnel } from "@/components/funnel";
 import { EmailPreviewMockup } from "./EmailPreviewMockup";
 import { LeadEmailPreviewMockup } from "./LeadEmailPreviewMockup";
@@ -15,6 +16,9 @@ interface Props {
   previewMode: PreviewMode;
   previewIndex: number;
   onModeChange: (mode: PreviewMode, index?: number) => void;
+  onFieldClick?: (field: string, questionVisibleIndex?: number) => void;
+  isTestMode: boolean;
+  onToggleTestMode: () => void;
   companyName: string;
   publicEmail: string;
   publicPhone: string;
@@ -60,6 +64,9 @@ export function PreviewPanel({
   previewMode,
   previewIndex,
   onModeChange,
+  onFieldClick,
+  isTestMode,
+  onToggleTestMode,
   companyName,
   publicEmail,
   publicPhone,
@@ -67,9 +74,25 @@ export function PreviewPanel({
 }: Props) {
   const topRef = useRef<HTMLDivElement>(null);
 
+  // Test-Modus: aktuelle Position des Funnels (wird über onStepChange vom Funnel selbst gemeldet).
+  // Im Edit-Modus irrelevant — Edit-Modus nutzt previewMode/previewIndex.
+  const [testActiveMode, setTestActiveMode] = useState<PreviewMode>("question");
+  const [testActiveIndex, setTestActiveIndex] = useState(0);
+
+  // Mobile-Preview-Toggle: schaltet die Vorschau-Breite auf 375px (Standard iPhone-Breite).
+  const [isMobilePreview, setIsMobilePreview] = useState(false);
+
   useEffect(() => {
     topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [previewMode, previewIndex]);
+
+  // Beim Wechsel in/aus dem Test-Modus die Test-Position resetten.
+  useEffect(() => {
+    if (isTestMode) {
+      setTestActiveMode("question");
+      setTestActiveIndex(0);
+    }
+  }, [isTestMode]);
 
   const questions = buildQuestions(state.questions);
   const visibleCount = questions.length;
@@ -103,9 +126,13 @@ export function PreviewPanel({
     { key: "email_lead", label: "Lead-Benachrichtigung", mode: "email_lead", index: 0 },
   ];
 
+  // Im Test-Modus reflektiert die Step-Nav den internen Funnel-Step; im Edit-Modus steuert sie ihn.
+  const activeMode = isTestMode ? testActiveMode : previewMode;
+  const activeIndex = isTestMode ? testActiveIndex : previewIndex;
+
   const isActive = (step: Step) =>
-    step.mode === previewMode &&
-    (step.mode !== "question" || step.index === previewIndex);
+    step.mode === activeMode &&
+    (step.mode !== "question" || step.index === activeIndex);
 
   const initialStep =
     previewMode === "question"
@@ -120,10 +147,14 @@ export function PreviewPanel({
   const isPlaceholder = previewMode === "success" && noQuestions;
 
   const badgeText = isPlaceholder
-    ? "Vorschau — Platzhalter-Antworten (noch keine Fragen konfiguriert)"
+    ? "Platzhalter-Antworten"
     : hasUnsavedChanges
-      ? "Ungespeicherte Änderungen — Vorschau zeigt aktuelle Eingaben"
-      : "Alles gespeichert — Vorschau ist aktuell";
+      ? "Ungespeichert"
+      : "Gespeichert";
+
+  const badgeDotClass = isPlaceholder || hasUnsavedChanges
+    ? "bg-amber-500"
+    : "bg-green-500";
 
   const badgeClass = isPlaceholder || hasUnsavedChanges
     ? "bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 text-amber-700 dark:text-amber-400"
@@ -132,6 +163,55 @@ export function PreviewPanel({
   return (
     <div className="flex flex-col h-full">
       <div ref={topRef} />
+
+      {/* Test-Modus + Mobile/Desktop Toggle */}
+      <div className="mb-4 mx-auto w-full flex items-center justify-center gap-3" style={{ maxWidth: state.maxWidth || "720px" }}>
+        <button
+          type="button"
+          onClick={onToggleTestMode}
+          title={isTestMode ? "Zurück zum Editor" : "Funnel wie ein End-Kunde testen"}
+          className={
+            isTestMode
+              ? "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all bg-amber-500 hover:bg-amber-600 text-white shadow-md hover:shadow-lg"
+              : "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all bg-primary hover:bg-primary-hover text-white shadow-md hover:shadow-lg"
+          }
+        >
+          {isTestMode ? <Pencil size={15} /> : <Play size={15} fill="currentColor" />}
+          {isTestMode ? "Zurück zum Editor" : "Funnel testen"}
+        </button>
+
+        <div
+          className="inline-flex items-center rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-0.5"
+          title="Vorschau-Breite"
+        >
+          <button
+            type="button"
+            onClick={() => setIsMobilePreview(false)}
+            className={
+              !isMobilePreview
+                ? "flex items-center justify-center w-9 h-9 rounded-lg bg-primary text-white transition-colors"
+                : "flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors"
+            }
+            title="Desktop-Ansicht"
+            aria-label="Desktop-Ansicht"
+          >
+            <Monitor size={15} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsMobilePreview(true)}
+            className={
+              isMobilePreview
+                ? "flex items-center justify-center w-9 h-9 rounded-lg bg-primary text-white transition-colors"
+                : "flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors"
+            }
+            title="Mobile-Ansicht"
+            aria-label="Mobile-Ansicht"
+          >
+            <Smartphone size={15} />
+          </button>
+        </div>
+      </div>
 
       {/* Step-Navigation — bricht bei vielen Fragen in die nächste Zeile */}
       <div
@@ -143,12 +223,15 @@ export function PreviewPanel({
             <button
               key={step.key}
               type="button"
-              title={step.title}
-              onClick={() => onModeChange(step.mode, step.index)}
+              title={isTestMode ? step.title : (step.title ?? "Zum Schritt springen")}
+              onClick={() => !isTestMode && onModeChange(step.mode, step.index)}
+              disabled={isTestMode}
               className={
                 isActive(step)
                   ? "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors bg-primary text-white shadow-sm"
-                  : "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white border border-gray-200 dark:border-gray-700"
+                  : isTestMode
+                    ? "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-700 cursor-default opacity-70"
+                    : "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white border border-gray-200 dark:border-gray-700"
               }
             >
               {step.label}
@@ -157,13 +240,19 @@ export function PreviewPanel({
         </div>
       </div>
 
-      {/* Status-Badge */}
-      <div className={`${badgeClass} rounded-lg px-3 py-1.5 mb-4 text-xs w-fit mx-auto`}>
-        {badgeText}
-      </div>
+      {/* Status-Badge — im Test-Modus ausgeblendet */}
+      {!isTestMode && (
+        <div className={`${badgeClass} rounded-full px-3 py-1 mb-4 text-xs w-fit mx-auto flex items-center gap-1.5`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${badgeDotClass}`} />
+          {badgeText}
+        </div>
+      )}
 
-      {/* Inhalt */}
-      <div className="flex-1">
+      {/* Inhalt — Mobile-Preview-Modus engt die Breite auf 375px ein (iPhone-Standard). */}
+      <div
+        className="flex-1 mx-auto w-full transition-[max-width] duration-300"
+        style={{ maxWidth: isMobilePreview ? "375px" : undefined }}
+      >
         {previewMode === "email_customer" ? (
           <EmailPreviewMockup
             state={state}
@@ -171,6 +260,8 @@ export function PreviewPanel({
             mockAnswers={successAnswers}
             companyName={resolvedCompanyName}
             publicEmail={resolvedEmail}
+            activeField={activeField}
+            onFieldClick={onFieldClick}
           />
         ) : previewMode === "email_lead" ? (
           <LeadEmailPreviewMockup
@@ -178,6 +269,8 @@ export function PreviewPanel({
             questions={successQuestions}
             mockAnswers={successAnswers}
             companyName={resolvedCompanyName}
+            activeField={activeField}
+            onFieldClick={onFieldClick}
           />
         ) : previewMode === "question" && noQuestions ? (
           <div className="flex flex-col items-center justify-center h-48 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-center text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800">
@@ -186,7 +279,9 @@ export function PreviewPanel({
           </div>
         ) : (
           <Funnel
-            key={`${previewMode}-${previewIndex}`}
+            // Im Edit-Modus hängt der key am previewIndex (Funnel remountet beim Step-Wechsel von außen).
+            // Im Test-Modus NUR vom previewMode → Funnel behält seinen internen State während User durchklickt.
+            key={isTestMode ? `${previewMode}-test` : `${previewMode}-${previewIndex}-edit`}
             theme={theme}
             funnel={funnel}
             questions={previewMode === "success" ? successQuestions : questions}
@@ -198,6 +293,15 @@ export function PreviewPanel({
             initialSubmitted={initialSubmitted}
             initialAnswers={previewMode === "success" ? successAnswers : undefined}
             previewHighlight={activeField}
+            onFieldClick={onFieldClick}
+            onStepChange={
+              isTestMode
+                ? (mode, idx) => {
+                    setTestActiveMode(mode as PreviewMode);
+                    setTestActiveIndex(idx);
+                  }
+                : undefined
+            }
             onSubmit={() => {}}
           />
         )}

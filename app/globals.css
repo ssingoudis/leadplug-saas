@@ -201,3 +201,14 @@
     cursor: pointer;
   }
 }
+
+/* Editor: kurzer Blink auf Sidebar-Zeilen ohne fokussierbares Input (z.B. Kontaktfeld-Reihen).
+   Wird per JS auf 1.2s an das Element gesetzt, danach removed. */
+@keyframes editor-field-flash {
+  0%   { box-shadow: 0 0 0 3px rgb(70 72 212 / 0.7); }
+  100% { box-shadow: 0 0 0 0  rgb(70 72 212 / 0);   }
+}
+.editor-field-flash {
+  animation: editor-field-flash 1.2s ease-out;
+  border-radius: 0.75rem;
+}

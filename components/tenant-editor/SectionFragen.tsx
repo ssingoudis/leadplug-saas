@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ChevronDown,
   Plus,
   Trash2,
   ChevronUp,
   GripVertical,
+  List,
+  Copy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { uid, toKey, toSlug } from "@/lib/editorUtils";
@@ -17,6 +19,22 @@ interface Props {
   questions: EditorQuestion[];
   onChange: (questions: EditorQuestion[]) => void;
   onFocus: (field: string, questionVisibleIndex?: number) => void;
+  commandFocus: {
+    field: string;
+    questionVisibleIndex?: number;
+    ts: number;
+  } | null;
+}
+
+// Felder, die zu einer konkreten Frage-Karte gehören (vs. globale Felder).
+function isQuestionField(field: string): boolean {
+  return (
+    field === "question_title" ||
+    field === "question_subtitle" ||
+    field.startsWith("option_") ||
+    field.startsWith("slider_") ||
+    field.startsWith("text_")
+  );
 }
 
 const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
@@ -41,10 +59,15 @@ function Label({ children }: { children: React.ReactNode }) {
   );
 }
 
-function newOption(): EditorOption {
+function newOption(label = ""): EditorOption {
   const id = uid();
-  // value = _id als eindeutiger Startwert; wird beim ersten Eintippen durch den Slug ersetzt
-  return { _id: id, label: "", value: id, iconKey: "", iconUrl: "" };
+  // value = Slug aus Label wenn vorhanden, sonst _id als eindeutiger Startwert.
+  return { _id: id, label, value: label ? toSlug(label) : id, iconKey: "", iconUrl: "" };
+}
+
+// Drei vorausgefüllte Beispiel-Optionen — User überschreibt nur den Text statt vor einem leeren Feld zu stehen.
+function defaultChoiceOptions(): EditorOption[] {
+  return [newOption("Option 1"), newOption("Option 2"), newOption("Option 3")];
 }
 
 function newQuestion(): EditorQuestion {
@@ -63,7 +86,7 @@ function newQuestion(): EditorQuestion {
     sliderStep: "1",
     sliderUnit: "",
     sliderDefault: "50",
-    options: [newOption(), newOption()],
+    options: defaultChoiceOptions(),
   };
 }
 
@@ -91,6 +114,7 @@ interface QuestionCardProps {
   onToggle: () => void;
   onUpdate: (patch: Partial<EditorQuestion>) => void;
   onRemove: () => void;
+  onDuplicate: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
   onFocus: (field: string) => void;
@@ -104,6 +128,7 @@ function QuestionCard({
   onToggle,
   onUpdate,
   onRemove,
+  onDuplicate,
   onMoveUp,
   onMoveDown,
   onFocus,
@@ -115,6 +140,34 @@ function QuestionCard({
     question.questionType === "short_text" ||
     question.questionType === "long_text";
   const isSlider = question.questionType === "slider";
+
+  // Bulk-Import: Textarea, eine Option pro Zeile.
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+
+  function parseBulk(): EditorOption[] {
+    return bulkText
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((label) => newOption(label));
+  }
+
+  function bulkAppend() {
+    const parsed = parseBulk();
+    if (parsed.length === 0) return;
+    onUpdate({ options: [...question.options, ...parsed] });
+    setBulkText("");
+    setBulkOpen(false);
+  }
+
+  function bulkReplace() {
+    const parsed = parseBulk();
+    if (parsed.length === 0) return;
+    onUpdate({ options: parsed });
+    setBulkText("");
+    setBulkOpen(false);
+  }
 
   function handleTitleChange(title: string) {
     const patch: Partial<EditorQuestion> = { title };
@@ -158,13 +211,13 @@ function QuestionCard({
       (type === "single_choice" || type === "multiple_choice") &&
       question.options.length === 0
     ) {
-      patch.options = [newOption(), newOption()];
+      patch.options = defaultChoiceOptions();
     }
     onUpdate(patch);
   }
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+    <div className="border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden">
       {/* Card Header */}
       <div className="flex items-center bg-white dark:bg-gray-900">
         <div className="flex flex-col gap-0.5 pl-2 py-3 shrink-0">
@@ -219,7 +272,17 @@ function QuestionCard({
 
         <button
           type="button"
+          onClick={onDuplicate}
+          title="Frage duplizieren"
+          className="p-3 text-gray-300 dark:text-gray-600 hover:text-primary transition-colors shrink-0"
+        >
+          <Copy size={15} />
+        </button>
+
+        <button
+          type="button"
           onClick={onRemove}
+          title="Frage löschen"
           className="p-3 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 transition-colors shrink-0"
         >
           <Trash2 size={15} />
@@ -308,14 +371,67 @@ function QuestionCard({
                   </div>
                 ))}
               </div>
-              <button
-                type="button"
-                onClick={addOption}
-                className="mt-2 flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary-hover transition-colors"
-              >
-                <Plus size={13} />
-                Option hinzufügen
-              </button>
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={addOption}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/40 hover:border-primary text-primary text-xs font-semibold transition-colors"
+                >
+                  <Plus size={13} />
+                  Option hinzufügen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBulkOpen((b) => !b)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500 text-gray-600 dark:text-gray-300 text-xs font-semibold transition-colors"
+                >
+                  <List size={13} />
+                  Mehrere auf einmal
+                </button>
+              </div>
+
+              {bulkOpen && (
+                <div className="mt-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-3 space-y-2">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Eine Option pro Zeile. Leere Zeilen werden ignoriert.
+                  </p>
+                  <textarea
+                    value={bulkText}
+                    onChange={(e) => setBulkText(e.target.value)}
+                    rows={5}
+                    placeholder={"Antwort 1\nAntwort 2\nAntwort 3"}
+                    className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition resize-y font-mono"
+                  />
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={bulkAppend}
+                      disabled={!bulkText.trim()}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Anhängen
+                    </button>
+                    <button
+                      type="button"
+                      onClick={bulkReplace}
+                      disabled={!bulkText.trim()}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Ersetzen
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBulkOpen(false);
+                        setBulkText("");
+                      }}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                    >
+                      Abbrechen
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -328,7 +444,7 @@ function QuestionCard({
                   type="number"
                   value={question.sliderMin}
                   onChange={(e) => onUpdate({ sliderMin: e.target.value })}
-                  data-field="question_title"
+                  data-field="slider_min"
                   className={inputClass}
                 />
               </div>
@@ -338,7 +454,7 @@ function QuestionCard({
                   type="number"
                   value={question.sliderMax}
                   onChange={(e) => onUpdate({ sliderMax: e.target.value })}
-                  data-field="question_title"
+                  data-field="slider_max"
                   className={inputClass}
                 />
               </div>
@@ -348,7 +464,7 @@ function QuestionCard({
                   type="number"
                   value={question.sliderStep}
                   onChange={(e) => onUpdate({ sliderStep: e.target.value })}
-                  data-field="question_title"
+                  data-field="slider_step"
                   className={inputClass}
                 />
               </div>
@@ -358,7 +474,7 @@ function QuestionCard({
                   type="text"
                   value={question.sliderUnit}
                   onChange={(e) => onUpdate({ sliderUnit: e.target.value })}
-                  data-field="question_title"
+                  data-field="slider_unit"
                   placeholder="m²"
                   className={inputClass}
                 />
@@ -369,7 +485,7 @@ function QuestionCard({
                   type="number"
                   value={question.sliderDefault}
                   onChange={(e) => onUpdate({ sliderDefault: e.target.value })}
-                  data-field="question_title"
+                  data-field="slider_default"
                   className={inputClass}
                 />
               </div>
@@ -385,6 +501,7 @@ function QuestionCard({
                   type="text"
                   value={question.placeholder}
                   onChange={(e) => onUpdate({ placeholder: e.target.value })}
+                  data-field="text_placeholder"
                   placeholder="Hier eingeben..."
                   className={inputClass}
                 />
@@ -395,6 +512,7 @@ function QuestionCard({
                   id={`req-${question._id}`}
                   checked={question.required}
                   onChange={(e) => onUpdate({ required: e.target.checked })}
+                  data-field="text_required"
                   className="rounded"
                 />
                 <label
@@ -429,10 +547,27 @@ function QuestionCard({
   );
 }
 
-export function SectionFragen({ questions, onChange, onFocus }: Props) {
+export function SectionFragen({ questions, onChange, onFocus, commandFocus }: Props) {
   const [openId, setOpenId] = useState<string | null>(
     questions[0]?._id ?? null,
   );
+
+  // Sichtbarer Index jeder Frage (für Preview-Navigation).
+  // Berechnung hochgezogen, damit der commandFocus-Effekt ihn nutzen kann.
+  let vc = 0;
+  const visibleIndices = questions.map((q) => (q.visible !== false ? vc++ : -1));
+
+  // Klick im Preview auf ein Frage-Element → richtige Karte aufklappen.
+  useEffect(() => {
+    if (!commandFocus) return;
+    if (!isQuestionField(commandFocus.field)) return;
+    const target = commandFocus.questionVisibleIndex ?? 0;
+    const sidebarIdx = visibleIndices.indexOf(target);
+    if (sidebarIdx === -1) return;
+    const q = questions[sidebarIdx];
+    if (q && openId !== q._id) setOpenId(q._id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [commandFocus]);
 
   function addQuestion() {
     const q = newQuestion();
@@ -444,6 +579,23 @@ export function SectionFragen({ questions, onChange, onFocus }: Props) {
     const next = questions.filter((q) => q._id !== id);
     onChange(next);
     if (openId === id) setOpenId(next[0]?._id ?? null);
+  }
+
+  function duplicateQuestion(id: string) {
+    const idx = questions.findIndex((q) => q._id === id);
+    if (idx === -1) return;
+    const orig = questions[idx];
+    const dup: EditorQuestion = {
+      ...orig,
+      _id: uid(),
+      dbId: undefined, // neue Frage → kein DB-Eintrag
+      questionKey: "", // wird aus Titel beim Speichern neu generiert
+      title: orig.title ? `${orig.title} (Kopie)` : "",
+      options: orig.options.map((o) => ({ ...o, _id: uid() })),
+    };
+    const next = [...questions.slice(0, idx + 1), dup, ...questions.slice(idx + 1)];
+    onChange(next);
+    setOpenId(dup._id);
   }
 
   function updateQ(id: string, patch: Partial<EditorQuestion>) {
@@ -464,10 +616,6 @@ export function SectionFragen({ questions, onChange, onFocus }: Props) {
     onChange(next);
   }
 
-  // Sichtbarer Index jeder Frage (für Preview-Navigation).
-  let vc = 0;
-  const visibleIndices = questions.map((q) => q.visible !== false ? vc++ : -1);
-
   return (
     <div className="space-y-3">
       {questions.length === 0 && (
@@ -486,6 +634,7 @@ export function SectionFragen({ questions, onChange, onFocus }: Props) {
           onToggle={() => setOpenId(openId === q._id ? null : q._id)}
           onUpdate={(patch) => updateQ(q._id, patch)}
           onRemove={() => removeQuestion(q._id)}
+          onDuplicate={() => duplicateQuestion(q._id)}
           onMoveUp={() => moveUp(idx)}
           onMoveDown={() => moveDown(idx)}
           onFocus={(field) => {
