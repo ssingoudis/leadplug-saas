@@ -133,8 +133,9 @@ Reihenfolge laut [`../CLAUDE.md`](../CLAUDE.md) §5:
 | C.4 | **Logic Jumps** (per Frage: "springe zu X wenn Antwort = Y") — neue Tabelle oder JSONB | 3-4 Tage |
 | C.5 | Webhook-Export Code (Delivery, Retry, Signatur) — nutzt B.6-Schema | 3-5 Tage |
 | C.6 | Antwortoptionen-UX-Polish + icon_url Layout-Anpassung (Bild oben vs. SVG zentriert) | 1-2 Tage |
+| C.7 | Smooth Slide-Übergänge zwischen Fragen im Widget (Typeform-Stil) via framer-motion `LazyMotion` — postMessage-Resize erst nach `onAnimationComplete`, `prefers-reduced-motion` respektieren | 2-3 Tage |
 
-**Total Phase C realistisch: 16-25 Tage Vollzeit.**
+**Total Phase C realistisch: 18-28 Tage Vollzeit.**
 
 ---
 
