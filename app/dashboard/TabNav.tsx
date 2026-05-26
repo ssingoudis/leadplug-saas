@@ -8,7 +8,7 @@ export const TABS = [
   { label: 'Leads',         href: '/dashboard/leads' },
   { label: 'Kontakte',      href: '/dashboard/kontakte' },
   { label: 'Statistiken',   href: '/dashboard/statistiken' },
-  { label: 'Embed-Code',    href: '/dashboard/embed' },
+  { label: 'Einbinden',     href: '/dashboard/embed' },
   { label: 'Billing',       href: '/dashboard/billing' },
 ]
 
@@ -24,16 +24,10 @@ function guardedClick(e: React.MouseEvent<HTMLAnchorElement>, href: string) {
 export default function TabNav() {
   const pathname = usePathname()
 
-  // Normale Seiten: Tab-Leiste
-  const activeTab = TABS.find((tab) =>
-    tab.href === '/dashboard/funnels'
-      ? pathname.startsWith('/dashboard/funnels')
-      : pathname === tab.href,
-  )
-
+  // Nur Desktop: Tabs als Pills. Mobile zeigt den Page-Title im Header bewusst nicht —
+  // der aktive Eintrag wird im Hamburger-Menü visuell markiert (siehe DashboardHeader).
   return (
-    <>
-      {/* Desktop: alle Tabs */}
+    <div className="hidden lg:flex items-center gap-1 py-3">
       {TABS.map((tab) => {
         const active =
           tab.href === '/dashboard/funnels'
@@ -44,22 +38,16 @@ export default function TabNav() {
             key={tab.href}
             href={tab.href}
             onClick={(e) => guardedClick(e, tab.href)}
-            className={`hidden lg:flex items-center px-4 py-4 text-sm border-b-2 -mb-0.5 transition-colors ${
+            className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
               active
-                ? 'font-semibold text-primary border-primary'
-                : 'font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border-transparent'
+                ? 'font-semibold text-primary bg-primary/10'
+                : 'font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
             }`}
           >
             {tab.label}
           </a>
         )
       })}
-      {/* Mobile: nur aktiver Tab als Seitenname */}
-      {activeTab && (
-        <span className="lg:hidden flex items-center px-4 py-4 text-sm font-semibold text-primary border-b-2 border-primary -mb-0.5">
-          {activeTab.label}
-        </span>
-      )}
-    </>
+    </div>
   )
 }

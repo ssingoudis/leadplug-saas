@@ -19,7 +19,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const admin = createAdminClient()
   const { data: tenant } = await admin
     .from('tenants')
-    .select('id')
+    .select('id, company_name')
     .eq('auth_user_id', user.id)
     .maybeSingle()
 
@@ -69,7 +69,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-background" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      <DashboardHeader />
+      <DashboardHeader
+        userName={tenant.company_name ?? user.email ?? ''}
+        userEmail={user.email ?? ''}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8">
         {children}
       </div>

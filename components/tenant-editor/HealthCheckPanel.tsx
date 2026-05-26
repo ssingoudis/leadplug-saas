@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, AlertCircle, ChevronDown } from "lucide-react";
+import { CheckCircle2, AlertCircle, ChevronDown, Power } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EditorState } from "@/types";
 
@@ -78,9 +78,41 @@ interface Props {
 
 export function HealthCheckPanel({ state, onJumpTo }: Props) {
   const issues = computeIssues(state);
-  const isReady = issues.length === 0;
+  const isComplete = issues.length === 0;
+  const isActive = state.isActive;
 
-  const [open, setOpen] = useState(!isReady);
+  // Drei Zustände in absteigender Priorität:
+  // 1. Issues → amber "X Hinweise"
+  // 2. Komplett aber inaktiv → grau "Inaktiv" (Konfiguration ok, aber Funnel nicht öffentlich)
+  // 3. Komplett und aktiv → grün "Vollständig"
+  const status: "issues" | "inactive" | "ready" = !isComplete
+    ? "issues"
+    : !isActive
+      ? "inactive"
+      : "ready";
+
+  const [open, setOpen] = useState(status !== "ready");
+
+  const statusMeta = {
+    ready: {
+      icon: <CheckCircle2 size={15} className="text-green-500 shrink-0" />,
+      badgeText: "Vollständig",
+      badgeClass:
+        "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400",
+    },
+    inactive: {
+      icon: <Power size={15} className="text-gray-400 shrink-0" />,
+      badgeText: "Inaktiv",
+      badgeClass:
+        "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400",
+    },
+    issues: {
+      icon: <AlertCircle size={15} className="text-amber-500 shrink-0" />,
+      badgeText: `${issues.length} ${issues.length === 1 ? "Hinweis" : "Hinweise"}`,
+      badgeClass:
+        "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400",
+    },
+  }[status];
 
   return (
     <div className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/30 shrink-0">
@@ -90,25 +122,17 @@ export function HealthCheckPanel({ state, onJumpTo }: Props) {
         className="w-full flex items-center justify-between px-6 py-3 text-left hover:bg-gray-100/60 dark:hover:bg-gray-800/60 transition-colors"
       >
         <div className="flex items-center gap-2 min-w-0">
-          {isReady ? (
-            <CheckCircle2 size={15} className="text-green-500 shrink-0" />
-          ) : (
-            <AlertCircle size={15} className="text-amber-500 shrink-0" />
-          )}
+          {statusMeta.icon}
           <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">
-            Funnel-Status
+            Konfiguration
           </p>
           <span
             className={cn(
               "text-xs px-2 py-0.5 rounded-full font-medium shrink-0",
-              isReady
-                ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400"
-                : "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400",
+              statusMeta.badgeClass,
             )}
           >
-            {isReady
-              ? "Bereit"
-              : `${issues.length} ${issues.length === 1 ? "Hinweis" : "Hinweise"}`}
+            {statusMeta.badgeText}
           </span>
         </div>
         <ChevronDown
@@ -122,11 +146,26 @@ export function HealthCheckPanel({ state, onJumpTo }: Props) {
 
       {open && (
         <div className="px-6 pb-3 space-y-1.5">
-          {issues.length === 0 ? (
+          {status === "ready" && (
             <p className="text-xs text-gray-500 dark:text-gray-400 italic">
-              Alles konfiguriert — Funnel kann live gehen.
+              Alles konfiguriert — Funnel ist live und erreichbar.
             </p>
-          ) : (
+          )}
+
+          {status === "inactive" && (
+            <button
+              type="button"
+              onClick={() => onJumpTo("funnel_status_toggle")}
+              className="w-full flex items-start gap-2 text-left text-xs text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors group"
+            >
+              <Power size={11} className="shrink-0 mt-0.5" />
+              <span className="underline-offset-2 group-hover:underline">
+                Konfiguration vollständig, aber Funnel ist deaktiviert — jetzt aktivieren
+              </span>
+            </button>
+          )}
+
+          {status === "issues" &&
             issues.map((issue, idx) => (
               <button
                 key={idx}
@@ -139,8 +178,7 @@ export function HealthCheckPanel({ state, onJumpTo }: Props) {
                   {issue.message}
                 </span>
               </button>
-            ))
-          )}
+            ))}
         </div>
       )}
     </div>

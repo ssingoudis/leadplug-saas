@@ -40,6 +40,9 @@
     .phase-1 { border-color: #22c55e; }
     .phase-2 { border-color: #f59e0b; }
     .phase-3 { border-color: #8b5cf6; }
+    .phase-4 { border-color: #3b82f6; }
+    .phase-5 { border-color: #14b8a6; }
+    .phase-6 { border-color: #64748b; }
 
     /* Header strip */
     .phase-header {
@@ -52,6 +55,9 @@
     .phase-1 .phase-header { background: #f0fdf4; }
     .phase-2 .phase-header { background: #fffbeb; }
     .phase-3 .phase-header { background: #f5f3ff; }
+    .phase-4 .phase-header { background: #eff6ff; }
+    .phase-5 .phase-header { background: #f0fdfa; }
+    .phase-6 .phase-header { background: #f8fafc; }
 
     .phase-num {
       width: 38px;
@@ -67,12 +73,18 @@
     .phase-1 .phase-num { background: #dcfce7; color: #15803d; }
     .phase-2 .phase-num { background: #fef3c7; color: #b45309; }
     .phase-3 .phase-num { background: #ede9fe; color: #6d28d9; }
+    .phase-4 .phase-num { background: #dbeafe; color: #1d4ed8; }
+    .phase-5 .phase-num { background: #ccfbf1; color: #0f766e; }
+    .phase-6 .phase-num { background: #e2e8f0; color: #475569; }
 
     .phase-title { font-size: 17px; font-weight: 700; }
     .phase-when  { font-size: 12px; font-weight: 500; margin-top: 2px; }
     .phase-1 .phase-when { color: #16a34a; }
     .phase-2 .phase-when { color: #d97706; }
     .phase-3 .phase-when { color: #7c3aed; }
+    .phase-4 .phase-when { color: #2563eb; }
+    .phase-5 .phase-when { color: #0d9488; }
+    .phase-6 .phase-when { color: #475569; }
 
     /* Status badge in header */
     .phase-badge {
@@ -100,10 +112,16 @@
     .task-done {
       background: #f0fdf4;
     }
+    .task-progress { background: #eff6ff; }
+    .task-todo     { background: #fff; }
+    .task-vision   { background: #fafafa; }
     .task-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
     .task-name   { font-size: 13px; font-weight: 700; display: block; margin-bottom: 3px; }
     .task-detail { font-size: 12px; color: #64748b; line-height: 1.55; }
-    .task-done .task-name   { color: #15803d; }
+    .task-done .task-name     { color: #15803d; }
+    .task-progress .task-name { color: #1d4ed8; }
+    .task-todo .task-name     { color: #0f172a; }
+    .task-vision .task-name   { color: #475569; }
 
     /* Connector between phases */
     .connector {
@@ -254,7 +272,7 @@
       <div class="phase-num">3</div>
       <div>
         <div class="phase-title">Self-Service Editor</div>
-        <div class="phase-when">✓ Vollständig abgeschlossen</div>
+        <div class="phase-when">✓ Funktional vollständig</div>
       </div>
       <span class="phase-badge phase-badge-done">✓ Abgeschlossen</span>
     </div>
@@ -290,13 +308,232 @@
     </div>
   </div>
 
+  <div class="connector"><span>aktuelle Iteration</span></div>
+
+  <!-- Phase 4 -->
+  <div class="phase phase-4">
+    <div class="phase-header">
+      <div class="phase-num">4</div>
+      <div>
+        <div class="phase-title">Polish & Self-Service-Schliff</div>
+        <div class="phase-when">▶ In Arbeit</div>
+      </div>
+      <span class="phase-badge phase-badge-progress">▶ In Arbeit</span>
+    </div>
+    <div class="tasks">
+      <div class="task task-done">
+        <span class="task-icon">✅</span>
+        <div>
+          <span class="task-name">Funnels-Übersicht aufgeräumt</span>
+          <span class="task-detail">Inaktive Funnels ans Ende sortiert, Karten gedimmt, "Öffnen"-Button bei inaktiv ausgeblendet, sauberes 404 bei direkt aufgerufener inaktiver URL</span>
+        </div>
+      </div>
+      <div class="task task-done">
+        <span class="task-icon">✅</span>
+        <div>
+          <span class="task-name">Embed-Tab umbenannt</span>
+          <span class="task-detail">"Embed-Code" → "Einbinden" — laienfreundlicher Begriff für nicht-technische Endkunden</span>
+        </div>
+      </div>
+      <div class="task task-done">
+        <span class="task-icon">✅</span>
+        <div>
+          <span class="task-name">Editor-Shortcut "Code kopieren"</span>
+          <span class="task-detail">Im Sidebar-Footer des Editors — Embed-Snippet direkt in die Zwischenablage, ohne Tab-Wechsel. Nur bei aktiven, gespeicherten Funnels sichtbar</span>
+        </div>
+      </div>
+      <div class="task task-done">
+        <span class="task-icon">✅</span>
+        <div>
+          <span class="task-name">Platzhalter für Phase-5-Features</span>
+          <span class="task-detail">"Bald verfügbar"-Sektionen auf der Embed-Seite für Plattform-Anleitungen und Conversion-Tracking — als sichtbare Roadmap für Tenants</span>
+        </div>
+      </div>
+      <div class="task task-todo">
+        <span class="task-icon">⏳</span>
+        <div>
+          <span class="task-name">Editor-Mikropolish</span>
+          <span class="task-detail">Question-Type als Badge rechts statt im Card-Header-Text, Dark-Mode Input-Border-Kontrast verbessern — wird am Projektende gemacht</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"><span>wenn Self-Service rund läuft</span></div>
+
+  <!-- Phase 5 -->
+  <div class="phase phase-5">
+    <div class="phase-header">
+      <div class="phase-num">5</div>
+      <div>
+        <div class="phase-title">Agentur- & Premium-Features</div>
+        <div class="phase-when">○ Geplant — Zielgruppe Agenturen</div>
+      </div>
+      <span class="phase-badge phase-badge-todo">○ Geplant</span>
+    </div>
+    <div class="tasks">
+      <div class="task task-todo">
+        <span class="task-icon">📡</span>
+        <div>
+          <span class="task-name">Conversion-Tracking via postMessage</span>
+          <span class="task-detail">Funnel sendet Events (step_change, answer, submit_success) per postMessage nach außen. Tenant aktiviert optional Bridge-Snippet, das Events an Google Ads / Facebook Pixel weitergibt. 80% der Tracking-Vorteile eines Skript-Embeds bei 10% der Komplexität. Kritisch für Tenants mit bezahlter Werbung</span>
+        </div>
+      </div>
+      <div class="task task-todo">
+        <span class="task-icon">📘</span>
+        <div>
+          <span class="task-name">Plattform-Anleitungen mit Screenshots</span>
+          <span class="task-detail">Klick-für-Klick-Anleitungen für WordPress, Wix, Squarespace, Webflow, Jimdo. Senkt Support-Last und hilft nicht-technischen Endkunden über die "Wie binde ich das ein?"-Hürde</span>
+        </div>
+      </div>
+      <div class="task task-todo">
+        <span class="task-icon">🔗</span>
+        <div>
+          <span class="task-name">Webhook-Output / Zapier-Integration</span>
+          <span class="task-detail">Leads automatisch in CRM (HubSpot, Pipedrive), Slack, E-Mail-Marketing oder beliebige Zapier-Endpoints weiterreichen. Standard-Erwartung von Agentur-Kunden</span>
+        </div>
+      </div>
+      <div class="task task-todo">
+        <span class="task-icon">👥</span>
+        <div>
+          <span class="task-name">Tenant-Subaccounts für Agenturen</span>
+          <span class="task-detail">Eine Agentur betreut mehrere Endkunden → ein Login, mehrere Tenants. Switcher im Header, separate Billing-Verwaltung. Macht LeadPlug für die Zielgruppe attraktiv</span>
+        </div>
+      </div>
+      <div class="task task-todo">
+        <span class="task-icon">🏢</span>
+        <div>
+          <span class="task-name">Tenant als Workspace mit mehreren Usern</span>
+          <span class="task-detail">DB-Refactoring: Junction-Table tenant_members(tenant_id, user_id, role) mit Rollen owner/editor/viewer statt 1:1 tenant.auth_user_id. RLS-Policies anpassen. UI: Mitglieder einladen, Rollen verwalten. Geschäftsführer + Bürokraft können denselben Tenant verwalten</span>
+        </div>
+      </div>
+      <div class="task task-todo">
+        <span class="task-icon">🎨</span>
+        <div>
+          <span class="task-name">Whitelabel-Logo für Premium-Pläne</span>
+          <span class="task-detail">DB-Felder tenants.brand_logo_url + brand_name. Dashboard zeigt das Tenant-Logo statt "LeadPlug" — feature-gated über billing_model. Agenturen können ihren Endkunden ihre eigene Marke präsentieren</span>
+        </div>
+      </div>
+      <div class="task task-todo">
+        <span class="task-icon">📋</span>
+        <div>
+          <span class="task-name">Funnel-Vorlagen pro Branche</span>
+          <span class="task-detail">Quick-Start-Templates für Solar, Wärmepumpe, Bad, Dach, Fenster usw. Tenants müssen nicht bei Null anfangen — reduziert Onboarding-Friction massiv</span>
+        </div>
+      </div>
+      <div class="task task-todo">
+        <span class="task-icon">🎯</span>
+        <div>
+          <span class="task-name">Server-Side Conversion API</span>
+          <span class="task-detail">Facebook CAPI + Google Enhanced Conversions: Tracking-Events server-seitig senden, damit sie nicht von iOS-Tracking-Schutz oder Adblockern blockiert werden. Premium-Tier-Feature</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"><span>wenn Agentur-Fokus etabliert</span></div>
+
+  <!-- Phase 6 -->
+  <div class="phase phase-6">
+    <div class="phase-header">
+      <div class="phase-num">6</div>
+      <div>
+        <div class="phase-title">Vision</div>
+        <div class="phase-when">💭 Ideenpool für später</div>
+      </div>
+      <span class="phase-badge phase-badge-todo">💭 Vision</span>
+    </div>
+    <div class="tasks">
+      <div class="task task-vision">
+        <span class="task-icon">🧪</span>
+        <div>
+          <span class="task-name">A/B-Testing pro Funnel</span>
+          <span class="task-detail">Zwei Funnel-Varianten parallel ausspielen, Conversion-Rate vergleichen, Gewinner-Variante automatisch übernehmen</span>
+        </div>
+      </div>
+      <div class="task task-vision">
+        <span class="task-icon">🌳</span>
+        <div>
+          <span class="task-name">Verzweigungs-Logik</span>
+          <span class="task-detail">Bedingte Folge-Fragen je nach Antwort. "Wenn Heizung = Öl → frage nach Tank-Größe; wenn Gas → andere Frage"</span>
+        </div>
+      </div>
+      <div class="task task-vision">
+        <span class="task-icon">🌐</span>
+        <div>
+          <span class="task-name">White-Label-Domain pro Tenant</span>
+          <span class="task-detail">funnel.kundendomain.de statt app.leadplug.de/slug — eigene DNS-Konfiguration, Wildcard-Subdomains, automatisches SSL</span>
+        </div>
+      </div>
+      <div class="task task-vision">
+        <span class="task-icon">🔌</span>
+        <div>
+          <span class="task-name">Öffentliche API</span>
+          <span class="task-detail">REST-Endpoints für Funnel-Daten, Submissions, Statistiken — damit Tenants/Agenturen eigene Tools andocken können</span>
+        </div>
+      </div>
+      <div class="task task-vision">
+        <span class="task-icon">📊</span>
+        <div>
+          <span class="task-name">Lead-Pipeline (CRM-Light)</span>
+          <span class="task-detail">Kanban-View statt Liste: Spalten "Neu / Kontaktiert / Termin / Abgeschlossen / Verloren". Leads per Drag-and-Drop zwischen Status verschieben. Notizen + Aktivitäts-Log pro Lead. Macht aus dem reinen Lead-Empfänger ein echtes Verkaufstool</span>
+        </div>
+      </div>
+      <div class="task task-vision">
+        <span class="task-icon">📅</span>
+        <div>
+          <span class="task-name">Termin-Booking direkt im Funnel</span>
+          <span class="task-detail">Nach Funnel-Submit zeigt sich ein Kalender (Calendly-Style) für direkte Terminbuchung. Massive Conversion-Steigerung — Lead wird sofort zu Termin. Integration mit Google Calendar / Outlook für Verfügbarkeitsabgleich</span>
+        </div>
+      </div>
+      <div class="task task-vision">
+        <span class="task-icon">🤖</span>
+        <div>
+          <span class="task-name">KI-Features</span>
+          <span class="task-detail">Lead-Scoring (welche Anfragen sind heiß?), Auto-generierte Funnels aus Branchen-Beschreibung ("Erstelle einen Funnel für Heizungsbau"), Smart-Follow-up-Texte. Hebt das Produkt vom Wettbewerb ab</span>
+        </div>
+      </div>
+      <div class="task task-vision">
+        <span class="task-icon">🧭</span>
+        <div>
+          <span class="task-name">Onboarding-Wizard für neue Tenants</span>
+          <span class="task-detail">Schritt-für-Schritt-Tour beim ersten Login: Funnel aus Vorlage wählen → Branding anpassen → Code kopieren. Senkt Time-to-First-Lead drastisch und reduziert Support-Anfragen</span>
+        </div>
+      </div>
+      <div class="task task-vision">
+        <span class="task-icon">📜</span>
+        <div>
+          <span class="task-name">Audit-Log / Änderungshistorie</span>
+          <span class="task-detail">Wer hat wann was am Funnel geändert? Besonders kritisch wenn mehrere Team-Mitglieder denselben Tenant verwalten. Lead-Status-Changes ebenfalls protokollieren</span>
+        </div>
+      </div>
+      <div class="task task-vision">
+        <span class="task-icon">📧</span>
+        <div>
+          <span class="task-name">Visueller E-Mail-Template-Editor</span>
+          <span class="task-detail">Tenants können Lead-Benachrichtigung und Kunden-Danke-Mail vollständig anpassen — Drag-and-Drop-Blöcke, eigenes Logo, Brand-Farben. Aktuell sind die Templates hardgecodiert</span>
+        </div>
+      </div>
+      <div class="task task-vision">
+        <span class="task-icon">🌍</span>
+        <div>
+          <span class="task-name">Mehrsprachigkeit</span>
+          <span class="task-detail">Dashboard + Funnel-Widget in DE/EN/weitere Sprachen. Tenants können pro Funnel die Sprache wählen — Voraussetzung für internationale Agenturen als Kunden</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <div class="legend">
   <strong>Phasen:</strong>
-  <div class="legend-item"><div class="ld" style="background: #22c55e;"></div> Phase 1 — Abgeschlossen</div>
-  <div class="legend-item"><div class="ld" style="background: #f59e0b;"></div> Phase 2 — Abgeschlossen (Test-Modus)</div>
-  <div class="legend-item"><div class="ld" style="background: #8b5cf6;"></div> Phase 3 — Abgeschlossen</div>
+  <div class="legend-item"><div class="ld" style="background: #22c55e;"></div> Phase 1 — Erste Kunden ✓</div>
+  <div class="legend-item"><div class="ld" style="background: #f59e0b;"></div> Phase 2 — SaaS-Infrastruktur ✓</div>
+  <div class="legend-item"><div class="ld" style="background: #8b5cf6;"></div> Phase 3 — Self-Service Editor ✓</div>
+  <div class="legend-item"><div class="ld" style="background: #3b82f6;"></div> Phase 4 — Polish ▶</div>
+  <div class="legend-item"><div class="ld" style="background: #14b8a6;"></div> Phase 5 — Agentur-Features ○</div>
+  <div class="legend-item"><div class="ld" style="background: #64748b;"></div> Phase 6 — Vision 💭</div>
 </div>
 
 </body>

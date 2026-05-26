@@ -21,9 +21,17 @@ export function FunnelCard({ funnel }: { funnel: FunnelItem }) {
   return (
     <div
       onClick={() => router.push(`/dashboard/funnels/${funnel.slug}/edit`)}
-      className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden flex flex-col cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
+      className={`bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden flex flex-col cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 transition-all ${
+        funnel.isActive ? "" : "opacity-75 hover:opacity-100"
+      }`}
     >
-      <div className="h-1.5 w-full" style={{ backgroundColor: funnel.primaryColor }} />
+      <div
+        className="h-1.5 w-full transition-opacity"
+        style={{
+          backgroundColor: funnel.primaryColor,
+          opacity: funnel.isActive ? 1 : 0.35,
+        }}
+      />
 
       <div className="p-5 flex flex-col flex-1">
         <div className="flex items-start justify-between gap-2 mb-3">
@@ -54,15 +62,17 @@ export function FunnelCard({ funnel }: { funnel: FunnelItem }) {
             <Edit3 size={13} />
             Bearbeiten
           </Link>
-          <Link
-            href={`/${funnel.slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-primary hover:text-primary dark:hover:text-primary transition-colors"
-          >
-            <Eye size={13} />
-            Öffnen
-          </Link>
+          {funnel.isActive && (
+            <Link
+              href={`/${funnel.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-primary hover:text-primary dark:hover:text-primary transition-colors"
+            >
+              <Eye size={13} />
+              Öffnen
+            </Link>
+          )}
           {!funnel.isActive && (
             <DeleteFunnelButton
               slug={funnel.slug}
