@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, Save, AlertCircle, Power, TriangleAlert, ArrowLeft, ExternalLink, Pencil, Play } from "lucide-react";
+import { Loader2, Save, AlertCircle, Power, TriangleAlert, ArrowLeft, ExternalLink, Pencil, Play, Copy, Check } from "lucide-react";
+import { buildEmbedSnippet } from "@/lib/embedSnippet";
 import { DeleteFunnelButton } from "./DeleteFunnelButton";
 import { SectionAccordion } from "./SectionAccordion";
 import { SectionDesign } from "./SectionDesign";
@@ -149,6 +150,20 @@ export function EditorSidebar({
     kontakt: false,
   });
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [embedCopied, setEmbedCopied] = useState(false);
+
+  function handleCopyEmbed() {
+    if (!originalSlug) return;
+    const base =
+      process.env.NEXT_PUBLIC_BASE_URL ??
+      (typeof window !== "undefined" ? window.location.origin : "");
+    const title = state.funnelName || originalSlug;
+    const snippet = buildEmbedSnippet(originalSlug, `${base}/${originalSlug}`, title);
+    navigator.clipboard.writeText(snippet).then(() => {
+      setEmbedCopied(true);
+      setTimeout(() => setEmbedCopied(false), 2000);
+    });
+  }
 
   function toggle(key: string) {
     setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -362,6 +377,33 @@ export function EditorSidebar({
 
         {/* Footer — Funnel-Status */}
         <div className="border-t border-gray-100 dark:border-gray-800 shrink-0">
+          {/* Embed-Code-Shortcut — nur bei aktiven, gespeicherten Funnels (sonst führt der Code zu 404). */}
+          {originalSlug && state.isActive && (
+            <div className="px-6 pt-4 pb-3 flex items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-800">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                  Einbindungs-Code
+                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">
+                  Schnell in die Zwischenablage kopieren.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCopyEmbed}
+                title="Embed-Code in Zwischenablage kopieren"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors shrink-0 ${
+                  embedCopied
+                    ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700/40 text-green-700 dark:text-green-400"
+                    : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                }`}
+              >
+                {embedCopied ? <Check size={12} /> : <Copy size={12} />}
+                {embedCopied ? "Kopiert" : "Kopieren"}
+              </button>
+            </div>
+          )}
+
           <div className="px-6 py-4 flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
@@ -376,6 +418,7 @@ export function EditorSidebar({
             <button
               type="button"
               onClick={handleStatusToggle}
+              data-field="funnel_status_toggle"
               className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors shrink-0 ${
                 state.isActive
                   ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700/40 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"

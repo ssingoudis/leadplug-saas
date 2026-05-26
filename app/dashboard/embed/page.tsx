@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Card from '@/components/ui/Card'
 import EmbedBlock from '@/app/admin/[slug]/EmbedBlock'
+import { Sparkles, BarChart3 } from 'lucide-react'
 
 async function getFunnels() {
   const supabase = await createClient()
@@ -73,6 +74,50 @@ export default async function EmbedPage() {
             ))}
           </div>
         )}
+      </Card>
+
+      {/* Platzhalter: Plattform-Anleitungen (geplantes Feature, Phase 5) */}
+      <Card>
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <Sparkles size={18} className="text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+                Anleitung für deine Plattform
+              </h3>
+              <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-700/40">
+                Bald verfügbar
+              </span>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+              Klick-für-Klick-Anleitungen mit Screenshots für WordPress, Wix, Squarespace, Webflow und Jimdo — damit auch ohne Tech-Know-how nichts schiefgeht.
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      {/* Platzhalter: Conversion-Tracking (geplantes Feature, Phase 5) */}
+      <Card>
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <BarChart3 size={18} className="text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+                Conversion-Tracking für Google Ads & Facebook
+              </h3>
+              <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-700/40">
+                Bald verfügbar
+              </span>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+              Funnel-Submits automatisch an deine Pixel weitergeben — damit Google Ads und Facebook deine Werbung gezielt auf Lead-Generierung optimieren statt nur auf Klicks. Speziell für Agenturen und Tenants mit bezahlter Werbung.
+            </p>
+          </div>
+        </div>
       </Card>
 
     </div>

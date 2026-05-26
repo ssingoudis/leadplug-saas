@@ -1,9 +1,16 @@
 'use client'
 
-import { useState } from 'react'
-import { Settings, Power, Menu, X, LayoutDashboard, BarChart2, Code2, Layers, Inbox, Users } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { usePathname } from 'next/navigation'
+import { Settings, Power, Menu, X, LayoutDashboard, BarChart2, Code2, Layers, Inbox, Users, CreditCard, Zap } from 'lucide-react'
 import ThemeToggle from '@/components/ui/ThemeToggle'
+import UserMenu from '@/components/ui/UserMenu'
 import TabNav, { TABS } from './TabNav'
+
+interface Props {
+  userName?: string
+  userEmail?: string
+}
 
 const TAB_ICONS: Record<string, React.ComponentType<{ size?: number }>> = {
   '/dashboard':             LayoutDashboard,
@@ -12,6 +19,7 @@ const TAB_ICONS: Record<string, React.ComponentType<{ size?: number }>> = {
   '/dashboard/kontakte':    Users,
   '/dashboard/statistiken': BarChart2,
   '/dashboard/embed':       Code2,
+  '/dashboard/billing':     CreditCard,
 }
 
 function guardedClick(e: React.MouseEvent<HTMLAnchorElement>, href: string) {
@@ -23,42 +31,72 @@ function guardedClick(e: React.MouseEvent<HTMLAnchorElement>, href: string) {
   }
 }
 
-export default function DashboardHeader() {
+export default function DashboardHeader({ userName, userEmail }: Props) {
   const [open, setOpen] = useState(false)
+  const pathname = usePathname()
+  const mobileMenuRef = useRef<HTMLDivElement>(null)
+
+  // Klick außerhalb / ESC schließt das Mobile-Menü.
+  useEffect(() => {
+    if (!open) return
+    function onDocClick(e: MouseEvent) {
+      if (!mobileMenuRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onDocClick)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDocClick)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  function isActive(href: string): boolean {
+    return href === '/dashboard/funnels'
+      ? pathname.startsWith('/dashboard/funnels')
+      : pathname === href
+  }
 
   return (
-    <div className="bg-white dark:bg-gray-900 sticky top-0 z-10 border-b-2 border-primary">
-      <div className="px-4 sm:px-8 py-0 flex items-stretch gap-0">
-        {/* Tabs */}
-        <TabNav />
+    <div ref={mobileMenuRef} className="bg-white dark:bg-gray-900 sticky top-0 z-10 border-b border-gray-200 dark:border-gray-800">
+      <div className="relative px-4 sm:px-8 flex items-stretch">
+        {/* Brand / Logo */}
+        <a
+          href="/dashboard"
+          onClick={(e) => guardedClick(e, '/dashboard')}
+          className="flex items-center gap-2 py-3 shrink-0 group relative z-10"
+          aria-label="LeadPlug Dashboard"
+        >
+          <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-white shadow-sm group-hover:shadow-md transition-shadow">
+            <Zap size={16} fill="currentColor" />
+          </span>
+          <span className="text-base font-bold text-gray-900 dark:text-white tracking-tight">
+            LeadPlug
+          </span>
+        </a>
+
+        {/* Tabs — absolut mittig (Desktop), unabhängig von Logo/Action-Breite */}
+        <div className="hidden lg:flex absolute inset-x-0 top-0 bottom-0 items-center justify-center pointer-events-none">
+          <div className="pointer-events-auto">
+            <TabNav />
+          </div>
+        </div>
 
         {/* Desktop actions */}
-        <div className="ml-auto hidden lg:flex items-center gap-2 py-3">
+        <div className="ml-auto hidden lg:flex items-center gap-2 py-3 relative z-10">
           <ThemeToggle />
-          <a
-            href="/dashboard/account"
-            onClick={(e) => guardedClick(e, '/dashboard/account')}
-            title="Account"
-            className="flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-primary hover:text-primary dark:hover:bg-gray-800 transition-colors"
-          >
-            <Settings size={16} />
-          </a>
-          <a
-            href="/logout"
-            onClick={(e) => guardedClick(e, '/logout')}
-            title="Logout"
-            className="flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-primary hover:text-primary dark:hover:bg-gray-800 transition-colors"
-          >
-            <Power size={16} />
-          </a>
+          <UserMenu userName={userName} userEmail={userEmail} />
         </div>
 
         {/* Mobile: ThemeToggle + Hamburger */}
-        <div className="ml-auto flex lg:hidden items-center gap-2 py-3">
+        <div className="ml-auto flex lg:hidden items-center gap-2 py-3 relative z-10">
           <ThemeToggle />
           <button
             onClick={() => setOpen(!open)}
-            aria-label="Menü öffnen"
+            aria-label={open ? 'Menü schließen' : 'Menü öffnen'}
+            aria-expanded={open}
             className="flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-primary hover:text-primary dark:hover:bg-gray-800 transition-colors cursor-pointer"
           >
             {open ? <X size={16} /> : <Menu size={16} />}
@@ -72,12 +110,17 @@ export default function DashboardHeader() {
           {/* Navigation */}
           {TABS.map((tab) => {
             const Icon = TAB_ICONS[tab.href]
+            const active = isActive(tab.href)
             return (
               <a
                 key={tab.href}
                 href={tab.href}
                 onClick={(e) => { guardedClick(e, tab.href); setOpen(false); }}
-                className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                className={`flex items-center gap-3 px-6 py-3 text-sm transition-colors ${
+                  active
+                    ? 'font-semibold text-primary bg-primary/10'
+                    : 'font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                }`}
               >
                 {Icon && <Icon size={15} />}
                 {tab.label}
@@ -88,7 +131,11 @@ export default function DashboardHeader() {
           <a
             href="/dashboard/account"
             onClick={(e) => { guardedClick(e, '/dashboard/account'); setOpen(false); }}
-            className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            className={`flex items-center gap-3 px-6 py-3 text-sm transition-colors ${
+              pathname === '/dashboard/account'
+                ? 'font-semibold text-primary bg-primary/10'
+                : 'font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+            }`}
           >
             <Settings size={15} />
             Account
@@ -97,10 +144,10 @@ export default function DashboardHeader() {
           <a
             href="/logout"
             onClick={(e) => { guardedClick(e, '/logout'); setOpen(false); }}
-            className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
           >
             <Power size={15} />
-            Logout
+            Abmelden
           </a>
         </div>
       )}

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { TenantFunnelClient } from '@/components/TenantFunnelClient'
-import { getTenantConfig } from '@/lib/getTenantConfig'
+import { getTenantConfig, TenantInactiveError } from '@/lib/getTenantConfig'
 import type { Metadata } from 'next'
 
 type SlugPageProps = {
@@ -11,17 +11,27 @@ export async function generateMetadata(
   { params }: SlugPageProps,
 ): Promise<Metadata> {
   const { slug } = await params
-  const config = await getTenantConfig(slug)
-  if (!config) return { title: 'Angebot anfordern' }
-  return {
-    title: `${config.funnel.title} – ${config.companyName}`,
-    description: config.funnel.subtitle,
+  try {
+    const config = await getTenantConfig(slug)
+    if (!config) return { title: 'Angebot anfordern' }
+    return {
+      title: `${config.funnel.title} – ${config.companyName}`,
+      description: config.funnel.subtitle,
+    }
+  } catch {
+    return { title: 'Nicht verfügbar' }
   }
 }
 
 export default async function SlugPage({ params }: SlugPageProps) {
   const { slug } = await params
-  const config = await getTenantConfig(slug)
+  let config
+  try {
+    config = await getTenantConfig(slug)
+  } catch (err) {
+    if (err instanceof TenantInactiveError) notFound()
+    throw err
+  }
 
   if (!config) {
     notFound()

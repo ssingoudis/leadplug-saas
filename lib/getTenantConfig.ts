@@ -91,7 +91,7 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
   }
 }
 
-class TenantInactiveError extends Error {}
+export class TenantInactiveError extends Error {}
 
 let cachedClient: SupabaseClient | null = null
 

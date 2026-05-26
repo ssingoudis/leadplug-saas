@@ -35,6 +35,7 @@ async function getFunnels(): Promise<FunnelItem[]> {
     .from("funnels")
     .select("slug, funnel_name, contact_form_title, is_active, primary_color, total_views, created_at")
     .eq("tenant_slug", tenant.slug)
+    .order("is_active", { ascending: false })
     .order("created_at", { ascending: true });
 
   const slugs = (funnels ?? []).map((f) => f.slug);
