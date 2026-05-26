@@ -1,6 +1,6 @@
 # Current Feature
 
-Funnel Widget Platform – generischer Multi-Tenant iFrame Sales-Funnel für Handwerksbetriebe aller Branchen.
+LeadPlug — SaaS-Funnel-Builder mit integriertem CRM für **Agenturen und Marketer**, die Funnels für ihre Endkunden bauen (branchen-offen). Multi-Tenant iFrame-Widget + Editor + Lead-Posteingang. Strategische Grundlagen siehe [`../CLAUDE.md`](../CLAUDE.md).
 
 ---
 
@@ -110,6 +110,22 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 ---
 
 ## History
+
+- **Phase A — Dokumentations- & Architektur-Reset (2026-05-26)** — Strategische Neu-Aufstellung des Projekts vor MVP-Sprint. Keine Code-Änderung, reine Doku- und Architektur-Arbeit (keine Aufgaben-Nummer vergeben, da kein Branch).
+
+  *Strategische Entscheidungen (in CLAUDE.md verankert):* Zielgruppe pivotiert von "Handwerksbetriebe als Endnutzer" auf "Agenturen/Marketer als Plattform-User". Tenant-Modell neu definiert: Tenant = Agentur-Workspace mit Multi-User (Junction-Table `tenant_members` mit Rollen). Pricing-Strategie konkretisiert: 3 Tiers (Webhook ~29€ / Standard ~99€ / Pro ~249€) pro Tenant. GTM via strategische Partnerschaften mit Domain-Marktführern. Builder-Richtung festgelegt: linear, **kein** Node-Canvas (React Flow explizit abgelehnt nach Diskussion FormFlow-Vergleich).
+
+  *DB-Architektur-Entscheidungen:* RLS-Pattern auf vollständige Policies (SELECT/INSERT/UPDATE/DELETE) erweitert — Service-Key nur noch für anonyme/system-Endpoints. UUID-FKs überall, Slugs nur für öffentliche URLs. `tenants` wird zur reinen Agentur-Account-Tabelle, `funnels` trägt alle endkunden-spezifischen Daten. `tenant_members` minimal halten (kein Profile-Layer, YAGNI).
+
+  *Doku-Neuaufstellung:* [`CLAUDE.md`](../CLAUDE.md) komplett neu geschrieben (15 Sektionen, Single Source of Truth). [`context/project-overview.md`](project-overview.md) neu geschrieben (echtes DB-Schema, alle 10 API-Routes, 12-Schritt Submission-Flow inkl. Rate-Limiting). [`context/supabase-schema.md`](supabase-schema.md) als technische Vollreferenz aus Live-DB regeneriert (Enums, Tables, Constraints, Indices, RLS-Policies, Functions, Triggers). [`context/roadmap.md`](roadmap.md) als granulare Aufgaben-Quelle erstellt (Phasen A-E, Sub-Nummern B.1-B.7 für anstehenden Schema-Refactor, Phase E mit allen v2/Pro-Features). Aufgaben-Nummerierung bleibt sequenziell — nächste Code-Aufgabe ist **Aufgabe 25** (= Phase B.1 `tenant_members` + RLS-Refactor).
+
+  *Veraltete Files entfernt:* 8 Files aus `context/` gelöscht — `supabase-schema.sql`, `.svg`, `Ablaufdiagramm.png`/`.txt`, `datenbank-schema.html`, `submission-flow.html`, `admin-funnel-creator.html`, `saas-architektur.html`. Grund: zeigten nicht-existente Tabellen (`industries`, `funnel_options`, `themes`), nicht-existente Spalten (`industry`, `lead_price_base`, `flat_monthly_price`, `funnel_title`, `tenants.contact_email`) oder waren strukturell redundant zur neuen MD-Doku.
+
+  *Behalten + Rollen geklärt:* `tenant-funnel-editor.html` (Editor-Struktur), `funnel-funktionsweise.html` (UI-Konzept, wird Phase B.5 obsolet), `workflows.html` (Auth-Flows, Korrektheit verifiziert — `proxy.ts` ist Next-16-Standard), `resize-erklaerung.html` (postMessage), `saas-phasenplan.html` (visuelle High-Level Phasen-Übersicht — bleibt parallel zu `roadmap.md` als User-gepflegtes Status-Visual).
+
+  *Nächster Schritt:* Phase B startet mit **Aufgabe 25 — `tenant_members` + komplette RLS-Refactor**. Eigene Planungs-Session, Supabase-Branch via MCP, dann Code auf Feature-Branch `feature/aufgabe-25-tenant-members`.
+
+  (`CLAUDE.md`, `context/project-overview.md` (rewrite), `context/supabase-schema.md` (rewrite), `context/roadmap.md` (neu), `context/current-feature.md`, Memory-Files in `C:\Users\Stavros\.claude\projects\c--Programmieren-leadplug-saas\memory\`)
 
 - **Aufgabe 24 – Funnels-Übersicht-Polish & Roadmap-Wiederbelebung** – Mehrere kleinere UX-Verbesserungen rund um Funnel-Verwaltung und Einbindung, plus Roadmap-Erweiterung.
 

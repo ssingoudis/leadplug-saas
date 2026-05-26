@@ -1,20 +1,33 @@
-# Funnel Widget Platform – Projekt Overview
+# LeadPlug — Projekt-Architektur
 
-> Architektur, Business-Logik und Design-Entscheidungen. Code-Details stehen im jeweiligen Quellfile.
+> **Technische Architektur, Code-Struktur und DB-Schema.**
+> Strategische Entscheidungen (Positioning, Pricing, Tenant-Modell, GTM, Builder-Richtung) stehen in [`../CLAUDE.md`](../CLAUDE.md). Dieses File ist die rein technische Bauplan-Beschreibung.
 
 ---
 
-## 1. Projektziel
+## 1. Architektur-Überblick
 
-Einbettbarer **Sales-Funnel als iFrame-Widget** für Handwerksbetriebe aller Branchen (Solar, Wärmepumpe, Heizung, Sanitär, Elektro, etc.). Endkunde durchläuft einen mehrstufigen Click-Funnel (konfigurierbare Fragen + Kontaktformular) und hinterlässt seine Kontaktdaten.
+LeadPlug ist eine **einzige Next.js-App** (Vercel-Deployment) mit drei logisch getrennten Bereichen:
 
-**Mandantenfähig (Multi-Tenant):**
-- URL pro Funnel: `https://domain.de/[slug]` – Slug ist global eindeutig und kundenwählbar
-- Ein Tenant-Eintrag = ein Funnel. Braucht ein Kunde zwei Branchen → zwei Slugs, z.B. `musterfirma-solar` und `musterfirma-waermepumpe`
-- Alle Werte (Farben, Texte, Fragen, Preise) konfigurierbar in Supabase
-- Integration per `<iframe>` auf der Kundenseite
+### A. Öffentliches Widget — `app/[slug]/`
+- iFrame-Endpoint pro Funnel: `https://app.leadplug.de/[slug]`
+- Lädt `TenantConfig` via `getTenantConfig(slug)` (Server-Side)
+- Rendert `<Funnel/>` (komplett eigenständige Komponente in `components/funnel.tsx`)
+- Submission → `POST /api/submit`
+- `frame-ancestors *` + `X-Frame-Options: ALLOWALL` für maximale Embed-Kompatibilität
 
-**Geschäftsmodell:** Pro erfolgreicher Submission zahlt der Tenant eine **individuell verhandelte Gebühr** (`tenants.lead_price_base`, z.B. 3,00 €). Jede Submission wird in Supabase geloggt, Monatsabrechnung über die `monthly_billing`-View.
+### B. Admin-Bereich — `app/admin/`
+- **Nur für Stavros** (Plattform-Owner)
+- Globale Funnel-Übersicht, Leads aller Tenants, monatliche Statistik
+- Tools zum manuellen Funnel-Anlegen, Icon-Picker, Email/Success-Previews
+- Schutz via Supabase Auth + Server-Side-Check auf Owner-Identität
+
+### C. Tenant-Dashboard — `app/dashboard/`
+- Für **Agentur-User** (eingeloggt via Supabase Auth)
+- Eigene Funnels CRUD (Liste, Editor, Embed-Code, Löschen)
+- Lead-Posteingang (Status-Workflow: `offen` → `kontaktiert` → `abgeschlossen`)
+- Statistiken, Account-Settings, Billing (Stripe Customer Portal)
+- RLS sorgt dafür, dass Tenant nur seine eigenen Daten sieht
 
 ---
 
@@ -23,184 +36,458 @@ Einbettbarer **Sales-Funnel als iFrame-Widget** für Handwerksbetriebe aller Bra
 | Layer | Technologie |
 |---|---|
 | Framework | Next.js 16 (App Router) |
+| Runtime (API) | Node.js (`runtime = 'nodejs'`) — wegen Supabase Service Key |
 | Sprache | TypeScript (strict) |
 | Styling | TailwindCSS |
+| DB / Auth / RLS | Supabase (Postgres) |
+| Billing | Stripe (Subscription, Webhook-Sync) |
 | E-Mail | Resend + React Email |
-| Tenant-Config | Supabase |
-| Tracking-DB | Supabase (Postgres) |
+| Fonts | Self-hosted .woff2 in `public/fonts/` (DSGVO-konform) |
 | Deployment | Vercel |
 
-> **Kein PDF, keine Preisschätzung.** `generatePDF.ts` und `priceCalculator.ts` sind entfernt. Die Dankes-Mail enthält keine Preise.
+---
+
+## 3. Ordnerstruktur (aktueller Stand)
+
+### `app/` — Routes & Pages
+
+```
+app/
+├── [slug]/                          # Öffentliches Funnel-Widget
+│   ├── page.tsx                     # SSR-Page, lädt Config, rendert <Funnel/>
+│   └── layout.tsx                   # Minimales Layout für iFrame
+│
+├── admin/                           # Owner-Bereich (Stavros)
+│   ├── page.tsx                     # Dashboard
+│   ├── layout.tsx
+│   ├── AdminHeader.tsx
+│   ├── FunnelGrid.tsx
+│   ├── DailyLeadsChart.tsx
+│   ├── MonthlyStats.tsx
+│   ├── leads/                       # Globale Lead-Übersicht
+│   │   ├── page.tsx
+│   │   └── LeadsView.tsx
+│   ├── new/                         # Manuelles Anlegen eines Funnels
+│   │   ├── page.tsx
+│   │   └── IconPicker.tsx
+│   ├── preview/                     # Funnel-Preview-Tool
+│   │   └── page.tsx
+│   └── [slug]/                      # Einzelner Funnel: Detail/Preview
+│       ├── page.tsx
+│       ├── SubmissionsTable.tsx
+│       ├── EmbedBlock.tsx
+│       ├── EmailPreviewBlock.tsx, SuccessPreviewBlock.tsx
+│       ├── DynamicIframe.tsx, FunnelPreviewIframe.tsx
+│       ├── contact-preview/page.tsx
+│       ├── email-preview/route.tsx
+│       ├── lead-preview/route.tsx
+│       └── success-preview/page.tsx
+│
+├── dashboard/                       # Tenant-Bereich (Agentur)
+│   ├── page.tsx, layout.tsx
+│   ├── DashboardHeader.tsx, TabNav.tsx
+│   ├── TenantLeadsTable.tsx
+│   ├── funnels/
+│   │   ├── page.tsx                 # Funnel-Liste
+│   │   ├── new/                     # Neuer Funnel
+│   │   │   ├── page.tsx
+│   │   │   └── FunnelEditorClient.tsx
+│   │   └── [slug]/edit/             # Funnel bearbeiten
+│   │       ├── page.tsx
+│   │       └── FunnelEditorClient.tsx
+│   ├── leads/page.tsx
+│   ├── kontakte/page.tsx
+│   ├── statistiken/
+│   │   ├── page.tsx
+│   │   ├── MonthlyLeadsChart.tsx, MonthlyTable.tsx, DonutChart.tsx
+│   ├── account/page.tsx
+│   ├── billing/
+│   │   ├── page.tsx
+│   │   └── BillingClient.tsx
+│   └── embed/page.tsx
+│
+├── api/                             # Server-Routes
+│   ├── submit/route.ts              # Funnel-Submission (das Herzstück)
+│   ├── track-view/route.ts          # Funnel-View-Tracking
+│   ├── admin/create-funnel/route.ts # Admin: Funnel anlegen
+│   ├── tenant/
+│   │   ├── funnels/route.ts         # Tenant: Funnel-CRUD (Liste)
+│   │   ├── funnels/[slug]/route.ts  # Tenant: einzelner Funnel
+│   │   └── slug-check/route.ts      # Slug-Verfügbarkeit
+│   ├── leads/[id]/route.ts          # Lead-Update (Status)
+│   └── stripe/
+│       ├── checkout/route.ts        # Stripe Checkout-Session erstellen
+│       ├── portal/route.ts          # Stripe Customer-Portal-Link
+│       └── webhook/route.ts         # Subscription-Status-Sync
+│
+├── auth/                            # Supabase Auth Flow
+│   ├── callback/page.tsx
+│   └── confirm/route.ts
+│
+├── login/page.tsx, signup/page.tsx, logout/route.ts
+├── icons/page.tsx                   # Icon-Picker-Anzeige (intern)
+├── page.tsx, layout.tsx              # Landing / Root
+```
+
+### `lib/` — Server-Side Logic
+
+```
+lib/
+├── supabase/
+│   ├── server.ts                    # Supabase Client (Server Components, RLS-respektierend)
+│   ├── client.ts                    # Supabase Client (Browser, RLS-respektierend)
+│   └── admin.ts                     # Supabase Service-Key-Client (RLS-umgehend)
+├── getTenantConfig.ts               # Funnel-Config-Loader (joins funnels + tenants + questions)
+├── sendEmails.ts                    # 2-Mail-Versand via Resend (Promise.all)
+├── tracking.ts                      # logSubmission, isRateLimited, updateEmailStatus, logHoneypot
+├── billing.ts                       # Billing-/Plan-Logik
+├── stripe.ts                        # Stripe-Client-Setup, Price-IDs
+├── embedSnippet.ts                  # iFrame-Embed-Code-Generator
+├── resolveAnswer.ts                 # Antwort-Wert → Label-Auflösung (für E-Mails)
+├── validateContactField.ts          # Server-side Kontakt-Feld-Validierung
+├── editorUtils.ts                   # Funnel-Editor Helper
+└── utils.ts                         # Allgemeine Utilities (cn, etc.)
+```
+
+### `components/` — UI
+
+```
+components/
+├── funnel.tsx                       # ⚠️ Widget-UI (eigenständig, nur in Absprache anfassen)
+├── TenantFunnelClient.tsx           # Client-Wrapper (startedAt, referrer, userAgent)
+├── icons.tsx                        # SVG Icon-Map (icon_key → Component)
+├── icons/
+│   ├── _base.tsx
+│   ├── index.ts
+│   └── custom-*.tsx                 # Custom-Icons (Solar, Dach, Zeitfenster, etc.)
+│
+├── ui/                              # Dashboard / Tenant-Portal Komponenten
+│   ├── Button.tsx, Card.tsx, Badge.tsx
+│   ├── Input.tsx, StatTile.tsx
+│   ├── ThemeToggle.tsx, UserMenu.tsx
+│
+├── tenant-editor/                   # Funnel-Editor (Dashboard /funnels/.../edit)
+│   ├── FunnelEditorShell.tsx        # Editor-Container
+│   ├── EditorSidebar.tsx            # Navigation zwischen Sektionen
+│   ├── PreviewPanel.tsx             # Live-Preview rechts
+│   ├── SectionAccordion.tsx
+│   ├── SectionFragen.tsx            # Fragen-Editor
+│   ├── SectionTexte.tsx             # Text-Editor
+│   ├── SectionKontakt.tsx           # Kontaktformular-Editor
+│   ├── SectionDesign.tsx            # Theme-Editor (Farben, Font, Radius)
+│   ├── SlugInput.tsx, DeleteFunnelButton.tsx
+│   ├── EmailPreviewMockup.tsx, LeadEmailPreviewMockup.tsx
+│   ├── HealthCheckPanel.tsx
+│   └── defaults.ts
+│
+├── dashboard/FunnelCard.tsx
+└── leads/LeadsTable.tsx
+```
+
+### `emails/`, `types/`
+
+```
+emails/
+├── CustomerConfirmation.tsx         # Mail 1 – Endkunde (Danke)
+└── TenantLeadNotification.tsx       # Mail 2 – Tenant (Lead-Daten)
+
+types/
+└── index.ts                         # Alle TypeScript-Interfaces
+```
 
 ---
 
-## 3. Ordnerstruktur
+## 4. Datenbank-Schema (Stand 2026-05-26, aus Supabase)
 
+Alle Tabellen haben **RLS aktiviert**. Service-Key-Zugriffe umgehen RLS (nur server-side).
+
+### `tenants` (Stammdaten der Agentur-Accounts, 9 Zeilen aktuell)
+
+| Spalte | Typ | Hinweise |
+|---|---|---|
+| `id` | uuid, PK | `gen_random_uuid()` |
+| `slug` | text, unique | URL-Slug des Tenants (separater Slug zum Funnel-Slug!) |
+| `company_name` | text | Firmenname |
+| `is_active` | bool | Default `true` |
+| `public_email` | text | Angezeigte E-Mail in Kundenmail |
+| `public_phone` | text, nullable | Angezeigte Telefon |
+| `notification_email` | text | Empfänger der Lead-Benachrichtigungs-Mail |
+| `address`, `website` | text, nullable | |
+| `auth_user_id` | uuid, nullable | FK → `auth.users.id` (Owner) |
+| `billing_model` | enum `billing_model_type` | `per_lead` \| `per_month` \| `per_year` \| `free` |
+| `lead_price` | numeric, default `3.00` | Preis pro Lead bei `per_lead` |
+| `billing_price` | numeric, nullable | Pauschalpreis bei `per_month`/`per_year` |
+| `stripe_customer_id` | text | Stripe Customer (`cus_...`) |
+| `stripe_subscription_id` | text | Stripe Subscription (`sub_...`) |
+| `stripe_subscription_status` | text | `active`/`trialing`/`past_due`/`canceled`/`unpaid`/`incomplete` |
+| `stripe_price_id` | text | Stripe Price-ID des aktiven Plans |
+| `created_at`, `updated_at` | timestamptz | |
+
+### `funnels` (12 Zeilen aktuell)
+
+| Spalte | Typ | Hinweise |
+|---|---|---|
+| `id` | uuid, PK | |
+| `slug` | text, unique | **URL-Slug**, z.B. `https://app.leadplug.de/[slug]` |
+| `tenant_slug` | text, FK → `tenants.slug` | Zugehöriger Agentur-Account |
+| `is_active` | bool, default `true` | |
+| `funnel_name` | text, nullable | Anzeigename in der Dashboard-Übersicht |
+| `contact_form_title` | text, nullable | Titel über dem Kontaktformular |
+| `contact_form_subtitle` | text, nullable | |
+| `submit_button_label` | text, nullable | |
+| `success_message`, `response_message` | text, nullable | Erfolgs-Texte |
+| `answers_overview_label` | text, nullable | |
+| `privacy_text`, `privacy_policy_url` | text, nullable | |
+| `footer_text`, `footer_company_name`, `footer_email`, `footer_phone` | text, nullable | Funnel-spezifischer Footer (überschreibt Tenant-Werte) |
+| `notification_email` | text, nullable | Pro-Funnel Override für Lead-Benachrichtigung |
+| `email_sender_local` | text, nullable | Local-Part der Sender-Adresse (z.B. `info` für `info@example.com`) |
+| `contact_fields` | jsonb, nullable | Inline-Definition der Kontaktformular-Felder (siehe unten) |
+| `primary_color`, `text_color`, `background_color`, `page_background_color` | text, nullable | Theme |
+| `font` | text, nullable | `system`/`inter`/`poppins`/`roboto` |
+| `border_radius`, `max_width` | text, nullable | Theme |
+| `total_views` | int, default `0` | Inkrementiert via `track-view` |
+| `created_at`, `updated_at` | timestamptz | |
+
+**`contact_fields` jsonb-Struktur** (per `ContactFieldConfig`):
+```typescript
+{ key: string, type: 'radio'|'text'|'email'|'tel', label: string,
+  placeholder?: string, options?: string[],
+  required: boolean, visible: boolean, sort_order: number }
 ```
-app/[slug]/page.tsx                # Widget-Seite pro Funnel-Slug (iframe-target)
-app/[slug]/layout.tsx              # Minimales Layout ohne Header/Footer
-app/api/submit/route.ts            # POST: Formular → Log → 2 Mails
 
-components/funnel.tsx              # Generischer Funnel (branchenunabhängig)
-components/TenantFunnelClient.tsx  # Client-Wrapper (startedAt, referrer, userAgent)
+### `funnel_questions` (58 Zeilen aktuell)
 
-emails/CustomerConfirmation.tsx    # Mail 1 – Endkunde (Danke, kein PDF, kein Preis)
-emails/TenantLeadNotification.tsx  # Mail 2 – Betreiber (Kontaktdaten + Antworten)
+| Spalte | Typ | Hinweise |
+|---|---|---|
+| `id` | uuid, PK | |
+| `funnel_slug` | text, FK → `funnels.slug` | |
+| `question_key` | text | Key im `answers`-JSONB der Submission |
+| `title`, `subtitle` | text | |
+| `question_type` | enum `question_type` | `single_choice`/`multiple_choice`/`short_text`/`long_text`/`slider` |
+| `options` | jsonb, default `[]` | **Inline** — KEINE separate Tabelle |
+| `config` | jsonb, default `{}` | Frei strukturierbar (z.B. Slider-Range) |
+| `sort_order` | int, default `0` | Reihenfolge im Funnel |
+| `visible` | bool, default `true` | |
 
-lib/getTenantConfig.ts   # Supabase-Loader
-lib/sendEmails.ts        # Resend, 2 Mails via Promise.all
-lib/tracking.ts          # Supabase: logSubmission
-
-types/index.ts                      # Alle TypeScript-Interfaces
-context/supabase-schema-v2.sql      # DB-Schema v2 (idempotent, aktuelle DB)
-context/supabase-seed-v2.sql        # Seed-Daten v2 (Solar + Wärmepumpe Demo)
-context/database-guide.md           # Bedienungsanleitung zur Datenbank
-context/_alt-supabase-schema.sql    # Altes Schema (Referenz, nicht aktiv)
-context/_alt-supabase-seed.sql      # Alte Seed-Daten (Referenz, nicht aktiv)
-public/fonts/                       # Self-hosted Fonts (DSGVO)
+**`options` jsonb-Struktur:**
+```typescript
+[{ label: string, value: string, icon_key?: string, icon_url?: string }]
 ```
 
----
+> **Architektur-Hinweis:** Aktuell ist **eine Frage = ein Schritt** im Funnel. Schema-Refactor zu **Page → 1:N Fields** ist als kommende Aufgabe geplant (siehe CLAUDE.md §5).
 
-## 4. Supabase Datenbank-Schema
+### `submissions` (25 Zeilen, das wichtigste CRM-Feld!)
 
-Vollständiges Schema: [`supabase-schema-v2.sql`](supabase-schema-v2.sql), Seed-Daten: [`supabase-seed-v2.sql`](supabase-seed-v2.sql), Bedienungsanleitung: [`database-guide.md`](database-guide.md).
+| Spalte | Typ | Hinweise |
+|---|---|---|
+| `id` | uuid, PK | |
+| `funnel_slug` | text | Snapshot — auch wenn Funnel gelöscht wird, Submission bleibt |
+| `tenant_slug` | text | Snapshot |
+| `contact_anrede`, `contact_name`, `contact_email`, `contact_phone` | text | Legacy-Spalten (vor `contact`-jsonb) |
+| `contact` | jsonb, nullable | Komplettes Kontakt-Objekt (neue Struktur) |
+| `answers` | jsonb | `{ question_key: value }` |
+| `lead_price` | numeric, default `0` | Server-side gesetzt, Snapshot zum Submission-Zeitpunkt |
+| `source_url` | text, nullable | URL der einbettenden Seite |
+| `user_agent`, `ip_address` | text, nullable | |
+| `customer_email_sent`, `tenant_email_sent` | bool | Nach Email-Versand gesetzt |
+| `status` | text, check (`offen`/`kontaktiert`/`abgeschlossen`) | **CRM-Status-Workflow** |
+| `created_at` | timestamptz | |
 
-### Struktur (3 Ebenen)
+### `funnel_view_logs` (262 Zeilen, View-Tracking)
 
-```
-tenants           → Wer ist der Kunde? (Stammdaten, Billing)
-  └── funnels     → Welches Widget? (Slug, Branche, Texte, Theme)
-        └── funnel_questions → Fragen pro Funnel
-              └── funnel_options   → Antwortoptionen pro Frage
-```
-
-### Tabellen
-
-**`industries`** – Lookup-Tabelle der erlaubten Branchen
-- `id` (Text, PK): `solar`, `waermepumpe`, `heizung`, `sanitaer`, `elektro`, `general`
-- Neue Branche hinzufügen = ein INSERT, kein Schema-Change
-
-**`tenants`** – Kunden (Handwerksbetriebe)
-- Stammdaten: `company_name`, `contact_email`, `phone`, `address`, `website`
-- Billing: `billing_model`, `lead_price_base`, `flat_monthly_price`, `flat_monthly_lead_limit`
-- `stripe_customer_id` – vorbereitet, noch leer
-
-**`themes`** – Wiederverwendbare Design-Konfigurationen
-- `tenant_id NULL` = globale Vorlage; `tenant_id NOT NULL` = kundenspezifisch
-- Felder: `primary_color`, `text_color`, `background_color`, `font`, `border_radius`, `max_width`
-
-**`funnels`** – Das Widget (ein Tenant kann mehrere haben)
-- `slug` (UNIQUE) → URL: `domain.de/[slug]`
-- `tenant_id` → Zugehöriger Kunde
-- `theme_id` → Zugehöriges Design
-- `industry` → FK auf `industries`
-- Alle konfigurierbaren Texte (`funnel_title`, `submit_button_label`, …)
-
-**`funnel_questions`** – Fragen pro Funnel, geordnet
-- `funnel_id`, `sort_order`, `question_key` (UNIQUE pro Funnel = Key im `answers`-JSONB), `title`, `visible`
-
-**`funnel_options`** – Antwortoptionen pro Frage
-- `question_id`, `sort_order`, `label`, `value` (UNIQUE pro Frage)
-- `icon_key` (Built-in SVG in `funnel.tsx`) **oder** `icon_url` (externes Bild, Vorrang)
-
-**`submissions`** – Ein Eintrag pro Formular-Submission
-- `funnel_id` + `funnel_slug` (Snapshot), `tenant_id`
-- Kontaktdaten, `answers` (JSONB)
-- `lead_price` + `billing_model` – Snapshot zum Zeitpunkt der Submission (historisch korrekt)
-- `utm_source`, `utm_medium`, `utm_campaign` – vorbereitet, noch nicht ausgewertet
-- `honeypot_triggered` – Bots zählen nicht in `monthly_billing`
-- `billed`, `billed_at`
-
-**View `monthly_billing`** – Eine Zeile pro Tenant/Monat, aggregiert über alle Funnels des Tenants.
-
-
----
-
-## 5. Konfigurierbare Texte (mit Defaults)
-
-Alle Texte sind pro Funnel in Supabase einstellbar. Wenn `NULL`, greift der generische Default.
-
-| Feld in `funnels` | Default |
+| Spalte | Typ |
 |---|---|
-| `funnel_title` | `"Jetzt kostenloses Angebot anfordern"` |
-| `submit_button_label` | `"Anfrage absenden"` |
-| `success_message` | `"Vielen Dank! Wir melden uns in Kürze bei Ihnen."` |
-| `response_time_text` | `"24 Stunden"` |
-| `contact_form_subtitle` | `"Wer soll das Angebot erhalten?"` |
-| `privacy_text` | generischer Text ohne Branchennennung |
-| `privacy_policy_url` | `"#"` |
+| `id` | bigint, PK |
+| `funnel_slug`, `tenant_slug` | text |
+| `viewed_at` | timestamptz |
+
+### `honeypot_triggers` (0 Zeilen, Bot-Hits)
+
+| Spalte | Typ |
+|---|---|
+| `id` | uuid, PK |
+| `funnel_slug`, `ip_address` | text, nullable |
+| `created_at` | timestamptz |
+
+### Aktuelle Migrationen (chronologisch, 15 insgesamt)
+
+```
+20260513064118 — add_funnel_text_columns
+20260513064141 — add_funnel_contact_fields
+20260513172651 — add_total_views_to_funnels
+20260513172720 — add_increment_funnel_views_function
+20260516184043 — add_subtitle_to_funnel_questions
+20260518064921 — add_auth_user_id_and_rls_policies
+20260518073725 — add_funnel_view_logs
+20260518114633 — add_free_billing_model
+20260521175813 — add_footer_contact_columns_to_funnels
+20260521181741 — add_funnel_name_column
+20260521183515 — add_notification_email_to_funnels
+20260521190855 — rename_funnel_title_to_contact_form_title
+20260522121300 — add_crm_columns_to_submissions
+20260522124347 — drop_notes_from_submissions
+20260522192429 — add_stripe_fields_to_tenants
+```
 
 ---
 
-## 6. Icon-System
+## 5. API-Routes (Übersicht)
 
-**Icon-Datei:** `components/icons.tsx` enthält alle SVG-Komponenten als `ICON_MAP`. Referenzierung per `icon_key` (String). Neue Icons = neuer Eintrag in `icons.tsx`.
-
-**Built-in Icons (wachsende Liste):**
-- Allgemein: `House`, `Apartment`, `Factory`, `Check`, `Cross`, `Question`, `Calendar`, `Euro`, `Document`, `HousePartial`, `Star`
-- Energie/Heizung: `Thermometer`, `Flame`, `HeatPump`, `SolarPanel`, `Drop`, `Snowflake`
-- Handwerk: `Wrench`, `Lightning`
-
-**Custom Image:** Wenn `icon_url` in `funnel_options` gesetzt → `<img>` statt SVG. Vorrang über `icon_key`.
+| Route | Methode | Zweck |
+|---|---|---|
+| `/api/submit` | POST | Funnel-Submission (Honeypot, Rate-Limit, Validierung, Log, Mails) |
+| `/api/track-view` | POST | Funnel-View-Tracking inkrementieren |
+| `/api/admin/create-funnel` | POST | Admin: neuen Funnel anlegen |
+| `/api/tenant/funnels` | GET / POST | Tenant: Funnel-Liste / neuen anlegen |
+| `/api/tenant/funnels/[slug]` | GET / PUT / DELETE | Tenant: einzelner Funnel |
+| `/api/tenant/slug-check` | POST | Slug-Verfügbarkeit prüfen |
+| `/api/leads/[id]` | PUT | Lead-Status updaten (`offen`/`kontaktiert`/`abgeschlossen`) |
+| `/api/stripe/checkout` | POST | Stripe Checkout-Session erstellen |
+| `/api/stripe/portal` | POST | Stripe Customer-Portal-Link |
+| `/api/stripe/webhook` | POST | Stripe-Webhook-Handler (Subscription-Sync) |
 
 ---
 
-## 7. E-Mail-Flow: 2 Mails pro Submission
+## 6. Submission-Flow (`/api/submit`)
 
-Parallel via `Promise.all` in [`../lib/sendEmails.ts`](../lib/sendEmails.ts).
+`runtime = 'nodejs'`. Reihenfolge ist **kritisch**:
 
-**Mail 1 – Endkunde** (`contact.email`)
+1. **JSON-Parse** — bei Fehler 400
+2. **IP extrahieren** aus `x-forwarded-for` oder `x-real-ip`
+3. **Honeypot-Check** — wenn `honeypot`-Feld gefüllt: `logHoneypot()` + sofort `{success:true}` (Bots dürfen keinen 400 sehen, sonst lernen sie das Muster)
+4. **Rate-Limiting** — max. **3 Submissions pro IP in 10 Minuten** (via `isRateLimited(ip)`). Bei Überschreitung: `{success:true}` ohne DB-Eintrag
+5. **Struktur-Check** — `tenant`, `answers`, `contact` müssen existieren — bei Fehler 400
+6. **Tenant-Config laden** — `getTenantConfig(funnelSlug)` — bei null 404
+7. **Dynamische Feldvalidierung** — alle sichtbaren + required Felder aus `contactFields` werden validiert via `validateContactField()`. Bei Fehler 400 mit Feldnamen
+8. **`lead_price` server-side ableiten** — `tenantConfig.billingModel === 'per_lead' ? tenantConfig.leadPrice : 0`. **Client-Werte werden niemals vertraut**
+9. **`logSubmission()` in Supabase** — gibt `submissionId` zurück
+10. **`sendAllEmails()` in try/catch** — Fehler loggen, **nicht werfen**. Endkunde bekommt immer `{success:true}`
+11. **`updateEmailStatus()`** — `customer_email_sent` / `tenant_email_sent` Booleans in DB schreiben
+12. Response: `{success:true}`
+
+**Wichtig:** Schritte 9 → 10 → 11 in dieser Reihenfolge. Billing (Schritt 9) darf nie durch E-Mail-Fehler (Schritt 10) verloren gehen.
+
+---
+
+## 7. E-Mail-Flow
+
+2 Mails pro Submission, parallel via `Promise.all` in [`lib/sendEmails.ts`](../lib/sendEmails.ts).
+
+**Mail 1 — Endkunde** (Empfänger: `contact.email`)
+- Komponente: [`emails/CustomerConfirmation.tsx`](../emails/CustomerConfirmation.tsx)
 - Betreff: `Ihre Anfrage bei [companyName]`
-- Danke-Nachricht + Antwortzeit aus `response_time_text`
+- Inhalt: Danke + `responseMessage`
 - **Kein PDF, keine Preisschätzung**
 
-**Mail 2 – Betreiber** (`tenants.contact_email`)
+**Mail 2 — Tenant** (Empfänger: `notificationEmail` aus Funnel/Tenant)
+- Komponente: [`emails/TenantLeadNotification.tsx`](../emails/TenantLeadNotification.tsx)
 - Betreff: `Neue Anfrage von [contact.name]`
-- Kontaktdaten klickbar (`mailto:` / `tel:`), Antworten als Tabelle, Zeitstempel
-- `replyTo = contact.email`
+- Inhalt: Kontaktdaten (klickbar via `mailto:`/`tel:`) + Antworten als Tabelle
+- `replyTo = contact.email` (Tenant kann direkt antworten)
+
+**Sender-Adresse:** `[funnels.email_sender_local]@[Domain aus EMAIL_FROM]`. Wenn `email_sender_local` leer → Default aus `EMAIL_FROM`.
 
 ---
 
-## 8. API-Route
+## 8. Auth & RLS
 
-[`../app/api/submit/route.ts`](../app/api/submit/route.ts) – `POST`, runtime `nodejs`.
+### Supabase Auth
+- Provider: E-Mail/Passwort
+- Sign-up: [`app/signup/page.tsx`](../app/signup/page.tsx) → erstellt User in `auth.users` + Tenant-Eintrag in `public.tenants` mit `auth_user_id`
+- Login: [`app/login/page.tsx`](../app/login/page.tsx)
+- Callback: [`app/auth/callback/page.tsx`](../app/auth/callback/page.tsx), [`app/auth/confirm/route.ts`](../app/auth/confirm/route.ts)
+- Logout: [`app/logout/route.ts`](../app/logout/route.ts)
 
-**Reihenfolge (kritisch):**
-1. Honeypot-Check → bei ausgelöstem Honeypot `{success:true}` ohne DB-Eintrag zurückgeben
-2. Payload-Shape-Check → 400 bei ungültig
-3. `getTenantConfig(slug)` → 404 bei null / inaktiv
-4. **`logSubmission()` ZUERST** – Billing darf nie durch E-Mail-Fehler verloren gehen
-5. `sendAllEmails()` in try/catch → Endkunde bekommt immer `{success:true}`
-6. `lead_price` server-side aus `tenants.lead_price_base` lesen – Client-Wert wird nie vertraut
+### Drei Supabase-Clients (in `lib/supabase/`)
+- **`server.ts`** — für Server Components, **respektiert RLS** (User-Session-Token aus Cookies)
+- **`client.ts`** — für Client Components, **respektiert RLS**
+- **`admin.ts`** — Service-Key-Client, **umgeht RLS** (nur in API-Routes für `/api/submit`, `/api/stripe/webhook`, Admin-Endpoints)
+
+### RLS-Policies
+Alle 6 Tabellen haben `rls_enabled: true`. Die konkreten Policies sind über die Migration `add_auth_user_id_and_rls_policies` (20260518) eingeführt — Details sind in der Supabase-Console einsehbar. Tenant-Identity wird über `tenants.auth_user_id = auth.uid()` aufgelöst.
+
+> **Geplante Erweiterung** (siehe CLAUDE.md §2): Wechsel von `tenants.auth_user_id` (1:1) zu Junction-Table `tenant_members` (N:M mit Rollen). RLS-Policies müssen entsprechend angepasst werden.
 
 ---
 
-## 9. Bot-Schutz
+## 9. Billing & Stripe
 
-**Honeypot-Feld:** Unsichtbares Input-Feld im Formular (`visibility:hidden` + `position:absolute`). Bots füllen es aus, Menschen nicht. Server-Side: wenn gefüllt → `{success:true}` ohne DB-Eintrag (Bots sollen keinen 400-Fehler sehen, sonst lernen sie das Muster).
+### Aktueller Stand (Test-Modus)
+- Stripe Test-Keys in Vercel-ENV (`sk_test_...`)
+- Webhook-Endpoint: `https://app.leadplug.de/api/stripe/webhook`
+- Lauscht auf: `customer.subscription.created`, `.updated`, `.deleted`
+- Portal-Config: `bpc_1TZypEQ5RyuRWopI3iAIq9DL` (Test, sofortige Kündigung)
+
+### Flow
+1. Tenant klickt "Plan abonnieren" → `/api/stripe/checkout` erstellt Checkout-Session
+2. Stripe leitet zurück nach erfolgreichem Payment → Tenant landet auf `/dashboard/billing`
+3. Stripe-Webhook trigger → `/api/stripe/webhook` aktualisiert `stripe_subscription_status` und `stripe_price_id` in `tenants`
+4. Tenant kann via "Plan verwalten" das Stripe Customer Portal öffnen (`/api/stripe/portal`)
+
+### Wechsel auf Production (TODO bei Launch)
+1. Stripe-Dashboard: Toggle von Test- auf Live-Modus
+2. Live-Product + -Price anlegen (49€/Monat oder die aktuellen Tiers — Webhook/Standard/Pro, siehe CLAUDE.md §3)
+3. ENV-Vars in Vercel ersetzen: `STRIPE_SECRET_KEY` → `sk_live_...`, `STRIPE_PRICE_ID_*` → Live-IDs
+4. Live-Webhook in Stripe anlegen, `STRIPE_WEBHOOK_SECRET` updaten
+5. Live-Portal-Config anlegen, ID in `lib/stripe.ts` ersetzen
+6. Redeploy
+
+### `billing_model` Enum
+- `per_lead` — Tenant zahlt pro Submission (`tenants.lead_price`)
+- `per_month` — Monatspauschale (`tenants.billing_price`)
+- `per_year` — Jahrespauschale
+- `free` — kein Billing
+
+Bei `per_lead`: `lead_price` wird **bei jeder Submission** als Snapshot in `submissions.lead_price` gespeichert (historisch korrekt — Preisänderungen wirken nicht rückwirkend).
 
 ---
 
-## 10. postMessage Höhen-Kommunikation
+## 10. Theme-System (Widget-Rendering)
 
-Das Widget misst via `ResizeObserver` die Höhe des äußeren Container-Elements und sendet sie an den Parent-Frame:
+Das öffentliche Funnel-Widget rendert via CSS-Variablen in [`components/funnel.tsx`](../components/funnel.tsx):
 
-```js
-window.parent.postMessage({ type: 'funnel-resize', height: containerRef.scrollHeight }, '*')
+```css
+--funnel-primary       /* primary_color */
+--funnel-primary-hover
+--funnel-text          /* text_color */
+--funnel-text-muted
+--funnel-bg            /* background_color */
+--funnel-border
+--funnel-input-bg
+--funnel-radius        /* border_radius */
 ```
 
-Ohne Listener im Parent: Widget funktioniert weiter mit fixer iFrame-Höhe, kein Fehler.
+Plus `fontFamily`, `maxWidth`, `borderRadius` direkt als inline-Styles auf dem Container.
 
-**Einbettungs-Snippet für Kunden** (vollständig dokumentiert in `Anleitungen/iFrame-Code.md`):
+**Defaults** (wenn DB-Werte null):
+```
+primary_color:        #22c55e
+text_color:           #1f2937
+background_color:     #ffffff
+page_background:      transparent
+border_radius:        0.5rem
+max_width:            720px
+font:                 'system'
+```
+
+**Fonts:** Self-hosted in `public/fonts/` (DSGVO-konform — LG München 2022). Enum: `system | inter | poppins | roboto`. Neuen Font hinzufügen:
+1. `.woff2` in `public/fonts/<name>/` ablegen
+2. `@font-face` in `app/globals.css`
+3. Key in `FunnelFont` und `FONT_STACKS` in `funnel.tsx`
+
+---
+
+## 11. iFrame & postMessage
+
+### Embed-Snippet (für Tenant zum Einbau auf Kunden-Webseite)
+
 ```html
 <iframe
-  src="https://domain.de/[slug]"
+  src="https://app.leadplug.de/[slug]"
   id="funnel-widget"
   style="width:100%;border:none;display:block;height:500px;"
   scrolling="no"
-  loading="lazy">
-</iframe>
+  loading="lazy"></iframe>
 <script>
   window.addEventListener('message', function(e) {
     if (!e.data || e.data.type !== 'funnel-resize') return;
@@ -210,53 +497,85 @@ Ohne Listener im Parent: Widget funktioniert weiter mit fixer iFrame-Höhe, kein
 </script>
 ```
 
----
+Wird in [`lib/embedSnippet.ts`](../lib/embedSnippet.ts) generiert und im Dashboard unter `/dashboard/embed` angezeigt.
 
-## 11. Routing & iFrame
+### postMessage-Logik im Widget
+- `ResizeObserver` misst den äußeren Container nach jedem Render
+- Sendet `window.parent.postMessage({type:'funnel-resize', height: scrollHeight}, '*')`
+- Ohne Listener im Parent: Widget funktioniert weiter mit fester iFrame-Höhe — kein Fehler
 
-- [`../app/[slug]/page.tsx`](../app/[slug]/page.tsx): lädt Config via Funnel-Slug, `notFound()` bei ungültigem Slug, inaktivem Funnel oder inaktivem Tenant
-- [`../app/[slug]/layout.tsx`](../app/[slug]/layout.tsx): minimales HTML, optimiert für iFrame
-- [`../next.config.mjs`](../next.config.mjs): `frame-ancestors *` und `X-Frame-Options: ALLOWALL`
-
----
-
-## 12. Umgebungsvariablen (`.env.local`)
-
-```env
-RESEND_API_KEY=re_xxxxx
-EMAIL_FROM=noreply@domain.de
-SUPABASE_URL=https://xxxx.supabase.co
-SUPABASE_SERVICE_KEY=eyJxxxxx        # nur server-side!
-NEXT_PUBLIC_BASE_URL=https://domain.de
-```
+> **Geplante Erweiterung** (CLAUDE.md §5): Script-/Web-Component-Embed als nahtlose Alternative für Pro-Plan.
 
 ---
 
-## 13. Design-Entscheidungen
+## 12. Bot-Schutz
+
+### Honeypot
+- Unsichtbares Input-Feld im Formular (`visibility:hidden` + `position:absolute`)
+- Bots füllen es aus, Menschen nicht
+- Server-Side in `/api/submit`: wenn gefüllt → `logHoneypot()` + `{success:true}` ohne DB-Eintrag
+- Bots dürfen keinen 400 sehen, sonst lernen sie das Muster
+
+### Rate-Limiting
+- Max. **3 Submissions pro IP in 10 Minuten**
+- Bei Überschreitung: `{success:true}` ohne DB-Eintrag
+- Implementiert in `lib/tracking.ts` (`isRateLimited(ip)`)
+
+### Slug-Validierung
+- `getTenantConfig` lehnt Slugs ab, die nicht dem Pattern `/^[a-z0-9][a-z0-9-_]*$/` entsprechen
+- Slugs mit `_`-Prefix sind reserviert (interne Nutzung)
+
+---
+
+## 13. TypeScript-Typen
+
+Alle Domain-Typen in [`types/index.ts`](../types/index.ts). Wichtigste:
+
+- `TenantConfig` — was `getTenantConfig()` zurückgibt (alles was das Widget zum Rendern braucht)
+- `ContactFieldConfig` — Definition eines Kontaktformular-Feldes (jsonb in DB)
+- `FunnelFont` — Font-Enum (`'system' | 'inter' | 'poppins' | 'roboto'`)
+- `FunnelTheme` — Theme-Werte mit Defaults
+- `QuestionType` — DB-Enum (`'single_choice' | 'multiple_choice' | 'short_text' | 'long_text' | 'slider'`)
+- `BillingModel` — DB-Enum (`'per_lead' | 'per_month' | 'per_year' | 'free'`)
+
+---
+
+## 14. Geplante Schema-Änderungen (Phase B/C)
+
+Detaillierte Roadmap: siehe **CLAUDE.md §5 (Builder-Richtung)**. Kurzüberblick der bevorstehenden DB-Migrationen:
+
+| Aufgabe | Schema-Impact |
+|---|---|
+| **Page → 1:N Fields** | Neue Tabelle `pages` (FK auf funnels); `funnel_questions` wird zu `fields` mit FK auf `pages` statt `funnel_slug`. Daten-Migration für bestehende 58 Fragen nötig |
+| **Multi-User pro Tenant** | Neue Tabelle `tenant_members(tenant_id, auth_user_id, role)` mit Rollen-Enum. RLS-Policies migrieren. `tenants.auth_user_id` als Owner-Shortcut behalten oder deprecaten |
+| **Logic Jumps** | Neue Spalte oder Junction `field_jump_rules` (per Frage: `if answer = X then go to field Y`) |
+| **Webhook-Export hardening** | Neue Tabelle `webhook_subscriptions(tenant_id, url, secret, ...)` + `webhook_delivery_attempts` für Retry-Logik |
+
+**Workflow für alle Migrations** (siehe CLAUDE.md §13):
+1. Supabase-Branch erstellen (`mcp__supabase__create_branch`)
+2. Migration dort testen
+3. Review → Merge in Production
+4. Bei Problemen: Rollback via DOWN-Migration oder dokumentierter manueller Pfad
+
+---
+
+## 15. Design-Entscheidungen (kondensiert)
 
 | Entscheidung | Begründung |
 |---|---|
-| Ein Slug = ein Funnel | Einfaches Routing, stabile iFrame-URLs; zwei Branchen = zwei Slugs |
+| Funnel-Slug ≠ Tenant-Slug | Ein Tenant kann mehrere Funnels haben; Funnel-Slug ist die öffentliche URL |
+| Eine Next.js-App für alle 3 Bereiche (Widget/Admin/Dashboard) | Shared Code, simples Deployment, gleiche Auth |
 | Supabase als primäre Config | Tenant-Management ohne Code-Deployment |
-| Supabase ZUERST loggen | Billing darf nie durch E-Mail-Fehler verloren gehen |
-| Kein PDF, keine Preisschätzung | Branchenunabhängig; vereinfachte Architektur |
+| Service-Key-Client nur server-side | RLS-Bypass darf nie zum Browser gelangen |
+| Supabase ZUERST loggen, dann E-Mail | Billing darf nicht durch E-Mail-Fehler verloren gehen |
 | 2 Mails via `Promise.all` | Paralleler Versand, minimale Latenz |
-| Honeypot statt CAPTCHA | Kein Konversionsverlust; unsichtbar für den Nutzer |
-| postMessage für Höhe | Eltern-Frame kann iFrame dynamisch anpassen |
-| Generischer Funnel (eine Datei) | Neue Branche = neue DB-Einträge, keine neue Komponenten-Datei |
+| Honeypot statt CAPTCHA | Null Conversion-Verlust; unsichtbar für Nutzer |
+| Rate-Limiting per IP zusätzlich | Zweite Verteidigungslinie gegen automatisierte Submissions |
+| postMessage für iFrame-Höhe | Eltern-Frame kann iFrame dynamisch anpassen |
+| Generischer Funnel (eine Datei) | Neue Branche = neue DB-Einträge, keine neue Komponente |
 | `icon_key` + optionale `icon_url` | 80% mit Built-in-Icons abgedeckt; Custom-Bilder möglich |
-| Konfigurierbare Texte mit Defaults | Kein Branchenbezug hardcoded; Tenant kann anpassen, muss aber nicht |
-| iFrame statt Web Component | Maximale Kompatibilität (WordPress, Jimdo, Squarespace) |
+| Konfigurierbare Texte mit Defaults | Keine Branche hardcoded; Tenant kann anpassen, muss aber nicht |
+| iFrame statt Web Component (Standard) | Maximale Kompatibilität (WordPress, Jimdo, Squarespace). Web-Component kommt als Pro-Feature in v2 |
 | Kuratierter Font-Enum | Self-Hosting DSGVO-konform (LG München 2022) |
-| `lead_price` pro Submission | Preisänderungen wirken nicht rückwirkend auf alte Leads |
-
----
-
-## 14. Spätere Erweiterungen (nicht jetzt umsetzen)
-
-- Admin-Dashboard für Tenant-Anlage ohne SQL
-- SMS-Verifizierung als optionaler Lead-Tier (`lead_price_sms`, `sms_verification_enabled`)
-- Stripe-Integration für automatische Monatsabrechnung
-- UTM-Parameter in `submissions`
-- Funnel-Start- und Step-Events (Abbruchquote)
-- A/B-Testing verschiedener Fragen-Reihenfolgen
+| `lead_price` Snapshot pro Submission | Preisänderungen wirken nicht rückwirkend auf alte Leads |
+| `submissions.status` als CRM-Workflow | Lead-Posteingang ist bereits angelegt — `offen` → `kontaktiert` → `abgeschlossen` |
