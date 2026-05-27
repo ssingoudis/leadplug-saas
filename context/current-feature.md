@@ -111,6 +111,52 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ## History
 
+- **Aufgabe 29 — Phase B.6 (Webhook-Schema, nur DDL) ✅ (2026-05-27)**
+
+  Migration auf Production appliziert. Schema-Foundation für späteren Webhook-Tier-Launch (Phase C.5). **Kein App-Code-Touch** — Editor/Dashboard/Submit-Flow byte-identisch. Tabellen sind initial leer (additive Migration, kein Backfill nötig).
+
+  **Migration:**
+  - `20260528170000_aufgabe_29_webhook_schema.sql` — single-step additive Migration. DOWN-File parallel.
+
+  **2 neue Tabellen:**
+  - `webhook_subscriptions(id, tenant_id, url, secret, event_types[], is_active, created_at, updated_at)` — pro Tenant 1..N Webhooks. CHECK-Constraints: `url LIKE 'http%' AND length >= 10`, `length(secret) >= 16`. FK auf `tenants` mit ON DELETE CASCADE. `updated_at`-Trigger.
+  - `webhook_delivery_attempts(id, subscription_id, submission_id, attempt_count, status, last_error, delivered_at, created_at)` — Append-only Audit-Trail jedes Versuchs. CHECK-Constraints: `status IN (pending|retrying|success|failed)`, `attempt_count >= 1`, `delivered_when_success` (delivered_at NOT NULL bei status='success'). FK auf `webhook_subscriptions` mit ON DELETE CASCADE, FK auf `submissions(id)` mit ON DELETE SET NULL (Audit bleibt erhalten auch wenn Submission gelöscht).
+
+  **5 RLS-Policies (Defense-in-Depth-Pattern aus B.1 fortgesetzt):**
+  - `webhook_subscriptions_select`: alle Tenant-Member sehen eigene Subscriptions
+  - `webhook_subscriptions_insert/update`: owner+admin
+  - `webhook_subscriptions_delete`: owner only (CASCADE entfernt alle delivery_attempts mit)
+  - `webhook_delivery_attempts_select`: User-Client kann eigene Subscription-Logs lesen
+  - **Kein INSERT/UPDATE/DELETE auf delivery_attempts via User-Client** — Sender (Phase C.5) schreibt via Service-Key
+
+  **7 Indices:**
+  - `idx_webhook_subscriptions_tenant_id` (Tenant-Lookup)
+  - `idx_webhook_subscriptions_active` partial `WHERE is_active = true` (Sender skipt inaktive)
+  - `idx_webhook_delivery_attempts_subscription(subscription_id, created_at DESC)` (Latest-N pro Subscription)
+  - `idx_webhook_delivery_attempts_submission` partial `WHERE submission_id IS NOT NULL` ("Welche Webhooks haben diese Submission delivered?")
+  - `idx_webhook_delivery_attempts_retry_queue` partial `WHERE status IN ('pending','retrying')` (Retry-Worker scannt nur Open-Items)
+
+  **Architektur-Entscheidungen:**
+  - `event_types` als `text[]` (kein Enum) — flexibler bei neuen Events, keine Schema-Migration nötig. Initial relevant: `submission.created`. App-Code wird die Liste der gültigen Event-Types als Konstante pflegen, wenn Sender kommt.
+  - `status` als text + CHECK statt Enum — analog zu `submissions.status`-Pattern, leichter erweiterbar.
+  - `secret` als text mit min-length 16 — App generiert beim Create (Random Base64, ≥32 Zeichen), UI darf Wert nur 1× anzeigen. Format-Kontrolle bleibt im App-Code, DB enforced nur Minimal-Länge.
+  - `submission_id` FK mit ON DELETE SET NULL — Delivery-Audit bleibt erhalten auch wenn Submission gelöscht (gleiches Pattern wie `submissions.tenant_id` seit Aufgabe 26).
+  - `subscription_id` FK mit ON DELETE CASCADE — wenn Tenant Subscription löscht, gehen die Delivery-Logs mit; Logs sind nur für DIESE Subscription relevant.
+  - `delivered_at NOT NULL`-Invariante bei `status='success'` — DB enforced Daten-Integrität (Sender muss `delivered_at` bei Erfolg setzen).
+  - `updated_at`-Trigger nur auf `subscriptions`. `delivery_attempts` ist append-only, kein Update durch User; bei Retry wird ein NEUER Eintrag mit höherem `attempt_count` geschrieben (saubere Audit-History).
+
+  **Verifikation:**
+  - DB: 2 neue Tabellen, 5 Policies (alle korrekt mit `current_tenant_ids()`/`current_tenant_role()` Helper), 7 Indices, 1 Trigger, beide Tabellen RLS-enabled (via `rls_auto_enable` Event-Trigger automatisch).
+  - Kein TypeScript-/Build-Touch nötig (Schema-only).
+
+  **Nicht in dieser Aufgabe (Phase C.5):**
+  - Sender-Code: HTTP-POST + HMAC-Signatur + JSON-Body
+  - Retry-Worker: Cron-Scan auf Retry-Queue-Index, Exponential-Backoff
+  - Dashboard-UI: Subscription-CRUD, Secret-1x-Anzeige, Delivery-Log-Viewer
+  - `lib/webhookEvents.ts`: konstanten-Liste der gültigen Event-Types
+
+  *Branch:* `feature/aufgabe-29-webhook-schema` mit `--no-ff` in main gemerged.
+
 - **Aufgabe 28 — Phase B.4 (tenants als reine Agentur-Account-Tabelle) ✅ (2026-05-27)**
 
   Beide Migrationen auf Production appliziert (28a Backfills + Constraints, 28b DROP), Code-Refactor live auf Vercel (Commit d741902), Production-Smoke-Test grün (`https://app.leadplug.de/demo-solar` rendert sauber), supabase-schema.md regeneriert, Roadmap auf ✅.

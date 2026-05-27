@@ -6,11 +6,11 @@
 > Für architektonisches Verständnis und Zweck der Tabellen: siehe [`project-overview.md`](project-overview.md) §4.
 > Bei jeder neuen Migration: dieses File neu regenerieren.
 
-- **Stand:** 2026-05-27 (nach Aufgabe 28 / Phase B.4)
-- **Letzte Migrationen:** `20260528150000_aufgabe_28a_tenants_cleanup_phase1` + `20260528160000_aufgabe_28b_tenants_drop_endcustomer_columns`
-- **Tabellen:** 7 in `public` (alle mit RLS aktiviert)
+- **Stand:** 2026-05-27 (nach Aufgabe 29 / Phase B.6)
+- **Letzte Migration:** `20260528170000_aufgabe_29_webhook_schema`
+- **Tabellen:** 9 in `public` (alle mit RLS aktiviert)
 - **Enums:** 3 (`billing_model_type`, `question_type`, `tenant_member_role`)
-- **Functions:** 5 — **Triggers:** 3 — **Views:** 0
+- **Functions:** 5 — **Triggers:** 4 — **Views:** 0
 
 ---
 
@@ -21,7 +21,7 @@ Alle Tabellen haben `rls_enabled = true`. **Defense-in-Depth: CRUD läuft über 
 - Tenant-Identity wird via Junction-Table aufgelöst: `auth.uid()` → `tenant_members.auth_user_id` → `tenant_members.tenant_id` → Daten.
 - Helper-Funktionen `current_tenant_ids()` und `current_tenant_role(uuid)` (`SECURITY DEFINER`, `STABLE`, `search_path` gepinnt) bündeln die Auflösung — alle Policies referenzieren sie.
 - Rollen-Enum `tenant_member_role` = `owner | admin | member`. Owner darf Tenant löschen, owner+admin dürfen Tenant-Settings updaten und Members verwalten, Member darf eigene Membership selbst entfernen.
-- **20 Policies über 6 Tabellen** (SELECT/INSERT/UPDATE/DELETE — pro Tabelle nur die sinnvollen). `honeypot_triggers` bleibt policy-frei (Bot-Telemetrie, nur Service-Key).
+- **25 Policies über 8 Tabellen** (SELECT/INSERT/UPDATE/DELETE — pro Tabelle nur die sinnvollen). `honeypot_triggers` bleibt policy-frei (Bot-Telemetrie, nur Service-Key).
 - Seit Aufgabe 26 (Phase B.2): alle Policies referenzieren **direkt UUID-Spalten** (`tenant_id`, `funnel_id`), keine Slug-Walks mehr.
 
 **Service-Key-Client (`lib/supabase/admin.ts`, RLS-Bypass) ist NUR noch zulässig für:**
@@ -464,7 +464,82 @@ View-Tracking pro Funnel-Render. Aktuell 277 Zeilen.
 
 ---
 
-### 3.7 `honeypot_triggers`
+### 3.7 `webhook_subscriptions`
+
+Pro Tenant 1..N Webhook-Endpoints, an die Events geliefert werden. **Schema-Foundation für Webhook-Tier-Launch (Phase C.5)** — Sender-Code existiert noch nicht. Aktuell 0 Zeilen.
+
+**Columns:**
+
+| Spalte | Typ | Nullable | Default | Constraints / Comment |
+|---|---|---|---|---|
+| `id` | uuid | NO | `gen_random_uuid()` | PK |
+| `tenant_id` | uuid | NO | — | FK → `tenants.id` ON DELETE CASCADE |
+| `url` | text | NO | — | CHECK: `LIKE 'http%' AND length(url) >= 10`. HTTPS empfohlen, http nur für lokale Tests. |
+| `secret` | text | NO | — | CHECK: `length(secret) >= 16`. HMAC-Signing-Secret, app-generated bei Create. |
+| `event_types` | text[] | NO | `'{}'` | Liste der abonnierten Event-Types, z.B. `{"submission.created"}`. |
+| `is_active` | bool | NO | `true` | |
+| `created_at` | timestamptz | NO | `now()` | |
+| `updated_at` | timestamptz | NO | `now()` | via Trigger |
+
+**Foreign Keys:** `tenant_id` → `tenants.id` ON DELETE CASCADE
+
+**Indices:**
+- `webhook_subscriptions_pkey` — UNIQUE btree(id)
+- `idx_webhook_subscriptions_tenant_id` — btree(tenant_id)
+- `idx_webhook_subscriptions_active` — btree(tenant_id, is_active) **WHERE is_active = true** (partial)
+
+**Triggers:**
+- `webhook_subscriptions_updated_at` — BEFORE UPDATE → `update_updated_at()`
+
+**RLS-Policies:**
+- `webhook_subscriptions_select` (SELECT, `authenticated`): `tenant_id IN (SELECT current_tenant_ids())`
+- `webhook_subscriptions_insert` (INSERT, `authenticated`): `current_tenant_role(tenant_id) IN ('owner','admin')`
+- `webhook_subscriptions_update` (UPDATE, `authenticated`): `current_tenant_role(tenant_id) IN ('owner','admin')` (USING + WITH CHECK)
+- `webhook_subscriptions_delete` (DELETE, `authenticated`): `current_tenant_role(tenant_id) = 'owner'` (nur Owner — Delete entfernt via CASCADE auch alle delivery_attempts)
+
+---
+
+### 3.8 `webhook_delivery_attempts`
+
+Audit-Trail jeder Webhook-Zustellungs-Versuche. Append-only (kein UPDATE durch User-Client). Aktuell 0 Zeilen.
+
+**Columns:**
+
+| Spalte | Typ | Nullable | Default | Constraints / Comment |
+|---|---|---|---|---|
+| `id` | uuid | NO | `gen_random_uuid()` | PK |
+| `subscription_id` | uuid | NO | — | FK → `webhook_subscriptions.id` ON DELETE CASCADE |
+| `submission_id` | uuid | YES | — | FK → `submissions.id` ON DELETE SET NULL (Audit bleibt erhalten) |
+| `attempt_count` | int | NO | `1` | CHECK >= 1 |
+| `status` | text | NO | `'pending'` | CHECK IN (`pending`, `retrying`, `success`, `failed`) |
+| `last_error` | text | YES | — | NULL bei Erfolg |
+| `delivered_at` | timestamptz | YES | — | NULL bis erfolgreich |
+| `created_at` | timestamptz | NO | `now()` | |
+
+**Check Constraints:**
+- `status` ∈ `{pending, retrying, success, failed}`
+- `attempt_count >= 1`
+- `delivered_when_success`: wenn `status='success'`, muss `delivered_at IS NOT NULL`
+
+**Foreign Keys:**
+- `subscription_id` → `webhook_subscriptions.id` ON DELETE CASCADE
+- `submission_id` → `submissions.id` ON DELETE SET NULL
+
+**Indices:**
+- `webhook_delivery_attempts_pkey` — UNIQUE btree(id)
+- `idx_webhook_delivery_attempts_subscription` — btree(subscription_id, created_at DESC) — für "letzte N Versuche pro Subscription"
+- `idx_webhook_delivery_attempts_submission` — btree(submission_id) **WHERE submission_id IS NOT NULL** (partial)
+- `idx_webhook_delivery_attempts_retry_queue` — btree(created_at) **WHERE status IN ('pending','retrying')** (partial) — Retry-Queue-Scan
+
+**Triggers:** keine (Append-only)
+
+**RLS-Policies:**
+- `webhook_delivery_attempts_select` (SELECT, `authenticated`): `subscription_id IN (SELECT id FROM webhook_subscriptions WHERE tenant_id IN (SELECT current_tenant_ids()))`
+- **Kein INSERT/UPDATE/DELETE-Policy** — Schreibzugriff nur via Service-Key durch System-Code (Webhook-Sender, kommt in Phase C.5)
+
+---
+
+### 3.9 `honeypot_triggers`
 
 Bot-Hits-Log. Aktuell 0 Zeilen (Honeypot greift selten / Bots sind sauber abgewehrt).
 
@@ -515,9 +590,9 @@ Bot-Hits-Log. Aktuell 0 Zeilen (Honeypot greift selten / Bots sind sauber abgewe
 - `submissions.contact` — komplettes Kontakt-Objekt (einzige Quelle seit Aufgabe 27)
 - `submissions.answers` — `{ question_key: value }`
 
-### 4.5 RLS-Schema (komplett, Stand B.2)
-- **Alle 7 Tabellen** haben `rls_enabled = true`.
-- **20 Policies** über 6 Tabellen (alle außer `honeypot_triggers`). Verteilung: tenants(3) + tenant_members(4) + funnels(4) + funnel_questions(4) + submissions(3) + funnel_view_logs(2). `funnel_view_logs.update` und `submissions.insert` fehlen absichtlich (Append-only via Service-Key bzw. anonymer Endpoint).
+### 4.5 RLS-Schema (komplett, Stand B.6)
+- **Alle 9 Tabellen** haben `rls_enabled = true` (via `rls_auto_enable` Event-Trigger automatisch bei CREATE TABLE).
+- **25 Policies** über 8 Tabellen (alle außer `honeypot_triggers`). Verteilung: tenants(3) + tenant_members(4) + funnels(4) + funnel_questions(4) + submissions(3) + funnel_view_logs(2) + webhook_subscriptions(4) + webhook_delivery_attempts(1). `webhook_delivery_attempts.insert/update/delete` fehlen absichtlich (Append-only via Service-Key — Sender-Code kommt in Phase C.5).
 - Alle Policies referenzieren **direkt UUID-Spalten** (`tenant_id`, `funnel_id`) — keine Slug-Walks mehr.
 - Helper `current_tenant_ids()` und `current_tenant_role(uuid)` werden in allen Policies referenziert (siehe §2).
 - `honeypot_triggers` bleibt policy-frei (Bot-Telemetrie, nur Service-Key zulässig).
@@ -530,7 +605,7 @@ Bot-Hits-Log. Aktuell 0 Zeilen (Honeypot greift selten / Bots sind sauber abgewe
 
 ## 5. Stand der Schema-Evolution
 
-22 Migrationen seit Projektbeginn:
+23 Migrationen seit Projektbeginn:
 
 ```
 20260513064118 — add_funnel_text_columns
@@ -555,13 +630,13 @@ Bot-Hits-Log. Aktuell 0 Zeilen (Honeypot greift selten / Bots sind sauber abgewe
 20260528140000 — aufgabe_27_drop_submissions_contact_legacy     ← Phase B.3
 20260528150000 — aufgabe_28a_tenants_cleanup_phase1             ← Phase B.4 (Backfills + Constraints)
 20260528160000 — aufgabe_28b_tenants_drop_endcustomer_columns   ← Phase B.4 (DROP)
+20260528170000 — aufgabe_29_webhook_schema                      ← Phase B.6 (additive)
 ```
 
 ### Geplante Migrationen (siehe roadmap.md Phase B)
 
 1. **B.5 `pages` + `fields`** — Page → 1:N Refactor; Kontaktfelder werden reguläre Field-Types.
-2. **B.6 Webhook-Schema** — `webhook_subscriptions` + `webhook_delivery_attempts` (nur Struktur).
-3. **B.7 Updated-At-Konsistenz** — Trigger auf alle relevanten Tabellen.
+2. **B.7 Updated-At-Konsistenz** — Trigger auf alle relevanten Tabellen (`submissions`, `pages`/`fields` nach B.5, etc.).
 
 ---
 
