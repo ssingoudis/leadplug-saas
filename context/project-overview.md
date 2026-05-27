@@ -197,23 +197,21 @@ types/
 
 ---
 
-## 4. Datenbank-Schema (Stand 2026-05-27, nach Aufgabe 25 / Phase B.1)
+## 4. Datenbank-Schema (Stand 2026-05-27, nach Aufgaben 25–27 / Phase B.1–B.3)
 
-Alle Tabellen haben **RLS aktiviert**. Service-Key-Zugriffe umgehen RLS (nur server-side).
+Alle Tabellen haben **RLS aktiviert** (20 Policies über 6 Tabellen). Service-Key-Zugriffe umgehen RLS (nur server-side). Die maschinelle Voll-Referenz mit Indices, Triggers, Policies und Functions steht in [`supabase-schema.md`](supabase-schema.md).
 
 ### `tenants` (Stammdaten der Agentur-Accounts, 9 Zeilen aktuell)
 
 | Spalte | Typ | Hinweise |
 |---|---|---|
 | `id` | uuid, PK | `gen_random_uuid()` |
-| `slug` | text, unique | URL-Slug des Tenants (separater Slug zum Funnel-Slug!) |
 | `company_name` | text | Firmenname |
 | `is_active` | bool | Default `true` |
-| `public_email` | text | Angezeigte E-Mail in Kundenmail |
-| `public_phone` | text, nullable | Angezeigte Telefon |
-| `notification_email` | text | Empfänger der Lead-Benachrichtigungs-Mail |
-| `address`, `website` | text, nullable | |
-| `auth_user_id` | uuid, nullable | FK → `auth.users.id` (Owner) |
+| `public_email` | text | Angezeigte E-Mail in Kundenmail (B.4: drop geplant) |
+| `public_phone` | text, nullable | Angezeigte Telefon (B.4: drop geplant) |
+| `notification_email` | text | Empfänger der Lead-Benachrichtigungs-Mail (B.4: drop geplant — `funnels.notification_email` wird Pflicht) |
+| `address`, `website` | text, nullable | (`address` B.4: drop geplant) |
 | `billing_model` | enum `billing_model_type` | `per_lead` \| `per_month` \| `per_year` \| `free` |
 | `lead_price` | numeric, default `3.00` | Preis pro Lead bei `per_lead` |
 | `billing_price` | numeric, nullable | Pauschalpreis bei `per_month`/`per_year` |
@@ -221,7 +219,9 @@ Alle Tabellen haben **RLS aktiviert**. Service-Key-Zugriffe umgehen RLS (nur ser
 | `stripe_subscription_id` | text | Stripe Subscription (`sub_...`) |
 | `stripe_subscription_status` | text | `active`/`trialing`/`past_due`/`canceled`/`unpaid`/`incomplete` |
 | `stripe_price_id` | text | Stripe Price-ID des aktiven Plans |
-| `created_at`, `updated_at` | timestamptz | |
+| `created_at`, `updated_at` | timestamptz | `updated_at` via Trigger |
+
+> **In Aufgabe 26 gedroppt:** `slug` (Tenant-Slug war nirgendwo öffentlich genutzt), `auth_user_id` (User↔Tenant-Mapping läuft jetzt ausschließlich über `tenant_members`).
 
 ### `tenant_members` (3 Zeilen aktuell, eingeführt mit Aufgabe 25 / Phase B.1)
 
@@ -242,8 +242,8 @@ UNIQUE `(tenant_id, auth_user_id)` — kein User doppelt im selben Tenant. Owner
 | Spalte | Typ | Hinweise |
 |---|---|---|
 | `id` | uuid, PK | |
-| `slug` | text, unique | **URL-Slug**, z.B. `https://app.leadplug.de/[slug]` |
-| `tenant_slug` | text, FK → `tenants.slug` | Zugehöriger Agentur-Account |
+| `slug` | text, unique | **URL-Slug**, z.B. `https://app.leadplug.de/[slug]` — nach Anlage unveränderlich |
+| `tenant_id` | uuid, FK → `tenants.id` ON DELETE CASCADE | Zugehöriger Agentur-Account |
 | `is_active` | bool, default `true` | |
 | `funnel_name` | text, nullable | Anzeigename in der Dashboard-Übersicht |
 | `contact_form_title` | text, nullable | Titel über dem Kontaktformular |
@@ -274,8 +274,8 @@ UNIQUE `(tenant_id, auth_user_id)` — kein User doppelt im selben Tenant. Owner
 | Spalte | Typ | Hinweise |
 |---|---|---|
 | `id` | uuid, PK | |
-| `funnel_slug` | text, FK → `funnels.slug` | |
-| `question_key` | text | Key im `answers`-JSONB der Submission |
+| `funnel_id` | uuid, FK → `funnels.id` ON DELETE CASCADE | |
+| `question_key` | text | Key im `answers`-JSONB der Submission. UNIQUE(funnel_id, question_key) |
 | `title`, `subtitle` | text | |
 | `question_type` | enum `question_type` | `single_choice`/`multiple_choice`/`short_text`/`long_text`/`slider` |
 | `options` | jsonb, default `[]` | **Inline** — KEINE separate Tabelle |
@@ -290,15 +290,15 @@ UNIQUE `(tenant_id, auth_user_id)` — kein User doppelt im selben Tenant. Owner
 
 > **Architektur-Hinweis:** Aktuell ist **eine Frage = ein Schritt** im Funnel. Schema-Refactor zu **Page → 1:N Fields** ist als kommende Aufgabe geplant (siehe CLAUDE.md §5).
 
-### `submissions` (25 Zeilen, das wichtigste CRM-Feld!)
+### `submissions` (26 Zeilen, das wichtigste CRM-Feld!)
 
 | Spalte | Typ | Hinweise |
 |---|---|---|
 | `id` | uuid, PK | |
-| `funnel_slug` | text | Snapshot — auch wenn Funnel gelöscht wird, Submission bleibt |
-| `tenant_slug` | text | Snapshot |
-| `contact_anrede`, `contact_name`, `contact_email`, `contact_phone` | text | Legacy-Spalten (vor `contact`-jsonb) |
-| `contact` | jsonb, nullable | Komplettes Kontakt-Objekt (neue Struktur) |
+| `tenant_id` | uuid, nullable, FK → `tenants.id` ON DELETE SET NULL | RLS-Filter; bei Tenant-Löschung wird NULL (Submission bleibt für Audit erhalten) |
+| `funnel_slug` | text, nullable | **Snapshot** für Display + Funnel-URL-Lookup (kein FK — bleibt auch wenn Funnel gelöscht) |
+| `tenant_slug` | text, nullable | **Snapshot** historisch; neue Inserts setzen das Feld nicht mehr (`tenants.slug` existiert seit Aufgabe 26 nicht mehr) |
+| `contact` | jsonb, nullable | Komplettes Kontakt-Objekt — einzige Quelle seit Aufgabe 27 |
 | `answers` | jsonb | `{ question_key: value }` |
 | `lead_price` | numeric, default `0` | Server-side gesetzt, Snapshot zum Submission-Zeitpunkt |
 | `source_url` | text, nullable | URL der einbettenden Seite |
@@ -307,13 +307,16 @@ UNIQUE `(tenant_id, auth_user_id)` — kein User doppelt im selben Tenant. Owner
 | `status` | text, check (`offen`/`kontaktiert`/`abgeschlossen`) | **CRM-Status-Workflow** |
 | `created_at` | timestamptz | |
 
-### `funnel_view_logs` (262 Zeilen, View-Tracking)
+> **In Aufgabe 27 gedroppt:** `contact_anrede`, `contact_name`, `contact_email`, `contact_phone` — alle ersetzt durch das `contact`-jsonb.
 
-| Spalte | Typ |
-|---|---|
-| `id` | bigint, PK |
-| `funnel_slug`, `tenant_slug` | text |
-| `viewed_at` | timestamptz |
+### `funnel_view_logs` (277 Zeilen, View-Tracking)
+
+| Spalte | Typ | Hinweise |
+|---|---|---|
+| `id` | bigint, PK | `nextval()` (einzige Nicht-UUID-PK im Schema) |
+| `funnel_id` | uuid, FK → `funnels.id` ON DELETE CASCADE | |
+| `tenant_id` | uuid, FK → `tenants.id` ON DELETE CASCADE | |
+| `viewed_at` | timestamptz | default `now()` |
 
 ### `honeypot_triggers` (0 Zeilen, Bot-Hits)
 
@@ -323,7 +326,7 @@ UNIQUE `(tenant_id, auth_user_id)` — kein User doppelt im selben Tenant. Owner
 | `funnel_slug`, `ip_address` | text, nullable |
 | `created_at` | timestamptz |
 
-### Aktuelle Migrationen (chronologisch, 17 insgesamt)
+### Aktuelle Migrationen (chronologisch, 20 insgesamt)
 
 ```
 20260513064118 — add_funnel_text_columns
@@ -341,8 +344,11 @@ UNIQUE `(tenant_id, auth_user_id)` — kein User doppelt im selben Tenant. Owner
 20260522121300 — add_crm_columns_to_submissions
 20260522124347 — drop_notes_from_submissions
 20260522192429 — add_stripe_fields_to_tenants
-20260527120000 — aufgabe_25_tenant_members_and_full_rls    ← Phase B.1
+20260527120000 — aufgabe_25_tenant_members_and_full_rls         ← Phase B.1
 20260527130000 — aufgabe_25_add_funnel_view_logs_delete_policy  ← B.1 Hotfix
+20260528120000 — aufgabe_26a_uuid_fks_add                       ← Phase B.2 (ADD, zero-downtime)
+20260528130000 — aufgabe_26b_uuid_fks_drop                      ← Phase B.2 (DROP)
+20260528140000 — aufgabe_27_drop_submissions_contact_legacy     ← Phase B.3
 ```
 
 ---
