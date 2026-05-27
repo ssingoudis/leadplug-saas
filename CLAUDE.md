@@ -233,6 +233,8 @@ Einzige Funnel-Komponente: `components/funnel.tsx` (generisch, nicht branchen-sp
 - `/api/submit` — anonymer Endbenutzer, keine Auth
 - `/api/track-view` — anonymer Funnel-View
 - `/api/stripe/webhook` — System-Event von Stripe, kein User-Kontext
+- `/api/tenant/slug-check` + `generateRandomSlug` in `/api/tenant/funnels` POST — globale Slug-Uniqueness (RLS würde fremde Tenants ausblenden)
+- `app/dashboard/layout.tsx` Auto-Tenant-Anlage beim ersten Login — System-Provisioning (User hat noch keine Membership)
 - Admin-Operationen (Stavros / Plattform-Owner)
 
 > Bei neuen API-Routes oder DB-Zugriffen: **erst prüfen, ob RLS reicht** (default), Service-Key nur in obigen Ausnahmefällen.

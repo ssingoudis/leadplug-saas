@@ -21,3 +21,6 @@ tsconfig.tsbuildinfo
 
 # Claude Code internal memory
 memory/
+
+# Playwright MCP smoke-test artifacts
+.playwright-mcp/

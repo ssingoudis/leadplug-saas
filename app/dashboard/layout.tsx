@@ -25,26 +25,41 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (!tenant) {
     if (user.email) {
-      const { error: insertError } = await admin.from('tenants').insert({
-        slug: await (async () => {
-          const base = emailToSlug(user.email!)
-          let slug = base
-          for (let i = 2; i <= 99; i++) {
-            const { data } = await admin.from('tenants').select('slug').eq('slug', slug).maybeSingle()
-            if (!data) break
-            slug = `${base}-${i}`
-          }
-          return slug
-        })(),
-        company_name: user.email.split('@')[0],
-        notification_email: user.email,
-        public_email: user.email,
-        auth_user_id: user.id,
-        billing_model: 'free',
-        is_active: true,
-      })
-      if (insertError) console.error('[dashboard/layout] tenant insert failed:', insertError)
-      if (!insertError) redirect('/dashboard')
+      const base = emailToSlug(user.email)
+      let slug = base
+      for (let i = 2; i <= 99; i++) {
+        const { data } = await admin.from('tenants').select('slug').eq('slug', slug).maybeSingle()
+        if (!data) break
+        slug = `${base}-${i}`
+      }
+
+      const { data: inserted, error: insertError } = await admin
+        .from('tenants')
+        .insert({
+          slug,
+          company_name: user.email.split('@')[0],
+          notification_email: user.email,
+          public_email: user.email,
+          auth_user_id: user.id,
+          billing_model: 'free',
+          is_active: true,
+        })
+        .select('id')
+        .single()
+
+      if (insertError || !inserted) {
+        console.error('[dashboard/layout] tenant insert failed:', insertError)
+      } else {
+        const { error: memberError } = await admin.from('tenant_members').insert({
+          tenant_id: inserted.id,
+          auth_user_id: user.id,
+          role: 'owner',
+        })
+        if (memberError) {
+          console.error('[dashboard/layout] tenant_members owner insert failed:', memberError)
+        }
+        redirect('/dashboard')
+      }
     }
 
     return (

@@ -16,16 +16,14 @@ export async function GET() {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const admin = createAdminClient();
-  const { data: tenant } = await admin
+  const { data: tenant } = await supabase
     .from("tenants")
     .select("slug")
-    .eq("auth_user_id", user.id)
     .maybeSingle();
 
   if (!tenant) return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
 
-  const { data: funnels, error } = await admin
+  const { data: funnels, error } = await supabase
     .from("funnels")
     .select(
       "slug, funnel_name, contact_form_title, is_active, primary_color, total_views, created_at",
@@ -35,11 +33,10 @@ export async function GET() {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Submission-Count pro Funnel
   const slugs = (funnels ?? []).map((f) => f.slug);
   let countMap: Record<string, number> = {};
   if (slugs.length > 0) {
-    const { data: counts } = await admin
+    const { data: counts } = await supabase
       .from("submissions")
       .select("funnel_slug")
       .in("funnel_slug", slugs);
@@ -68,11 +65,9 @@ export async function POST(req: NextRequest) {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const admin = createAdminClient();
-  const { data: tenant } = await admin
+  const { data: tenant } = await supabase
     .from("tenants")
     .select("slug")
-    .eq("auth_user_id", user.id)
     .maybeSingle();
 
   if (!tenant) return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
@@ -83,17 +78,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Funnel-Name fehlt" }, { status: 400 });
   }
 
+  // Admin-Client nur für globale Slug-Uniqueness — RLS würde andere Tenants ausblenden.
+  const admin = createAdminClient();
   const slug = await generateRandomSlug(admin);
 
   const funnelRow = editorStateToFunnelRow(state, tenant.slug, slug);
-  const { error: funnelErr } = await admin.from("funnels").insert(funnelRow);
+  const { error: funnelErr } = await supabase.from("funnels").insert(funnelRow);
   if (funnelErr) {
     return NextResponse.json({ error: funnelErr.message }, { status: 500 });
   }
 
   if (state.questions.length > 0) {
     const questionRows = editorQuestionsToDbRows(state.questions, slug);
-    const { error: qErr } = await admin
+    const { error: qErr } = await supabase
       .from("funnel_questions")
       .insert(questionRows);
     if (qErr) {

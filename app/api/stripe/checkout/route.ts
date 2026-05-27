@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { stripe, STRIPE_PRICE_ID } from '@/lib/stripe'
 
 export async function POST(req: NextRequest) {
@@ -9,11 +8,9 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Nicht eingeloggt' }, { status: 401 })
 
-    const admin = createAdminClient()
-    const { data: tenant, error } = await admin
+    const { data: tenant, error } = await supabase
       .from('tenants')
       .select('id, slug, company_name, notification_email, stripe_customer_id, billing_model, stripe_subscription_status')
-      .eq('auth_user_id', user.id)
       .maybeSingle()
 
     if (error || !tenant) {
@@ -38,7 +35,8 @@ export async function POST(req: NextRequest) {
       })
       customerId = customer.id
 
-      await admin
+      // RLS-UPDATE-Policy verlangt owner|admin — der eingeloggte User ist Owner.
+      await supabase
         .from('tenants')
         .update({ stripe_customer_id: customerId })
         .eq('id', tenant.id)
@@ -50,7 +48,6 @@ export async function POST(req: NextRequest) {
       mode: 'subscription',
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      // Kein payment_method_types — Stripe wählt dynamisch (Best Practice)
       subscription_data: {
         metadata: { tenant_slug: tenant.slug, supabase_tenant_id: tenant.id },
       },

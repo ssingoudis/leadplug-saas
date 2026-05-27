@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Card from '@/components/ui/Card'
 import LeadsTable from '@/components/leads/LeadsTable'
@@ -10,22 +9,20 @@ async function getKontakteData(): Promise<{ leads: LeadRow[]; funnels: FunnelOpt
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const admin = createAdminClient()
-  const { data: tenant } = await admin
+  const { data: tenant } = await supabase
     .from('tenants')
     .select('slug')
-    .eq('auth_user_id', user.id)
     .maybeSingle()
 
   if (!tenant) return { leads: [], funnels: [] }
 
   const [{ data: submissions }, { data: funnels }] = await Promise.all([
-    admin
+    supabase
       .from('submissions')
       .select('id, contact_name, contact_email, contact_phone, funnel_slug, created_at')
       .eq('tenant_slug', tenant.slug)
       .order('created_at', { ascending: false }),
-    admin
+    supabase
       .from('funnels')
       .select('slug, funnel_name, contact_form_title')
       .eq('tenant_slug', tenant.slug)

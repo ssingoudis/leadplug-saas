@@ -3,6 +3,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]$/;
 
+// Admin-Client noetig: muss globale Slug-Uniqueness pruefen.
+// User-Client + RLS wuerde nur eigene Funnels sehen → falsche Antwort.
 export async function GET(req: NextRequest) {
   const slug = req.nextUrl.searchParams.get("slug") ?? "";
 

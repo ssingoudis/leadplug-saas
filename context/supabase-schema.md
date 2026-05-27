@@ -6,27 +6,32 @@
 > Für architektonisches Verständnis und Zweck der Tabellen: siehe [`project-overview.md`](project-overview.md) §4.
 > Bei jeder neuen Migration: dieses File neu regenerieren.
 
-- **Stand:** 2026-05-26
-- **Letzte Migration:** `20260522192429_add_stripe_fields_to_tenants`
-- **Tabellen:** 6 in `public` (alle mit RLS aktiviert)
-- **Enums:** 2 (`billing_model_type`, `question_type`)
-- **Functions:** 3 — **Triggers:** 2 — **Views:** 0
+- **Stand:** 2026-05-27 (nach Aufgabe 25 / Phase B.1)
+- **Letzte Migration:** `20260527130000_aufgabe_25_add_funnel_view_logs_delete_policy`
+- **Tabellen:** 7 in `public` (alle mit RLS aktiviert)
+- **Enums:** 3 (`billing_model_type`, `question_type`, `tenant_member_role`)
+- **Functions:** 5 — **Triggers:** 3 — **Views:** 0
 
 ---
 
-## ⚠️ RLS-Architektur (kritisch zu verstehen)
+## RLS-Architektur (verbindlich)
 
-Alle Tabellen haben `rls_enabled = true`. Aber:
+Alle Tabellen haben `rls_enabled = true`. **Defense-in-Depth: CRUD läuft über RLS-Policies**, nicht nur SELECT.
 
-- **RLS-Policies existieren NUR für `SELECT`-Operationen.**
-- **Es gibt KEINE Policies für INSERT, UPDATE, DELETE.**
-- Schreibende Operationen laufen ausnahmslos **server-side über den Service-Key-Client** (`lib/supabase/admin.ts`), der RLS umgeht.
-- Der reguläre User-Client (`lib/supabase/client.ts`, `lib/supabase/server.ts`) kann nur **lesen**, was die SELECT-Policies erlauben — und das ist immer "Daten des eigenen Tenants" (außer `honeypot_triggers`, das hat gar keine Policy → komplett blockiert für User).
+- Tenant-Identity wird via Junction-Table aufgelöst: `auth.uid()` → `tenant_members.auth_user_id` → `tenant_members.tenant_id` → Daten.
+- Helper-Funktionen `current_tenant_ids()` und `current_tenant_role(uuid)` (`SECURITY DEFINER`, `STABLE`, `search_path` gepinnt) bündeln die Auflösung — alle Policies referenzieren sie.
+- Rollen-Enum `tenant_member_role` = `owner | admin | member`. Owner darf Tenant löschen, owner+admin dürfen Tenant-Settings updaten und Members verwalten, Member darf eigene Membership selbst entfernen.
+- **19 Policies über 6 Tabellen** (SELECT/INSERT/UPDATE/DELETE — pro Tabelle nur die sinnvollen). `honeypot_triggers` bleibt policy-frei (Bot-Telemetrie, nur Service-Key).
 
-**Daraus folgt:**
-- Jeder INSERT/UPDATE/DELETE auf eine dieser Tabellen MUSS in einer API-Route mit Service-Key passieren.
-- Auth-Prüfung passiert manuell in den API-Routes (z.B. "ist der eingeloggte User der Owner dieses Tenants?"), nicht durch die DB.
-- Tenant-Identity wird über `tenants.auth_user_id = auth.uid()` aufgelöst — dies ist das Herz aller RLS-Policies.
+**Service-Key-Client (`lib/supabase/admin.ts`, RLS-Bypass) ist NUR noch zulässig für:**
+- `/api/submit` — anonymer Endbenutzer, keine Auth
+- `/api/track-view` — anonymer Funnel-View
+- `/api/stripe/webhook` — System-Event von Stripe, kein User-Kontext
+- `/api/tenant/slug-check` + `generateRandomSlug` in `/api/tenant/funnels` POST — globale Slug-Uniqueness-Prüfung (RLS würde fremde Tenants ausblenden)
+- `app/dashboard/layout.tsx` Auto-Tenant-Anlage beim ersten Login (System-Provisioning, vor Membership)
+- Admin-Operationen (Stavros / Plattform-Owner)
+
+`tenants.auth_user_id` bleibt als Owner-Shortcut bestehen (kann in Phase B.4 entfallen).
 
 ---
 
@@ -44,9 +49,47 @@ Verwendung: `tenants.billing_model`.
 ```
 Verwendung: `funnel_questions.question_type`.
 
+### `tenant_member_role`
+```
+'owner' | 'admin' | 'member'
+```
+Verwendung: `tenant_members.role`. Eingeführt mit Migration `aufgabe_25_tenant_members_and_full_rls`.
+
 ---
 
 ## 2. Functions
+
+### `current_tenant_ids() → SETOF uuid`
+**Helper für RLS.** Liefert alle `tenant_id`s, in denen der aktuelle `auth.uid()` Member ist. `SECURITY DEFINER`, `STABLE`, `search_path = public, pg_temp`. `EXECUTE` granted für `authenticated`, revoked für `anon`/`public`.
+
+```sql
+CREATE OR REPLACE FUNCTION public.current_tenant_ids()
+RETURNS SETOF uuid
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  SELECT tenant_id FROM public.tenant_members WHERE auth_user_id = auth.uid()
+$$;
+```
+
+### `current_tenant_role(p_tenant_id uuid) → tenant_member_role`
+**Helper für RLS.** Liefert die Rolle des aktuellen Users für einen bestimmten Tenant (oder NULL wenn nicht Member). `SECURITY DEFINER`, `STABLE`, `search_path = public, pg_temp`.
+
+```sql
+CREATE OR REPLACE FUNCTION public.current_tenant_role(p_tenant_id uuid)
+RETURNS public.tenant_member_role
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  SELECT role FROM public.tenant_members
+  WHERE tenant_id = p_tenant_id AND auth_user_id = auth.uid()
+  LIMIT 1
+$$;
+```
 
 ### `increment_funnel_views(funnel_slug text) → void`
 Inkrementiert `funnels.total_views` für einen Funnel. `SECURITY DEFINER` — wird auch ohne RLS-Rechte für `funnels` ausgeführt. Aufrufbar durch jeden (z.B. via `/api/track-view`).
@@ -161,13 +204,56 @@ Stammdaten der zahlenden Agentur-Accounts. Aktuell 9 Zeilen.
 **Triggers:**
 - `tenants_updated_at` — BEFORE UPDATE → `update_updated_at()`
 
-**RLS-Policies:**
-- `tenant_own_record` (SELECT): `auth.uid() = auth_user_id`
-- **Keine INSERT/UPDATE/DELETE Policy** → Schreibzugriff nur via Service-Key
+**RLS-Policies** (seit B.1):
+- `tenants_select` (SELECT, `authenticated`): `id IN (SELECT current_tenant_ids())`
+- `tenants_update` (UPDATE, `authenticated`): `current_tenant_role(id) IN ('owner','admin')` (USING + WITH CHECK)
+- `tenants_delete` (DELETE, `authenticated`): `current_tenant_role(id) = 'owner'`
+- **Kein INSERT-Policy** → Tenant-Anlage läuft via Signup-Flow + admin-Client (`app/dashboard/layout.tsx`)
 
 ---
 
-### 3.2 `funnels`
+### 3.2 `tenant_members`
+
+Junction-Table N:M zwischen `tenants` und `auth.users` mit Rolle pro Mitgliedschaft. Aktuell 3 Zeilen (1 Owner pro existierendem Tenant mit `auth_user_id`). Eingeführt mit Migration `aufgabe_25_tenant_members_and_full_rls`.
+
+**Columns:**
+
+| Spalte | Typ | Nullable | Default | Constraints |
+|---|---|---|---|---|
+| `id` | uuid | NO | `gen_random_uuid()` | PK |
+| `tenant_id` | uuid | NO | — | FK → `tenants.id` ON DELETE CASCADE |
+| `auth_user_id` | uuid | NO | — | FK → `auth.users.id` ON DELETE CASCADE |
+| `role` | `tenant_member_role` | NO | — | |
+| `created_at` | timestamptz | NO | `now()` | |
+| `updated_at` | timestamptz | NO | `now()` | via Trigger |
+
+**Foreign Keys:**
+- `tenant_id` → `tenants.id` ON DELETE CASCADE
+- `auth_user_id` → `auth.users.id` ON DELETE CASCADE
+
+**Constraints:**
+- UNIQUE `(tenant_id, auth_user_id)` — kein User doppelt im selben Tenant
+
+**Indices:**
+- `tenant_members_pkey` — UNIQUE btree(id)
+- `tenant_members_tenant_id_idx` — btree(tenant_id)
+- `tenant_members_auth_user_id_idx` — btree(auth_user_id)
+- UNIQUE-Index aus dem Composite-Constraint
+
+**Triggers:**
+- `set_updated_at` — BEFORE UPDATE → `update_updated_at()`
+
+**RLS-Policies:**
+- `tenant_members_select` (SELECT, `authenticated`): `tenant_id IN (SELECT current_tenant_ids())` — alle Member sehen sich
+- `tenant_members_insert` (INSERT, `authenticated`): `current_tenant_role(tenant_id) IN ('owner','admin')`
+- `tenant_members_update` (UPDATE, `authenticated`): `current_tenant_role(tenant_id) IN ('owner','admin')`
+- `tenant_members_delete` (DELETE, `authenticated`): owner/admin **oder** `auth_user_id = auth.uid()` (Self-Remove)
+
+> Auto-Anlage des Owner-Eintrags beim ersten Login passiert in `app/dashboard/layout.tsx` via admin-Client (System-Provisioning).
+
+---
+
+### 3.3 `funnels`
 
 Das Widget pro Tenant. Ein Tenant kann mehrere haben. Aktuell 12 Zeilen.
 
@@ -220,13 +306,16 @@ Das Widget pro Tenant. Ein Tenant kann mehrere haben. Aktuell 12 Zeilen.
 **Triggers:**
 - `funnels_updated_at` — BEFORE UPDATE → `update_updated_at()`
 
-**RLS-Policies:**
-- `tenant_own_funnels` (SELECT):
+**RLS-Policies** (seit B.1, USING+WITH-CHECK Pattern):
+- `funnels_select`, `funnels_insert`, `funnels_update`, `funnels_delete` (alle `authenticated`):
   ```sql
-  tenant_slug = (SELECT slug FROM tenants WHERE auth_user_id = auth.uid())
+  tenant_slug IN (
+    SELECT t.slug FROM public.tenants t
+    WHERE t.id IN (SELECT public.current_tenant_ids())
+  )
   ```
-- **Öffentliche Lesbarkeit für das Widget**: läuft NICHT über RLS, sondern über den Service-Key in `getTenantConfig()`. Anonymous Endbenutzer haben keine RLS-Berechtigung — der Server stellt die Daten bereit.
-- **Keine INSERT/UPDATE/DELETE Policy** → Schreibzugriff nur via Service-Key
+  (B.2 wird das durch direkten UUID-Lookup ersetzen.)
+- **Öffentliche Lesbarkeit für das Widget** läuft NICHT über RLS, sondern über den Service-Key in `getTenantConfig()`. Anonymous Endbenutzer haben keine RLS-Berechtigung — der Server stellt die Daten bereit.
 
 **`contact_fields` jsonb-Schema:**
 ```typescript
@@ -244,7 +333,7 @@ ContactFieldConfig[] = {
 
 ---
 
-### 3.3 `funnel_questions`
+### 3.4 `funnel_questions`
 
 Fragen pro Funnel, flach, geordnet via `sort_order`. Aktuell 58 Zeilen.
 
@@ -275,15 +364,15 @@ Fragen pro Funnel, flach, geordnet via `sort_order`. Aktuell 58 Zeilen.
 
 **Triggers:** keine
 
-**RLS-Policies:**
-- `tenant_own_funnel_questions` (SELECT):
+**RLS-Policies** (seit B.1):
+- `funnel_questions_select`, `funnel_questions_insert`, `funnel_questions_update`, `funnel_questions_delete` (alle `authenticated`):
   ```sql
   funnel_slug IN (
-    SELECT slug FROM funnels
-    WHERE tenant_slug = (SELECT slug FROM tenants WHERE auth_user_id = auth.uid())
+    SELECT f.slug FROM public.funnels f
+    JOIN public.tenants t ON t.slug = f.tenant_slug
+    WHERE t.id IN (SELECT public.current_tenant_ids())
   )
   ```
-- **Keine INSERT/UPDATE/DELETE Policy** → Schreibzugriff nur via Service-Key
 
 **`options` jsonb-Schema:**
 ```typescript
@@ -301,7 +390,7 @@ Fragen pro Funnel, flach, geordnet via `sort_order`. Aktuell 58 Zeilen.
 
 ---
 
-### 3.4 `submissions`
+### 3.5 `submissions`
 
 Eine Zeile pro abgeschickte Funnel-Submission. Das ist die CRM-Quelle. Aktuell 25 Zeilen.
 
@@ -342,16 +431,19 @@ Eine Zeile pro abgeschickte Funnel-Submission. Das ist die CRM-Quelle. Aktuell 2
 
 **Triggers:** keine
 
-**RLS-Policies:**
-- `tenant_own_submissions` (SELECT):
+**RLS-Policies** (seit B.1):
+- `submissions_select`, `submissions_update`, `submissions_delete` (alle `authenticated`):
   ```sql
-  tenant_slug = (SELECT slug FROM tenants WHERE auth_user_id = auth.uid())
+  tenant_slug IN (
+    SELECT t.slug FROM public.tenants t
+    WHERE t.id IN (SELECT public.current_tenant_ids())
+  )
   ```
-- **Keine INSERT/UPDATE/DELETE Policy** → INSERT durch `/api/submit` (Service-Key), UPDATE durch `/api/leads/[id]` (Service-Key)
+- **Kein INSERT-Policy** → INSERT durch `/api/submit` (anonym, Service-Key)
 
 ---
 
-### 3.5 `funnel_view_logs`
+### 3.6 `funnel_view_logs`
 
 View-Tracking pro Funnel-Render. Aktuell 262 Zeilen.
 
@@ -375,16 +467,20 @@ View-Tracking pro Funnel-Render. Aktuell 262 Zeilen.
 
 **Triggers:** keine
 
-**RLS-Policies:**
-- `tenant_own_view_logs` (SELECT):
+**RLS-Policies** (seit B.1 + Hotfix-Migration `20260527130000`):
+- `funnel_view_logs_select` (SELECT, `authenticated`):
   ```sql
-  tenant_slug = (SELECT slug FROM tenants WHERE auth_user_id = auth.uid())
+  tenant_slug IN (
+    SELECT t.slug FROM public.tenants t
+    WHERE t.id IN (SELECT public.current_tenant_ids())
+  )
   ```
-- **Keine INSERT/UPDATE/DELETE Policy** → INSERT durch `/api/track-view` (Service-Key)
+- `funnel_view_logs_delete` (DELETE, `authenticated`): gleiche Bedingung — für Cascade-Cleanup beim Funnel-Löschen
+- **Kein INSERT/UPDATE-Policy** → INSERT durch `/api/track-view` (anonym, Service-Key)
 
 ---
 
-### 3.6 `honeypot_triggers`
+### 3.7 `honeypot_triggers`
 
 Bot-Hits-Log. Aktuell 0 Zeilen (Honeypot greift selten / Bots sind sauber abgewehrt).
 
@@ -414,9 +510,9 @@ Bot-Hits-Log. Aktuell 0 Zeilen (Honeypot greift selten / Bots sind sauber abgewe
 ## 4. Übergreifende Patterns & Konventionen
 
 ### 4.1 Updated-At-Pattern
-- Spalten `created_at` (default `now()`) und `updated_at` (default `now()`) auf `tenants` und `funnels`.
+- Spalten `created_at` (default `now()`) und `updated_at` (default `now()`) auf `tenants`, `funnels` und `tenant_members`.
 - Trigger `update_updated_at()` setzt `updated_at` bei jedem UPDATE neu.
-- Andere Tabellen haben das Pattern (noch) **nicht** — `funnel_questions`, `submissions`, `funnel_view_logs`, `honeypot_triggers` haben keinen Updated-At-Trigger.
+- Andere Tabellen haben das Pattern (noch) **nicht** — `funnel_questions`, `submissions`, `funnel_view_logs`, `honeypot_triggers` haben keinen Updated-At-Trigger. Wird in Phase B.7 konsolidiert.
 
 ### 4.2 Soft-Delete via `is_active`
 - `tenants` und `funnels` haben `is_active bool`. Inaktive Funnels/Tenants werden in `getTenantConfig()` (via Service-Key) abgefangen — Widget zeigt dann `notFound()`.
@@ -433,10 +529,11 @@ Bot-Hits-Log. Aktuell 0 Zeilen (Honeypot greift selten / Bots sind sauber abgewe
 - `submissions.contact` — komplettes Kontakt-Objekt (neue Struktur)
 - `submissions.answers` — `{ question_key: value }`
 
-### 4.5 RLS-Schema (komplett)
-- **Alle 6 Tabellen** haben `rls_enabled = true`.
-- **5 SELECT-Policies** existieren — alle auflösen auf `auth.uid()` → `tenants.auth_user_id` → `tenants.slug` → Daten.
-- **0 INSERT/UPDATE/DELETE-Policies** — schreibender Zugriff geht **ausnahmslos** über Service-Key.
+### 4.5 RLS-Schema (komplett, Stand B.1)
+- **Alle 7 Tabellen** haben `rls_enabled = true`.
+- **19 Policies** über 6 Tabellen (alle außer `honeypot_triggers`). Verteilung: tenants(3) + tenant_members(4) + funnels(4) + funnel_questions(4) + submissions(3) + funnel_view_logs(2) = 20 — aber `funnel_view_logs.update` fehlt absichtlich, daher 19.
+- Helper `current_tenant_ids()` und `current_tenant_role(uuid)` werden in allen Policies referenziert (siehe §2).
+- `honeypot_triggers` bleibt policy-frei (Bot-Telemetrie, nur Service-Key zulässig).
 - `rls_auto_enable` Event-Trigger sorgt dafür, dass jede neue Tabelle in `public` automatisch RLS aktiv hat.
 
 ### 4.6 Sequences
@@ -446,7 +543,7 @@ Bot-Hits-Log. Aktuell 0 Zeilen (Honeypot greift selten / Bots sind sauber abgewe
 
 ## 5. Stand der Schema-Evolution
 
-15 Migrationen seit Projektbeginn:
+17 Migrationen seit Projektbeginn:
 
 ```
 20260513064118 — add_funnel_text_columns
@@ -463,15 +560,19 @@ Bot-Hits-Log. Aktuell 0 Zeilen (Honeypot greift selten / Bots sind sauber abgewe
 20260521190855 — rename_funnel_title_to_contact_form_title
 20260522121300 — add_crm_columns_to_submissions
 20260522124347 — drop_notes_from_submissions
-20260522192429 — add_stripe_fields_to_tenants  ← letzte
+20260522192429 — add_stripe_fields_to_tenants
+20260527120000 — aufgabe_25_tenant_members_and_full_rls    ← Phase B.1
+20260527130000 — aufgabe_25_add_funnel_view_logs_delete_policy  ← Hotfix B.1
 ```
 
-### Geplante Migrationen (siehe CLAUDE.md §5)
+### Geplante Migrationen (siehe roadmap.md Phase B)
 
-1. **`tenant_members`** — Junction-Table für Multi-User pro Tenant (Rollen: `owner | admin | member`). RLS-Policies umstellen von `auth_user_id` direkt auf `tenant_members`.
-2. **`pages` + Refactor von `funnel_questions`** — Page → 1:N Fields. Bestehende 58 Fragen migrieren.
-3. **Logic Jumps** — Branching-Logik pro Frage (separate Tabelle oder JSONB).
-4. **Webhook-Hardening** — Tabellen `webhook_subscriptions` + `webhook_delivery_attempts` für Retry-fähige Lead-Exporte.
+1. **B.2 UUID-FKs** — `funnels.tenant_slug`/`funnel_questions.funnel_slug`/`funnel_view_logs.*_slug` → UUID-FKs; RLS-Slug-Walks durch direkte UUID-Joins ersetzen.
+2. **B.3 Drop Legacy `submissions.contact_*`** — alles über `contact` jsonb.
+3. **B.4 `tenants` schlanker** — `notification_email`, `public_email`, `public_phone`, `address` droppen; `funnels.notification_email` wird Pflicht.
+4. **B.5 `pages` + `fields`** — Page → 1:N Refactor; Kontaktfelder werden reguläre Field-Types.
+5. **B.6 Webhook-Schema** — `webhook_subscriptions` + `webhook_delivery_attempts` (nur Struktur).
+6. **B.7 Updated-At-Konsistenz** — Trigger auf alle relevanten Tabellen.
 
 ---
 
