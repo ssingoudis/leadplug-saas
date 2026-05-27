@@ -6,8 +6,8 @@
 > Für architektonisches Verständnis und Zweck der Tabellen: siehe [`project-overview.md`](project-overview.md) §4.
 > Bei jeder neuen Migration: dieses File neu regenerieren.
 
-- **Stand:** 2026-05-27 (nach Aufgabe 25 / Phase B.1)
-- **Letzte Migration:** `20260527130000_aufgabe_25_add_funnel_view_logs_delete_policy`
+- **Stand:** 2026-05-27 (nach Aufgaben 26+27 / Phase B.2+B.3)
+- **Letzte Migrationen:** `20260528130000_aufgabe_26b_uuid_fks_drop` + `20260528140000_aufgabe_27_drop_submissions_contact_legacy`
 - **Tabellen:** 7 in `public` (alle mit RLS aktiviert)
 - **Enums:** 3 (`billing_model_type`, `question_type`, `tenant_member_role`)
 - **Functions:** 5 — **Triggers:** 3 — **Views:** 0
@@ -21,17 +21,18 @@ Alle Tabellen haben `rls_enabled = true`. **Defense-in-Depth: CRUD läuft über 
 - Tenant-Identity wird via Junction-Table aufgelöst: `auth.uid()` → `tenant_members.auth_user_id` → `tenant_members.tenant_id` → Daten.
 - Helper-Funktionen `current_tenant_ids()` und `current_tenant_role(uuid)` (`SECURITY DEFINER`, `STABLE`, `search_path` gepinnt) bündeln die Auflösung — alle Policies referenzieren sie.
 - Rollen-Enum `tenant_member_role` = `owner | admin | member`. Owner darf Tenant löschen, owner+admin dürfen Tenant-Settings updaten und Members verwalten, Member darf eigene Membership selbst entfernen.
-- **19 Policies über 6 Tabellen** (SELECT/INSERT/UPDATE/DELETE — pro Tabelle nur die sinnvollen). `honeypot_triggers` bleibt policy-frei (Bot-Telemetrie, nur Service-Key).
+- **20 Policies über 6 Tabellen** (SELECT/INSERT/UPDATE/DELETE — pro Tabelle nur die sinnvollen). `honeypot_triggers` bleibt policy-frei (Bot-Telemetrie, nur Service-Key).
+- Seit Aufgabe 26 (Phase B.2): alle Policies referenzieren **direkt UUID-Spalten** (`tenant_id`, `funnel_id`), keine Slug-Walks mehr.
 
 **Service-Key-Client (`lib/supabase/admin.ts`, RLS-Bypass) ist NUR noch zulässig für:**
 - `/api/submit` — anonymer Endbenutzer, keine Auth
 - `/api/track-view` — anonymer Funnel-View
 - `/api/stripe/webhook` — System-Event von Stripe, kein User-Kontext
 - `/api/tenant/slug-check` + `generateRandomSlug` in `/api/tenant/funnels` POST — globale Slug-Uniqueness-Prüfung (RLS würde fremde Tenants ausblenden)
-- `app/dashboard/layout.tsx` Auto-Tenant-Anlage beim ersten Login (System-Provisioning, vor Membership)
-- Admin-Operationen (Stavros / Plattform-Owner)
+- `app/dashboard/layout.tsx` — Tenant-Lookup via `tenant_members`-Join + Auto-Tenant-Anlage beim ersten Login (User hat vor Anlage noch keine Membership)
+- Admin-Operationen (Plattform-Owner — `/admin/*` UI wurde in Aufgabe 26 gelöscht, Re-Build in Phase E geplant)
 
-`tenants.auth_user_id` bleibt als Owner-Shortcut bestehen (kann in Phase B.4 entfallen).
+`tenants.auth_user_id` wurde in Aufgabe 26 gedroppt — `tenant_members` ist die alleinige Quelle für die User↔Tenant-Verknüpfung.
 
 ---
 
@@ -164,7 +165,6 @@ Stammdaten der zahlenden Agentur-Accounts. Aktuell 9 Zeilen.
 | Spalte | Typ | Nullable | Default | Constraints / Comment |
 |---|---|---|---|---|
 | `id` | uuid | NO | `gen_random_uuid()` | PK |
-| `slug` | text | NO | — | UNIQUE — Comment: "Slug für die URL des iFrames, https://app.leadplug.de/slug" |
 | `company_name` | text | NO | — | Comment: "Firmenname" |
 | `is_active` | bool | YES | `true` | Comment: "Legt fest, ob das iFrame aktiv ist oder nicht" |
 | `public_email` | text | NO | — | Comment: "Angezeigte E-Mail Adresse in der Kundenmail" |
@@ -172,7 +172,6 @@ Stammdaten der zahlenden Agentur-Accounts. Aktuell 9 Zeilen.
 | `notification_email` | text | NO | — | — |
 | `address` | text | YES | — | Comment: "Rechnungsadresse" |
 | `website` | text | YES | — | Comment: "Firmenwebseite" |
-| `auth_user_id` | uuid | YES | — | FK → `auth.users.id` |
 | `billing_model` | `billing_model_type` | NO | `'per_month'` | Comment: "Abrechnungsmodell" |
 | `lead_price` | numeric | YES | `3.00` | Comment: "Preis pro Lead in €" |
 | `billing_price` | numeric | YES | — | Comment: "Preis pro Monat fix in €" |
@@ -183,8 +182,9 @@ Stammdaten der zahlenden Agentur-Accounts. Aktuell 9 Zeilen.
 | `created_at` | timestamptz | YES | `now()` | |
 | `updated_at` | timestamptz | YES | `now()` | wird via Trigger aktualisiert |
 
-**Foreign Keys:**
-- `auth_user_id` → `auth.users.id`
+> **In Aufgabe 26 gedroppt:** `slug` (Tenant-Slug war nirgendwo öffentlich), `auth_user_id` (User↔Tenant-Mapping läuft jetzt ausschließlich über `tenant_members`).
+
+**Foreign Keys:** keine eigenen FKs — `tenants.id` ist FK-Target für `tenant_members.tenant_id`, `funnels.tenant_id`, `funnel_view_logs.tenant_id`, `submissions.tenant_id`.
 
 **Check Constraints:**
 - `tenants_stripe_subscription_status_check`:
@@ -195,9 +195,6 @@ Stammdaten der zahlenden Agentur-Accounts. Aktuell 9 Zeilen.
 
 **Indices:**
 - `tenants_pkey` — UNIQUE btree(id)
-- `tenants_slug_key` — UNIQUE btree(slug)
-- `tenants_auth_user_id_idx` — UNIQUE btree(auth_user_id)
-- `idx_tenants_slug` — btree(slug) **WHERE is_active = true** (partial)
 - `tenants_stripe_customer_id_unique` — UNIQUE btree(stripe_customer_id) **WHERE stripe_customer_id IS NOT NULL**
 - `tenants_stripe_subscription_id_unique` — UNIQUE btree(stripe_subscription_id) **WHERE stripe_subscription_id IS NOT NULL**
 
@@ -262,8 +259,8 @@ Das Widget pro Tenant. Ein Tenant kann mehrere haben. Aktuell 12 Zeilen.
 | Spalte | Typ | Nullable | Default |
 |---|---|---|---|
 | `id` | uuid | NO | `gen_random_uuid()` |
-| `slug` | text | NO | — (UNIQUE) |
-| `tenant_slug` | text | NO | — |
+| `slug` | text | NO | — (UNIQUE — öffentlicher URL-Identifier, nach Anlage unveränderlich) |
+| `tenant_id` | uuid | NO | — FK → `tenants.id` ON DELETE CASCADE |
 | `is_active` | bool | YES | `true` |
 | `funnel_name` | text | YES | — |
 | `contact_form_title` | text | YES | — |
@@ -293,7 +290,7 @@ Das Widget pro Tenant. Ein Tenant kann mehrere haben. Aktuell 12 Zeilen.
 | `updated_at` | timestamptz | YES | `now()` |
 
 **Foreign Keys:**
-- `tenant_slug` → `tenants.slug`
+- `tenant_id` → `tenants.id` ON DELETE CASCADE
 
 **Check Constraints:** keine
 
@@ -301,20 +298,16 @@ Das Widget pro Tenant. Ein Tenant kann mehrere haben. Aktuell 12 Zeilen.
 - `funnels_pkey` — UNIQUE btree(id)
 - `funnels_slug_key` — UNIQUE btree(slug)
 - `idx_funnels_slug` — btree(slug) **WHERE is_active = true** (partial)
-- `idx_funnels_tenant` — btree(tenant_slug)
+- `idx_funnels_tenant_id` — btree(tenant_id)
 
 **Triggers:**
 - `funnels_updated_at` — BEFORE UPDATE → `update_updated_at()`
 
-**RLS-Policies** (seit B.1, USING+WITH-CHECK Pattern):
+**RLS-Policies** (seit B.2 UUID-basiert):
 - `funnels_select`, `funnels_insert`, `funnels_update`, `funnels_delete` (alle `authenticated`):
   ```sql
-  tenant_slug IN (
-    SELECT t.slug FROM public.tenants t
-    WHERE t.id IN (SELECT public.current_tenant_ids())
-  )
+  tenant_id IN (SELECT public.current_tenant_ids())
   ```
-  (B.2 wird das durch direkten UUID-Lookup ersetzen.)
 - **Öffentliche Lesbarkeit für das Widget** läuft NICHT über RLS, sondern über den Service-Key in `getTenantConfig()`. Anonymous Endbenutzer haben keine RLS-Berechtigung — der Server stellt die Daten bereit.
 
 **`contact_fields` jsonb-Schema:**
@@ -342,7 +335,7 @@ Fragen pro Funnel, flach, geordnet via `sort_order`. Aktuell 58 Zeilen.
 | Spalte | Typ | Nullable | Default |
 |---|---|---|---|
 | `id` | uuid | NO | `gen_random_uuid()` |
-| `funnel_slug` | text | NO | — |
+| `funnel_id` | uuid | NO | — FK → `funnels.id` ON DELETE CASCADE |
 | `question_key` | text | NO | — |
 | `title` | text | NO | — |
 | `subtitle` | text | YES | — |
@@ -353,24 +346,23 @@ Fragen pro Funnel, flach, geordnet via `sort_order`. Aktuell 58 Zeilen.
 | `visible` | bool | YES | `true` |
 
 **Foreign Keys:**
-- `funnel_slug` → `funnels.slug`
+- `funnel_id` → `funnels.id` ON DELETE CASCADE
 
 **Check Constraints:** keine
 
 **Indices:**
 - `funnel_questions_pkey` — UNIQUE btree(id)
-- `funnel_questions_funnel_slug_question_key_key` — **UNIQUE btree(funnel_slug, question_key)** (verhindert doppelte question_keys innerhalb eines Funnels)
-- `idx_funnel_questions_funnel` — btree(funnel_slug, sort_order) (Listen-Query in Reihenfolge)
+- `funnel_questions_funnel_id_question_key_key` — **UNIQUE btree(funnel_id, question_key)** (verhindert doppelte question_keys innerhalb eines Funnels)
+- `idx_funnel_questions_funnel_id` — btree(funnel_id, sort_order) (Listen-Query in Reihenfolge)
 
 **Triggers:** keine
 
-**RLS-Policies** (seit B.1):
+**RLS-Policies** (seit B.2 UUID-basiert):
 - `funnel_questions_select`, `funnel_questions_insert`, `funnel_questions_update`, `funnel_questions_delete` (alle `authenticated`):
   ```sql
-  funnel_slug IN (
-    SELECT f.slug FROM public.funnels f
-    JOIN public.tenants t ON t.slug = f.tenant_slug
-    WHERE t.id IN (SELECT public.current_tenant_ids())
+  funnel_id IN (
+    SELECT id FROM public.funnels
+    WHERE tenant_id IN (SELECT public.current_tenant_ids())
   )
   ```
 
@@ -392,20 +384,17 @@ Fragen pro Funnel, flach, geordnet via `sort_order`. Aktuell 58 Zeilen.
 
 ### 3.5 `submissions`
 
-Eine Zeile pro abgeschickte Funnel-Submission. Das ist die CRM-Quelle. Aktuell 25 Zeilen.
+Eine Zeile pro abgeschickte Funnel-Submission. Das ist die CRM-Quelle. Aktuell 26 Zeilen.
 
 **Columns:**
 
 | Spalte | Typ | Nullable | Default | Comment |
 |---|---|---|---|---|
 | `id` | uuid | NO | `gen_random_uuid()` | |
-| `funnel_slug` | text | NO | — | |
-| `tenant_slug` | text | NO | — | "Zeigt an, aus welchem slug/iFrame die Anfrage eingereicht wurde" |
-| `contact_anrede` | text | YES | — | Legacy (vor `contact`-jsonb) |
-| `contact_name` | text | NO | — | "Name des Anfragers" |
-| `contact_email` | text | NO | — | "E-Mail Adresse des Anfragers" |
-| `contact_phone` | text | NO | — | "Telefonnummer des Anfragers" |
-| `contact` | jsonb | YES | — | Komplettes Kontakt-Objekt (neue Struktur) |
+| `tenant_id` | uuid | YES | — | FK → `tenants.id` ON DELETE SET NULL — RLS-Filter |
+| `funnel_slug` | text | YES | — | **Snapshot** für Display (kein FK — bleibt auch wenn Funnel gelöscht) |
+| `tenant_slug` | text | YES | — | **Snapshot** historisch; neue Inserts via App-Code lassen das Feld leer (`tenants.slug` existiert nicht mehr) |
+| `contact` | jsonb | YES | — | Komplettes Kontakt-Objekt — einzige Quelle für Name/Email/Telefon/Anrede |
 | `answers` | jsonb | NO | — | "Liste aller Antworten des Anfragers" |
 | `lead_price` | numeric | YES | `0` | Snapshot zum Submission-Zeitpunkt |
 | `source_url` | text | YES | — | |
@@ -416,7 +405,10 @@ Eine Zeile pro abgeschickte Funnel-Submission. Das ist die CRM-Quelle. Aktuell 2
 | `status` | text | NO | `'offen'` | CRM-Status (siehe Check) |
 | `created_at` | timestamptz | YES | `now()` | |
 
-**Foreign Keys:** keine (Snapshot-Design — `funnel_slug` und `tenant_slug` bleiben auch wenn Funnel/Tenant gelöscht wird)
+> **In Aufgabe 27 gedroppt:** `contact_anrede`, `contact_name`, `contact_email`, `contact_phone` — alle ersetzt durch das `contact`-jsonb.
+
+**Foreign Keys:**
+- `tenant_id` → `tenants.id` ON DELETE SET NULL — bei Tenant-Löschung wird `tenant_id` NULL, Submission bleibt für Audit/Forensik erhalten
 
 **Check Constraints:**
 - `submissions_status_check`:
@@ -426,18 +418,16 @@ Eine Zeile pro abgeschickte Funnel-Submission. Das ist die CRM-Quelle. Aktuell 2
 
 **Indices:**
 - `submissions_pkey` — UNIQUE btree(id)
-- `idx_submissions_funnel` — btree(funnel_slug, created_at)
-- `idx_submissions_tenant` — btree(tenant_slug, created_at)
+- `idx_submissions_tenant_id` — btree(tenant_id, created_at) — Haupt-Filter für Lead-Listen
+- `idx_submissions_funnel` — btree(funnel_slug, created_at) — für Funnel-spezifische Lookups + DELETE-Pfad
+- `idx_submissions_tenant` — btree(tenant_slug, created_at) — Legacy (nicht mehr aktiv genutzt, kann später entfallen)
 
 **Triggers:** keine
 
-**RLS-Policies** (seit B.1):
+**RLS-Policies** (seit B.2 UUID-basiert):
 - `submissions_select`, `submissions_update`, `submissions_delete` (alle `authenticated`):
   ```sql
-  tenant_slug IN (
-    SELECT t.slug FROM public.tenants t
-    WHERE t.id IN (SELECT public.current_tenant_ids())
-  )
+  tenant_id IN (SELECT public.current_tenant_ids())
   ```
 - **Kein INSERT-Policy** → INSERT durch `/api/submit` (anonym, Service-Key)
 
@@ -445,37 +435,33 @@ Eine Zeile pro abgeschickte Funnel-Submission. Das ist die CRM-Quelle. Aktuell 2
 
 ### 3.6 `funnel_view_logs`
 
-View-Tracking pro Funnel-Render. Aktuell 262 Zeilen.
+View-Tracking pro Funnel-Render. Aktuell 277 Zeilen.
 
 **Columns:**
 
 | Spalte | Typ | Nullable | Default |
 |---|---|---|---|
 | `id` | int8 | NO | `nextval('funnel_view_logs_id_seq')` |
-| `funnel_slug` | text | NO | — |
-| `tenant_slug` | text | NO | — |
+| `funnel_id` | uuid | NO | — FK → `funnels.id` ON DELETE CASCADE |
+| `tenant_id` | uuid | NO | — FK → `tenants.id` ON DELETE CASCADE |
 | `viewed_at` | timestamptz | NO | `now()` |
 
 **Foreign Keys:**
-- `funnel_slug` → `funnels.slug`
+- `funnel_id` → `funnels.id` ON DELETE CASCADE
+- `tenant_id` → `tenants.id` ON DELETE CASCADE
 
 **Check Constraints:** keine
 
 **Indices:**
 - `funnel_view_logs_pkey` — UNIQUE btree(id)
-- `funnel_view_logs_tenant_month` — btree(tenant_slug, viewed_at) (für Monats-Aggregationen)
+- `idx_funnel_view_logs_tenant_id` — btree(tenant_id, viewed_at) (Monats-Aggregationen)
+- `idx_funnel_view_logs_funnel_id` — btree(funnel_id)
 
 **Triggers:** keine
 
-**RLS-Policies** (seit B.1 + Hotfix-Migration `20260527130000`):
-- `funnel_view_logs_select` (SELECT, `authenticated`):
-  ```sql
-  tenant_slug IN (
-    SELECT t.slug FROM public.tenants t
-    WHERE t.id IN (SELECT public.current_tenant_ids())
-  )
-  ```
-- `funnel_view_logs_delete` (DELETE, `authenticated`): gleiche Bedingung — für Cascade-Cleanup beim Funnel-Löschen
+**RLS-Policies** (seit B.2 UUID-basiert):
+- `funnel_view_logs_select` (SELECT, `authenticated`): `tenant_id IN (SELECT public.current_tenant_ids())`
+- `funnel_view_logs_delete` (DELETE, `authenticated`): gleiche Bedingung (Cascade-Cleanup, FK übernimmt eigentlich automatisch)
 - **Kein INSERT/UPDATE-Policy** → INSERT durch `/api/track-view` (anonym, Service-Key)
 
 ---
@@ -519,19 +505,22 @@ Bot-Hits-Log. Aktuell 0 Zeilen (Honeypot greift selten / Bots sind sauber abgewe
 - Partial-Indices `idx_*_slug WHERE is_active = true` optimieren Lookups nur aktive Datensätze.
 
 ### 4.3 Snapshot-Felder
-- `submissions` referenziert `funnel_slug` und `tenant_slug` ohne FK — Snapshot bleibt erhalten, auch wenn Quelle gelöscht wird.
+- `submissions` hat **zwei Schichten** für die Tenant-Verknüpfung:
+  - **`tenant_id` (UUID, ON DELETE SET NULL)** — für RLS und tagesaktuelle Joins. Bei Tenant-Löschung wird NULL.
+  - **`tenant_slug` + `funnel_slug` (Text-Snapshot, kein FK)** — bleibt erhalten wenn Tenant/Funnel gelöscht wird. `funnel_slug` wird vom App-Code weiter befüllt; `tenant_slug` wird seit Aufgabe 26 nicht mehr befüllt (`tenants.slug` existiert nicht mehr) — historische Werte bleiben aber.
 - `submissions.lead_price` ist ebenfalls Snapshot — Preisänderungen wirken nicht rückwirkend.
 
 ### 4.4 JSONB für strukturierte Felder
 - `funnels.contact_fields` — Definition der Kontaktformular-Felder
 - `funnel_questions.options` — Antwortoptionen pro Frage
 - `funnel_questions.config` — Frage-Type-spezifische Config
-- `submissions.contact` — komplettes Kontakt-Objekt (neue Struktur)
+- `submissions.contact` — komplettes Kontakt-Objekt (einzige Quelle seit Aufgabe 27)
 - `submissions.answers` — `{ question_key: value }`
 
-### 4.5 RLS-Schema (komplett, Stand B.1)
+### 4.5 RLS-Schema (komplett, Stand B.2)
 - **Alle 7 Tabellen** haben `rls_enabled = true`.
-- **19 Policies** über 6 Tabellen (alle außer `honeypot_triggers`). Verteilung: tenants(3) + tenant_members(4) + funnels(4) + funnel_questions(4) + submissions(3) + funnel_view_logs(2) = 20 — aber `funnel_view_logs.update` fehlt absichtlich, daher 19.
+- **20 Policies** über 6 Tabellen (alle außer `honeypot_triggers`). Verteilung: tenants(3) + tenant_members(4) + funnels(4) + funnel_questions(4) + submissions(3) + funnel_view_logs(2). `funnel_view_logs.update` und `submissions.insert` fehlen absichtlich (Append-only via Service-Key bzw. anonymer Endpoint).
+- Alle Policies referenzieren **direkt UUID-Spalten** (`tenant_id`, `funnel_id`) — keine Slug-Walks mehr.
 - Helper `current_tenant_ids()` und `current_tenant_role(uuid)` werden in allen Policies referenziert (siehe §2).
 - `honeypot_triggers` bleibt policy-frei (Bot-Telemetrie, nur Service-Key zulässig).
 - `rls_auto_enable` Event-Trigger sorgt dafür, dass jede neue Tabelle in `public` automatisch RLS aktiv hat.
@@ -543,7 +532,7 @@ Bot-Hits-Log. Aktuell 0 Zeilen (Honeypot greift selten / Bots sind sauber abgewe
 
 ## 5. Stand der Schema-Evolution
 
-17 Migrationen seit Projektbeginn:
+20 Migrationen seit Projektbeginn:
 
 ```
 20260513064118 — add_funnel_text_columns
@@ -563,16 +552,17 @@ Bot-Hits-Log. Aktuell 0 Zeilen (Honeypot greift selten / Bots sind sauber abgewe
 20260522192429 — add_stripe_fields_to_tenants
 20260527120000 — aufgabe_25_tenant_members_and_full_rls    ← Phase B.1
 20260527130000 — aufgabe_25_add_funnel_view_logs_delete_policy  ← Hotfix B.1
+20260528120000 — aufgabe_26a_uuid_fks_add                  ← Phase B.2 (ADD, zero-downtime)
+20260528130000 — aufgabe_26b_uuid_fks_drop                 ← Phase B.2 (DROP)
+20260528140000 — aufgabe_27_drop_submissions_contact_legacy ← Phase B.3
 ```
 
 ### Geplante Migrationen (siehe roadmap.md Phase B)
 
-1. **B.2 UUID-FKs** — `funnels.tenant_slug`/`funnel_questions.funnel_slug`/`funnel_view_logs.*_slug` → UUID-FKs; RLS-Slug-Walks durch direkte UUID-Joins ersetzen.
-2. **B.3 Drop Legacy `submissions.contact_*`** — alles über `contact` jsonb.
-3. **B.4 `tenants` schlanker** — `notification_email`, `public_email`, `public_phone`, `address` droppen; `funnels.notification_email` wird Pflicht.
-4. **B.5 `pages` + `fields`** — Page → 1:N Refactor; Kontaktfelder werden reguläre Field-Types.
-5. **B.6 Webhook-Schema** — `webhook_subscriptions` + `webhook_delivery_attempts` (nur Struktur).
-6. **B.7 Updated-At-Konsistenz** — Trigger auf alle relevanten Tabellen.
+1. **B.4 `tenants` schlanker** — `notification_email`, `public_email`, `public_phone`, `address` droppen; `funnels.notification_email` wird Pflicht.
+2. **B.5 `pages` + `fields`** — Page → 1:N Refactor; Kontaktfelder werden reguläre Field-Types.
+3. **B.6 Webhook-Schema** — `webhook_subscriptions` + `webhook_delivery_attempts` (nur Struktur).
+4. **B.7 Updated-At-Konsistenz** — Trigger auf alle relevanten Tabellen.
 
 ---
 
