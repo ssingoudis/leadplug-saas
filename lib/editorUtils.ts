@@ -124,6 +124,7 @@ export function editorStateToFunnelRow(
   state: EditorState,
   tenantId: string,
   funnelSlug: string,
+  fallbackNotificationEmail: string,
 ): Record<string, unknown> {
   return {
     slug: funnelSlug,
@@ -141,7 +142,7 @@ export function editorStateToFunnelRow(
     footer_company_name: state.footerCompanyName || null,
     footer_email: state.footerEmail || null,
     footer_phone: state.footerPhone || null,
-    notification_email: state.notificationEmail || null,
+    notification_email: state.notificationEmail?.trim() || fallbackNotificationEmail,
     email_sender_local: state.emailSenderLocal || null,
     primary_color: state.primaryColor || null,
     text_color: state.textColor || null,

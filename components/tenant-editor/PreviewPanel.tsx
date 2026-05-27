@@ -20,8 +20,6 @@ interface Props {
   isTestMode: boolean;
   onToggleTestMode: () => void;
   companyName: string;
-  publicEmail: string;
-  publicPhone: string;
   hasUnsavedChanges: boolean;
 }
 
@@ -68,8 +66,6 @@ export function PreviewPanel({
   isTestMode,
   onToggleTestMode,
   companyName,
-  publicEmail,
-  publicPhone,
   hasUnsavedChanges,
 }: Props) {
   const topRef = useRef<HTMLDivElement>(null);
@@ -103,8 +99,8 @@ export function PreviewPanel({
   const mockAnswers = buildMockAnswers(questions);
 
   const resolvedCompanyName = state.footerCompanyName || companyName || "Muster GmbH";
-  const resolvedEmail = state.footerEmail || publicEmail || "info@muster.de";
-  const resolvedPhone = state.footerPhone || publicPhone || "+49 123 456789";
+  const resolvedEmail = state.footerEmail || "info@muster.de";
+  const resolvedPhone = state.footerPhone || "+49 123 456789";
   const successQuestions = noQuestions ? PLACEHOLDER_QUESTIONS : questions;
   const successAnswers = noQuestions ? PLACEHOLDER_ANSWERS : mockAnswers;
 

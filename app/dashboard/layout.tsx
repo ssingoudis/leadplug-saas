@@ -37,8 +37,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
         .from('tenants')
         .insert({
           company_name: user.email.split('@')[0],
-          notification_email: user.email,
-          public_email: user.email,
           billing_model: 'free',
           is_active: true,
         })

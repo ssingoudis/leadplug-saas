@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
 
     const { data: tenant, error } = await supabase
       .from('tenants')
-      .select('id, company_name, notification_email, stripe_customer_id, billing_model, stripe_subscription_status')
+      .select('id, company_name, stripe_customer_id, billing_model, stripe_subscription_status')
       .maybeSingle()
 
     if (error || !tenant) {
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     let customerId = tenant.stripe_customer_id
     if (!customerId) {
       const customer = await stripe.customers.create({
-        email: tenant.notification_email ?? user.email,
+        email: user.email ?? undefined,
         name: tenant.company_name ?? undefined,
         metadata: { supabase_tenant_id: tenant.id },
       })

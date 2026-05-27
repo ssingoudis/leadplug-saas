@@ -13,8 +13,6 @@ interface Props {
   mode: "create" | "edit";
   originalSlug?: string;
   companyName: string;
-  publicEmail: string;
-  publicPhone: string;
 }
 
 export function FunnelEditorShell({
@@ -22,8 +20,6 @@ export function FunnelEditorShell({
   mode,
   originalSlug,
   companyName,
-  publicEmail,
-  publicPhone,
 }: Props) {
   const router = useRouter();
 
@@ -415,8 +411,6 @@ export function FunnelEditorShell({
           isTestMode={isTestMode}
           onToggleTestMode={() => setIsTestMode((t) => !t)}
           companyName={companyName}
-          publicEmail={publicEmail}
-          publicPhone={publicPhone}
           hasUnsavedChanges={isDirty}
         />
       </main>

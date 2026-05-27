@@ -11,7 +11,7 @@ import type { EditorState } from "@/types";
 async function getCurrentTenant(supabase: SupabaseClient) {
   const { data: tenant } = await supabase
     .from("tenants")
-    .select("id, company_name, public_email, public_phone")
+    .select("id, company_name")
     .maybeSingle();
   return tenant;
 }
@@ -53,8 +53,6 @@ export async function GET(
   return NextResponse.json({
     state,
     companyName: tenant.company_name,
-    publicEmail: tenant.public_email,
-    publicPhone: tenant.public_phone ?? "",
   });
 }
 
@@ -75,8 +73,17 @@ export async function PUT(
 
   const { state }: { state: EditorState } = await req.json();
 
+  // notification_email ist seit B.4 NOT NULL — Fallback auf User-E-Mail wenn leer.
+  const fallbackEmail = user.email ?? '';
+  if (!state.notificationEmail?.trim() && !fallbackEmail) {
+    return NextResponse.json(
+      { error: "Benachrichtigungs-E-Mail fehlt" },
+      { status: 400 },
+    );
+  }
+
   // Slug bleibt immer der originale — Änderungen würden bestehende Embed-Codes brechen
-  const funnelRow = editorStateToFunnelRow(state, tenant.id, oldSlug);
+  const funnelRow = editorStateToFunnelRow(state, tenant.id, oldSlug, fallbackEmail);
   const { data: updatedFunnel, error: updateErr } = await supabase
     .from("funnels")
     .update(funnelRow)

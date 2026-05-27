@@ -81,11 +81,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Funnel-Name fehlt" }, { status: 400 });
   }
 
+  // notification_email ist seit B.4 NOT NULL — Fallback auf User-E-Mail wenn leer.
+  const fallbackEmail = user.email ?? '';
+  if (!state.notificationEmail?.trim() && !fallbackEmail) {
+    return NextResponse.json(
+      { error: "Benachrichtigungs-E-Mail fehlt" },
+      { status: 400 },
+    );
+  }
+
   // Admin-Client nur für globale Slug-Uniqueness — RLS würde andere Tenants ausblenden.
   const admin = createAdminClient();
   const slug = await generateRandomSlug(admin);
 
-  const funnelRow = editorStateToFunnelRow(state, tenant.id, slug);
+  const funnelRow = editorStateToFunnelRow(state, tenant.id, slug, fallbackEmail);
   const { data: insertedFunnel, error: funnelErr } = await supabase
     .from("funnels")
     .insert(funnelRow)

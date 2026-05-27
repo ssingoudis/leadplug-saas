@@ -6,8 +6,6 @@ import type { EditorState } from "@/types";
 interface Props {
   initialState: EditorState;
   companyName: string;
-  publicEmail: string;
-  publicPhone: string;
 }
 
 export default function FunnelEditorClient(props: Props) {
