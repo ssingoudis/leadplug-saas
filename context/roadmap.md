@@ -9,8 +9,8 @@
 
 | Phase | Fokus | Status |
 |---|---|---|
-| **A** | Doku-Reset (CLAUDE.md, project-overview, schema, HTML-Files) | 🟡 in Arbeit (Mai 2026) |
-| **B** | Schema-Refactor & Architektur-Foundation | ⚪ geplant (vor MVP) |
+| **A** | Doku-Reset (CLAUDE.md, project-overview, schema, HTML-Files) | ✅ abgeschlossen (Mai 2026) |
+| **B** | Schema-Refactor & Architektur-Foundation | 🟡 in Arbeit — B.1 ✅ (Mai 2026), B.2-B.7 offen |
 | **C** | Builder-MVP-Sprint (Logic Jumps, Feldtypen, Polish) | ⚪ nach Phase B |
 | **D** | MVP-Launch + Partner-Pitches | ⚪ Ziel |
 | **E** | Pro-Plan-Features (Twilio, Web-Component-Embed, Kanban, …) | ⚪ Post-MVP |
@@ -36,17 +36,19 @@ Ziel: alle Dokumente entsprechen der aktuellen Realität, bevor neue Architektur
 
 Strategischer Hintergrund: Wir sind heute auf einem Schema, das für das alte Tenant-Modell (Tenant = Handwerker) gewachsen ist. Vor MVP bauen wir es auf das neue Modell um (Tenant = Agentur, Multi-User, sauberes RLS, UUID-FKs).
 
-### B.1 — `tenant_members` + komplette RLS-Refactor
+### B.1 — `tenant_members` + komplette RLS-Refactor ✅ (Aufgabe 25, Mai 2026)
 
-**~2-3 Tage.**
+**Status:** abgeschlossen am 2026-05-27 als Aufgabe 25. Migration `aufgabe_25_tenant_members_and_full_rls` + Hotfix `aufgabe_25_add_funnel_view_logs_delete_policy` direkt auf Production appliziert (Branch-Workflow übersprungen wegen MCP-Tooling-Limit + bewusst akzeptierter Ausnahmefall mit dokumentierter DOWN-Migration).
 
-- Neue Tabelle `tenant_members(id, tenant_id, auth_user_id, role, created_at)` mit Enum `tenant_member_role` (`owner` / `admin` / `member`).
-- **Minimal** — keine Profile-Felder (kein `display_name`, kein `phone`). Wenn je nötig: separate `user_profiles`-Tabelle (v2).
-- Daten-Migration: für jeden bestehenden Tenant mit `auth_user_id` einen `tenant_members`-Eintrag mit `role='owner'`.
-- Alle bestehenden 5 RLS-SELECT-Policies neu schreiben (Auflösung über `tenant_members`).
-- **Zusätzlich neue Policies für INSERT, UPDATE, DELETE** auf allen 6 Tabellen.
-- `tenants.auth_user_id` bleibt als Owner-Shortcut, kann später entfallen.
-- App-Code: Auth-Checks in API-Routes können vereinfacht werden (RLS übernimmt).
+**Tatsächliche Umsetzung:**
+- Enum `tenant_member_role`, Tabelle `tenant_members` mit UNIQUE(tenant_id, auth_user_id), 2 Indices, updated_at-Trigger
+- Backfill: 3 Owner-Einträge (`leadplug`, `ssingoudis`, `stavros`)
+- Helper-Funktionen `current_tenant_ids()` und `current_tenant_role(uuid)` — SECURITY DEFINER, STABLE, search_path gepinnt
+- 19 neue Policies über 6 Tabellen (alte 5 SELECT-Policies gedroppt)
+- 12 App-Code-Files umgestellt von admin-Client + manueller Auth → user-Client + RLS (7 API-Routes, 5 Server-Components)
+- `app/dashboard/layout.tsx` erweitert: Auto-Tenant-Anlage schreibt jetzt zusätzlich Owner-Membership
+- Slug-Walks (`tenant_slug IN (SELECT t.slug FROM tenants t WHERE t.id IN current_tenant_ids())`) bleiben in B.1 — werden in B.2 durch UUID-Joins ersetzt
+- Type-Check sauber, Smoke-Test (Public-Widget rendert, geschützte Routen redirecten zu Login) sauber
 
 ### B.2 — UUID-FKs überall
 

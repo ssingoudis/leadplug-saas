@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { DEFAULT_EDITOR_STATE } from "@/components/tenant-editor/defaults";
 import FunnelEditorClient from "./FunnelEditorClient";
@@ -11,11 +10,9 @@ export default async function NewFunnelPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-  const { data: tenant } = await admin
+  const { data: tenant } = await supabase
     .from("tenants")
     .select("slug, company_name, public_email, public_phone")
-    .eq("auth_user_id", user.id)
     .maybeSingle();
 
   if (!tenant) redirect("/dashboard");

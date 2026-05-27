@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   editorStateToFunnelRow,
   editorQuestionsToDbRows,
@@ -8,26 +8,12 @@ import {
 } from "@/lib/editorUtils";
 import type { EditorState } from "@/types";
 
-async function getAuthenticatedTenant(admin: ReturnType<typeof createAdminClient>, userId: string) {
-  const { data: tenant } = await admin
+async function getCurrentTenant(supabase: SupabaseClient) {
+  const { data: tenant } = await supabase
     .from("tenants")
     .select("slug, company_name, public_email, public_phone")
-    .eq("auth_user_id", userId)
     .maybeSingle();
   return tenant;
-}
-
-async function verifyOwnership(
-  admin: ReturnType<typeof createAdminClient>,
-  funnelSlug: string,
-  tenantSlug: string,
-): Promise<boolean> {
-  const { data } = await admin
-    .from("funnels")
-    .select("tenant_slug")
-    .eq("slug", funnelSlug)
-    .maybeSingle();
-  return data?.tenant_slug === tenantSlug;
 }
 
 // GET /api/tenant/funnels/[slug] — Funnel laden (für Editor)
@@ -42,14 +28,11 @@ export async function GET(
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const admin = createAdminClient();
-  const tenant = await getAuthenticatedTenant(admin, user.id);
+  const tenant = await getCurrentTenant(supabase);
   if (!tenant) return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
 
-  const owned = await verifyOwnership(admin, slug, tenant.slug);
-  if (!owned) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
-  const { data: funnelRow, error: funnelErr } = await admin
+  // RLS sorgt dafür, dass nur eigene Funnels sichtbar sind.
+  const { data: funnelRow, error: funnelErr } = await supabase
     .from("funnels")
     .select("*")
     .eq("slug", slug)
@@ -59,7 +42,7 @@ export async function GET(
     return NextResponse.json({ error: "Funnel nicht gefunden" }, { status: 404 });
   }
 
-  const { data: questionRows } = await admin
+  const { data: questionRows } = await supabase
     .from("funnel_questions")
     .select("*")
     .eq("funnel_slug", slug)
@@ -87,32 +70,31 @@ export async function PUT(
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const admin = createAdminClient();
-  const tenant = await getAuthenticatedTenant(admin, user.id);
+  const tenant = await getCurrentTenant(supabase);
   if (!tenant) return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
-
-  const owned = await verifyOwnership(admin, oldSlug, tenant.slug);
-  if (!owned) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { state }: { state: EditorState } = await req.json();
 
   // Slug bleibt immer der originale — Änderungen würden bestehende Embed-Codes brechen
   const funnelRow = editorStateToFunnelRow(state, tenant.slug, oldSlug);
-  const { error: updateErr } = await admin
+  const { error: updateErr, count } = await supabase
     .from("funnels")
-    .update(funnelRow)
+    .update(funnelRow, { count: "exact" })
     .eq("slug", oldSlug);
 
   if (updateErr) {
     return NextResponse.json({ error: updateErr.message }, { status: 500 });
   }
+  if (count === 0) {
+    return NextResponse.json({ error: "Funnel nicht gefunden" }, { status: 404 });
+  }
 
-  // Fragen: alte löschen, neue einfügen (atomarer als Upsert bei Reihenfolge-Änderungen)
-  await admin.from("funnel_questions").delete().eq("funnel_slug", oldSlug);
+  // Fragen: alte löschen, neue einfügen (RLS filtert beides auf eigene Funnels)
+  await supabase.from("funnel_questions").delete().eq("funnel_slug", oldSlug);
 
   if (state.questions.length > 0) {
     const questionRows = editorQuestionsToDbRows(state.questions, oldSlug);
-    const { error: qErr } = await admin
+    const { error: qErr } = await supabase
       .from("funnel_questions")
       .insert(questionRows);
     if (qErr) {
@@ -135,14 +117,8 @@ export async function DELETE(
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const admin = createAdminClient();
-  const tenant = await getAuthenticatedTenant(admin, user.id);
-  if (!tenant) return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
-
-  const owned = await verifyOwnership(admin, slug, tenant.slug);
-  if (!owned) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
-  const { data: funnel } = await admin
+  // RLS sorgt dafür, dass nur eigene Funnels sichtbar/löschbar sind.
+  const { data: funnel } = await supabase
     .from("funnels")
     .select("is_active")
     .eq("slug", slug)
@@ -156,11 +132,11 @@ export async function DELETE(
     );
   }
 
-  // Alles löschen: View-Logs → Submissions → Fragen → Funnel
-  await admin.from("funnel_view_logs").delete().eq("funnel_slug", slug);
-  await admin.from("submissions").delete().eq("funnel_slug", slug);
-  await admin.from("funnel_questions").delete().eq("funnel_slug", slug);
-  const { error } = await admin.from("funnels").delete().eq("slug", slug);
+  // Reihenfolge: View-Logs → Submissions → Fragen → Funnel
+  await supabase.from("funnel_view_logs").delete().eq("funnel_slug", slug);
+  await supabase.from("submissions").delete().eq("funnel_slug", slug);
+  await supabase.from("funnel_questions").delete().eq("funnel_slug", slug);
+  const { error } = await supabase.from("funnels").delete().eq("slug", slug);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

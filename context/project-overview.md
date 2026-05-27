@@ -197,7 +197,7 @@ types/
 
 ---
 
-## 4. Datenbank-Schema (Stand 2026-05-26, aus Supabase)
+## 4. Datenbank-Schema (Stand 2026-05-27, nach Aufgabe 25 / Phase B.1)
 
 Alle Tabellen haben **RLS aktiviert**. Service-Key-Zugriffe umgehen RLS (nur server-side).
 
@@ -222,6 +222,20 @@ Alle Tabellen haben **RLS aktiviert**. Service-Key-Zugriffe umgehen RLS (nur ser
 | `stripe_subscription_status` | text | `active`/`trialing`/`past_due`/`canceled`/`unpaid`/`incomplete` |
 | `stripe_price_id` | text | Stripe Price-ID des aktiven Plans |
 | `created_at`, `updated_at` | timestamptz | |
+
+### `tenant_members` (3 Zeilen aktuell, eingeführt mit Aufgabe 25 / Phase B.1)
+
+Junction N:M zwischen `tenants` und `auth.users` mit Rolle pro Mitgliedschaft.
+
+| Spalte | Typ | Hinweise |
+|---|---|---|
+| `id` | uuid, PK | `gen_random_uuid()` |
+| `tenant_id` | uuid, FK → `tenants.id` ON DELETE CASCADE | |
+| `auth_user_id` | uuid, FK → `auth.users.id` ON DELETE CASCADE | |
+| `role` | enum `tenant_member_role` | `owner` \| `admin` \| `member` |
+| `created_at`, `updated_at` | timestamptz | `updated_at` via Trigger |
+
+UNIQUE `(tenant_id, auth_user_id)` — kein User doppelt im selben Tenant. Owner-Eintrag wird beim ersten Login durch `app/dashboard/layout.tsx` (admin-Client) auto-erzeugt. Multi-User-UI (Invites) kommt in Phase E.
 
 ### `funnels` (12 Zeilen aktuell)
 
@@ -309,7 +323,7 @@ Alle Tabellen haben **RLS aktiviert**. Service-Key-Zugriffe umgehen RLS (nur ser
 | `funnel_slug`, `ip_address` | text, nullable |
 | `created_at` | timestamptz |
 
-### Aktuelle Migrationen (chronologisch, 15 insgesamt)
+### Aktuelle Migrationen (chronologisch, 17 insgesamt)
 
 ```
 20260513064118 — add_funnel_text_columns
@@ -327,6 +341,8 @@ Alle Tabellen haben **RLS aktiviert**. Service-Key-Zugriffe umgehen RLS (nur ser
 20260522121300 — add_crm_columns_to_submissions
 20260522124347 — drop_notes_from_submissions
 20260522192429 — add_stripe_fields_to_tenants
+20260527120000 — aufgabe_25_tenant_members_and_full_rls    ← Phase B.1
+20260527130000 — aufgabe_25_add_funnel_view_logs_delete_policy  ← B.1 Hotfix
 ```
 
 ---
@@ -403,10 +419,15 @@ Alle Tabellen haben **RLS aktiviert**. Service-Key-Zugriffe umgehen RLS (nur ser
 - **`client.ts`** — für Client Components, **respektiert RLS**
 - **`admin.ts`** — Service-Key-Client, **umgeht RLS** (nur in API-Routes für `/api/submit`, `/api/stripe/webhook`, Admin-Endpoints)
 
-### RLS-Policies
-Alle 6 Tabellen haben `rls_enabled: true`. Die konkreten Policies sind über die Migration `add_auth_user_id_and_rls_policies` (20260518) eingeführt — Details sind in der Supabase-Console einsehbar. Tenant-Identity wird über `tenants.auth_user_id = auth.uid()` aufgelöst.
+### RLS-Policies (seit Aufgabe 25 / Phase B.1)
+Alle 7 Tabellen haben `rls_enabled: true`. **19 Policies** decken SELECT/INSERT/UPDATE/DELETE pro Tabelle ab (Defense-in-Depth, nicht mehr nur SELECT). Tenant-Identity wird via Junction-Table `tenant_members` über zwei Helper-Funktionen aufgelöst: `current_tenant_ids()` (SETOF uuid) und `current_tenant_role(uuid)` — beide `SECURITY DEFINER, STABLE, search_path` gepinnt. Details: [`supabase-schema.md`](supabase-schema.md) §2 + §4.5.
 
-> **Geplante Erweiterung** (siehe CLAUDE.md §2): Wechsel von `tenants.auth_user_id` (1:1) zu Junction-Table `tenant_members` (N:M mit Rollen). RLS-Policies müssen entsprechend angepasst werden.
+**Admin-Client (RLS-Bypass, `lib/supabase/admin.ts`) ist nur noch zulässig für:**
+- `/api/submit`, `/api/track-view` — anonymer Endbenutzer
+- `/api/stripe/webhook` — System-Event ohne User-Kontext
+- `/api/tenant/slug-check` + `generateRandomSlug` in `/api/tenant/funnels` POST — globale Slug-Uniqueness
+- `app/dashboard/layout.tsx` Auto-Tenant-Anlage beim ersten Login — System-Provisioning
+- Admin-Operationen (Stavros / Plattform-Owner)
 
 ---
 

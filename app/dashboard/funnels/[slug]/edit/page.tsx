@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect, notFound } from "next/navigation";
 import { dbToEditorState } from "@/lib/editorUtils";
 import FunnelEditorClient from "./FunnelEditorClient";
@@ -17,25 +16,23 @@ export default async function EditFunnelPage({ params }: Props) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-  const { data: tenant } = await admin
+  const { data: tenant } = await supabase
     .from("tenants")
     .select("slug, company_name, public_email, public_phone")
-    .eq("auth_user_id", user.id)
     .maybeSingle();
 
   if (!tenant) redirect("/dashboard");
 
-  // Funnel laden + Ownership prüfen
-  const { data: funnelRow } = await admin
+  // RLS sorgt dafuer, dass nur eigene Funnels sichtbar sind.
+  const { data: funnelRow } = await supabase
     .from("funnels")
     .select("*")
     .eq("slug", slug)
     .maybeSingle();
 
-  if (!funnelRow || funnelRow.tenant_slug !== tenant.slug) notFound();
+  if (!funnelRow) notFound();
 
-  const { data: questionRows } = await admin
+  const { data: questionRows } = await supabase
     .from("funnel_questions")
     .select("*")
     .eq("funnel_slug", slug)

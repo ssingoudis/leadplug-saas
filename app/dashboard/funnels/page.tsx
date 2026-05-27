@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Plus, Zap } from "lucide-react";
@@ -22,16 +21,14 @@ async function getFunnels(): Promise<FunnelItem[]> {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
-  const { data: tenant } = await admin
+  const { data: tenant } = await supabase
     .from("tenants")
     .select("slug")
-    .eq("auth_user_id", user.id)
     .maybeSingle();
 
   if (!tenant) return [];
 
-  const { data: funnels } = await admin
+  const { data: funnels } = await supabase
     .from("funnels")
     .select("slug, funnel_name, contact_form_title, is_active, primary_color, total_views, created_at")
     .eq("tenant_slug", tenant.slug)
@@ -41,7 +38,7 @@ async function getFunnels(): Promise<FunnelItem[]> {
   const slugs = (funnels ?? []).map((f) => f.slug);
   let countMap: Record<string, number> = {};
   if (slugs.length > 0) {
-    const { data: counts } = await admin
+    const { data: counts } = await supabase
       .from("submissions")
       .select("funnel_slug")
       .in("funnel_slug", slugs);

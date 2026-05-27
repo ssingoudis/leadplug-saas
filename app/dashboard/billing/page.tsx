@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { getSubscriptionStatus } from '@/lib/billing'
 import BillingClient from './BillingClient'
@@ -14,11 +13,9 @@ export default async function BillingPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const admin = createAdminClient()
-  const { data: tenant } = await admin
+  const { data: tenant } = await supabase
     .from('tenants')
     .select('billing_model, billing_price, stripe_customer_id, stripe_subscription_status, stripe_price_id')
-    .eq('auth_user_id', user.id)
     .maybeSingle()
 
   if (!tenant) redirect('/dashboard')
