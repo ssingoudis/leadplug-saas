@@ -10,7 +10,7 @@
 | Phase | Fokus | Status |
 |---|---|---|
 | **A** | Doku-Reset (CLAUDE.md, project-overview, schema, HTML-Files) | ✅ abgeschlossen (Mai 2026) |
-| **B** | Schema-Refactor & Architektur-Foundation | 🟡 in Arbeit — B.1 ✅ (Mai 2026), B.2-B.7 offen |
+| **B** | Schema-Refactor & Architektur-Foundation | 🟡 in Arbeit — B.1 ✅, B.2 + B.3 🟡 (Code done, Phase-2-Migration ausstehend), B.4-B.7 offen |
 | **C** | Builder-MVP-Sprint (Logic Jumps, Feldtypen, Polish) | ⚪ nach Phase B |
 | **D** | MVP-Launch + Partner-Pitches | ⚪ Ziel |
 | **E** | Pro-Plan-Features (Twilio, Web-Component-Embed, Kanban, …) | ⚪ Post-MVP |
@@ -50,25 +50,27 @@ Strategischer Hintergrund: Wir sind heute auf einem Schema, das für das alte Te
 - Slug-Walks (`tenant_slug IN (SELECT t.slug FROM tenants t WHERE t.id IN current_tenant_ids())`) bleiben in B.1 — werden in B.2 durch UUID-Joins ersetzt
 - Type-Check sauber, Smoke-Test (Public-Widget rendert, geschützte Routen redirecten zu Login) sauber
 
-### B.2 — UUID-FKs überall
+### B.2 — UUID-FKs überall 🟡 (Aufgabe 26, Code done am 2026-05-27, Phase-2-Migration ausstehend)
 
-**~1-2 Tage.**
+**Status:** Code-Refactor + Phase-1-Migration (additiv) sind durch. Phase-2-Migration (DROP-only) ist geschrieben aber wartet auf Vercel-Deploy. Details + Reihenfolge: [`current-feature.md`](current-feature.md) Aufgabe 26.
 
-- `funnels.tenant_slug` → neue Spalte `tenant_id uuid REFERENCES tenants(id)`.
-- `funnel_questions.funnel_slug` → `funnel_id uuid REFERENCES funnels(id)`.
-- `funnel_view_logs.funnel_slug` / `tenant_slug` → UUIDs.
-- `submissions` behält `funnel_slug` + `tenant_slug` (Snapshot-Design, kein FK).
-- App-Code anpassen: alle Joins gehen über UUIDs.
-- Slugs bleiben für öffentliche URLs (`funnels.slug`) — werden nach Anlage unveränderlich.
-- Evaluate: `tenants.slug` ganz droppen (taucht nirgends öffentlich auf).
+**Tatsächliche Umsetzung (über ursprünglichen Scope hinaus):**
+- Neue UUID-Spalten: `funnels.tenant_id`, `funnel_questions.funnel_id`, `funnel_view_logs.funnel_id+tenant_id`, **zusätzlich** `submissions.tenant_id` (ON DELETE SET NULL) — RLS via tenant_id, slug-Spalten bleiben als Snapshot.
+- `tenants.slug` UND `tenants.auth_user_id` droppen — tenant_members ist Single Source of Truth, layout.tsx baut Tenant-Lookup auf tenant_members um.
+- `funnels.slug` bleibt für öffentliche URLs, **wird nach Anlage unveränderlich** (UI-Enforcement existiert bereits).
+- **/admin/* (Plattform-Owner-Cockpit) komplett gelöscht** — veraltet aus Pre-Self-Signup-Phase. Neuer Build als Phase-E-Eintrag geplant.
+- Zweiphasen-Migration (Zero-Downtime): Phase 1 ADD-only mit BEFORE-Triggern für Slug→UUID-Sync, Phase 2 DROP-only.
+- 11 alte RLS-Policies durch UUID-Versionen (`*_v2_*`) ersetzt (in Phase 2 werden alte gedroppt + v2-Suffix entfernt).
 
-### B.3 — Legacy `submissions.contact_*`-Spalten droppen
+### B.3 — Legacy `submissions.contact_*`-Spalten droppen 🟡 (Aufgabe 27, Code done am 2026-05-27, Migration ausstehend)
 
-**~0.5 Tag.**
+**Status:** Code-Refactor durch, in denselben Deploy wie B.2 gezogen (gemeinsamer Commit). Migration geschrieben aber wartet auf Vercel-Deploy.
 
-- Backfill-Check: ist `submissions.contact` jsonb für alle 25 Zeilen befüllt? Falls nein → Migration zum Befüllen.
-- Drop `contact_anrede`, `contact_name`, `contact_email`, `contact_phone`.
-- App-Code: alle Reads gehen nur noch über `contact` jsonb.
+**Umsetzung:**
+- Backfill-Check ✅: alle 26 Submissions haben `contact` jsonb befüllt (verifiziert per SQL).
+- App-Code: 6 Files refactored — lesen aus `contact` jsonb auf Server-Seite, Client-Komponenten unverändert (LeadRow + TenantSubmission types behalten ihre Shape).
+- `lib/tracking.ts`: `logSubmission` schreibt nur noch `contact` jsonb, nicht mehr die 4 Spalten.
+- Migration `20260528140000_aufgabe_27_drop_submissions_contact_legacy.sql` dropt die 4 Spalten — wartet auf Apply nach Vercel-Deploy.
 
 ### B.4 — `tenants` zur reinen Agentur-Account-Tabelle
 
@@ -161,6 +163,7 @@ Nicht-MVP-Features, sortiert nach strategischer Priorität sobald Pre-Launch-Val
 - **`contacts`-Tabelle + Dedup-Logik**: gleiche E-Mail-Adresse über mehrere Submissions = 1 Kontakt mit Historie. CRM-Voraussetzung.
 - **Script- / Web-Component-Embed**: nahtlose Integration ohne iFrame-Sandbox. Differenzierungs-Feature für Pro-Plan.
 - **`user_profiles`-Tabelle**: falls Phone für Twilio gebraucht wird.
+- **Plattform-Owner-Dashboard v2**: sauberer Re-Build des in Aufgabe 26 gelöschten `/admin/*`. Klares Feature-Set: Liste aller Tenants mit Stripe-Status/MRR/Leads-Volumen, "in Tenant hineinschauen" für Support, Cross-Tenant-Suche, manuelles Tenant-Anlegen/Deaktivieren/Free-Schalten, System-Health (fehlgeschlagene Webhooks, Stripe-Mismatches). SUPERADMIN_EMAIL-Gating via proxy.ts wiederherstellen.
 
 ### Mittlere Priorität
 
