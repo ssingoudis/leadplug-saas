@@ -263,7 +263,7 @@ Klare Trennung — keine Override-Hierarchien zwischen Tabellen:
 
 ### 13.5 Bevorstehende Schema-Änderungen
 
-Vor MVP-Launch steht ein größerer Schema-Refactor an. Status: B.1 (`tenant_members`) ✅, B.2 (UUID-FKs) ✅, B.3 (submissions.contact_*-Cleanup) ✅, B.4 (tenants als reine Account-Tabelle) ✅ — alle Mai 2026. **Offen:** B.5 (pages + fields), B.6 (Webhook-Schema), B.7 (updated_at-Trigger). Details + Reihenfolge: siehe [`context/roadmap.md`](context/roadmap.md).
+Vor MVP-Launch steht ein größerer Schema-Refactor an. Status: B.1 (`tenant_members`) ✅, B.2 (UUID-FKs) ✅, B.3 (submissions.contact_*-Cleanup) ✅, B.4 (tenants als reine Account-Tabelle) ✅, B.6 (Webhook-Schema) ✅ — alle Mai 2026. **Offen:** B.5 (pages + fields — der dickste Block, eigene Planungs-Session nötig), B.7 (updated_at-Trigger-Konsistenz). Details + Reihenfolge: siehe [`context/roadmap.md`](context/roadmap.md).
 
 ---
 

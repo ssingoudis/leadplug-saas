@@ -10,7 +10,7 @@
 | Phase | Fokus | Status |
 |---|---|---|
 | **A** | Doku-Reset (CLAUDE.md, project-overview, schema, HTML-Files) | ✅ abgeschlossen (Mai 2026) |
-| **B** | Schema-Refactor & Architektur-Foundation | 🟡 in Arbeit — B.1 ✅, B.2 ✅, B.3 ✅, B.4 ✅ (alle Mai 2026), B.5-B.7 offen |
+| **B** | Schema-Refactor & Architektur-Foundation | 🟡 in Arbeit — B.1 ✅, B.2 ✅, B.3 ✅, B.4 ✅, B.6 ✅ (alle Mai 2026), B.5 + B.7 offen |
 | **C** | Builder-MVP-Sprint (Logic Jumps, Feldtypen, Polish) | ⚪ nach Phase B |
 | **D** | MVP-Launch + Partner-Pitches | ⚪ Ziel |
 | **E** | Pro-Plan-Features (Twilio, Web-Component-Embed, Kanban, …) | ⚪ Post-MVP |
@@ -98,14 +98,17 @@ Strategischer Hintergrund: Wir sind heute auf einem Schema, das für das alte Te
 - App-Code: Editor + Widget-Renderer auf neue Struktur umstellen.
 - **Builder-UI-Regel:** Funnel muss mindestens 1 Field mit `field_type='email'` enthalten — sonst kein "Veröffentlichen".
 
-### B.6 — Webhook-Schema (nur Struktur, kein Code)
+### B.6 — Webhook-Schema (nur Struktur, kein Code) ✅ (Aufgabe 29, 2026-05-27)
 
-**~0.5 Tag.**
+**Status:** abgeschlossen am 2026-05-27. Migration auf Production appliziert, Tabellen + RLS + Indices angelegt. Sender-Code kommt mit Webhook-Tier-Launch in Phase C.5.
 
-- `webhook_subscriptions(id, tenant_id, url, secret, event_types[], is_active, created_at, updated_at)` — pro Tenant 1..N Webhooks
-- `webhook_delivery_attempts(id, subscription_id, submission_id, attempt_count, status, last_error, delivered_at, created_at)` — Audit & Retry-Foundation
-- RLS-Policies: Tenant kann eigene Subscriptions lesen/schreiben.
-- **Kein Code für Webhook-Versand** in Phase B — kommt mit Webhook-Tier-Launch.
+**Tatsächliche Umsetzung:**
+- `webhook_subscriptions(id, tenant_id, url, secret, event_types[], is_active, created_at, updated_at)` — pro Tenant 1..N Webhooks. CHECK-Constraints: `url LIKE 'http%' AND length >= 10`, `length(secret) >= 16`. `updated_at`-Trigger.
+- `webhook_delivery_attempts(id, subscription_id, submission_id, attempt_count, status, last_error, delivered_at, created_at)` — Append-only Audit-Trail. CHECK-Constraints: `status IN (pending|retrying|success|failed)`, `attempt_count >= 1`, `delivered_at IS NOT NULL` wenn `status='success'`. FK auf `submissions(id)` mit ON DELETE SET NULL (Audit bleibt erhalten).
+- **5 RLS-Policies:** subscriptions SELECT (alle Member), INSERT+UPDATE (owner+admin), DELETE (owner only). delivery_attempts SELECT only — keine User-Client-Writes (System schreibt via Service-Key).
+- **7 Indices:** `tenant_id`, partial `is_active=true`, `(subscription_id, created_at DESC)`, partial `submission_id IS NOT NULL`, partial Retry-Queue (`status IN (pending,retrying)`).
+- Schema additive — keine bestehenden Daten, kein Backfill nötig. Einzelner Migration-Schritt (kein zwei-Phasen-Pattern).
+- App-Code: **kein Touch.** Editor/Dashboard/Submit-Flow unverändert.
 
 ### B.7 — `updated_at` Trigger Konsistenz
 

@@ -197,9 +197,9 @@ types/
 
 ---
 
-## 4. Datenbank-Schema (Stand 2026-05-27, nach Aufgabe 28 / Phase B.4)
+## 4. Datenbank-Schema (Stand 2026-05-27, nach Aufgabe 29 / Phase B.6)
 
-Alle Tabellen haben **RLS aktiviert** (20 Policies über 6 Tabellen). Service-Key-Zugriffe umgehen RLS (nur server-side). Die maschinelle Voll-Referenz mit Indices, Triggers, Policies und Functions steht in [`supabase-schema.md`](supabase-schema.md).
+Alle Tabellen haben **RLS aktiviert** (25 Policies über 8 Tabellen, `honeypot_triggers` policy-frei). Service-Key-Zugriffe umgehen RLS (nur server-side). Die maschinelle Voll-Referenz mit Indices, Triggers, Policies und Functions steht in [`supabase-schema.md`](supabase-schema.md).
 
 ### `tenants` (Stammdaten der Agentur-Accounts — reine Account-Tabelle nach B.4, 9 Zeilen aktuell)
 
@@ -317,6 +317,35 @@ UNIQUE `(tenant_id, auth_user_id)` — kein User doppelt im selben Tenant. Owner
 | `tenant_id` | uuid, FK → `tenants.id` ON DELETE CASCADE | |
 | `viewed_at` | timestamptz | default `now()` |
 
+### `webhook_subscriptions` (0 Zeilen — Schema-Foundation, eingeführt in Aufgabe 29 / Phase B.6)
+
+Pro Tenant 1..N Webhook-Endpoints. Sender-Code kommt erst mit Webhook-Tier-Launch in Phase C.5. Schema-Details: [`supabase-schema.md`](supabase-schema.md) §3.7.
+
+| Spalte | Typ | Hinweise |
+|---|---|---|
+| `id` | uuid, PK | |
+| `tenant_id` | uuid, FK → `tenants.id` ON DELETE CASCADE | |
+| `url` | text | HTTPS-Endpoint (http nur für Tests). CHECK `LIKE 'http%' AND length >= 10` |
+| `secret` | text | HMAC-Signing-Secret. CHECK `length >= 16`. App-generated, UI zeigt 1× |
+| `event_types` | text[], default `'{}'` | z.B. `{"submission.created"}` |
+| `is_active` | bool, default `true` | |
+| `created_at`, `updated_at` | timestamptz | `updated_at` via Trigger |
+
+### `webhook_delivery_attempts` (0 Zeilen — Audit-Trail, eingeführt in Aufgabe 29 / Phase B.6)
+
+Append-only Log jedes Webhook-Versandsversuchs.
+
+| Spalte | Typ | Hinweise |
+|---|---|---|
+| `id` | uuid, PK | |
+| `subscription_id` | uuid, FK → `webhook_subscriptions.id` ON DELETE CASCADE | |
+| `submission_id` | uuid, nullable, FK → `submissions.id` ON DELETE SET NULL | Audit bleibt erhalten |
+| `attempt_count` | int, default `1` | CHECK >= 1 |
+| `status` | text, default `'pending'` | CHECK IN (`pending`, `retrying`, `success`, `failed`) |
+| `last_error` | text, nullable | |
+| `delivered_at` | timestamptz, nullable | CHECK: muss gesetzt sein bei `status='success'` |
+| `created_at` | timestamptz | |
+
 ### `honeypot_triggers` (0 Zeilen, Bot-Hits)
 
 | Spalte | Typ |
@@ -325,7 +354,7 @@ UNIQUE `(tenant_id, auth_user_id)` — kein User doppelt im selben Tenant. Owner
 | `funnel_slug`, `ip_address` | text, nullable |
 | `created_at` | timestamptz |
 
-### Aktuelle Migrationen (chronologisch, 22 insgesamt)
+### Aktuelle Migrationen (chronologisch, 23 insgesamt)
 
 ```
 20260513064118 — add_funnel_text_columns
@@ -350,6 +379,7 @@ UNIQUE `(tenant_id, auth_user_id)` — kein User doppelt im selben Tenant. Owner
 20260528140000 — aufgabe_27_drop_submissions_contact_legacy     ← Phase B.3
 20260528150000 — aufgabe_28a_tenants_cleanup_phase1             ← Phase B.4 (Backfills + Constraints)
 20260528160000 — aufgabe_28b_tenants_drop_endcustomer_columns   ← Phase B.4 (DROP)
+20260528170000 — aufgabe_29_webhook_schema                      ← Phase B.6 (additive)
 ```
 
 ---
