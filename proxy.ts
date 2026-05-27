@@ -28,21 +28,6 @@ export async function proxy(req: NextRequest) {
 
   const { pathname } = req.nextUrl
 
-  if (pathname.startsWith('/admin')) {
-    if (!user) {
-      const url = req.nextUrl.clone()
-      url.pathname = '/login'
-      url.searchParams.set('from', pathname)
-      return NextResponse.redirect(url)
-    }
-    const adminEmail = process.env.SUPERADMIN_EMAIL
-    if (!adminEmail || user.email !== adminEmail) {
-      const url = req.nextUrl.clone()
-      url.pathname = '/dashboard'
-      return NextResponse.redirect(url)
-    }
-  }
-
   if (pathname.startsWith('/dashboard')) {
     if (!user) {
       const url = req.nextUrl.clone()
@@ -56,5 +41,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/dashboard/:path*'],
+  matcher: ['/dashboard/:path*'],
 }

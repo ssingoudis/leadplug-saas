@@ -102,7 +102,6 @@ export interface TenantConfig {
   id?: string          // tenant ID
   funnelId?: string    // funnel ID
   slug: string         // funnel slug (URL-Identifier)
-  tenantSlug: string   // tenant slug (lesbarer Identifier des Kunden)
   companyName: string
   publicEmail: string          // Wird dem Kunden angezeigt (z.B. im Success-Screen)
   notificationEmail: string    // Wohin neue Leads gesendet werden

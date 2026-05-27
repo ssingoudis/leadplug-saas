@@ -18,7 +18,7 @@ export default async function EditFunnelPage({ params }: Props) {
 
   const { data: tenant } = await supabase
     .from("tenants")
-    .select("slug, company_name, public_email, public_phone")
+    .select("id, company_name, public_email, public_phone")
     .maybeSingle();
 
   if (!tenant) redirect("/dashboard");
@@ -35,7 +35,7 @@ export default async function EditFunnelPage({ params }: Props) {
   const { data: questionRows } = await supabase
     .from("funnel_questions")
     .select("*")
-    .eq("funnel_slug", slug)
+    .eq("funnel_id", funnelRow.id)
     .order("sort_order", { ascending: true });
 
   const initialState = dbToEditorState(funnelRow, questionRows ?? []);

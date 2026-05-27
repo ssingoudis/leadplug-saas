@@ -43,7 +43,7 @@ export async function isRateLimited(ip: string): Promise<boolean> {
 
 export async function logSubmission(params: {
   funnelSlug: string
-  tenantSlug: string
+  tenantId: string
   contact: ContactData
   answers: Record<string, string>
   leadPrice: number
@@ -57,11 +57,7 @@ export async function logSubmission(params: {
   try {
     const { data, error } = await supabase.from('submissions').insert({
       funnel_slug:    params.funnelSlug,
-      tenant_slug:    params.tenantSlug,
-      contact_anrede: params.contact.anrede  ?? null,
-      contact_name:   params.contact.name    ?? '',
-      contact_email:  params.contact.email   ?? null,
-      contact_phone:  params.contact.telefon ?? null,
+      tenant_id:      params.tenantId,
       contact:        params.contact,
       answers:        params.answers,
       lead_price:     params.leadPrice,

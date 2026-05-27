@@ -23,7 +23,7 @@ async function getFunnels(): Promise<FunnelItem[]> {
 
   const { data: tenant } = await supabase
     .from("tenants")
-    .select("slug")
+    .select("id")
     .maybeSingle();
 
   if (!tenant) return [];
@@ -31,19 +31,21 @@ async function getFunnels(): Promise<FunnelItem[]> {
   const { data: funnels } = await supabase
     .from("funnels")
     .select("slug, funnel_name, contact_form_title, is_active, primary_color, total_views, created_at")
-    .eq("tenant_slug", tenant.slug)
+    .eq("tenant_id", tenant.id)
     .order("is_active", { ascending: false })
     .order("created_at", { ascending: true });
 
   const slugs = (funnels ?? []).map((f) => f.slug);
-  let countMap: Record<string, number> = {};
+  const countMap: Record<string, number> = {};
   if (slugs.length > 0) {
     const { data: counts } = await supabase
       .from("submissions")
       .select("funnel_slug")
       .in("funnel_slug", slugs);
     for (const row of counts ?? []) {
-      countMap[row.funnel_slug] = (countMap[row.funnel_slug] ?? 0) + 1;
+      if (row.funnel_slug) {
+        countMap[row.funnel_slug] = (countMap[row.funnel_slug] ?? 0) + 1;
+      }
     }
   }
 

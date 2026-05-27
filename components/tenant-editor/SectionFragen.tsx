@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { uid, toKey, toSlug } from "@/lib/editorUtils";
-import { IconPicker } from "@/app/admin/new/IconPicker";
+import { IconPicker } from "@/components/dashboard/IconPicker";
 import type { EditorQuestion, EditorOption, EditorState, QuestionType } from "@/types";
 
 interface Props {

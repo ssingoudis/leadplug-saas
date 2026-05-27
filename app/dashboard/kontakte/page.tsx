@@ -11,7 +11,7 @@ async function getKontakteData(): Promise<{ leads: LeadRow[]; funnels: FunnelOpt
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('slug')
+    .select('id')
     .maybeSingle()
 
   if (!tenant) return { leads: [], funnels: [] }
@@ -19,13 +19,13 @@ async function getKontakteData(): Promise<{ leads: LeadRow[]; funnels: FunnelOpt
   const [{ data: submissions }, { data: funnels }] = await Promise.all([
     supabase
       .from('submissions')
-      .select('id, contact_name, contact_email, contact_phone, funnel_slug, created_at')
-      .eq('tenant_slug', tenant.slug)
+      .select('id, contact, funnel_slug, created_at')
+      .eq('tenant_id', tenant.id)
       .order('created_at', { ascending: false }),
     supabase
       .from('funnels')
       .select('slug, funnel_name, contact_form_title')
-      .eq('tenant_slug', tenant.slug)
+      .eq('tenant_id', tenant.id)
       .order('funnel_name'),
   ])
 
@@ -34,15 +34,18 @@ async function getKontakteData(): Promise<{ leads: LeadRow[]; funnels: FunnelOpt
     funnelNameMap[f.slug] = f.funnel_name || f.contact_form_title || f.slug
   }
 
-  const leads: LeadRow[] = (submissions ?? []).map((s) => ({
-    id: s.id,
-    contact_name: s.contact_name ?? '—',
-    contact_email: s.contact_email ?? '—',
-    contact_phone: s.contact_phone ?? null,
-    funnel_slug: s.funnel_slug,
-    funnel_name: funnelNameMap[s.funnel_slug] ?? s.funnel_slug,
-    created_at: s.created_at,
-  }))
+  const leads: LeadRow[] = (submissions ?? []).map((s) => {
+    const c = (s.contact ?? {}) as Record<string, string>
+    return {
+      id: s.id,
+      contact_name: c.name ?? '—',
+      contact_email: c.email ?? '—',
+      contact_phone: c.telefon ?? null,
+      funnel_slug: s.funnel_slug,
+      funnel_name: funnelNameMap[s.funnel_slug] ?? s.funnel_slug,
+      created_at: s.created_at,
+    }
+  })
 
   const funnelOptions: FunnelOption[] = (funnels ?? []).map((f) => ({
     slug: f.slug,

@@ -122,12 +122,12 @@ export function buildQuestions(questions: EditorQuestion[]): QuestionConfig[] {
 
 export function editorStateToFunnelRow(
   state: EditorState,
-  tenantSlug: string,
+  tenantId: string,
   funnelSlug: string,
 ): Record<string, unknown> {
   return {
     slug: funnelSlug,
-    tenant_slug: tenantSlug,
+    tenant_id: tenantId,
     funnel_name: state.funnelName || null,
     contact_form_title: state.funnelTitle || null,
     submit_button_label: state.submitButtonLabel || null,
@@ -171,10 +171,10 @@ export async function generateRandomSlug(admin: any): Promise<string> {
 
 export function editorQuestionsToDbRows(
   questions: EditorQuestion[],
-  funnelSlug: string,
+  funnelId: string,
 ): Record<string, unknown>[] {
   return questions.map((q, idx) => ({
-    funnel_slug: funnelSlug,
+    funnel_id: funnelId,
     question_key: q.questionKey,
     title: q.title,
     subtitle: q.subtitle || null,

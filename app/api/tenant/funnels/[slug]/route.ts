@@ -11,7 +11,7 @@ import type { EditorState } from "@/types";
 async function getCurrentTenant(supabase: SupabaseClient) {
   const { data: tenant } = await supabase
     .from("tenants")
-    .select("slug, company_name, public_email, public_phone")
+    .select("id, company_name, public_email, public_phone")
     .maybeSingle();
   return tenant;
 }
@@ -45,7 +45,7 @@ export async function GET(
   const { data: questionRows } = await supabase
     .from("funnel_questions")
     .select("*")
-    .eq("funnel_slug", slug)
+    .eq("funnel_id", funnelRow.id)
     .order("sort_order", { ascending: true });
 
   const state = dbToEditorState(funnelRow, questionRows ?? []);
@@ -76,24 +76,26 @@ export async function PUT(
   const { state }: { state: EditorState } = await req.json();
 
   // Slug bleibt immer der originale — Änderungen würden bestehende Embed-Codes brechen
-  const funnelRow = editorStateToFunnelRow(state, tenant.slug, oldSlug);
-  const { error: updateErr, count } = await supabase
+  const funnelRow = editorStateToFunnelRow(state, tenant.id, oldSlug);
+  const { data: updatedFunnel, error: updateErr } = await supabase
     .from("funnels")
-    .update(funnelRow, { count: "exact" })
-    .eq("slug", oldSlug);
+    .update(funnelRow)
+    .eq("slug", oldSlug)
+    .select("id")
+    .maybeSingle();
 
   if (updateErr) {
     return NextResponse.json({ error: updateErr.message }, { status: 500 });
   }
-  if (count === 0) {
+  if (!updatedFunnel) {
     return NextResponse.json({ error: "Funnel nicht gefunden" }, { status: 404 });
   }
 
   // Fragen: alte löschen, neue einfügen (RLS filtert beides auf eigene Funnels)
-  await supabase.from("funnel_questions").delete().eq("funnel_slug", oldSlug);
+  await supabase.from("funnel_questions").delete().eq("funnel_id", updatedFunnel.id);
 
   if (state.questions.length > 0) {
-    const questionRows = editorQuestionsToDbRows(state.questions, oldSlug);
+    const questionRows = editorQuestionsToDbRows(state.questions, updatedFunnel.id);
     const { error: qErr } = await supabase
       .from("funnel_questions")
       .insert(questionRows);
@@ -120,7 +122,7 @@ export async function DELETE(
   // RLS sorgt dafür, dass nur eigene Funnels sichtbar/löschbar sind.
   const { data: funnel } = await supabase
     .from("funnels")
-    .select("is_active")
+    .select("id, is_active")
     .eq("slug", slug)
     .maybeSingle();
 
@@ -132,11 +134,10 @@ export async function DELETE(
     );
   }
 
-  // Reihenfolge: View-Logs → Submissions → Fragen → Funnel
-  await supabase.from("funnel_view_logs").delete().eq("funnel_slug", slug);
+  // Submissions vorab löschen (kein FK, Snapshot-Pattern — wird nicht via Cascade entfernt).
+  // funnel_view_logs + funnel_questions werden via FK-CASCADE beim Funnel-Delete entfernt.
   await supabase.from("submissions").delete().eq("funnel_slug", slug);
-  await supabase.from("funnel_questions").delete().eq("funnel_slug", slug);
-  const { error } = await supabase.from("funnels").delete().eq("slug", slug);
+  const { error } = await supabase.from("funnels").delete().eq("id", funnel.id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

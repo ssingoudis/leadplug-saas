@@ -22,13 +22,13 @@ export async function POST(req: NextRequest) {
 
   const [, { data: funnel }] = await Promise.all([
     supabase.rpc('increment_funnel_views', { funnel_slug: slug }),
-    supabase.from('funnels').select('tenant_slug').eq('slug', slug).single(),
+    supabase.from('funnels').select('id, tenant_id').eq('slug', slug).single(),
   ])
 
   if (funnel) {
     await supabase
       .from('funnel_view_logs')
-      .insert({ funnel_slug: slug, tenant_slug: funnel.tenant_slug })
+      .insert({ funnel_id: funnel.id, tenant_id: funnel.tenant_id })
       .then(({ error }) => { if (error) console.error('[track-view] log error:', error.message) })
   }
 

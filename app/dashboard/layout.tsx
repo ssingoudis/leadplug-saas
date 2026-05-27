@@ -4,11 +4,6 @@ import { redirect } from 'next/navigation'
 import { Power } from 'lucide-react'
 import DashboardHeader from './DashboardHeader'
 
-function emailToSlug(email: string): string {
-  return email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').slice(0, 40)
-}
-
-
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -16,35 +11,38 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!user) redirect('/login')
 
   // Admin-Client bypasses RLS — verlässlicher als RLS-Client für Tenant-Lookup
+  // (Single-Tenant-pro-User-Annahme heute; Multi-Tenant-UI kommt in Phase E)
   const admin = createAdminClient()
-  const { data: tenant } = await admin
-    .from('tenants')
-    .select('id, company_name')
+  const { data: membership } = await admin
+    .from('tenant_members')
+    .select('tenant_id')
     .eq('auth_user_id', user.id)
     .maybeSingle()
 
+  let tenant: { id: string; company_name: string | null } | null = null
+  if (membership?.tenant_id) {
+    const { data: tenantData } = await admin
+      .from('tenants')
+      .select('id, company_name')
+      .eq('id', membership.tenant_id)
+      .maybeSingle()
+    tenant = tenantData ?? null
+  }
+
   if (!tenant) {
     if (user.email) {
-      const base = emailToSlug(user.email)
-      let slug = base
-      for (let i = 2; i <= 99; i++) {
-        const { data } = await admin.from('tenants').select('slug').eq('slug', slug).maybeSingle()
-        if (!data) break
-        slug = `${base}-${i}`
-      }
-
+      // Auto-Tenant-Anlage beim ersten Login
+      // (RLS würde blockieren — User hat noch keine Membership)
       const { data: inserted, error: insertError } = await admin
         .from('tenants')
         .insert({
-          slug,
           company_name: user.email.split('@')[0],
           notification_email: user.email,
           public_email: user.email,
-          auth_user_id: user.id,
           billing_model: 'free',
           is_active: true,
         })
-        .select('id')
+        .select('id, company_name')
         .single()
 
       if (insertError || !inserted) {
@@ -58,6 +56,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         if (memberError) {
           console.error('[dashboard/layout] tenant_members owner insert failed:', memberError)
         }
+        tenant = inserted
         redirect('/dashboard')
       }
     }

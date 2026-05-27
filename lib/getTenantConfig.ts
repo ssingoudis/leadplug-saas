@@ -38,7 +38,6 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
     id:                tenant.id,
     funnelId:          row.id,
     slug:              row.slug,
-    tenantSlug:        tenant.slug,
     companyName:       row.footer_company_name || tenant.company_name,
     publicEmail:       row.footer_email        || tenant.public_email,
     notificationEmail: row.notification_email  || tenant.notification_email,
@@ -121,11 +120,11 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
       email_sender_local, notification_email,
       primary_color, text_color, background_color, page_background_color,
       font, border_radius, max_width,
-      tenants (
-        id, slug, company_name, public_email, notification_email, public_phone, address, website, is_active,
+      tenants!funnels_tenant_id_fkey (
+        id, company_name, public_email, notification_email, public_phone, address, website, is_active,
         billing_model, lead_price, billing_price
       ),
-      funnel_questions (
+      funnel_questions!funnel_questions_funnel_id_fkey (
         sort_order, question_key, title, subtitle, question_type, visible, options, config
       )
     `)
