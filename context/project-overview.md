@@ -600,20 +600,17 @@ Alle Domain-Typen in [`types/index.ts`](../types/index.ts). Wichtigste:
 
 ## 14. Geplante Schema-Änderungen (Phase B/C)
 
-Detaillierte Roadmap: siehe **CLAUDE.md §5 (Builder-Richtung)**. Kurzüberblick der bevorstehenden DB-Migrationen:
+Detaillierte Roadmap: siehe [`roadmap.md`](roadmap.md). Kurzüberblick der noch ausstehenden DB-Migrationen:
 
-| Aufgabe | Schema-Impact |
-|---|---|
-| **Page → 1:N Fields** | Neue Tabelle `pages` (FK auf funnels); `funnel_questions` wird zu `fields` mit FK auf `pages` statt `funnel_slug`. Daten-Migration für bestehende 58 Fragen nötig |
-| **Multi-User pro Tenant** | Neue Tabelle `tenant_members(tenant_id, auth_user_id, role)` mit Rollen-Enum. RLS-Policies migrieren. `tenants.auth_user_id` als Owner-Shortcut behalten oder deprecaten |
-| **Logic Jumps** | Neue Spalte oder Junction `field_jump_rules` (per Frage: `if answer = X then go to field Y`) |
-| **Webhook-Export hardening** | Neue Tabelle `webhook_subscriptions(tenant_id, url, secret, ...)` + `webhook_delivery_attempts` für Retry-Logik |
+| Aufgabe | Phase | Schema-Impact |
+|---|---|---|
+| **Page → 1:N Fields** | B.5 | Neue Tabellen `pages` (FK auf funnels) + `fields` (FK auf pages). `funnel_questions` + `funnels.contact_fields` jsonb wandern in `fields`. Daten-Migration für 58 Fragen + 12 funnels.contact_fields. |
+| **updated_at-Trigger-Konsistenz** | B.7 | `update_updated_at()`-Trigger auf `submissions`, `pages`, `fields` (nach B.5), `webhook_subscriptions` (hat bereits). |
+| **Logic Jumps** | C.4 | Neue Spalte/Junction `field_jump_rules` (per Frage: `if answer = X then go to field Y`). Aufbauend auf B.5-Foundation. |
 
-**Workflow für alle Migrations** (siehe CLAUDE.md §13):
-1. Supabase-Branch erstellen (`mcp__supabase__create_branch`)
-2. Migration dort testen
-3. Review → Merge in Production
-4. Bei Problemen: Rollback via DOWN-Migration oder dokumentierter manueller Pfad
+**Workflow** (siehe [`roadmap.md`](roadmap.md) Phase-B-Workflow-Section): per-Aufgabe-Feature-Branch + DOWN-Migration als Safety-Net, direkt auf Production appliziert mit User-Bestätigung pro Migration. Zwei-Phasen-Pattern für nicht-additive Schema-Änderungen (Phase 1 ADD + Vercel-Deploy + Phase 2 DROP).
+
+**Bereits abgeschlossen (Mai 2026):** B.1 (`tenant_members` + RLS), B.2 (UUID-FKs), B.3 (`submissions.contact_*`-Cleanup), B.4 (tenants schlanker), B.6 (Webhook-Schema).
 
 ---
 

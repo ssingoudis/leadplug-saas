@@ -117,15 +117,24 @@ Strategischer Hintergrund: Wir sind heute auf einem Schema, das für das alte Te
 - Trigger `update_updated_at()` auf alle relevanten Tabellen anwenden: `funnel_questions` (bzw. neue `pages`/`fields`), `submissions`, `tenant_members`, `webhook_subscriptions`.
 - `funnel_view_logs` und `honeypot_triggers` bleiben ohne (Append-only, keine Updates erwartet).
 
-### Phase-B-Workflow (verbindlich)
+### Phase-B-Workflow (verbindlich — aktuell gelebt)
 
-1. **Supabase-Branch erstellen**: `mcp__supabase__create_branch('phase-b-refactor')`
-2. Alle Migrationen (B.1 → B.7) in dieser Reihenfolge auf dem Branch applizieren
-3. App-Code auf Branch-DB testen (lokal mit Branch-Connection-String)
-4. User Review der gesamten Migration-Kette + App-Funktionalität
-5. **Merge in Production** wenn alles passt — oder Branch verwerfen falls Probleme
-6. `supabase-schema.md` regenerieren
-7. `roadmap.md` aktualisieren (Phase B abgeschlossen)
+Ursprünglich war ein einziger großer Supabase-Branch für die ganze Phase B geplant. **In der Praxis hat sich der per-Aufgabe-Branch-Workflow durchgesetzt** (B.1 bis B.6) — Branch-Tooling war bei Aufgabe 25 unzuverlässig, kleinere Reviews und klarere Rollback-Pfade sprachen dagegen.
+
+**Aktueller Workflow pro Aufgabe:**
+
+1. **Feature-Branch lokal**: `git checkout -b feature/aufgabe-XX-kurzname`
+2. **Migration + DOWN-Migration schreiben** unter `supabase/migrations/`
+3. **App-Code refactoren** (falls Aufgabe Code-Touch enthält) + `tsc --noEmit` lokal grün
+4. **User-Bestätigung holen** vor Production-Migration
+5. **Migration auf Production applizieren** via `mcp__supabase__apply_migration`
+6. **Verifikations-SQL** auf Production (Spalten/Policies/Indices vorhanden, Backfills komplett)
+7. **Commit auf Feature-Branch → Merge `--no-ff` auf main → Push** → Vercel-Auto-Deploy
+8. **Production-Smoke-Test** (WebFetch auf öffentliche Widget-URL, ggf. interner Login-Smoke)
+9. Bei Zwei-Phasen-Migrationen (B.2 / B.4): **Phase-2-Migration erst nach grünem Vercel-Deploy**
+10. **Doku-Final**: `supabase-schema.md` + `project-overview.md` + `roadmap.md` + `CLAUDE.md §13.5` + `current-feature.md`
+
+**Safety-Net:** DOWN-Migrationen liegen parallel im Repo. Tägliche Supabase-Auto-Backups bleiben der letzte Fallback bei Daten-Rollback.
 
 ---
 
