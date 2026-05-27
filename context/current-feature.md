@@ -111,6 +111,83 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ## History
 
+- **Aufgabe 26 + 27 — Phase B.2 (UUID-FKs) + Phase B.3 (submissions.contact_*-Cleanup), Stand 2026-05-27 — 🟡 IN ARBEIT, NICHT FERTIG**
+
+  > ⚠️ **Status für die nächste Session:**
+  > - ✅ Phase 1 Migration (`20260528120000_aufgabe_26a_uuid_fks_add.sql`) ist auf Production-DB
+  > - ✅ Aller App-Code-Refactor lokal abgeschlossen + lokal committed auf Branch `feature/aufgabe-26-uuid-fks`
+  > - ❌ Branch NICHT gepusht — `git push origin feature/aufgabe-26-uuid-fks` muss noch erfolgen
+  > - ❌ Vercel-Deploy steht aus (passiert nach Push + PR-Merge bzw. direkter Push auf main)
+  > - ❌ Phase-2-Migrations (Drops) sind GESCHRIEBEN aber NICHT appliziert:
+  >   - `supabase/migrations/20260528130000_aufgabe_26b_uuid_fks_drop.sql` (B.2 DROP)
+  >   - `supabase/migrations/20260528140000_aufgabe_27_drop_submissions_contact_legacy.sql` (B.3 DROP)
+  > - ❌ `context/supabase-schema.md` muss nach Phase-2-Apply neu regeneriert werden
+  > - ❌ Roadmap-Markierung B.2/B.3 als ✅ erst nach Phase-2-Apply
+
+  **Reihenfolge der nächsten Session (KRITISCH einhalten):**
+  1. `git push origin feature/aufgabe-26-uuid-fks` + Merge zu main (oder direkten Push)
+  2. Vercel-Deploy auf Production abwarten + grün verifizieren
+  3. Smoke-Test auf app.leadplug.de: Public-Widget rendert, Dashboard-Login funktioniert, neue Lead-Erstellung schreibt `tenant_id`+`funnel_slug`
+  4. Migration 26b applizieren (`mcp__supabase__apply_migration` mit Inhalt aus `20260528130000_aufgabe_26b_uuid_fks_drop.sql`)
+  5. Migration 27 applizieren
+  6. Final Smoke-Test
+  7. supabase-schema.md regenerieren
+  8. roadmap.md: B.2 + B.3 auf ✅, current-feature.md "in Arbeit"-Markierung entfernen
+  9. Merge des Branches in main mit `--no-ff`
+
+  **Rollback-Pfad falls etwas schiefgeht:**
+  - Migration 26a DOWN: `20260528120000_aufgabe_26a_uuid_fks_add_DOWN.sql` (verlustfrei, da additiv)
+  - Migration 26b + 27 DOWN: jeweilige `_DOWN.sql`-Files (rekonstruieren slugs aus company_name approx. — vor Apply Backup einspielen)
+  - Tägliche Supabase-Auto-Backups als zusätzliches Safety-Net
+
+  ---
+
+  **Was bereits passiert ist:**
+
+  *Strategische Entscheidungen (aus User-Beratung):*
+  - submissions: zusätzliche `tenant_id`-Spalte als RLS-Filter, alte Slug-Spalten bleiben als Snapshot (`tenant_slug` + `funnel_slug` populated NULL durch neuen Code, alte Rows bleiben für Display). FK ON DELETE SET NULL → wenn Tenant gelöscht wird, bleibt Submission anonym erhalten.
+  - tenants.auth_user_id: wird komplett gedroppt — tenant_members ist Single Source of Truth. layout.tsx baut Tenant-Lookup auf tenant_members-Join um.
+  - tenants.slug: wird komplett gedroppt — wurde nirgendwo öffentlich genutzt.
+  - /admin/* (Plattform-Owner-Cockpit): komplett gelöscht — veraltet aus Pre-Self-Signup-Phase. Neuer Build als Phase-E-Eintrag in roadmap.md geplant.
+  - B.3 (submissions.contact_*-Cleanup) wurde in denselben Deploy gezogen — Backfill war clean (alle 26 Zeilen haben contact-jsonb), App-Refactor war ~30 Min.
+
+  *Zweiphasen-Migration für Zero-Downtime (B.2):*
+  - **Migration 26a (appliziert):** ADD-only. Neue UUID-Spalten (funnels.tenant_id, funnel_questions.funnel_id, funnel_view_logs.funnel_id+tenant_id, submissions.tenant_id), Backfill aller 367 betroffenen Zeilen (12 funnels + 58 questions + 271 view_logs + 26 submissions, 0 orphans), BEFORE-Trigger füllen UUIDs aus Slugs für Übergangszeit, 13 neue UUID-RLS-Policies (`*_v2_*`) parallel zu den alten 20 (OR-kombiniert), alle Slug-Spalten NULLABLE gemacht (für neuen Code der sie weglässt).
+  - **Migration 26b (geschrieben, nicht appliziert):** DROP-only. Alte Policies + Slug-FKs + Slug-Indices + Slug-Spalten (funnels.tenant_slug, funnel_questions.funnel_slug, funnel_view_logs.funnel_slug+tenant_slug) + tenants.slug + tenants.auth_user_id + 4 Sync-Trigger. submissions.funnel_slug + tenant_slug BLEIBEN als Snapshot.
+
+  *App-Code-Refactor (15 Files + 7 admin-Files gelöscht):*
+  - `lib/getTenantConfig.ts`: tenantSlug-Feld raus, Supabase-Join mit expliziten FK-Namen (`tenants!funnels_tenant_id_fkey`, `funnel_questions!funnel_questions_funnel_id_fkey`) wegen FK-Ambiguität während Phase 1.
+  - `lib/tracking.ts`: `logSubmission(...)` nimmt jetzt `tenantId`, schreibt `tenant_id` + `contact` jsonb (nicht mehr contact_anrede/name/email/phone).
+  - `lib/editorUtils.ts`: `editorStateToFunnelRow(state, tenantId, slug)` + `editorQuestionsToDbRows(questions, funnelId)`.
+  - `app/api/submit/route.ts`: übergibt `tenantId = tenantConfig.id`.
+  - `app/api/track-view/route.ts`: liest + schreibt UUIDs direkt.
+  - `app/api/tenant/funnels/route.ts` GET+POST: tenant_id-Filter; POST returnt insertedFunnel.id für questions-Insert.
+  - `app/api/tenant/funnels/[slug]/route.ts`: Funnel-Lookup für funnel.id, questions via funnel_id; DELETE vereinfacht (FK-Cascade übernimmt view_logs+questions).
+  - `app/api/stripe/checkout/route.ts`: metadata.tenant_slug raus, supabase_tenant_id bleibt.
+  - `app/dashboard/layout.tsx`: Tenant-Lookup via `tenant_members.tenant_id` join `tenants` (admin-Client), Auto-Anlage ohne auth_user_id/slug.
+  - `app/dashboard/{funnels,kontakte,leads,page,funnels/[slug]/edit}/page.tsx`: tenant_id-Filter; questions via funnel_id (Index funnel_id → slug für Display-Mapping); contact-Daten aus jsonb extrahiert.
+  - `app/page.tsx`: Root-Redirect von `/admin` auf `/dashboard`.
+  - `proxy.ts`: admin-Gating entfernt, Matcher nur noch `/dashboard/:path*`.
+  - `types/index.ts`: TenantConfig.tenantSlug raus.
+
+  *Plattform-Admin gelöscht:* 19 Files aus `app/admin/*` gelöscht (überholtes Cockpit aus Pre-Self-Signup-Phase). 3 Komponenten (DailyLeadsChart, EmbedBlock, IconPicker) nach `components/dashboard/` verschoben (weiter im Tenant-Dashboard verwendet). Roadmap-Eintrag für "Plattform-Owner-Dashboard v2" in Phase E geplant — nicht heute.
+
+  *Verifikation Phase 1 + Refactor:*
+  - DB: 0 NULL-Werte in UUID-Spalten (alle 367 Zeilen backfilled), 13 v2-Policies aktiv, 20 v1-Policies aktiv, 4 Sync-Trigger laufen, neuer funnel_view_log via Dev-Server schreibt funnel_id+tenant_id mit Slugs=NULL (Trigger nicht nötig weil App schon UUIDs schreibt — sauberer Code-Pfad).
+  - TypeScript: `tsc --noEmit` sauber (keine Errors).
+  - Smoke-Test: Public-Widgets `/demo-solar` + `/leadplug` rendern, keine Console-Errors. Dashboard redirected zu `/login?from=/dashboard`. Track-View Insert mit UUIDs verifiziert in DB.
+  - Production-Build lokal nicht möglich (STRIPE_SECRET_KEY fehlt in .env.local — kein Refactor-Problem, Vercel hat den Key).
+
+  *Branch:* `feature/aufgabe-26-uuid-fks` (lokal, nicht gepusht).
+
+  *Bekannte Trade-offs (für Folge-Sessions):*
+  - submissions.tenant_slug wird durch neuen Code NICHT mehr populated. Bestehende 26 Zeilen behalten ihre Werte. Neue Zeilen haben NULL. Falls je human-readable Snapshot gewünscht: aus tenants.company_name slugifizieren.
+  - Race-Condition bei Auto-Tenant-Anlage in layout.tsx: ohne UNIQUE(tenants.auth_user_id) könnte Doppel-Klick beim First-Login 2 Tenants anlegen. Im MVP akzeptabel; Lösung wäre SECURITY-DEFINER-RPC für atomare Anlage. Phase-E-Punkt.
+  - tenant_members.delete erlaubt Self-Remove → könnte letzten Owner aussperren. Owner-Constraint mit Multi-User-Invite-UI in Phase E.
+
+  *Files (commit `ab7de97` auf Branch `feature/aufgabe-26-uuid-fks`):*
+  48 files changed: 22 deletions in `app/admin/`, 3 renames nach `components/dashboard/`, 6 neue migration files, 17 modifications in lib/api/dashboard.
+
 - **Aufgabe 25 — `tenant_members` + komplette RLS-Refactor (Phase B.1, 2026-05-27)** — Junction-Table für Multi-User pro Tenant eingeführt und Defense-in-Depth-RLS auf alle CRUD-Operationen erweitert.
 
   *DB-Migrationen (2 Stück, direkt auf Production appliziert):*

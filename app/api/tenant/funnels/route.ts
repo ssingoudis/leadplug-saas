@@ -18,7 +18,7 @@ export async function GET() {
 
   const { data: tenant } = await supabase
     .from("tenants")
-    .select("slug")
+    .select("id")
     .maybeSingle();
 
   if (!tenant) return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
@@ -26,22 +26,25 @@ export async function GET() {
   const { data: funnels, error } = await supabase
     .from("funnels")
     .select(
-      "slug, funnel_name, contact_form_title, is_active, primary_color, total_views, created_at",
+      "id, slug, funnel_name, contact_form_title, is_active, primary_color, total_views, created_at",
     )
-    .eq("tenant_slug", tenant.slug)
+    .eq("tenant_id", tenant.id)
     .order("created_at", { ascending: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const slugs = (funnels ?? []).map((f) => f.slug);
-  let countMap: Record<string, number> = {};
+  const countMap: Record<string, number> = {};
   if (slugs.length > 0) {
+    // Submissions: Snapshot via funnel_slug (kein FK, snapshot-Spalte bleibt)
     const { data: counts } = await supabase
       .from("submissions")
       .select("funnel_slug")
       .in("funnel_slug", slugs);
     for (const row of counts ?? []) {
-      countMap[row.funnel_slug] = (countMap[row.funnel_slug] ?? 0) + 1;
+      if (row.funnel_slug) {
+        countMap[row.funnel_slug] = (countMap[row.funnel_slug] ?? 0) + 1;
+      }
     }
   }
 
@@ -67,7 +70,7 @@ export async function POST(req: NextRequest) {
 
   const { data: tenant } = await supabase
     .from("tenants")
-    .select("slug")
+    .select("id")
     .maybeSingle();
 
   if (!tenant) return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
@@ -82,14 +85,18 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient();
   const slug = await generateRandomSlug(admin);
 
-  const funnelRow = editorStateToFunnelRow(state, tenant.slug, slug);
-  const { error: funnelErr } = await supabase.from("funnels").insert(funnelRow);
-  if (funnelErr) {
-    return NextResponse.json({ error: funnelErr.message }, { status: 500 });
+  const funnelRow = editorStateToFunnelRow(state, tenant.id, slug);
+  const { data: insertedFunnel, error: funnelErr } = await supabase
+    .from("funnels")
+    .insert(funnelRow)
+    .select("id")
+    .single();
+  if (funnelErr || !insertedFunnel) {
+    return NextResponse.json({ error: funnelErr?.message ?? "Insert failed" }, { status: 500 });
   }
 
   if (state.questions.length > 0) {
-    const questionRows = editorQuestionsToDbRows(state.questions, slug);
+    const questionRows = editorQuestionsToDbRows(state.questions, insertedFunnel.id);
     const { error: qErr } = await supabase
       .from("funnel_questions")
       .insert(questionRows);

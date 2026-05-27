@@ -234,8 +234,8 @@ Einzige Funnel-Komponente: `components/funnel.tsx` (generisch, nicht branchen-sp
 - `/api/track-view` — anonymer Funnel-View
 - `/api/stripe/webhook` — System-Event von Stripe, kein User-Kontext
 - `/api/tenant/slug-check` + `generateRandomSlug` in `/api/tenant/funnels` POST — globale Slug-Uniqueness (RLS würde fremde Tenants ausblenden)
-- `app/dashboard/layout.tsx` Auto-Tenant-Anlage beim ersten Login — System-Provisioning (User hat noch keine Membership)
-- Admin-Operationen (Stavros / Plattform-Owner)
+- `app/dashboard/layout.tsx` — Tenant-Lookup via `tenant_members`-Join + Auto-Tenant-Anlage beim ersten Login (User hat vor Anlage noch keine Membership; Lookup nutzt admin-Client weil verlässlicher als RLS bei Membership-Edge-Cases)
+- Admin-Operationen (Stavros / Plattform-Owner — kein UI mehr seit Aufgabe 26, neuer Build geplant für Phase E)
 
 > Bei neuen API-Routes oder DB-Zugriffen: **erst prüfen, ob RLS reicht** (default), Service-Key nur in obigen Ausnahmefällen.
 
@@ -244,7 +244,8 @@ Einzige Funnel-Komponente: `components/funnel.tsx` (generisch, nicht branchen-sp
 - **Alle Foreign-Key-Beziehungen über UUIDs** (z.B. `funnels.tenant_id → tenants.id`).
 - **Slugs sind nur für öffentliche URLs** (`funnels.slug` als iFrame-Endpoint) — niemals als FK-Target.
 - Ein Funnel-Slug ist **nach Anlage unveränderlich** (sonst brechen Embeds bei Tenants). Das wird im Builder-UI durchgesetzt.
-- Tenant-Slugs werden nicht öffentlich angezeigt — evaluieren wir, ob wir sie überhaupt brauchen.
+- Tenant-Slug existiert nicht mehr (in Aufgabe 26 gedroppt — wurde nirgendwo öffentlich angezeigt).
+- `submissions` hat als Sonderfall: `tenant_id uuid` (RLS-Filter, ON DELETE SET NULL) **plus** `tenant_slug text` + `funnel_slug text` als Snapshot (für Display + Funnel-URL-Lookup; bleiben erhalten wenn Funnel/Tenant gelöscht). Neue Inserts via App-Code setzen `tenant_slug = NULL` (Source weg seit tenants.slug drop), nur `funnel_slug` wird weiter befüllt.
 
 ### 13.4 Tabellen-Verantwortlichkeiten
 
@@ -262,7 +263,7 @@ Klare Trennung — keine Override-Hierarchien zwischen Tabellen:
 
 ### 13.5 Bevorstehende Schema-Änderungen
 
-Vor MVP-Launch steht ein größerer Schema-Refactor an (`tenant_members`-Einführung, UUID-FKs, Page→1:N, etc.). Details + Reihenfolge: siehe [`context/roadmap.md`](context/roadmap.md).
+Vor MVP-Launch steht ein größerer Schema-Refactor an. Status: B.1 (`tenant_members`) ✅, B.2 (UUID-FKs) 🟡 Code done & Phase-1-Migration appliziert (DROP-Migration ausstehend), B.3 (submissions.contact_*-Cleanup) 🟡 Code done (Migration ausstehend), B.4-B.7 offen. Details + Reihenfolge: siehe [`context/roadmap.md`](context/roadmap.md). Falls Phase-2-Migrations noch nicht appliziert: aktueller Status in [`context/current-feature.md`](context/current-feature.md) prüfen.
 
 ---
 

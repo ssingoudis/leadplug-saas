@@ -66,7 +66,7 @@ export async function POST(req: Request) {
 
   // 4. Tenant-Config laden
   const tenantConfig = await getTenantConfig(tenant)
-  if (!tenantConfig) {
+  if (!tenantConfig || !tenantConfig.id) {
     return NextResponse.json({ error: 'Tenant not found' }, { status: 404 })
   }
 
@@ -86,7 +86,7 @@ export async function POST(req: Request) {
   // 7. Submission loggen
   const submissionId = await logSubmission({
     funnelSlug: tenant,
-    tenantSlug: tenantConfig.tenantSlug,
+    tenantId: tenantConfig.id,
     contact,
     answers,
     leadPrice,

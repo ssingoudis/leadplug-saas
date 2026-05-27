@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Card from '@/components/ui/Card'
-import EmbedBlock from '@/app/admin/[slug]/EmbedBlock'
+import EmbedBlock from '@/components/dashboard/EmbedBlock'
 import { Sparkles, BarChart3 } from 'lucide-react'
 
 async function getFunnels() {
