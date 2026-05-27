@@ -18,7 +18,7 @@ export default async function EditFunnelPage({ params }: Props) {
 
   const { data: tenant } = await supabase
     .from("tenants")
-    .select("id, company_name, public_email, public_phone")
+    .select("id, company_name")
     .maybeSingle();
 
   if (!tenant) redirect("/dashboard");
@@ -45,8 +45,6 @@ export default async function EditFunnelPage({ params }: Props) {
       initialState={initialState}
       originalSlug={slug}
       companyName={tenant.company_name ?? ""}
-      publicEmail={tenant.public_email ?? ""}
-      publicPhone={tenant.public_phone ?? ""}
     />
   );
 }

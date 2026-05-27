@@ -120,7 +120,7 @@ export function SectionTexte({ state, onChange, onFocus }: Props) {
         </p>
 
         <div>
-          <Label tooltip="Neue Leads werden an diese Adresse gesendet. Leer lassen = Adresse aus deinen Account-Einstellungen wird verwendet.">
+          <Label tooltip="Pflichtfeld. Neue Leads werden an diese Adresse gesendet.">
             Benachrichtigungs-E-Mail
           </Label>
           <input

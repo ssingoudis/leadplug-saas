@@ -7,8 +7,6 @@ interface Props {
   initialState: EditorState;
   originalSlug: string;
   companyName: string;
-  publicEmail: string;
-  publicPhone: string;
 }
 
 export default function FunnelEditorClient(props: Props) {
@@ -18,8 +16,6 @@ export default function FunnelEditorClient(props: Props) {
       originalSlug={props.originalSlug}
       initialState={props.initialState}
       companyName={props.companyName}
-      publicEmail={props.publicEmail}
-      publicPhone={props.publicPhone}
     />
   );
 }

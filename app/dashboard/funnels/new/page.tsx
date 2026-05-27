@@ -12,17 +12,22 @@ export default async function NewFunnelPage() {
 
   const { data: tenant } = await supabase
     .from("tenants")
-    .select("slug, company_name, public_email, public_phone")
+    .select("id, company_name")
     .maybeSingle();
 
   if (!tenant) redirect("/dashboard");
 
+  // notification_email ist seit B.4 NOT NULL in funnels — beim Anlegen mit User-E-Mail
+  // vorbelegen, damit das Pflichtfeld nicht leer startet. User kann das im Editor ändern.
+  const initialState = {
+    ...DEFAULT_EDITOR_STATE,
+    notificationEmail: user.email ?? "",
+  };
+
   return (
     <FunnelEditorClient
-      initialState={DEFAULT_EDITOR_STATE}
+      initialState={initialState}
       companyName={tenant.company_name ?? ""}
-      publicEmail={tenant.public_email ?? ""}
-      publicPhone={tenant.public_phone ?? ""}
     />
   );
 }
