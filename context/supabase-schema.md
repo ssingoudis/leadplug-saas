@@ -6,8 +6,8 @@
 > Für architektonisches Verständnis und Zweck der Tabellen: siehe [`project-overview.md`](project-overview.md) §4.
 > Bei jeder neuen Migration: dieses File neu regenerieren.
 
-- **Stand:** 2026-05-27 (nach Aufgaben 26+27 / Phase B.2+B.3)
-- **Letzte Migrationen:** `20260528130000_aufgabe_26b_uuid_fks_drop` + `20260528140000_aufgabe_27_drop_submissions_contact_legacy`
+- **Stand:** 2026-05-27 (nach Aufgabe 28 / Phase B.4)
+- **Letzte Migrationen:** `20260528150000_aufgabe_28a_tenants_cleanup_phase1` + `20260528160000_aufgabe_28b_tenants_drop_endcustomer_columns`
 - **Tabellen:** 7 in `public` (alle mit RLS aktiviert)
 - **Enums:** 3 (`billing_model_type`, `question_type`, `tenant_member_role`)
 - **Functions:** 5 — **Triggers:** 3 — **Views:** 0
@@ -158,19 +158,15 @@ $function$
 
 ### 3.1 `tenants`
 
-Stammdaten der zahlenden Agentur-Accounts. Aktuell 9 Zeilen.
+Reine Agentur-Account-Tabelle nach Aufgabe 28 / Phase B.4. Aktuell 9 Zeilen.
 
 **Columns:**
 
 | Spalte | Typ | Nullable | Default | Constraints / Comment |
 |---|---|---|---|---|
 | `id` | uuid | NO | `gen_random_uuid()` | PK |
-| `company_name` | text | NO | — | Comment: "Firmenname" |
+| `company_name` | text | NO | — | Comment: "Firmenname" (Anzeigename der Agentur) |
 | `is_active` | bool | YES | `true` | Comment: "Legt fest, ob das iFrame aktiv ist oder nicht" |
-| `public_email` | text | NO | — | Comment: "Angezeigte E-Mail Adresse in der Kundenmail" |
-| `public_phone` | text | YES | — | Comment: "Angezeigte Telefonnummer in der Kundenmail" |
-| `notification_email` | text | NO | — | — |
-| `address` | text | YES | — | Comment: "Rechnungsadresse" |
 | `website` | text | YES | — | Comment: "Firmenwebseite" |
 | `billing_model` | `billing_model_type` | NO | `'per_month'` | Comment: "Abrechnungsmodell" |
 | `lead_price` | numeric | YES | `3.00` | Comment: "Preis pro Lead in €" |
@@ -183,6 +179,8 @@ Stammdaten der zahlenden Agentur-Accounts. Aktuell 9 Zeilen.
 | `updated_at` | timestamptz | YES | `now()` | wird via Trigger aktualisiert |
 
 > **In Aufgabe 26 gedroppt:** `slug` (Tenant-Slug war nirgendwo öffentlich), `auth_user_id` (User↔Tenant-Mapping läuft jetzt ausschließlich über `tenant_members`).
+>
+> **In Aufgabe 28 gedroppt:** `notification_email`, `public_email`, `public_phone`, `address` — alle endkunden-spezifischen Daten leben jetzt ausschließlich in `funnels` (`notification_email` Pflichtfeld, `footer_*` für Display).
 
 **Foreign Keys:** keine eigenen FKs — `tenants.id` ist FK-Target für `tenant_members.tenant_id`, `funnels.tenant_id`, `funnel_view_logs.tenant_id`, `submissions.tenant_id`.
 
@@ -532,7 +530,7 @@ Bot-Hits-Log. Aktuell 0 Zeilen (Honeypot greift selten / Bots sind sauber abgewe
 
 ## 5. Stand der Schema-Evolution
 
-20 Migrationen seit Projektbeginn:
+22 Migrationen seit Projektbeginn:
 
 ```
 20260513064118 — add_funnel_text_columns
@@ -550,19 +548,20 @@ Bot-Hits-Log. Aktuell 0 Zeilen (Honeypot greift selten / Bots sind sauber abgewe
 20260522121300 — add_crm_columns_to_submissions
 20260522124347 — drop_notes_from_submissions
 20260522192429 — add_stripe_fields_to_tenants
-20260527120000 — aufgabe_25_tenant_members_and_full_rls    ← Phase B.1
+20260527120000 — aufgabe_25_tenant_members_and_full_rls         ← Phase B.1
 20260527130000 — aufgabe_25_add_funnel_view_logs_delete_policy  ← Hotfix B.1
-20260528120000 — aufgabe_26a_uuid_fks_add                  ← Phase B.2 (ADD, zero-downtime)
-20260528130000 — aufgabe_26b_uuid_fks_drop                 ← Phase B.2 (DROP)
-20260528140000 — aufgabe_27_drop_submissions_contact_legacy ← Phase B.3
+20260528120000 — aufgabe_26a_uuid_fks_add                       ← Phase B.2 (ADD, zero-downtime)
+20260528130000 — aufgabe_26b_uuid_fks_drop                      ← Phase B.2 (DROP)
+20260528140000 — aufgabe_27_drop_submissions_contact_legacy     ← Phase B.3
+20260528150000 — aufgabe_28a_tenants_cleanup_phase1             ← Phase B.4 (Backfills + Constraints)
+20260528160000 — aufgabe_28b_tenants_drop_endcustomer_columns   ← Phase B.4 (DROP)
 ```
 
 ### Geplante Migrationen (siehe roadmap.md Phase B)
 
-1. **B.4 `tenants` schlanker** — `notification_email`, `public_email`, `public_phone`, `address` droppen; `funnels.notification_email` wird Pflicht.
-2. **B.5 `pages` + `fields`** — Page → 1:N Refactor; Kontaktfelder werden reguläre Field-Types.
-3. **B.6 Webhook-Schema** — `webhook_subscriptions` + `webhook_delivery_attempts` (nur Struktur).
-4. **B.7 Updated-At-Konsistenz** — Trigger auf alle relevanten Tabellen.
+1. **B.5 `pages` + `fields`** — Page → 1:N Refactor; Kontaktfelder werden reguläre Field-Types.
+2. **B.6 Webhook-Schema** — `webhook_subscriptions` + `webhook_delivery_attempts` (nur Struktur).
+3. **B.7 Updated-At-Konsistenz** — Trigger auf alle relevanten Tabellen.
 
 ---
 

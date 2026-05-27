@@ -263,7 +263,7 @@ Klare Trennung — keine Override-Hierarchien zwischen Tabellen:
 
 ### 13.5 Bevorstehende Schema-Änderungen
 
-Vor MVP-Launch steht ein größerer Schema-Refactor an. Status: B.1 (`tenant_members`) ✅, B.2 (UUID-FKs) 🟡 Code done & Phase-1-Migration appliziert (DROP-Migration ausstehend), B.3 (submissions.contact_*-Cleanup) 🟡 Code done (Migration ausstehend), B.4-B.7 offen. Details + Reihenfolge: siehe [`context/roadmap.md`](context/roadmap.md). Falls Phase-2-Migrations noch nicht appliziert: aktueller Status in [`context/current-feature.md`](context/current-feature.md) prüfen.
+Vor MVP-Launch steht ein größerer Schema-Refactor an. Status: B.1 (`tenant_members`) ✅, B.2 (UUID-FKs) ✅, B.3 (submissions.contact_*-Cleanup) ✅, B.4 (tenants als reine Account-Tabelle) ✅ — alle Mai 2026. **Offen:** B.5 (pages + fields), B.6 (Webhook-Schema), B.7 (updated_at-Trigger). Details + Reihenfolge: siehe [`context/roadmap.md`](context/roadmap.md).
 
 ---
 

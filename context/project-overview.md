@@ -197,21 +197,18 @@ types/
 
 ---
 
-## 4. Datenbank-Schema (Stand 2026-05-27, nach Aufgaben 25–27 / Phase B.1–B.3)
+## 4. Datenbank-Schema (Stand 2026-05-27, nach Aufgabe 28 / Phase B.4)
 
 Alle Tabellen haben **RLS aktiviert** (20 Policies über 6 Tabellen). Service-Key-Zugriffe umgehen RLS (nur server-side). Die maschinelle Voll-Referenz mit Indices, Triggers, Policies und Functions steht in [`supabase-schema.md`](supabase-schema.md).
 
-### `tenants` (Stammdaten der Agentur-Accounts, 9 Zeilen aktuell)
+### `tenants` (Stammdaten der Agentur-Accounts — reine Account-Tabelle nach B.4, 9 Zeilen aktuell)
 
 | Spalte | Typ | Hinweise |
 |---|---|---|
 | `id` | uuid, PK | `gen_random_uuid()` |
-| `company_name` | text | Firmenname |
+| `company_name` | text | Anzeigename der Agentur |
 | `is_active` | bool | Default `true` |
-| `public_email` | text | Angezeigte E-Mail in Kundenmail (B.4: drop geplant) |
-| `public_phone` | text, nullable | Angezeigte Telefon (B.4: drop geplant) |
-| `notification_email` | text | Empfänger der Lead-Benachrichtigungs-Mail (B.4: drop geplant — `funnels.notification_email` wird Pflicht) |
-| `address`, `website` | text, nullable | (`address` B.4: drop geplant) |
+| `website` | text, nullable | Optionale Firmenwebseite |
 | `billing_model` | enum `billing_model_type` | `per_lead` \| `per_month` \| `per_year` \| `free` |
 | `lead_price` | numeric, default `3.00` | Preis pro Lead bei `per_lead` |
 | `billing_price` | numeric, nullable | Pauschalpreis bei `per_month`/`per_year` |
@@ -221,7 +218,9 @@ Alle Tabellen haben **RLS aktiviert** (20 Policies über 6 Tabellen). Service-Ke
 | `stripe_price_id` | text | Stripe Price-ID des aktiven Plans |
 | `created_at`, `updated_at` | timestamptz | `updated_at` via Trigger |
 
-> **In Aufgabe 26 gedroppt:** `slug` (Tenant-Slug war nirgendwo öffentlich genutzt), `auth_user_id` (User↔Tenant-Mapping läuft jetzt ausschließlich über `tenant_members`).
+> **In Aufgabe 26 gedroppt:** `slug`, `auth_user_id` (User↔Tenant via `tenant_members`).
+>
+> **In Aufgabe 28 gedroppt:** `notification_email`, `public_email`, `public_phone`, `address` — alle endkunden-spezifischen Daten leben jetzt ausschließlich in `funnels` (`funnels.notification_email` ist NOT NULL, Footer-Display via `footer_company_name`/`footer_email`/`footer_phone`).
 
 ### `tenant_members` (3 Zeilen aktuell, eingeführt mit Aufgabe 25 / Phase B.1)
 
@@ -326,7 +325,7 @@ UNIQUE `(tenant_id, auth_user_id)` — kein User doppelt im selben Tenant. Owner
 | `funnel_slug`, `ip_address` | text, nullable |
 | `created_at` | timestamptz |
 
-### Aktuelle Migrationen (chronologisch, 20 insgesamt)
+### Aktuelle Migrationen (chronologisch, 22 insgesamt)
 
 ```
 20260513064118 — add_funnel_text_columns
@@ -349,6 +348,8 @@ UNIQUE `(tenant_id, auth_user_id)` — kein User doppelt im selben Tenant. Owner
 20260528120000 — aufgabe_26a_uuid_fks_add                       ← Phase B.2 (ADD, zero-downtime)
 20260528130000 — aufgabe_26b_uuid_fks_drop                      ← Phase B.2 (DROP)
 20260528140000 — aufgabe_27_drop_submissions_contact_legacy     ← Phase B.3
+20260528150000 — aufgabe_28a_tenants_cleanup_phase1             ← Phase B.4 (Backfills + Constraints)
+20260528160000 — aufgabe_28b_tenants_drop_endcustomer_columns   ← Phase B.4 (DROP)
 ```
 
 ---

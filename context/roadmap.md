@@ -10,7 +10,7 @@
 | Phase | Fokus | Status |
 |---|---|---|
 | **A** | Doku-Reset (CLAUDE.md, project-overview, schema, HTML-Files) | ✅ abgeschlossen (Mai 2026) |
-| **B** | Schema-Refactor & Architektur-Foundation | 🟡 in Arbeit — B.1 ✅, B.2 ✅, B.3 ✅ (alle Mai 2026), B.4-B.7 offen |
+| **B** | Schema-Refactor & Architektur-Foundation | 🟡 in Arbeit — B.1 ✅, B.2 ✅, B.3 ✅, B.4 ✅ (alle Mai 2026), B.5-B.7 offen |
 | **C** | Builder-MVP-Sprint (Logic Jumps, Feldtypen, Polish) | ⚪ nach Phase B |
 | **D** | MVP-Launch + Partner-Pitches | ⚪ Ziel |
 | **E** | Pro-Plan-Features (Twilio, Web-Component-Embed, Kanban, …) | ⚪ Post-MVP |
@@ -72,15 +72,18 @@ Strategischer Hintergrund: Wir sind heute auf einem Schema, das für das alte Te
 - `lib/tracking.ts`: `logSubmission` schreibt nur noch `contact` jsonb, nicht mehr die 4 Spalten.
 - Migration `20260528140000_aufgabe_27_drop_submissions_contact_legacy.sql` dropt die 4 Spalten — wartet auf Apply nach Vercel-Deploy.
 
-### B.4 — `tenants` zur reinen Agentur-Account-Tabelle
+### B.4 — `tenants` zur reinen Agentur-Account-Tabelle ✅ (Aufgabe 28, 2026-05-27)
 
-**~1 Tag.**
+**Status:** abgeschlossen am 2026-05-27. Beide Migrationen appliziert (28a Backfills + Constraints, 28b DROP), Code-Refactor live auf Production, Smoke-Test grün, supabase-schema.md regeneriert. Details: [`current-feature.md`](current-feature.md) Aufgabe 28.
 
-- Drop von `tenants`: `notification_email`, `public_email`, `public_phone`, `address`.
-- `tenants.company_name` bleibt als optionaler Agentur-Anzeigename.
-- Funnel-Footer-Daten (`footer_company_name`, `footer_email`, `footer_phone`) bleiben — das sind Endkunden-Daten.
-- `funnels.notification_email` wird Pflicht (kein Tenant-Fallback mehr). Default beim Anlegen: Email des erstellenden Users (aus `auth.users.email`).
-- App-Code: `getTenantConfig()` Override-Hierarchie auflösen — kein `|| tenant.public_email` mehr.
+**Tatsächliche Umsetzung:**
+- Drop aus `tenants`: `notification_email`, `public_email`, `public_phone`, `address`. `company_name` bleibt als Anzeigename der Agentur.
+- Backfill vor Drop: 11/12 funnels bekamen `notification_email` aus `tenants.notification_email`; alle leeren `footer_company_name`/`footer_email`/`footer_phone` aus `tenants.{company_name,public_email,public_phone}`.
+- `funnels.notification_email` ist jetzt NOT NULL. Default beim Anlegen via /new/page.tsx: `user.email` (aus `auth.users`). Server-side Fallback in POST + PUT: `state.notificationEmail || user.email`. Tooltip im Editor auf "Pflichtfeld" aktualisiert.
+- `getTenantConfig()` Override-Hierarchie aufgelöst — kein `|| tenant.public_email`-Fallback mehr; `TenantConfig.address`-Feld komplett entfernt (nirgends gerendert).
+- Auto-Tenant-Anlage in `app/dashboard/layout.tsx` schreibt `notification_email`/`public_email` nicht mehr (Defensive Default-Setzung war obsolet).
+- Stripe-Checkout nutzt `user.email` statt `tenant.notification_email` für Customer-Anlage.
+- Zwei-Phasen-Migration (zero-downtime): Phase 1 backfillt + setzt funnels.notification_email NOT NULL + dropt tenants.{notification_email,public_email} NOT NULL. Vercel-Deploy dazwischen. Phase 2 dropt die 4 Spalten.
 
 ### B.5 — `pages` + `fields` (Page → 1:N Refactor)
 

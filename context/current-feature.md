@@ -111,6 +111,54 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ## History
 
+- **Aufgabe 28 — Phase B.4 (tenants als reine Agentur-Account-Tabelle) ✅ (2026-05-27)**
+
+  Beide Migrationen auf Production appliziert (28a Backfills + Constraints, 28b DROP), Code-Refactor live auf Vercel (Commit d741902), Production-Smoke-Test grün (`https://app.leadplug.de/demo-solar` rendert sauber), supabase-schema.md regeneriert, Roadmap auf ✅.
+
+  **Migrationen (in Reihenfolge appliziert):**
+  - `20260528150000_aufgabe_28a_tenants_cleanup_phase1.sql` — Phase 1 (zero-downtime). Backfills: 11/12 funnels bekamen `notification_email` aus `tenants.notification_email`; leere `funnels.footer_{company_name,email,phone}` backfillt aus `tenants.{company_name,public_email,public_phone}`. `funnels.notification_email` auf NOT NULL gesetzt. `tenants.{notification_email,public_email}` NOT NULL gedroppt (damit layout.tsx-Auto-Anlage die Felder weglassen kann vor Phase 2).
+  - **Vercel-Deploy** dazwischen (Commit `d741902` auf main, Merge des Branches `feature/aufgabe-28-tenants-cleanup`).
+  - `20260528160000_aufgabe_28b_tenants_drop_endcustomer_columns.sql` — Phase 2. Drop von `tenants.notification_email`, `tenants.public_email`, `tenants.public_phone`, `tenants.address`. `tenants` ist jetzt nur noch: `id, company_name, is_active, website, billing_model, lead_price, billing_price, stripe_*, created_at, updated_at`.
+
+  **Architektur-Entscheidungen:**
+  - `funnels.notification_email` ist die alleinige Quelle für Lead-Benachrichtigungen (NOT NULL, Default beim Anlegen = `user.email`).
+  - Endkunden-Daten (Footer-Display) leben ausschließlich in `funnels.footer_company_name`/`footer_email`/`footer_phone`. Kein Override-Hierarchie mehr.
+  - `TenantConfig.address` komplett aus dem Type-System entfernt (wurde nirgends gerendert — pure Pass-Through-Property).
+  - Footer-Template-Strings `{{public_email}}` etc. bleiben unverändert in der DB (12 funnels) — nur die Resolution-Source wechselt von Tenant- auf Funnel-Level. Spart Daten-Migration.
+  - Auto-Tenant-Anlage in `app/dashboard/layout.tsx` schreibt `notification_email`/`public_email` nicht mehr (defensive Default war obsolet, brach NOT-NULL nicht weil Phase 1 die Constraints relaxed).
+  - Stripe-Customer-Anlage in `/api/stripe/checkout` nutzt `user.email` statt `tenant.notification_email` (auch ein Sub-Effekt: bei späteren Multi-User-Tenants ist der Stripe-Customer trotzdem auf den Initiator-User adressiert — sinnvolles Verhalten).
+
+  **App-Code-Refactor (14 Files):**
+  - `lib/getTenantConfig.ts`: Override-Kette `row.footer_email || tenant.public_email` etc. aufgelöst zu `row.footer_email || ''`. SELECT-Query reduziert auf nur tenant-spezifische Spalten (`company_name, website, is_active, billing_model, lead_price, billing_price`). `TenantConfig.publicEmail` wird jetzt aus `funnels.footer_email` befüllt, `phone` aus `footer_phone`.
+  - `lib/editorUtils.ts`: `editorStateToFunnelRow(state, tenantId, slug, fallbackNotificationEmail)` — neue Pflicht-Param. Schreibt `state.notificationEmail?.trim() || fallbackNotificationEmail` (kein null-Fallback mehr).
+  - `app/api/tenant/funnels/route.ts` POST + `[slug]/route.ts` PUT: Validierung `state.notificationEmail?.trim() || user.email`, 400 wenn beide leer.
+  - `app/api/tenant/funnels/[slug]/route.ts` GET: Response ohne `publicEmail`/`publicPhone` (nur `companyName`).
+  - `app/api/stripe/checkout/route.ts`: `tenant.notification_email` raus aus SELECT + Customer-Anlage nutzt `user.email`.
+  - `app/dashboard/layout.tsx`: Auto-Tenant-Insert ohne `notification_email`/`public_email`.
+  - `app/dashboard/funnels/new/page.tsx`: Tenant-SELECT nur noch `id, company_name`; `initialState.notificationEmail = user.email` als Pre-Fill.
+  - `app/dashboard/funnels/[slug]/edit/page.tsx`: Tenant-SELECT nur noch `id, company_name`.
+  - `FunnelEditorClient.tsx` (×2) + `FunnelEditorShell.tsx` + `PreviewPanel.tsx`: `publicEmail`/`publicPhone`-Props komplett entfernt. `PreviewPanel` fällt zurück auf Hardcode-Placeholder (`"info@muster.de"`, `"+49 123 456789"`).
+  - `SectionTexte.tsx`: Tooltip "Pflichtfeld. Neue Leads werden an diese Adresse gesendet." statt "Leer lassen = Adresse aus deinen Account-Einstellungen wird verwendet.".
+  - `types/index.ts`: `TenantConfig.address` entfernt.
+
+  **Verifikation:**
+  - DB Phase 1: 0 NULL/empty `notification_email` in funnels (alle 12 backfilled), `funnels.notification_email` NOT NULL, `tenants.{notification_email,public_email}` nullable.
+  - DB Phase 2: tenants-Spaltenliste = `id, company_name, is_active, website, billing_model, lead_price, billing_price, stripe_*, created_at, updated_at` — exakt wie geplant.
+  - TypeScript: `tsc --noEmit` sauber.
+  - DB-Smoke-Test während der Refactor-Phase: getTenantConfig-Join + Tenant-Insert ohne notification_email/public_email laufen sauber.
+  - Production-Smoke-Test nach Vercel-Deploy: `https://app.leadplug.de/demo-solar` rendert, HTTP 200, Widget vollständig sichtbar.
+
+  **Bekannte Trade-offs (für Folge-Sessions):**
+  - `lib/getTenantConfig.ts` hat noch eine spezielle Logik (`mapDbRow`-Fallbacks für `companyName || ''`) — bei wirklich leeren Funnels könnten Email-Mockups dann "" rendern. In der UI greift PreviewPanel die Placeholder ab, in echten E-Mails könnte das aber unschön sein. Für MVP akzeptabel; sauberer Fix bei B.5 (pages+fields).
+  - `funnels.notification_email` validiert keine Email-Format. Server-side Regex-Check könnte später hinzu — out of scope für B.4.
+
+  *Branch:* `feature/aufgabe-28-tenants-cleanup` mit `--no-ff` in main gemerged.
+
+  *Commits:*
+  - `02e5f97` feat(db): Aufgabe 28 Code-Refactor + Migration 28a
+  - `d741902` Merge auf main (Vercel-Auto-Deploy getriggert)
+  - + finaler Doku-Commit nach Migration 28b (Schema regeneriert, Roadmap auf ✅)
+
 - **Aufgabe 26 + 27 — Phase B.2 (UUID-FKs) + Phase B.3 (submissions.contact_*-Cleanup) ✅ (2026-05-27)**
 
   Alle 3 Migrationen sind auf Production appliziert, Code ist live auf Vercel, Smoke-Test grün, supabase-schema.md regeneriert, Roadmap auf ✅.
