@@ -14,9 +14,9 @@
 |---|---|---|
 | **A** | Doku-Reset (CLAUDE.md, project-overview, schema, HTML-Files) | ✅ abgeschlossen (Mai 2026) |
 | **B** | Schema-Refactor & Architektur-Foundation | ✅ abgeschlossen — B.1 ✅, B.2 ✅, B.3 ✅, B.4 ✅, B.5 ✅, B.6 ✅, B.7 ✅ (mit B.5 erledigt) — Mai 2026 |
-| **C** | Builder-MVP-Sprint (Logic Jumps, Feldtypen, Polish) | ⚪ nach Phase B |
-| **D** | MVP-Launch + Partner-Pitches | ⚪ Ziel |
-| **E** | Pro-Plan-Features (Twilio, Web-Component-Embed, Kanban, …) | ⚪ Post-MVP |
+| **C** | Builder-MVP-Sprint — laufend (C.1a-c + C.3 ✅, aktuell Builder-Final-Sprint 35→C.2, danach C.5 + C.4) | 🟡 laufend |
+| **D** | Launch-Vorbereitung (Stripe Live, Conversion-Tracking, Demo-Templates) | ⚪ ~1 Wo nach Phase C |
+| **E** | Post-Launch on demand — nur bauen wenn 5+ zahlende Kunden fragen | ⚪ open-ended |
 
 ---
 
@@ -142,95 +142,101 @@ Ursprünglich war ein einziger großer Supabase-Branch für die ganze Phase B ge
 
 > Nach Phase B. Sichtbares Feature-Building, das den MVP "demo-tauglich" macht.
 
-Reihenfolge laut [`../CLAUDE.md`](../CLAUDE.md) §5:
+### Fertige Sub-Aufgaben (History)
 
-| Schritt | Was | Geschätzter Aufwand |
+| Schritt | Was | Aufwand |
 |---|---|---|
-| C.1a ✅ | ~~Editor-Shell v2 — 3-Pane Layout~~ — Aufgabe 32, 2026-05-28. | 1 Tag |
-| C.1b ✅ | ~~Vorlagen + Field-Level-Properties + Submit-Multi-Field-UI~~ — Aufgabe 33, 2026-05-28. | 1 Tag |
-| C.1c ✅ | ~~WYSIWYG-Edit + Widget-Typeform-Redesign + Canvas-Interactions + Icons-Cleanup + Type-Cleanup + Partial-Submissions-Infra~~ — Aufgabe 34, 2026-05-28. Massiver Sprint, ging weit über ursprünglichen C.1c-Scope hinaus. C.6 + C.7 sind damit größtenteils erledigt. | 2 Tage |
-| C.1d | **Cutover:** Alten v1-Editor + Routing-Conditional + ?v=2-Flag entfernen. | 0.5 Tag |
+| C.1a ✅ | Editor-Shell v2 — 3-Pane Layout — Aufgabe 32 (2026-05-28) | 1 Tag |
+| C.1b ✅ | Vorlagen + Field-Level-Properties + Submit-Multi-Field-UI — Aufgabe 33 (2026-05-28) | 1 Tag |
+| C.1c ✅ | WYSIWYG-Edit + Widget-Typeform-Redesign + Canvas-Interactions + Icons-Cleanup + Type-Cleanup + Partial-Submissions-Infra — Aufgabe 34 (2026-05-28). Massiver Sprint, ging weit über ursprünglichen Scope hinaus. **C.6 + C.7 darin absorbiert.** | 2 Tage |
+| C.3 ✅ | Mehr Feldtypen im Builder — Aufgabe 31 (2026-05-28). Plus E-Mail + Telefon in Aufgabe 34 wieder rausgenommen (waren nur kosmetisch). | 3-5 Tage |
+| ~~C.6~~ | Antwortoptionen-UX-Polish + Icon-Layout — durch Aufgabe 34 erledigt (Icons komplett raus, A/B/C/D ist Default). | — |
+| ~~C.7~~ | Smooth Slide-Übergänge zwischen Fragen — durch Aufgabe 34 erledigt (framer-motion AnimatePresence + Spring-Slide live). | — |
+
+### Aktueller Sprint: Builder-Final (5 Aufgaben in einem Rutsch)
+
+**Reihenfolge fix:** 35 → 36 → 37 → C.1d → C.2. Branch: `feature/builder-final-sprint`. Nach Abschluss wird die Roadmap erneut evaluiert (C.5 + C.4 + Phase D als nächster Block).
+
+| Schritt | Was | Aufwand |
+|---|---|---|
 | **35** | **Submit-Button als Default-off + optionale Vorlage „Bestätigungs-Schritt".** Neue Spalte `funnels.skip_submit_step boolean DEFAULT false`. Editor v2 PropertiesPanel-Toggle auf Submit-Page. Widget honoriert Flag → Auto-Finish nach letzter Frage (ruft `/api/submit` mit `completed=true` aus dem letzten Step-Advance auf). Bestehende Funnels bleiben auf `false` (Backwards-Compat). | 1.5 Std |
 | **36** | **Lead-Inbox 3 Tabs:** Completed / Abgebrochen-mit-Email / Abgebrochen-ohne-Email. Schema-Indices stehen seit Aufgabe 34. UI-Arbeit am `/dashboard/leads` mit Filter-Tabs + Badge-Counts. | 2-3 Std |
 | **37** | **Bottom-Right Floating-Nav-Bug** in Live-Widget — rendert nicht wie erwartet trotz `!editMode`. Vermutlich Layout/Position-Issue im iFrame-Context. Debugging + Fix. | 1 Std |
-| C.2 | Theme-Panel im Editor (exponiert vorhandene CSS-Vars + Logo-Upload) | 2-3 Tage |
-| C.3 ✅ | ~~Mehr Feldtypen im Builder~~ — Aufgabe 31, 2026-05-28. Plus E-Mail + Telefon in Aufgabe 34 wieder rausgenommen (waren nur kosmetisch). | 3-5 Tage |
-| C.4 | **Logic Jumps** (per Frage: "springe zu X wenn Antwort = Y") — neue Tabelle oder JSONB | 3-4 Tage |
-| C.5 | Webhook-Export Code (Delivery, Retry, Signatur) — nutzt B.6-Schema | 3-5 Tage |
-| ~~C.6~~ | ~~Antwortoptionen-UX-Polish + icon_url Layout-Anpassung~~ — **vollständig durch Aufgabe 34 erledigt** (Icons komplett raus, A/B/C/D ist Default, IconPicker gelöscht). | — |
-| ~~C.7~~ | ~~Smooth Slide-Übergänge zwischen Fragen im Widget~~ — **durch Aufgabe 34 erledigt** (framer-motion AnimatePresence + Spring-Slide live). | — |
+| **C.1d** | **Cutover:** Alten v1-Editor + Routing-Conditional + ?v=2-Flag entfernen. ~1500 LOC tote Komponenten weg. | 0.5 Tag |
+| **C.2** | **Theme-Panel im Editor + Logo-Upload.** UI für Brand-Color, Font, Border-Radius (exponiert vorhandene CSS-Vars). Logo-Upload via Supabase-Storage → Funnel-Header-Rendering. | 2-3 Tage |
 
-**Total Phase C neu (nach Aufgabe 34): ~5-8 Tage verbleibend.**
+### Danach (nach Sprint-Review, nicht jetzt beginnen)
 
-> **Aufgabe-34-Reset:** C.1c wurde am 2026-05-28 nicht „klein" wie ursprünglich geplant, sondern als grundlegender Architektur-Reset durchgezogen. Drei Stränge in einem Sprint: WYSIWYG-Edit + Widget-Typeform-Redesign + Strategie-Shifts (Icons raus, Email/Tel raus, Partial-Submissions). C.1d Cutover bleibt eigener Sprint nach den 3 Folge-Aufgaben (35-37). C.6 + C.7 fallen weg — sind in C.1c absorbiert.
-
----
-
-## Phase D — MVP-Launch & Partner-Pitches
-
-- Stripe von Test- auf Live-Modus umstellen (Anleitung: `project-overview.md` §9)
-- Domain `app.leadplug.de` final konfigurieren
-- Mindestens 1 Demo-Funnel pro Branche als Showcase (Solar, Anwalt, etc.)
-- Onboarding-Flow für neue Tenants
-- Domain-Marktführer kontaktieren für Partner-Pitches (laut CLAUDE.md §4)
+| Schritt | Was | Aufwand |
+|---|---|---|
+| C.5 | **Webhook-Sender** (Backend + Subscription-CRUD-UI) — HTTP-POST + HMAC-Signatur + Retry-Logik, nutzt B.6-Schema. **Bedingung für 29€-Webhook-Tier.** | 4-5 Tage |
+| C.4 | **Logic Jumps** („wenn Antwort = X springe zu Page Y"). Fokus-Roadmap sagt „kann v1.1" — Launch geht auch ohne. | 3-4 Tage |
 
 ---
 
-## Phase E — Pro-Plan-Features (Post-MVP)
+## Phase D — Launch-Vorbereitung (mini, ~1 Woche)
 
-Nicht-MVP-Features, sortiert nach strategischer Priorität sobald Pre-Launch-Validierung steht:
+Pflicht-Tasks bevor zahlende Kunden draufdürfen. **Kein Onboarding-Wizard** — bei Direct-Sales bist du selbst der Onboarding-Flow.
 
-### Hohe Priorität (wenn Pro-Plan-Nachfrage kommt)
+| Schritt | Was | Aufwand |
+|---|---|---|
+| D.1 | Stripe von Test- auf Live-Modus umstellen (Anleitung: `project-overview.md` §9) | 1 Tag |
+| **D.2** | **Conversion-Tracking via postMessage** (Meta Pixel + Google Ads CAPI). Widget sendet bei Submit ein `postMessage`; parent-Seite ruft `fbq('track','Lead')` / `gtag('event','conversion')` auf. Doku-Snippet für Agenturen. **Performance-Marketing-Blocker — ohne das kaufen Performance-Agenturen nicht.** | 1-2 Tage |
+| D.3 | 3-5 Demo-Funnels als Templates (Solar, Anwalt, Coach, Versicherung, …). Reine Content-Arbeit, kein Engineering. Anker für Sales-Pitch + Startpunkt für neue Tenants. | 2-3 Tage |
 
-- **Multi-User-UI**: Invite-Flow, Role-Management, User-Avatare im Header. Backend ist schon in Phase B fertig.
-- **`contacts`-Tabelle + Dedup-Logik**: gleiche E-Mail-Adresse über mehrere Submissions = 1 Kontakt mit Historie. CRM-Voraussetzung.
-- **Script- / Web-Component-Embed**: nahtlose Integration ohne iFrame-Sandbox. Differenzierungs-Feature für Pro-Plan.
-- **`user_profiles`-Tabelle**: falls Phone für Twilio gebraucht wird.
-- **Plattform-Owner-Dashboard v2**: sauberer Re-Build des in Aufgabe 26 gelöschten `/admin/*`. Klares Feature-Set: Liste aller Tenants mit Stripe-Status/MRR/Leads-Volumen, "in Tenant hineinschauen" für Support, Cross-Tenant-Suche, manuelles Tenant-Anlegen/Deaktivieren/Free-Schalten, System-Health (fehlgeschlagene Webhooks, Stripe-Mismatches). SUPERADMIN_EMAIL-Gating via proxy.ts wiederherstellen.
-
-### Mittlere Priorität
-
-- **Twilio-Integration**: Telefonie aus dem Dashboard, Audio-Aufzeichnung, Auto-Summaries via Claude API
-- **Kanban-Board**: Lead-Pipeline visualisieren (offen → kontaktiert → abgeschlossen).
-- **Call-Dialer**: Lead-Liste durchtelefonieren mit Notizen.
-- **Whitelabel-Endkunden-Portal**: Endkunden der Agentur können sich einloggen und ihre eigenen Leads sehen.
-- **A/B-Testing**: zwei Funnel-Varianten gegeneinander, Conversion-Tracking.
-
-### Builder-Erweiterungen
-
-- **Per-Page-Theme-Override**: einzelne Pages können vom Funnel-Theme abweichen (z.B. dunklere Erfolgsseite).
-- **File-Upload-Feld** (z.B. Foto-Upload bei Solar-Anfragen).
-- **Signature-Feld** (DSGVO-Einwilligungsunterschrift).
-- **Calculator/Scoring-Felder**: Antworten aufsummieren, basierend auf Score weiterleiten oder routen.
-- **Erweiterte Logic Jumps**: Mehrere Bedingungen mit AND/OR-Verknüpfung.
-
-### Skalierung / Plattform
-
-- **Custom-Domain-Support**: Tenants können eigene Domain für Funnels einbinden (`funnel.solar-betrieb.de`).
-- **API für Drittsysteme**: REST-API zum externen Anlegen/Auslesen von Funnels.
-- **Audit-Log**: alle Änderungen an Funnels/Settings/Leads protokolliert.
-- **Team-Workspaces**: für sehr große Agenturen mit getrennten Bereichen (vs. heutiger Single-Workspace-Tenant).
+Direkt nach D.3: **Launch** + Direct-Sales an DACH-Marketing-Agenturen (siehe `builder-fokus-roadmap.html`).
 
 ---
 
-## Ideenliste (unsortiert, noch nicht eingeplant)
+## Phase E — Post-Launch on demand (nicht jetzt bauen)
 
-> Hier landen spontane Ideen, bis sie strategisch bewertet werden.
+> **Regel:** Erst wenn 5+ zahlende Kunden explizit nach einem Feature fragen, kommt es in den nächsten Sprint. Reihenfolge entscheidet der Markt.
 
-- Funnel-Vorlagen-Galerie pro Branche (Solar-Template, Anwalt-Template, etc.) als Quick-Start
-- Slack-/Discord-Integration für Lead-Notifications
-- E-Mail-Vorlage pro Funnel anpassbar (statt globaler Resend-Templates)
-- Mehrsprachige Funnels (DE/EN/...)
-- Lead-Magnet-Anhänge (z.B. PDF-Ratgeber nach Submission)
-- Re-engagement-Sequenzen für nicht-konvertierte Funnel-Starter (E-Mail-Drip)
+| Feature | Geschätzt | Trigger |
+|---|---|---|
+| Custom-Domain pro Funnel (`funnel.kunde.de` via CNAME) | ~3 Tage | erster Premium-Tier-Schmerz |
+| A/B-Tests (2 Varianten + Conversion-Counter) | ~1 Woche | Performance-Agenturen fragen |
+| Multi-User-Invite-UI (Backend steht seit B.1) | 2-3 Tage | „wie lade ich Kollegen ein?" |
+| Calculator-Feld (Antworten aufsummieren → Preis-Schätzung) | ~3 Tage | Solar/Versicherung wird Vertical-Anker |
+| File-Upload-Feld (Foto bei Solar-Anfrage) | ~3 Tage | Solar-Kunden fragen |
+| `contacts`-Tabelle + Dedup-Logik (gleiche Email = 1 Kontakt + Historie) | ~1 Woche | wenn CRM-Glaubwürdigkeit gefragt wird |
+
+---
+
+## Bewusst gestrichen (nicht mehr planen)
+
+> Diese Features sind aus der Roadmap raus. Bei Versuchung „kommt das nicht doch?": **nein.** Siehe `builder-fokus-roadmap.html` für Begründungen.
+
+**Telefonie/Voice:**
+- Twilio-Integration · Call-Dialer · Audio-Aufzeichnung / Auto-Summaries → „verbinde dein Twilio per Webhook"
+
+**CRM-Layer:**
+- Kanban-Board → Pipedrive/Trello machen's besser, Webhook-Anwendungsfall
+- Whitelabel-Endkunden-Portal → Komplexität-Explosion, Endkunden wollen kein Login
+
+**Plattform-Tooling:**
+- Plattform-Owner-Dashboard v2 → bei 0-50 Tenants reicht direkter Supabase-SQL-Zugriff
+- `user_profiles`-Tabelle → war nur für Twilio nötig
+- Public REST-API → Enterprise-Nische
+- Audit-Log → Enterprise-only
+- Team-Workspaces / Sub-Tenants → GoHighLevel-Komplexität, Multi-User pro Tenant reicht
+
+**Builder-Cosmetic:**
+- Per-Page-Theme-Override · Signature-Feld · Script-/Web-Component-Embed → Cosmetic, Webhook-Anwendungsfälle
+
+**Marketing/Content:**
+- Mehrsprachige Funnels (DE/EN/…) → DACH-Fokus
+- E-Mail-Drip / Nurture-Sequenzen → ActiveCampaign/ConvertKit machen's besser, Deliverability-Hölle
+- Slack-/Discord-Integration für Lead-Notifications → Webhook-Anwendungsfall
+- Onboarding-Wizard für neue Tenants → bei Direct-Sales bist du selbst der Onboarding-Flow
 
 ---
 
 ## Wartungs-Notiz
 
-Dieses File wird **manuell gepflegt**. Bei jeder abgeschlossenen Phase:
+Dieses File wird **manuell gepflegt**. Bei jeder abgeschlossenen Aufgabe:
 
-1. Status der abgeschlossenen Aufgabe auf ✅ setzen
+1. Status auf ✅ setzen
 2. Erkenntnisse oder Scope-Änderungen am Ende der Aufgabe dokumentieren
-3. Bei neuen Ideen → Ideenliste oder passende Phase einsortieren
-4. Bei neuen v2-Features → Phase E erweitern
+3. Strategische Wahrheit bleibt `builder-fokus-roadmap.html` — bei Konflikt wiegt sie stärker.
+4. Neue Ideen während eines Sprints: nicht hier eintragen, mit Stavros besprechen. Wenn relevant → in „Post-Launch on demand" oder Sprint-Backlog.

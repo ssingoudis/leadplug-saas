@@ -101,24 +101,25 @@ Drei Tiers pro Tenant (Agentur). Preise sind Richtwerte:
 - **Partial-Submissions live**: jede User-Session bekommt DB-Row mit `session_id` UPSERT + `completed_at` Flag. Abbrecher mit Email werden zu Leads. Pricing-Modell zählt Completed + Abandoned-mit-Email als Lead.
 - **DSGVO ignoriert für jetzt** — Rechtsgrundlage Art. 6 (1) (b) Vertragsanbahnung greift.
 
-**Geplante Verbesserungen (in Reihenfolge):**
+**Aktueller Sprint — „Builder-Final" (5 Aufgaben in einem Rutsch, Branch `feature/builder-final-sprint`):**
 
 1. Aufgabe 35 (~1.5 Std): Submit-Button als Default-off + optionale Vorlage „Bestätigungs-Schritt"
 2. Aufgabe 36 (~2-3 Std): Lead-Inbox 3 Tabs (Completed / Abgebrochen-mit-Email / Abgebrochen-ohne-Email)
 3. Aufgabe 37 (~1 Std): Bottom-Right Floating-Nav-Bug in Live-Widget fixen
 4. C.1d Cutover: alten v1-Editor + ?v=2-Flag entfernen
 5. C.2 Theme-Panel + Logo-Upload
-6. C.4 Logic Jumps
-7. C.5 Webhook-Export hardening
-8. (C.6 + C.7 sind in Aufgabe 34 absorbiert)
 
-**Nicht geplant für MVP** (kommt potenziell in v2 / Pro-Roadmap):
+Nach Sprint-Abschluss: Sprint-Review mit Stavros, dann nächster Block (voraussichtlich C.5 Webhook-Sender + C.4 Logic Jumps + Phase D Launch-Prep).
 
+**Bewusst gestrichen** (nicht mehr im Plan — siehe [`context/builder-fokus-roadmap.html`](context/builder-fokus-roadmap.html) für Begründungen):
+
+- Twilio · Call-Dialer · Kanban-Board · Whitelabel-Endkunden-Portal
+- Plattform-Owner-Dashboard v2 · Public REST-API · Audit-Log · Team-Workspaces
+- Mehrsprachigkeit · E-Mail-Drip · Slack/Discord-Integration · Onboarding-Wizard
+- Per-Page-Theme · Signature-Feld · Script-/Web-Component-Embed
 - Per-Element-CSS-Editor
-- Script- / Web-Component-Embed (nahtlose Integration ohne iFrame)
-- File-Upload, Signature, Calculator/Scoring-Felder
-- A/B-Tests
-- Twilio (Telefonie, Audio-Aufzeichnung, Auto-Summaries), Kanban-Board, Call-Dialer
+
+**Post-Launch on demand** (erst bei 5+ zahlenden Kunden-Anfragen): Custom-Domain · A/B-Tests · Multi-User-Invite-UI · Calculator-Feld · File-Upload-Feld · `contacts`-Dedup-Tabelle.
 
 ---
 
