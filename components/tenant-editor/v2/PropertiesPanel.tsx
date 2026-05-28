@@ -535,15 +535,21 @@ function SortableContactFieldRow({
     number: "#",
     date: "▦",
     checkbox: "☑",
+    slider: "≡",
+    multi_choice: "☑",
+    rating: "★",
+    scale: "⊢",
   };
   const icon = iconByType[field.type] ?? "T";
   const TEXT_PILL = "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800";
   const CHOICE_PILL = "bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800";
   const NUMERIC_PILL = "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800";
+  const RATING_PILL = "bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800";
   const pillByType: Record<ContactFieldConfig["type"], string> = {
     text: TEXT_PILL, long_text: TEXT_PILL, email: TEXT_PILL, tel: TEXT_PILL, plz: TEXT_PILL,
-    radio: CHOICE_PILL, dropdown: CHOICE_PILL,
-    number: NUMERIC_PILL, date: NUMERIC_PILL, checkbox: NUMERIC_PILL,
+    radio: CHOICE_PILL, dropdown: CHOICE_PILL, multi_choice: CHOICE_PILL,
+    number: NUMERIC_PILL, date: NUMERIC_PILL, checkbox: NUMERIC_PILL, slider: NUMERIC_PILL,
+    rating: RATING_PILL, scale: RATING_PILL,
   };
   const pillClass = pillByType[field.type] ?? TEXT_PILL;
 

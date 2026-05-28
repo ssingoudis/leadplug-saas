@@ -297,7 +297,43 @@ const CONTACT_TYPE_TO_FIELD_TYPE: Record<ContactFieldConfig["type"], string> = {
   date: "date",
   checkbox: "checkbox",
   dropdown: "dropdown",
+  // Polish-Runde 2 — gleicher 1:1 Roundtrip wie die Question-Types
+  slider: "slider",
+  multi_choice: "multi_choice",
+  rating: "rating",
+  scale: "scale",
 };
+
+// Welche Types nutzen options[] (für radio/dropdown/multi_choice)?
+const OPTION_BASED_CONTACT_TYPES = new Set<ContactFieldConfig["type"]>(["radio", "dropdown", "multi_choice"]);
+
+// Baut pro ContactFieldConfig die config-jsonb. Für slider/rating/scale gibt's Type-spezifische
+// Felder (analog QuestionConfig); für checkbox bleibt checkboxLabel; für andere leer.
+function buildContactFieldConfig(cf: ContactFieldConfig): Record<string, unknown> {
+  switch (cf.type) {
+    case "checkbox":
+      return cf.checkboxLabel ? { label: cf.checkboxLabel } : {};
+    case "slider":
+      return {
+        ...(cf.sliderMin != null ? { min: cf.sliderMin } : { min: 0 }),
+        ...(cf.sliderMax != null ? { max: cf.sliderMax } : { max: 100 }),
+        ...(cf.sliderStep != null ? { step: cf.sliderStep } : { step: 1 }),
+        ...(cf.sliderDefault != null ? { default: cf.sliderDefault } : { default: 50 }),
+        ...(cf.sliderUnit ? { unit: cf.sliderUnit } : {}),
+      };
+    case "rating":
+      return { maxStars: cf.ratingMaxStars ?? 5 };
+    case "scale":
+      return {
+        min: cf.scaleMin ?? 0,
+        max: cf.scaleMax ?? 10,
+        ...(cf.scaleLabelLeft ? { labelLeft: cf.scaleLabelLeft } : {}),
+        ...(cf.scaleLabelRight ? { labelRight: cf.scaleLabelRight } : {}),
+      };
+    default:
+      return {};
+  }
+}
 
 // Mapping QuestionType → field_type-Enum-Wert.
 // Seit Aufgabe 31 sind alle QuestionType-Werte 1:1 valide field_type-Werte —
@@ -396,8 +432,8 @@ export function editorStateToPagesAndFields(
           visible: cf.visible,
           required: cf.required,
           sort_order: cf.sort_order,
-          options: cf.type === "radio" ? cf.options ?? [] : [],
-          config: {},
+          options: OPTION_BASED_CONTACT_TYPES.has(cf.type) ? cf.options ?? [] : [],
+          config: buildContactFieldConfig(cf),
         });
       });
       return;
@@ -466,8 +502,8 @@ export function editorStateToPagesAndFields(
       visible: cf.visible,
       required: cf.required,
       sort_order: cf.sort_order,
-      options: cf.type === "radio" ? cf.options ?? [] : [],
-      config: {},
+      options: OPTION_BASED_CONTACT_TYPES.has(cf.type) ? cf.options ?? [] : [],
+      config: buildContactFieldConfig(cf),
     });
   });
 
@@ -492,19 +528,58 @@ export function editorStateToPagesAndFields(
 // "text" zurück, damit das Widget sie zumindest als Texteingabe rendert.
 function fieldTypeToContactType(ft: string): ContactFieldConfig["type"] {
   switch (ft) {
-    case "short_text": return "text";
-    case "email":      return "email";
-    case "tel":        return "tel";
-    case "plz":        return "plz";
-    case "radio":      return "radio";
+    case "short_text":   return "text";
+    case "email":        return "email";
+    case "tel":          return "tel";
+    case "plz":          return "plz";
+    case "radio":        return "radio";
     // Aufgabe 39 Polish
-    case "long_text":  return "long_text";
-    case "number":     return "number";
-    case "date":       return "date";
-    case "checkbox":   return "checkbox";
-    case "dropdown":   return "dropdown";
-    default:           return "text";
+    case "long_text":    return "long_text";
+    case "number":       return "number";
+    case "date":         return "date";
+    case "checkbox":     return "checkbox";
+    case "dropdown":     return "dropdown";
+    // Polish-Runde 2
+    case "slider":       return "slider";
+    case "multi_choice": return "multi_choice";
+    case "rating":       return "rating";
+    case "scale":        return "scale";
+    default:             return "text";
   }
+}
+
+// Eine DB-Field-Row → ContactFieldConfig. Wird sowohl für Submit-Page als auch Custom-Page-Fields
+// benutzt — gemeinsame Logik damit slider/rating/scale-Configs konsistent zurückgelesen werden.
+function fieldRowToContactConfig(f: DbFieldRow): ContactFieldConfig {
+  const t = fieldTypeToContactType(f.field_type);
+  const cfg = (f.config ?? {}) as Record<string, unknown>;
+  return {
+    key: f.field_key,
+    type: t,
+    label: f.label ?? "",
+    placeholder: f.placeholder ?? undefined,
+    required: f.required ?? false,
+    visible: f.visible ?? true,
+    sort_order: f.sort_order ?? 0,
+    options:
+      (t === "radio" || t === "dropdown" || t === "multi_choice") && Array.isArray(f.options)
+        ? (f.options as string[])
+        : undefined,
+    checkboxLabel: t === "checkbox" && typeof cfg.label === "string" ? cfg.label : undefined,
+    // Slider
+    sliderMin:     t === "slider" && typeof cfg.min === "number" ? cfg.min : undefined,
+    sliderMax:     t === "slider" && typeof cfg.max === "number" ? cfg.max : undefined,
+    sliderStep:    t === "slider" && typeof cfg.step === "number" ? cfg.step : undefined,
+    sliderUnit:    t === "slider" && typeof cfg.unit === "string" ? cfg.unit : undefined,
+    sliderDefault: t === "slider" && typeof cfg.default === "number" ? cfg.default : undefined,
+    // Rating
+    ratingMaxStars: t === "rating" && typeof cfg.maxStars === "number" ? cfg.maxStars : undefined,
+    // Scale
+    scaleMin:        t === "scale" && typeof cfg.min === "number" ? cfg.min : undefined,
+    scaleMax:        t === "scale" && typeof cfg.max === "number" ? cfg.max : undefined,
+    scaleLabelLeft:  t === "scale" && typeof cfg.labelLeft === "string" ? cfg.labelLeft : undefined,
+    scaleLabelRight: t === "scale" && typeof cfg.labelRight === "string" ? cfg.labelRight : undefined,
+  };
 }
 
 // Defensive Fallback: Question-Page ohne Field (sollte nie passieren).
@@ -640,19 +715,7 @@ export function dbToEditorState(
     // Aufgabe 38: Custom-Multi-Field-Page rekonstruieren
     if (page.page_type === "custom") {
       const pageCfg = pageConfigById.get(page.id) ?? {};
-      const customFields: ContactFieldConfig[] = pageFields.map((f) => ({
-        key: f.field_key,
-        type: fieldTypeToContactType(f.field_type),
-        label: f.label ?? "",
-        placeholder: f.placeholder ?? undefined,
-        required: f.required ?? false,
-        visible: f.visible ?? true,
-        sort_order: f.sort_order ?? 0,
-        options:
-          f.field_type === "radio" && Array.isArray(f.options)
-            ? (f.options as string[])
-            : undefined,
-      }));
+      const customFields: ContactFieldConfig[] = pageFields.map((f) => fieldRowToContactConfig(f));
       return {
         ...emptyEditorQuestion(page.id),
         kind: "custom",
@@ -721,19 +784,7 @@ export function dbToEditorState(
 
   // ContactFields aus Submit-Page-Fields bauen
   const contactFields: ContactFieldConfig[] = submitPage
-    ? (fieldsByPage.get(submitPage.id) ?? []).map((f) => ({
-        key: f.field_key,
-        type: fieldTypeToContactType(f.field_type),
-        label: f.label ?? "",
-        placeholder: f.placeholder ?? undefined,
-        required: f.required ?? false,
-        visible: f.visible ?? true,
-        sort_order: f.sort_order ?? 0,
-        options:
-          f.field_type === "radio" && Array.isArray(f.options)
-            ? (f.options as string[])
-            : undefined,
-      }))
+    ? (fieldsByPage.get(submitPage.id) ?? []).map((f) => fieldRowToContactConfig(f))
     : DEFAULT_CONTACT_FIELDS;
 
   return {

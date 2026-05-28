@@ -223,10 +223,13 @@ function ContactFieldProps({
   contactField: ContactFieldConfig;
   onPatch: (patch: Partial<ContactFieldConfig>) => void;
 }) {
-  // Aufgabe 39 Polish: erweiterte ContactFieldConfig-Types
-  const hasOptions = f.type === "radio" || f.type === "dropdown";
+  // Aufgabe 39 Polish + Runde 2: alle ContactFieldConfig-Types
+  const hasOptions = f.type === "radio" || f.type === "dropdown" || f.type === "multi_choice";
   const isTextish = f.type === "text" || f.type === "email" || f.type === "tel" || f.type === "plz" || f.type === "long_text" || f.type === "number";
   const isCheckbox = f.type === "checkbox";
+  const isSlider = f.type === "slider";
+  const isRating = f.type === "rating";
+  const isScale = f.type === "scale";
 
   return (
     <div className="flex flex-col gap-3">
@@ -274,6 +277,95 @@ function ContactFieldProps({
             placeholder="z. B. Ja, ich stimme zu"
           />
         </Field>
+      )}
+
+      {isSlider && (
+        <>
+          <div className="grid grid-cols-3 gap-2">
+            <Field label="Min">
+              <TextInput
+                value={f.sliderMin != null ? String(f.sliderMin) : ""}
+                onChange={(v) => onPatch({ sliderMin: v === "" ? undefined : Number(v) })}
+                placeholder="0"
+              />
+            </Field>
+            <Field label="Max">
+              <TextInput
+                value={f.sliderMax != null ? String(f.sliderMax) : ""}
+                onChange={(v) => onPatch({ sliderMax: v === "" ? undefined : Number(v) })}
+                placeholder="100"
+              />
+            </Field>
+            <Field label="Schritt">
+              <TextInput
+                value={f.sliderStep != null ? String(f.sliderStep) : ""}
+                onChange={(v) => onPatch({ sliderStep: v === "" ? undefined : Number(v) })}
+                placeholder="1"
+              />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Standardwert">
+              <TextInput
+                value={f.sliderDefault != null ? String(f.sliderDefault) : ""}
+                onChange={(v) => onPatch({ sliderDefault: v === "" ? undefined : Number(v) })}
+                placeholder="50"
+              />
+            </Field>
+            <Field label="Einheit (optional)">
+              <TextInput
+                value={f.sliderUnit ?? ""}
+                onChange={(v) => onPatch({ sliderUnit: v })}
+                placeholder="z. B. kWh"
+              />
+            </Field>
+          </div>
+        </>
+      )}
+
+      {isRating && (
+        <Field label="Anzahl Sterne (1-10)">
+          <TextInput
+            value={f.ratingMaxStars != null ? String(f.ratingMaxStars) : ""}
+            onChange={(v) => onPatch({ ratingMaxStars: v === "" ? undefined : Number(v) })}
+            placeholder="5"
+          />
+        </Field>
+      )}
+
+      {isScale && (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Minimum">
+              <TextInput
+                value={f.scaleMin != null ? String(f.scaleMin) : ""}
+                onChange={(v) => onPatch({ scaleMin: v === "" ? undefined : Number(v) })}
+                placeholder="0"
+              />
+            </Field>
+            <Field label="Maximum">
+              <TextInput
+                value={f.scaleMax != null ? String(f.scaleMax) : ""}
+                onChange={(v) => onPatch({ scaleMax: v === "" ? undefined : Number(v) })}
+                placeholder="10"
+              />
+            </Field>
+          </div>
+          <Field label="Label links (optional)">
+            <TextInput
+              value={f.scaleLabelLeft ?? ""}
+              onChange={(v) => onPatch({ scaleLabelLeft: v })}
+              placeholder="z. B. Sehr unwahrscheinlich"
+            />
+          </Field>
+          <Field label="Label rechts (optional)">
+            <TextInput
+              value={f.scaleLabelRight ?? ""}
+              onChange={(v) => onPatch({ scaleLabelRight: v })}
+              placeholder="z. B. Sehr wahrscheinlich"
+            />
+          </Field>
+        </>
       )}
     </div>
   );

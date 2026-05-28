@@ -96,15 +96,19 @@ export const WELCOME_META: FieldMeta = {
 /** Kurzer Anzeige-Name für einen Kontaktfeld-Typ. */
 export function contactFieldTypeLabel(type: ContactFieldConfig["type"]): string {
   switch (type) {
-    case "radio":     return "Auswahl";
-    case "text":      return "Text";
-    case "email":     return "E-Mail";
-    case "tel":       return "Telefon";
-    case "plz":       return "PLZ";
-    case "long_text": return "Lang-Text";
-    case "number":    return "Zahl";
-    case "date":      return "Datum";
-    case "checkbox":  return "Checkbox";
-    case "dropdown":  return "Dropdown";
+    case "radio":        return "Auswahl";
+    case "text":         return "Text";
+    case "email":        return "E-Mail";
+    case "tel":          return "Telefon";
+    case "plz":          return "PLZ";
+    case "long_text":    return "Lang-Text";
+    case "number":       return "Zahl";
+    case "date":         return "Datum";
+    case "checkbox":     return "Checkbox";
+    case "dropdown":     return "Dropdown";
+    case "slider":       return "Slider";
+    case "multi_choice": return "Mehrfachauswahl";
+    case "rating":       return "Sterne-Rating";
+    case "scale":        return "Skala";
   }
 }

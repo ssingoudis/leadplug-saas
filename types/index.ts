@@ -113,16 +113,33 @@ export interface QuestionConfig {
 // Konfiguration eines einzelnen Kontaktformular-Felds (kommt aus den Fields der submit-Page
 // und ab Aufgabe 38 auch Custom-Multi-Field-Pages).
 // Aufgabe 39 Polish: erweitert um long_text/number/date/checkbox/dropdown.
+// Aufgabe 39 Polish-Runde 2: + slider/multi_choice/rating/scale.
 export interface ContactFieldConfig {
   key:          string                           // Eindeutiger Bezeichner, z.B. "name", "email", "plz"
-  type:         'radio' | 'text' | 'email' | 'tel' | 'plz' | 'long_text' | 'number' | 'date' | 'checkbox' | 'dropdown'
+  type:
+    | 'radio' | 'text' | 'email' | 'tel' | 'plz'
+    | 'long_text' | 'number' | 'date' | 'checkbox' | 'dropdown'
+    | 'slider' | 'multi_choice' | 'rating' | 'scale'
   label:        string
   placeholder?: string                           // Nur für textish (text/email/tel/plz/long_text/number)
   required:     boolean
   visible:      boolean
   sort_order:   number
-  options?:     string[]                         // Für type "radio" oder "dropdown", z.B. ["Herr", "Frau"]
+  options?:     string[]                         // Für type "radio" / "dropdown" / "multi_choice"
   checkboxLabel?: string                         // Nur für type "checkbox" — Text rechts neben der Box
+  // Slider-config (nur für type "slider")
+  sliderMin?:     number
+  sliderMax?:     number
+  sliderStep?:    number
+  sliderUnit?:    string
+  sliderDefault?: number
+  // Rating-config (nur für type "rating")
+  ratingMaxStars?: number
+  // Scale-config (nur für type "scale")
+  scaleMin?:        number
+  scaleMax?:        number
+  scaleLabelLeft?:  string
+  scaleLabelRight?: string
 }
 
 export interface FunnelConfig {

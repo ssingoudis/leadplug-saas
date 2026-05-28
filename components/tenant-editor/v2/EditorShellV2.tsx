@@ -43,6 +43,10 @@ function defaultContactField(
     date: "Datum",
     checkbox: "Checkbox",
     dropdown: "Dropdown",
+    slider: "Slider",
+    multi_choice: "Mehrfachauswahl",
+    rating: "Sterne-Rating",
+    scale: "Skala",
   };
   // Eindeutigen Key generieren — robust gegen Kollisionen mit System-Keys wie name/email/phone/plz/anrede.
   const existingKeys = new Set(existing.map((f) => f.key));

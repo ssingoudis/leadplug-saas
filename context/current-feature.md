@@ -128,6 +128,41 @@ Total bis Launch: ~9-13 Tage Engineering + Stripe-Setup.
 
 ## History
 
+- **Polish-Runde 2 nach Aufgabe 39 — Cleanup + Date-Picker + 4 weitere ContactField-Types ✅ (2026-05-28)**
+
+  Quick-Wins-Sprint vor Pause. 5 Punkte (A-E) abgehakt:
+
+  - **A: Code-Cleanup** in funnel.tsx — ungenutzte `arrayMove`, `getOptionColSpanClasses`, `getOptionsGridClasses` + `gridClasses` rausgeworfen, deprecated-Warnings für `execCommand` mit eslint-disable-Kommentaren + Begründung
+  - **B: Date-Inline-Kalender** mit `react-day-picker` v10 + `date-fns` v4 — lazy-loaded via `dynamic(() => import("./funnel/DateInlinePicker"), { ssr: false })`. Funnels ohne date-Field laden 0 KB Extra; mit date-Field landet ~30 KB beim ersten Render des Date-Steps. Brand-Theme via CSS-Custom-Properties (--rdp-accent-color etc.). de-Locale, weekStartsOn=1, single-mode mit min/max-Disable. Ersetzt HTML5-`<input type="date">` in 3 Pfaden (Question-Page + Custom-Page + Submit-Form)
+  - **C: Slider als Custom-Field-Type** — ContactFieldConfig.type erweitert um `'slider'`, neue Felder `sliderMin/Max/Step/Unit/Default` in der Config. Widget rendert big number-readout + range input + min/max-Labels. PropertiesPanel hat 3-Spalten-Layout für Min/Max/Step + Standard + Einheit
+  - **D: Multi-Choice als Custom-Field-Type** — ContactFieldConfig.type um `'multi_choice'` erweitert. Widget rendert vertikale Card-Liste mit Checkbox-Indikator (selected = Brand-Tint + Border). Answer-Storage als comma-separated string, parsing über `split(",").filter(Boolean)`
+  - **E: Rating + Scale als Custom-Field-Types** — beide nutzen die existierenden `RatingStars` und `ScaleButtons` Helper-Komponenten aus Aufgabe 39 (Code-Reuse). Configs `ratingMaxStars`, `scaleMin/Max/LabelLeft/LabelRight` in ContactFieldConfig
+  - **Bonus:** `buildContactFieldConfig` + `fieldRowToContactConfig` als zentrale Helper für Write/Read in `lib/editorUtils.ts` — vermeidet die zuvor verteilte Logik in Submit-Page + Custom-Page-Mappings, ein Ort der ContactFieldConfig-Schema-Wahrheit
+
+  **Field-Type-Picker im Custom/Submit-PropertiesPanel hat jetzt 14 Types** (war 5 vor Aufgabe 39): text, long_text, email, tel, plz, number, slider, date, checkbox, radio, multi_choice, dropdown, rating, scale
+
+  **Files:**
+  - `package.json`: + react-day-picker v10 + date-fns v4
+  - `components/funnel/DateInlinePicker.tsx` neu (~70 LOC) — Brand-themable Day-Picker mit min/max + de-Locale
+  - `components/funnel.tsx`: lazy-loaded DateInlinePicker, alle 3 date-Pfade portiert, ungenutzte Helper raus, 4 neue Custom-Field-Branches (Multi-Choice/Slider/Rating/Scale), 4 gleiche Branches im Submit-Form-Render
+  - `types/index.ts`: ContactFieldConfig.type erweitert + 9 neue optionale Config-Felder (slider*, ratingMaxStars, scale*)
+  - `lib/editorUtils.ts`: buildContactFieldConfig + fieldRowToContactConfig Helper, CONTACT_TYPE_TO_FIELD_TYPE + OPTION_BASED_CONTACT_TYPES + fieldTypeToContactType-Switch erweitert
+  - `lib/getTenantConfig.ts`: fieldTypeToContactType-Switch erweitert
+  - `lib/validateContactField.ts`: Validation für multi_choice/slider/rating/scale
+  - `components/tenant-editor/v2/EditorShellV2.tsx`: labelByType-Record erweitert
+  - `components/tenant-editor/v2/properties/AddContactFieldPicker.tsx`: 4 neue Picker-Entries, RATING_PILL als 4. Kategorie-Farbe
+  - `components/tenant-editor/v2/properties/FieldProperties.tsx`: ContactFieldProps mit isSlider/isRating/isScale-Branches + 3 neue Config-Sektionen
+  - `components/tenant-editor/v2/PropertiesPanel.tsx`: SortableContactFieldRow iconByType + pillByType um 4 Types erweitert
+  - `components/tenant-editor/v2/fieldMeta.ts`: contactFieldTypeLabel-Switch erweitert
+
+  **Wie testen:**
+  1. Funnel öffnen, Custom-Karte hinzufügen → „+ Feld hinzufügen" → jetzt 14 Types statt 5
+  2. Slider-Feld konfigurieren (Min 0 Max 200 Einheit „kWh") → testen → großer Number-Readout
+  3. Date-Feld → testen → Inline-Kalender lädt asynchron (lazy)
+  4. Multi-Choice mit 3 Options → testen → Checkbox-Cards mit Brand-Tint
+  5. Rating 5 Sterne → testen → Hover-Preview funktioniert
+  6. Scale 0-10 mit Labels → testen → NPS-Style-Buttons-Reihe
+
 - **Polish-Iteration nach Aufgabe 39 (Sammel-Commit) ✅ (2026-05-28)**
 
   Stavros-Feedback-Runde nach Aufgabe 39, in zwei Schwüngen abgearbeitet:

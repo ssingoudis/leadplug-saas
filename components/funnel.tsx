@@ -1,8 +1,16 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import { ChevronLeft, Check, GripVertical, Plus, Trash2, Copy } from "lucide-react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
+
+// Lazy-loaded Inline-Kalender — Bundle wird nur geladen wenn der Funnel ein date-Feld hat.
+// ~30KB (react-day-picker + date-fns) bleiben aus dem Initial-Bundle.
+const DateInlinePicker = dynamic(() => import("./funnel/DateInlinePicker"), {
+  ssr: false,
+  loading: () => <div className="mb-3 h-[320px] w-full max-w-[320px] animate-pulse rounded-lg bg-gray-100 dark:bg-gray-800" />,
+});
 import {
   DndContext,
   closestCenter,
@@ -12,7 +20,6 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import {
-  arrayMove,
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
@@ -125,33 +132,6 @@ function mix(hex1: string, hex2: string, pct: number): string {
     g1 * (1 - pct) + g2 * pct,
     b1 * (1 - pct) + b2 * pct,
   );
-}
-
-// =============================================================================
-// GRID HELPERS
-// =============================================================================
-
-// Maps option count to Tailwind grid classes.
-// Breakpoint @[660px] used because Tailwind v4 @lg = 512px (too small for 4+ cards).
-//
-//   2 → 1×2  |  3 → 1×3  |  4 → 2×2 → 1×4  |  5 → 2+3 → 1×5  |  6 → 2×3 → 3×2
-
-function getOptionsGridClasses(count: number): string {
-  switch (count) {
-    case 2:  return "grid-cols-2 max-w-[360px]";
-    case 3:  return "grid-cols-3 max-w-[520px]";
-    case 4:  return "grid-cols-2 @[660px]:grid-cols-4";
-    case 5:  return "grid-cols-2 @[660px]:grid-cols-5";
-    case 6:  return "grid-cols-2 @[660px]:grid-cols-3";
-    default: return "grid-cols-2 @[660px]:grid-cols-4";
-  }
-}
-
-// For 5 options: last card spans both columns on mobile so all cards share equal width.
-// Above @[660px] all items are equal width (col-span-1).
-function getOptionColSpanClasses(count: number, idx: number): string {
-  if (count !== 5) return "";
-  return idx === 4 ? "col-span-2 max-w-[calc(50%-6px)] mx-auto @[660px]:col-span-1 @[660px]:max-w-none" : "";
 }
 
 // =============================================================================
@@ -753,9 +733,6 @@ export function Funnel({
   // Render — Funnel (question steps + contact form)
   // ---------------------------------------------------------------------------
 
-  const optionCount = currentQuestion?.options.length ?? 0;
-  const gridClasses = getOptionsGridClasses(optionCount);
-
   return (
     <div
       ref={containerRef}
@@ -940,6 +917,143 @@ export function Funnel({
                         );
                       }
 
+                      // Polish-Runde 2: Multi-Choice (mehrere Werte als comma-separated)
+                      if (field.type === "multi_choice" && field.options) {
+                        const selected = (fieldValue || "").split(",").map((s) => s.trim()).filter(Boolean);
+                        return (
+                          <div key={field.key}>
+                            <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
+                              {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
+                            </label>
+                            <div className="flex flex-col gap-2">
+                              {field.options.map((opt) => {
+                                const isChecked = selected.includes(opt);
+                                return (
+                                  <label
+                                    key={opt}
+                                    className="flex items-center gap-3 cursor-pointer px-3 py-2 border transition-colors"
+                                    style={{
+                                      borderColor: isChecked ? theme.primaryColor : theme.tintColor,
+                                      backgroundColor: isChecked
+                                        ? `color-mix(in srgb, ${theme.primaryColor} 12%, transparent)`
+                                        : theme.tintColor,
+                                      borderRadius: theme.borderRadius,
+                                    }}
+                                  >
+                                    <span
+                                      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border"
+                                      style={{
+                                        borderColor: isChecked ? theme.primaryColor : theme.borderColor,
+                                        backgroundColor: isChecked ? theme.primaryColor : theme.backgroundColor,
+                                      }}
+                                    >
+                                      {isChecked && <Check size={12} strokeWidth={3} color="#ffffff" />}
+                                    </span>
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => {
+                                        const next = isChecked
+                                          ? selected.filter((s) => s !== opt)
+                                          : [...selected, opt];
+                                        setAnswers((prev) => ({ ...prev, [field.key]: next.join(",") }));
+                                      }}
+                                      className="sr-only"
+                                    />
+                                    <span className="text-sm font-light" style={{ color: theme.textColor }}>{opt}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // Polish-Runde 2: Slider
+                      if (field.type === "slider") {
+                        const min = field.sliderMin ?? 0;
+                        const max = field.sliderMax ?? 100;
+                        const step = field.sliderStep ?? 1;
+                        const fallback = field.sliderDefault ?? Math.floor((min + max) / 2);
+                        const current = fieldValue ? Number(fieldValue) : fallback;
+                        return (
+                          <div key={field.key}>
+                            <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
+                              {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
+                            </label>
+                            <p className="text-2xl font-bold font-mono mb-2 leading-none" style={{ color: theme.primaryColor }}>
+                              {current.toLocaleString("de-DE")}{" "}
+                              {field.sliderUnit && (
+                                <span className="text-lg font-light opacity-80">{field.sliderUnit}</span>
+                              )}
+                            </p>
+                            <input
+                              type="range"
+                              min={min}
+                              max={max}
+                              step={step}
+                              value={current}
+                              onChange={(e) =>
+                                setAnswers((prev) => ({ ...prev, [field.key]: e.target.value }))
+                              }
+                              className="w-full cursor-pointer accent-primary"
+                              style={{ accentColor: theme.primaryColor }}
+                            />
+                            <div className="mt-1 flex justify-between text-[11px] font-light" style={{ color: theme.textColorMuted }}>
+                              <span>{min}{field.sliderUnit ? ` ${field.sliderUnit}` : ""}</span>
+                              <span>{max}{field.sliderUnit ? ` ${field.sliderUnit}` : ""}</span>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // Polish-Runde 2: Rating
+                      if (field.type === "rating") {
+                        const maxStars = Math.max(1, Math.min(10, field.ratingMaxStars ?? 5));
+                        const currentVal = Number(fieldValue) || 0;
+                        return (
+                          <div key={field.key}>
+                            <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
+                              {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
+                            </label>
+                            <RatingStars
+                              maxStars={maxStars}
+                              value={currentVal}
+                              onChange={(v) => setAnswers((prev) => ({ ...prev, [field.key]: String(v) }))}
+                              primaryColor={theme.primaryColor}
+                              mutedColor={theme.textColorMuted}
+                            />
+                          </div>
+                        );
+                      }
+
+                      // Polish-Runde 2: Scale (NPS-Style)
+                      if (field.type === "scale") {
+                        const min = field.scaleMin ?? 0;
+                        const max = field.scaleMax ?? 10;
+                        return (
+                          <div key={field.key}>
+                            <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
+                              {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
+                            </label>
+                            <ScaleButtons
+                              min={min}
+                              max={max}
+                              value={fieldValue ?? ""}
+                              onChange={(v) => setAnswers((prev) => ({ ...prev, [field.key]: v }))}
+                              labelLeft={field.scaleLabelLeft}
+                              labelRight={field.scaleLabelRight}
+                              primaryColor={theme.primaryColor}
+                              tintColor={theme.tintColor}
+                              tintColorHover={theme.tintColorHover}
+                              textColor={theme.textColor}
+                              mutedColor={theme.textColorMuted}
+                              borderRadius={theme.borderRadius}
+                            />
+                          </div>
+                        );
+                      }
+
                       // Aufgabe 39 Polish: Long-Text (Textarea)
                       if (field.type === "long_text") {
                         return (
@@ -993,16 +1107,14 @@ export function Funnel({
                             <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
                               {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
                             </label>
-                            <input
-                              type="date"
+                            <DateInlinePicker
                               value={fieldValue}
-                              onChange={(e) =>
-                                setAnswers((prev) => ({ ...prev, [field.key]: e.target.value }))
+                              onChange={(iso) =>
+                                setAnswers((prev) => ({ ...prev, [field.key]: iso }))
                               }
-                              className="w-full bg-transparent border-b text-base @md:text-lg py-2 outline-none transition-colors font-light"
-                              style={{ borderColor: theme.underlineColor, color: theme.textColor }}
-                              onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
-                              onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
+                              primaryColor={theme.primaryColor}
+                              textColor={theme.textColor}
+                              borderRadius={theme.borderRadius}
                             />
                           </div>
                         );
@@ -1349,29 +1461,22 @@ export function Funnel({
                   </div>
                 )}
 
-                {/* date — HTML5 native, Underline-only */}
+                {/* date — Inline-Kalender via react-day-picker (lazy-loaded) */}
                 {currentQuestion.questionType === "date" && (() => {
                   const dateCfg = currentQuestion.config as DateConfig;
                   const value = answers[currentQuestion.id] ?? dateCfg.default ?? "";
                   return (
-                    <div className="mb-3">
-                      <input
-                        type="date"
+                    <div data-edit-field="text_input" style={{ ...hl("text_input") }}>
+                      <DateInlinePicker
                         value={value}
-                        min={dateCfg.min || undefined}
-                        max={dateCfg.max || undefined}
-                        onChange={(e) =>
-                          setAnswers((prev) => ({ ...prev, [currentQuestion.id]: e.target.value }))
+                        onChange={(iso) =>
+                          setAnswers((prev) => ({ ...prev, [currentQuestion.id]: iso }))
                         }
-                        data-edit-field="text_input"
-                        className="w-full bg-transparent border-b text-lg @md:text-xl py-3 outline-none transition-colors font-light"
-                        style={{
-                          borderColor:     theme.underlineColor,
-                          color:           theme.textColor,
-                          ...hl("text_input"),
-                        }}
-                        onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
-                        onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
+                        min={dateCfg.min}
+                        max={dateCfg.max}
+                        primaryColor={theme.primaryColor}
+                        textColor={theme.textColor}
+                        borderRadius={theme.borderRadius}
                       />
                     </div>
                   );
@@ -1616,6 +1721,145 @@ export function Funnel({
                       );
                     }
 
+                    // Polish-Runde 2 — Multi-Choice
+                    if (field.type === "multi_choice" && field.options) {
+                      const selectedVals = (contactData[field.key] ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+                      return (
+                        <div key={field.key} data-edit-field={`contact_field_${field.key}`} style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}>
+                          <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
+                            {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
+                          </label>
+                          <div className="flex flex-col gap-2">
+                            {field.options.map((opt) => {
+                              const isChecked = selectedVals.includes(opt);
+                              return (
+                                <label
+                                  key={opt}
+                                  className="flex items-center gap-3 cursor-pointer px-3 py-2 border transition-colors"
+                                  style={{
+                                    borderColor: isChecked ? theme.primaryColor : theme.tintColor,
+                                    backgroundColor: isChecked
+                                      ? `color-mix(in srgb, ${theme.primaryColor} 12%, transparent)`
+                                      : theme.tintColor,
+                                    borderRadius: theme.borderRadius,
+                                  }}
+                                >
+                                  <span
+                                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border"
+                                    style={{
+                                      borderColor: isChecked ? theme.primaryColor : theme.borderColor,
+                                      backgroundColor: isChecked ? theme.primaryColor : theme.backgroundColor,
+                                    }}
+                                  >
+                                    {isChecked && <Check size={12} strokeWidth={3} color="#ffffff" />}
+                                  </span>
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => {
+                                      const next = isChecked
+                                        ? selectedVals.filter((s) => s !== opt)
+                                        : [...selectedVals, opt];
+                                      handleContactChange(field.key, next.join(","));
+                                    }}
+                                    className="sr-only"
+                                  />
+                                  <span className="text-sm font-light" style={{ color: theme.textColor }}>{opt}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                          {errors[field.key] && <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors[field.key]}</p>}
+                        </div>
+                      );
+                    }
+
+                    // Polish-Runde 2 — Slider
+                    if (field.type === "slider") {
+                      const min = field.sliderMin ?? 0;
+                      const max = field.sliderMax ?? 100;
+                      const step = field.sliderStep ?? 1;
+                      const fallback = field.sliderDefault ?? Math.floor((min + max) / 2);
+                      const raw = contactData[field.key];
+                      const current = raw ? Number(raw) : fallback;
+                      return (
+                        <div key={field.key} data-edit-field={`contact_field_${field.key}`} style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}>
+                          <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
+                            {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
+                          </label>
+                          <p className="text-2xl font-bold font-mono mb-2 leading-none" style={{ color: theme.primaryColor }}>
+                            {current.toLocaleString("de-DE")}{" "}
+                            {field.sliderUnit && (
+                              <span className="text-lg font-light opacity-80">{field.sliderUnit}</span>
+                            )}
+                          </p>
+                          <input
+                            type="range"
+                            min={min}
+                            max={max}
+                            step={step}
+                            value={current}
+                            onChange={(e) => handleContactChange(field.key, e.target.value)}
+                            className="w-full cursor-pointer"
+                            style={{ accentColor: theme.primaryColor }}
+                          />
+                          <div className="mt-1 flex justify-between text-[11px] font-light" style={{ color: theme.textColorMuted }}>
+                            <span>{min}{field.sliderUnit ? ` ${field.sliderUnit}` : ""}</span>
+                            <span>{max}{field.sliderUnit ? ` ${field.sliderUnit}` : ""}</span>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Polish-Runde 2 — Rating
+                    if (field.type === "rating") {
+                      const maxStars = Math.max(1, Math.min(10, field.ratingMaxStars ?? 5));
+                      const currentVal = Number(contactData[field.key]) || 0;
+                      return (
+                        <div key={field.key} data-edit-field={`contact_field_${field.key}`} style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}>
+                          <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
+                            {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
+                          </label>
+                          <RatingStars
+                            maxStars={maxStars}
+                            value={currentVal}
+                            onChange={(v) => handleContactChange(field.key, String(v))}
+                            primaryColor={theme.primaryColor}
+                            mutedColor={theme.textColorMuted}
+                          />
+                          {errors[field.key] && <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors[field.key]}</p>}
+                        </div>
+                      );
+                    }
+
+                    // Polish-Runde 2 — Scale
+                    if (field.type === "scale") {
+                      const min = field.scaleMin ?? 0;
+                      const max = field.scaleMax ?? 10;
+                      return (
+                        <div key={field.key} data-edit-field={`contact_field_${field.key}`} style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}>
+                          <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
+                            {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
+                          </label>
+                          <ScaleButtons
+                            min={min}
+                            max={max}
+                            value={contactData[field.key] ?? ""}
+                            onChange={(v) => handleContactChange(field.key, v)}
+                            labelLeft={field.scaleLabelLeft}
+                            labelRight={field.scaleLabelRight}
+                            primaryColor={theme.primaryColor}
+                            tintColor={theme.tintColor}
+                            tintColorHover={theme.tintColorHover}
+                            textColor={theme.textColor}
+                            mutedColor={theme.textColorMuted}
+                            borderRadius={theme.borderRadius}
+                          />
+                          {errors[field.key] && <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors[field.key]}</p>}
+                        </div>
+                      );
+                    }
+
                     // Aufgabe 39 Polish — Long-Text
                     if (field.type === "long_text") {
                       return (
@@ -1667,14 +1911,12 @@ export function Funnel({
                           <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
                             {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
                           </label>
-                          <input
-                            type="date"
+                          <DateInlinePicker
                             value={contactData[field.key] ?? ""}
-                            onChange={(e) => handleContactChange(field.key, e.target.value)}
-                            className="w-full bg-transparent border-b text-base @md:text-lg py-2 outline-none transition-colors font-light"
-                            style={{ borderColor: errors[field.key] ? "#ef4444" : theme.underlineColor, color: theme.textColor }}
-                            onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
-                            onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
+                            onChange={(iso) => handleContactChange(field.key, iso)}
+                            primaryColor={theme.primaryColor}
+                            textColor={theme.textColor}
+                            borderRadius={theme.borderRadius}
                           />
                           {errors[field.key] && <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors[field.key]}</p>}
                         </div>
@@ -2123,10 +2365,15 @@ function EditableText({
         }
       }}
       onPaste={(e: React.ClipboardEvent<HTMLElement>) => {
-        // Plain-Text-Paste-Sanitization gegen Rich-HTML aus Word/Browser
+        // Plain-Text-Paste-Sanitization gegen Rich-HTML aus Word/Browser.
+        // execCommand ist deprecated aber für contentEditable-Paste das einzige Pattern
+        // mit Cursor-Position-Preservation. Alternative (Selection-API + manueller Insert)
+        // wäre ~30 Zeilen für minimalen Nutzen — bleiben bei execCommand bis Browser-Support endet.
         e.preventDefault();
         const text = e.clipboardData.getData("text/plain");
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         if (typeof document !== "undefined" && document.execCommand) {
+          // eslint-disable-next-line @typescript-eslint/no-deprecated
           document.execCommand("insertText", false, text);
         }
       }}

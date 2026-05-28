@@ -50,6 +50,24 @@ export function validateContactField(field: ContactFieldConfig, value: string): 
     case "dropdown":
       return !value ? `Bitte wählen Sie ${field.label} aus.` : ""
 
+    // Polish-Runde 2
+    case "multi_choice":
+      return !value.trim() ? `Bitte wählen Sie mindestens eine Option.` : ""
+
+    case "slider":
+      // Slider hat immer einen Default → praktisch nie invalide
+      return ""
+
+    case "rating": {
+      const n = Number(value)
+      return !n || n < 1
+        ? `Bitte vergeben Sie eine Bewertung.`
+        : ""
+    }
+
+    case "scale":
+      return !value.trim() ? `Bitte wählen Sie einen Wert auf der Skala.` : ""
+
     default:
       return ""
   }

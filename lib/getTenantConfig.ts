@@ -24,18 +24,23 @@ const DEFAULT_CONTACT_FIELDS: ContactFieldConfig[] = [
 // Rückmapping für Submit-Page-Fields → ContactFieldConfig.type (Widget-API stabil halten).
 function fieldTypeToContactType(ft: string): ContactFieldConfig['type'] {
   switch (ft) {
-    case 'short_text': return 'text'
-    case 'email':      return 'email'
-    case 'tel':        return 'tel'
-    case 'plz':        return 'plz'
-    case 'radio':      return 'radio'
+    case 'short_text':   return 'text'
+    case 'email':        return 'email'
+    case 'tel':          return 'tel'
+    case 'plz':          return 'plz'
+    case 'radio':        return 'radio'
     // Aufgabe 39 Polish
-    case 'long_text':  return 'long_text'
-    case 'number':     return 'number'
-    case 'date':       return 'date'
-    case 'checkbox':   return 'checkbox'
-    case 'dropdown':   return 'dropdown'
-    default:           return 'text' // defensive fallback
+    case 'long_text':    return 'long_text'
+    case 'number':       return 'number'
+    case 'date':         return 'date'
+    case 'checkbox':     return 'checkbox'
+    case 'dropdown':     return 'dropdown'
+    // Polish-Runde 2
+    case 'slider':       return 'slider'
+    case 'multi_choice': return 'multi_choice'
+    case 'rating':       return 'rating'
+    case 'scale':        return 'scale'
+    default:             return 'text' // defensive fallback
   }
 }
 

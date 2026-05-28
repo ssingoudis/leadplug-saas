@@ -10,18 +10,23 @@ type ContactFieldType = ContactFieldConfig["type"];
 const TEXT_PILL = "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800";
 const CHOICE_PILL = "bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800";
 const NUMERIC_PILL = "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800";
+const RATING_PILL = "bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800";
 
 const CONTACT_TYPES: { type: ContactFieldType; icon: string; pillClass: string; description: string }[] = [
-  { type: "text",      icon: "T",  pillClass: TEXT_PILL,    description: "Vor-/Nachname, Firma, …" },
-  { type: "long_text", icon: "¶",  pillClass: TEXT_PILL,    description: "Mehrzeiliger Text" },
-  { type: "email",     icon: "@",  pillClass: TEXT_PILL,    description: "E-Mail-Adresse mit Validierung" },
-  { type: "tel",       icon: "☎",  pillClass: TEXT_PILL,    description: "Telefonnummer" },
-  { type: "plz",       icon: "⌗",  pillClass: TEXT_PILL,    description: "Postleitzahl (5 Ziffern)" },
-  { type: "number",    icon: "#",  pillClass: NUMERIC_PILL, description: "Zahleneingabe" },
-  { type: "date",      icon: "▦",  pillClass: NUMERIC_PILL, description: "Datumsauswahl" },
-  { type: "checkbox",  icon: "☑",  pillClass: NUMERIC_PILL, description: "Einzelne Checkbox (Ja/Nein)" },
-  { type: "radio",     icon: "◉",  pillClass: CHOICE_PILL,  description: "Auswahl mit fester Optionsliste" },
-  { type: "dropdown",  icon: "▽",  pillClass: CHOICE_PILL,  description: "Dropdown mit fester Optionsliste" },
+  { type: "text",         icon: "T",  pillClass: TEXT_PILL,    description: "Vor-/Nachname, Firma, …" },
+  { type: "long_text",    icon: "¶",  pillClass: TEXT_PILL,    description: "Mehrzeiliger Text" },
+  { type: "email",        icon: "@",  pillClass: TEXT_PILL,    description: "E-Mail-Adresse mit Validierung" },
+  { type: "tel",          icon: "☎",  pillClass: TEXT_PILL,    description: "Telefonnummer" },
+  { type: "plz",          icon: "⌗",  pillClass: TEXT_PILL,    description: "Postleitzahl (5 Ziffern)" },
+  { type: "number",       icon: "#",  pillClass: NUMERIC_PILL, description: "Zahleneingabe" },
+  { type: "slider",       icon: "≡",  pillClass: NUMERIC_PILL, description: "Slider mit Min/Max-Bereich" },
+  { type: "date",         icon: "▦",  pillClass: NUMERIC_PILL, description: "Datumsauswahl (Inline-Kalender)" },
+  { type: "checkbox",     icon: "☑",  pillClass: NUMERIC_PILL, description: "Einzelne Checkbox (Ja/Nein)" },
+  { type: "radio",        icon: "◉",  pillClass: CHOICE_PILL,  description: "Einfachauswahl mit Optionsliste" },
+  { type: "multi_choice", icon: "☑",  pillClass: CHOICE_PILL,  description: "Mehrfachauswahl mit Optionsliste" },
+  { type: "dropdown",     icon: "▽",  pillClass: CHOICE_PILL,  description: "Dropdown mit Optionsliste" },
+  { type: "rating",       icon: "★",  pillClass: RATING_PILL,  description: "1-N Sterne mit Hover-Preview" },
+  { type: "scale",        icon: "⊢",  pillClass: RATING_PILL,  description: "0-N Skala (NPS-Style)" },
 ];
 
 interface Props {
