@@ -297,12 +297,13 @@
     <!-- HEADER -->
     <!-- ────────────────────────────────────────────────── -->
     <header class="page-header">
-      <span class="pill">Stand: 2026-05-28</span>
+      <span class="pill">Stand: 2026-05-28 (abends)</span>
       <h1>Roadmap bis Launch — Builder-Fokus</h1>
       <p>
         Strategischer Reset: Lifestyle-Business statt Marktführer-Wette.
         Direct-Sales an DACH-Marketing-Agenturen statt Self-Service-Marketing.
-        Backlog halbiert. Klares Ziel: in ~3–4 Wochen launch-ready sein.
+        <strong>Phase C ist fast durch</strong> — Builder ist demo-tauglich,
+        nur Webhook-Sender + Logic-Jumps fehlen. Phase D (Launch-Prep) kommt danach.
       </p>
     </header>
 
@@ -365,41 +366,58 @@
 
     <div class="arrow">↓</div>
 
-    <!-- ── PHASE C ── -->
+    <!-- ── PHASE C (~90% fertig, Stand 2026-05-28 abends) ── -->
     <div class="phase p-c">
       <div class="phase-header">
         <span class="phase-tag">C</span>
-        <span class="phase-title">Builder + Widget + Webhook-Sender</span>
-        <span class="phase-duration">3–4 Wochen</span>
+        <span class="phase-title">Builder + Widget — fast komplett</span>
+        <span class="phase-duration" style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:6px; font-weight:800;">≈ 90% FERTIG</span>
       </div>
       <div class="phase-body">
         <p class="why">
-          Das ist das eigentliche Schaufenster. Builder muss ≥ 70% Typeform-Niveau
-          erreichen. Widget muss smooth animiert sein. Webhook-Sender ist
-          Bedingung für den 29€-Tier.
+          Builder ist demo-tauglich. Strukturell überraschend weit: Page+Elements-Modell teil-implementiert
+          (Welcome / Question / Custom-Multi-Field / Submit / Success), 14 Element-Types inkl. Rating &amp; Scale,
+          WYSIWYG-Inline-Edit, End-Screen-Redirect, Theme-Panel, Lead-Inbox mit 3 Tabs. Nur 2 echte
+          C-Items offen: <strong>C.5 Webhook-Sender</strong> + (optional) C.4 Logic-Jumps.
         </p>
         <ul>
-          <li>
+          <li style="opacity:0.65;">
             <span class="id">C.1</span>
             <span class="desc">
-              Pages + Layers Tabs im Editor (Hierarchie-Sicht)
-              <small>Akkordeon links: Pages-Liste. Klick auf Page → rechts Felder dieser Page bearbeiten.</small>
+              <span style="text-decoration: line-through; text-decoration-color: #94a3b8;">Pages + Layers Tabs im Editor</span>
+              <small>Erledigt als 3-Pane v2-Editor (Aufgabe 32-34 + C.1d Cutover). StepList links, WYSIWYG-Canvas mitte, Properties-Panel rechts. Click-Select + Inline-Edit + Drag-Reorder + Pin-Edge-Insert.</small>
             </span>
-            <span class="est">1 Wo</span>
+            <span class="est" style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:6px; font-weight:800;">✓ FERTIG</span>
           </li>
-          <li>
+          <li style="opacity:0.65;">
             <span class="id">C.2</span>
             <span class="desc">
-              Theme-Panel im Editor + Logo-Upload
-              <small>Brand-Color, Font, Border-Radius mit Pickern. Logo-Upload für Funnel-Header.</small>
+              <span style="text-decoration: line-through; text-decoration-color: #94a3b8;">Theme-Panel im Editor</span>
+              <small>Erledigt am 2026-05-28. Color-Picker (4 Farben), Font, Border-Radius-Slider, Max-Width-Presets. Logo-Upload <strong>bewusst gestrichen</strong> (Stavros).</small>
             </span>
-            <span class="est">3–4 T</span>
+            <span class="est" style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:6px; font-weight:800;">✓ FERTIG</span>
           </li>
-          <li style="opacity: 0.65;">
+          <li style="opacity:0.65;">
             <span class="id">C.3</span>
             <span class="desc">
-              <span style="text-decoration: line-through; text-decoration-color: #94a3b8;">Mehr Feldtypen im Builder (Email, Tel, Date, Number, Dropdown, Checkbox)</span>
-              <small>Erledigt als Aufgabe 31. 6 neue Question-Field-Types live. <code>multi_choice</code>-Rename durchgängig. URL/File-Upload/Address bewusst gestrichen.</small>
+              <span style="text-decoration: line-through; text-decoration-color: #94a3b8;">Mehr Feldtypen + Rating/Scale/Statement + Welcome/End-Screen</span>
+              <small>Aufgabe 31 (Basis-Types) + Aufgabe 39 (Rating, Scale, Statement, Welcome-Screen, End-Screen-Redirect). Custom-Multi-Field-Pages (Aufgabe 38). 5 zusätzliche Submit/Custom-Field-Types in Polish-Iteration (long_text, number, date, checkbox, dropdown).</small>
+            </span>
+            <span class="est" style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:6px; font-weight:800;">✓ FERTIG</span>
+          </li>
+          <li style="opacity:0.65;">
+            <span class="id">C.6</span>
+            <span class="desc">
+              <span style="text-decoration: line-through; text-decoration-color: #94a3b8;">Antwortoptionen-UX-Polish + Icon-Layout</span>
+              <small>Erledigt in Aufgabe 34. Icons komplett raus (radikal), A/B/C/D-Letter-Chips als Default, Brand-Tint Hover, Drag-Reorder + Duplicate + Delete inline.</small>
+            </span>
+            <span class="est" style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:6px; font-weight:800;">✓ FERTIG</span>
+          </li>
+          <li style="opacity:0.65;">
+            <span class="id">C.7</span>
+            <span class="desc">
+              <span style="text-decoration: line-through; text-decoration-color: #94a3b8;">Smooth Slide-Animationen</span>
+              <small>Erledigt in Aufgabe 34. framer-motion AnimatePresence + Spring-Slide zwischen Steps. Auto-Advance bei single_choice mit 250ms-Delay.</small>
             </span>
             <span class="est" style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:6px; font-weight:800;">✓ FERTIG</span>
           </li>
@@ -407,36 +425,33 @@
             <span class="id">C.5</span>
             <span class="desc">
               Webhook-Sender (Backend + Subscription-CRUD-UI)
-              <small>HTTP-POST + HMAC-Signatur + Retry-Logik nutzt B.6-Schema. Plus Dashboard-UI &bdquo;Webhook hinzufügen&ldquo;.</small>
+              <span class="must-badge">Pre-Launch-Pflicht</span>
+              <small>HTTP-POST + HMAC-Signatur + Retry-Logik. Schema steht seit B.6 (Aufgabe 29), Code fehlt.
+              Plus Dashboard-UI „Webhook hinzufügen / testen / Logs ansehen". <strong>Bedingung für 29€-Webhook-Tier.</strong></small>
             </span>
             <span class="est">4–5 T</span>
-          </li>
-          <li>
-            <span class="id">C.7</span>
-            <span class="desc">
-              Smooth Slide-Animationen via Framer-Motion (Typeform-Stil)
-              <small>postMessage-Resize erst nach onAnimationComplete; prefers-reduced-motion respektieren.</small>
-            </span>
-            <span class="est">3–4 T</span>
-          </li>
-          <li>
-            <span class="id">C.6</span>
-            <span class="desc">
-              Antwortoptionen-UX-Polish + Icon-Layout-Anpassung
-              <small>Drag-Drop schicker, Icon-Bild oben vs. SVG-zentriert.</small>
-            </span>
-            <span class="est">1–2 T</span>
           </li>
           <li>
             <span class="id">C.4</span>
             <span class="desc">
               Logic Jumps (&bdquo;wenn Antwort = X springe zu Page Y&ldquo;)
               <span class="opt-badge">kann nach Launch</span>
-              <small>Verkauft, aber v1.1 OK. Erst die anderen C.* fertig machen, dann entscheiden.</small>
+              <small>Verkauft, aber v1.1 OK. Erst C.5 + D.* fertig, dann entscheiden ob's vor Launch noch reingeht.</small>
             </span>
             <span class="est">3–4 T</span>
           </li>
         </ul>
+        <div style="margin-top:14px; padding:10px 14px; background:#eff6ff; border-left:3px solid #2563eb; border-radius:4px; font-size:12px; color:#1e40af; line-height:1.5;">
+          <strong>Polish-Loop-Bonus (nicht ursprünglich geplant, aber jetzt drin):</strong>
+          WYSIWYG-Inline-Edit · Partial-Submissions-Architektur · Skip-Submit-Toggle ·
+          Lead-Inbox 3 Tabs · Custom-Multi-Field-Pages · Welcome &amp; End-Screen ·
+          Bottom-Action-Bar · Eye-Toggle für Field-Sichtbarkeit · Hidden-Page-Overlay.
+        </div>
+        <div style="margin-top:8px; padding:10px 14px; background:#fef3c7; border-left:3px solid #f59e0b; border-radius:4px; font-size:12px; color:#92400e; line-height:1.5;">
+          <strong>Polish-Loop offen:</strong>
+          Date-Input als Inline-Kalender (statt HTML5-default). ~½ Tag wenn eigene Komponente,
+          ~2h wenn Dependency wie <code>react-day-picker</code> akzeptiert. Frage offen.
+        </div>
       </div>
     </div>
 

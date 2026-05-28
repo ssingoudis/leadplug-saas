@@ -133,7 +133,8 @@ Nach Sprint-Abschluss: Sprint-Review mit Stavros, dann nächster Block (voraussi
 
 - [`context/builder-fokus-roadmap.html`](context/builder-fokus-roadmap.html) — **strategische Roadmap bis Launch** (Lifestyle-Business via Direct-Sales an DACH-Marketing-Agenturen, ~4-5 Wo Engineering). Definiert Scope (was bleibt, was gestrichen ist, was on-demand kommt). **Erste Anlaufstelle für „was sollen wir bauen".**
 - [`context/roadmap.md`](context/roadmap.md) — **granulare Aufgaben-Liste** (Phasen A-E, Sub-Nummern B.1, B.2, …, C.1, C.2, …) mit Detail-Beschreibungen und Phase-B-Historie. **Erste Anlaufstelle für „welche Aufgabe konkret als Nächstes".** Inhaltlich der Fokus-Roadmap unterzuordnen.
-- [`context/project-overview.md`](context/project-overview.md) — Architektur, Code-Struktur, DB-Schema, API-Routes
+- [`context/architecture.md`](context/architecture.md) — **technische Karte des Produkts**: wie ist die App gebaut, wo lebt was, welche Komponente macht welchen Job. Builder + Widget + Mapping + Submission-Pipeline. **Erste Anlaufstelle für „wo ist X im Code".**
+- [`context/project-overview.md`](context/project-overview.md) — Code-Struktur (Verzeichnisse), DB-Schema, API-Routes
 - [`context/supabase-schema.md`](context/supabase-schema.md) — vollständige technische DB-Referenz (Enums, Tables, RLS, Indices, Functions)
 - [`context/saas-phasenplan.html`](context/saas-phasenplan.html) — visuelle High-Level Phasen-Übersicht mit Status-Badges (Phasen 1-6) — vom User selbst gepflegt
 - [`context/current-feature.md`](context/current-feature.md) — laufende Arbeit + Aufgaben-History (chronologisch)
