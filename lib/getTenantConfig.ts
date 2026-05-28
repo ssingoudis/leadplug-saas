@@ -34,15 +34,14 @@ function fieldTypeToContactType(ft: string): ContactFieldConfig['type'] {
 }
 
 // Rückmapping für Question-Page-Fields → QuestionType.
+// Seit Aufgabe 31 sind alle QuestionType-Werte 1:1 valide field_type-Werte.
+// `radio` + `plz` sind Submit-Page-only und fallen auf single_choice zurück.
+const VALID_QUESTION_TYPES: ReadonlySet<string> = new Set([
+  'single_choice', 'multi_choice', 'short_text', 'long_text', 'slider',
+  'email', 'tel', 'date', 'number', 'dropdown', 'checkbox',
+])
 function fieldTypeToQuestionType(ft: string): QuestionType {
-  switch (ft) {
-    case 'single_choice': return 'single_choice'
-    case 'multi_choice':  return 'multiple_choice'
-    case 'short_text':    return 'short_text'
-    case 'long_text':     return 'long_text'
-    case 'slider':        return 'slider'
-    default:              return 'single_choice'
-  }
+  return VALID_QUESTION_TYPES.has(ft) ? (ft as QuestionType) : 'single_choice'
 }
 
 interface DbField {

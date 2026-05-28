@@ -77,6 +77,21 @@ export function buildFunnelConfig(state: EditorState): FunnelConfig {
   };
 }
 
+// Types die options-Array brauchen (Choice-Cards + Dropdown).
+const OPTION_BASED_TYPES = new Set<QuestionType>([
+  "single_choice",
+  "multi_choice",
+  "dropdown",
+]);
+
+// Types die placeholder + required + maxLength als config nutzen.
+const TEXTISH_TYPES = new Set<QuestionType>([
+  "short_text",
+  "long_text",
+  "email",
+  "tel",
+]);
+
 export function buildQuestions(questions: EditorQuestion[]): QuestionConfig[] {
   return questions
     .filter((q) => q.visible !== false)
@@ -86,35 +101,67 @@ export function buildQuestions(questions: EditorQuestion[]): QuestionConfig[] {
       subtitle: q.subtitle || undefined,
       questionType: q.questionType,
       visible: q.visible,
-      options:
-        q.questionType === "single_choice" ||
-        q.questionType === "multiple_choice"
-          ? q.options
-              .filter((o) => o.label.trim())
-              .map((o) => ({
-                label: o.label,
-                value: o.value || toKey(o.label),
-                iconKey: o.iconKey || "",
-                iconUrl: o.iconUrl || undefined,
-              }))
-          : [],
-      config:
-        q.questionType === "slider"
-          ? {
-              min: Number(q.sliderMin) || 0,
-              max: Number(q.sliderMax) || 100,
-              step: Number(q.sliderStep) || 1,
-              default: Number(q.sliderDefault) || 50,
-              unit: q.sliderUnit || "",
-            }
-          : q.questionType === "short_text" || q.questionType === "long_text"
-            ? {
-                placeholder: q.placeholder || undefined,
-                maxLength: q.maxLength ? Number(q.maxLength) : undefined,
-                required: q.required,
-              }
-            : {},
+      options: OPTION_BASED_TYPES.has(q.questionType)
+        ? q.options
+            .filter((o) => o.label.trim())
+            .map((o) => ({
+              label: o.label,
+              value: o.value || toKey(o.label),
+              iconKey: o.iconKey || "",
+              iconUrl: o.iconUrl || undefined,
+            }))
+        : [],
+      config: buildQuestionConfig(q),
     }));
+}
+
+// Pro Type die richtige config-jsonb für QuestionConfig + DB bauen.
+function buildQuestionConfig(q: EditorQuestion): Record<string, unknown> {
+  switch (q.questionType) {
+    case "slider":
+      return {
+        min: Number(q.sliderMin) || 0,
+        max: Number(q.sliderMax) || 100,
+        step: Number(q.sliderStep) || 1,
+        default: Number(q.sliderDefault) || 50,
+        unit: q.sliderUnit || "",
+      };
+    case "short_text":
+    case "long_text":
+    case "email":
+    case "tel":
+      return {
+        ...(q.placeholder ? { placeholder: q.placeholder } : {}),
+        ...(q.maxLength ? { maxLength: Number(q.maxLength) } : {}),
+        required: q.required,
+      };
+    case "date":
+      return {
+        ...(q.dateMin ? { min: q.dateMin } : {}),
+        ...(q.dateMax ? { max: q.dateMax } : {}),
+        ...(q.dateDefault ? { default: q.dateDefault } : {}),
+        required: q.required,
+      };
+    case "number":
+      return {
+        ...(q.numberMin ? { min: Number(q.numberMin) } : {}),
+        ...(q.numberMax ? { max: Number(q.numberMax) } : {}),
+        ...(q.numberStep ? { step: Number(q.numberStep) } : {}),
+        ...(q.numberDefault ? { default: Number(q.numberDefault) } : {}),
+        ...(q.numberUnit ? { unit: q.numberUnit } : {}),
+        required: q.required,
+      };
+    case "checkbox":
+      return {
+        label: q.checkboxLabel || "",
+        required: q.required,
+      };
+    case "single_choice":
+    case "multi_choice":
+    case "dropdown":
+    default:
+      return {};
+  }
 }
 
 // =============================================================================
@@ -185,10 +232,10 @@ const CONTACT_TYPE_TO_FIELD_TYPE: Record<ContactFieldConfig["type"], string> = {
 };
 
 // Mapping QuestionType → field_type-Enum-Wert.
-// Nur "multiple_choice" muss zu "multi_choice" gemappt werden (Roadmap-Schreibweise),
-// alle anderen sind 1:1 identisch.
+// Seit Aufgabe 31 sind alle QuestionType-Werte 1:1 valide field_type-Werte —
+// die Funktion bleibt für Lesbarkeit (Aufrufer signalisieren ihre Absicht).
 function questionTypeToFieldType(qt: QuestionType): string {
-  return qt === "multiple_choice" ? "multi_choice" : qt;
+  return qt;
 }
 
 // Erzeugt eine kryptographisch sichere UUID (v4). Wird benötigt, um Page-IDs
@@ -243,10 +290,15 @@ export function editorStateToPagesAndFields(
       config: {},
     });
 
-    const isText = q.questionType === "short_text" || q.questionType === "long_text";
-    const isSlider = q.questionType === "slider";
-    const isChoice =
-      q.questionType === "single_choice" || q.questionType === "multiple_choice";
+    // Types die ihren required-Flag respektieren (sonst implizit true für choice/slider).
+    const userControlsRequired =
+      TEXTISH_TYPES.has(q.questionType) ||
+      q.questionType === "date" ||
+      q.questionType === "number" ||
+      q.questionType === "checkbox";
+
+    // Types die placeholder als top-level Spalte nutzen (Suchhilfe für API-Filter etc.).
+    const hasPlaceholder = TEXTISH_TYPES.has(q.questionType);
 
     fields.push({
       page_id: pageId,
@@ -254,11 +306,11 @@ export function editorStateToPagesAndFields(
       field_type: questionTypeToFieldType(q.questionType),
       label: q.title,
       subtitle: q.subtitle || null,
-      placeholder: isText ? q.placeholder || null : null,
+      placeholder: hasPlaceholder ? q.placeholder || null : null,
       visible: q.visible,
-      required: isText ? q.required : true,
+      required: userControlsRequired ? q.required : true,
       sort_order: 0,
-      options: isChoice
+      options: OPTION_BASED_TYPES.has(q.questionType)
         ? q.options
             .filter((o) => o.label.trim())
             .map((o, oidx) => ({
@@ -269,21 +321,7 @@ export function editorStateToPagesAndFields(
               sort_order: oidx,
             }))
         : [],
-      config: isSlider
-        ? {
-            min: Number(q.sliderMin) || 0,
-            max: Number(q.sliderMax) || 100,
-            step: Number(q.sliderStep) || 1,
-            default: Number(q.sliderDefault) || 50,
-            unit: q.sliderUnit || "",
-          }
-        : isText
-          ? {
-              ...(q.placeholder ? { placeholder: q.placeholder } : {}),
-              ...(q.maxLength ? { maxLength: Number(q.maxLength) } : {}),
-              required: q.required,
-            }
-          : {},
+      config: buildQuestionConfig(q),
     });
   });
 
@@ -349,23 +387,57 @@ function fieldTypeToContactType(ft: string): ContactFieldConfig["type"] {
   }
 }
 
+// Defensive Fallback: Question-Page ohne Field (sollte nie passieren).
+function emptyEditorQuestion(pageId: string): EditorQuestion {
+  return {
+    _id: uid(),
+    dbId: pageId,
+    questionKey: "",
+    questionType: "single_choice",
+    title: "",
+    subtitle: "",
+    visible: true,
+    required: true,
+    placeholder: "",
+    maxLength: "",
+    sliderMin: "0",
+    sliderMax: "100",
+    sliderStep: "1",
+    sliderUnit: "",
+    sliderDefault: "50",
+    options: [],
+    dateMin: "",
+    dateMax: "",
+    dateDefault: "",
+    numberMin: "",
+    numberMax: "",
+    numberStep: "1",
+    numberDefault: "",
+    numberUnit: "",
+    checkboxLabel: "",
+  };
+}
+
 // Rückmapping field_type → QuestionType für Question-Page-Fields.
+// Seit Aufgabe 31 sind alle QuestionType-Werte 1:1 valide field_type-Werte.
+// `radio` + `plz` sind Submit-Page-only und fallen auf single_choice zurück.
+const VALID_QUESTION_TYPES: ReadonlySet<string> = new Set([
+  "single_choice",
+  "multi_choice",
+  "short_text",
+  "long_text",
+  "slider",
+  "email",
+  "tel",
+  "date",
+  "number",
+  "dropdown",
+  "checkbox",
+]);
+
 function fieldTypeToQuestionType(ft: string): QuestionType {
-  switch (ft) {
-    case "single_choice":
-      return "single_choice";
-    case "multi_choice":
-      return "multiple_choice";
-    case "short_text":
-      return "short_text";
-    case "long_text":
-      return "long_text";
-    case "slider":
-      return "slider";
-    default:
-      // Defensive: bei zukünftigen field_types fallback auf single_choice
-      return "single_choice";
-  }
+  if (VALID_QUESTION_TYPES.has(ft)) return ft as QuestionType;
+  return "single_choice";
 }
 
 export interface DbPageRow {
@@ -421,45 +493,30 @@ export function dbToEditorState(
     const f = pageFields[0];
     if (!f) {
       // Defensive: Question-Page ohne Field → Leerstring-Question (sollte nie passieren)
-      return {
-        _id: uid(),
-        dbId: page.id,
-        questionKey: "",
-        questionType: "single_choice",
-        title: "",
-        subtitle: "",
-        visible: true,
-        required: true,
-        placeholder: "",
-        maxLength: "",
-        sliderMin: "0",
-        sliderMax: "100",
-        sliderStep: "1",
-        sliderUnit: "",
-        sliderDefault: "50",
-        options: [],
-      };
+      return emptyEditorQuestion(page.id);
     }
 
     const cfg = (f.config ?? {}) as Record<string, unknown>;
     const opts = Array.isArray(f.options) ? f.options : [];
+    const questionType = fieldTypeToQuestionType(f.field_type);
 
     return {
       _id: uid(),
       dbId: f.id,
       questionKey: f.field_key,
-      questionType: fieldTypeToQuestionType(f.field_type),
+      questionType,
       title: f.label ?? "",
       subtitle: f.subtitle ?? "",
       visible: f.visible ?? true,
       required: f.required ?? true,
       placeholder: f.placeholder ?? (typeof cfg.placeholder === "string" ? cfg.placeholder : ""),
       maxLength: cfg.maxLength != null ? String(cfg.maxLength) : "",
-      sliderMin: cfg.min != null ? String(cfg.min) : "0",
-      sliderMax: cfg.max != null ? String(cfg.max) : "100",
-      sliderStep: cfg.step != null ? String(cfg.step) : "1",
-      sliderUnit: typeof cfg.unit === "string" ? cfg.unit : "",
-      sliderDefault: cfg.default != null ? String(cfg.default) : "50",
+      // Slider
+      sliderMin: questionType === "slider" && cfg.min != null ? String(cfg.min) : "0",
+      sliderMax: questionType === "slider" && cfg.max != null ? String(cfg.max) : "100",
+      sliderStep: questionType === "slider" && cfg.step != null ? String(cfg.step) : "1",
+      sliderUnit: questionType === "slider" && typeof cfg.unit === "string" ? cfg.unit : "",
+      sliderDefault: questionType === "slider" && cfg.default != null ? String(cfg.default) : "50",
       options: opts.map((o: Record<string, unknown>) => ({
         _id: uid(),
         label: typeof o.label === "string" ? o.label : "",
@@ -467,6 +524,18 @@ export function dbToEditorState(
         iconKey: typeof o.icon_key === "string" ? o.icon_key : "",
         iconUrl: typeof o.icon_url === "string" ? o.icon_url : "",
       })),
+      // Date
+      dateMin: questionType === "date" && typeof cfg.min === "string" ? cfg.min : "",
+      dateMax: questionType === "date" && typeof cfg.max === "string" ? cfg.max : "",
+      dateDefault: questionType === "date" && typeof cfg.default === "string" ? cfg.default : "",
+      // Number
+      numberMin: questionType === "number" && cfg.min != null ? String(cfg.min) : "",
+      numberMax: questionType === "number" && cfg.max != null ? String(cfg.max) : "",
+      numberStep: questionType === "number" && cfg.step != null ? String(cfg.step) : "1",
+      numberDefault: questionType === "number" && cfg.default != null ? String(cfg.default) : "",
+      numberUnit: questionType === "number" && typeof cfg.unit === "string" ? cfg.unit : "",
+      // Checkbox
+      checkboxLabel: questionType === "checkbox" && typeof cfg.label === "string" ? cfg.label : "",
     };
   });
 

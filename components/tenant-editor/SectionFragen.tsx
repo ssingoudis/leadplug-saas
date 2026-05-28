@@ -33,16 +33,25 @@ function isQuestionField(field: string): boolean {
     field === "question_subtitle" ||
     field.startsWith("option_") ||
     field.startsWith("slider_") ||
-    field.startsWith("text_")
+    field.startsWith("text_") ||
+    field.startsWith("date_") ||
+    field.startsWith("number_") ||
+    field.startsWith("checkbox_")
   );
 }
 
 const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   single_choice: "Einfachauswahl",
-  multiple_choice: "Mehrfachauswahl",
+  multi_choice: "Mehrfachauswahl",
   short_text: "Kurztext",
   long_text: "Langtext",
   slider: "Schieberegler",
+  email: "E-Mail",
+  tel: "Telefon",
+  date: "Datum",
+  number: "Zahl",
+  dropdown: "Dropdown",
+  checkbox: "Checkbox",
 };
 
 const inputClass =
@@ -87,6 +96,15 @@ function newQuestion(): EditorQuestion {
     sliderUnit: "",
     sliderDefault: "50",
     options: defaultChoiceOptions(),
+    dateMin: "",
+    dateMax: "",
+    dateDefault: "",
+    numberMin: "",
+    numberMax: "",
+    numberStep: "1",
+    numberDefault: "",
+    numberUnit: "",
+    checkboxLabel: "Ja, ich stimme zu",
   };
 }
 
@@ -135,11 +153,17 @@ function QuestionCard({
 }: QuestionCardProps) {
   const isChoice =
     question.questionType === "single_choice" ||
-    question.questionType === "multiple_choice";
+    question.questionType === "multi_choice" ||
+    question.questionType === "dropdown";
   const isText =
     question.questionType === "short_text" ||
-    question.questionType === "long_text";
+    question.questionType === "long_text" ||
+    question.questionType === "email" ||
+    question.questionType === "tel";
   const isSlider = question.questionType === "slider";
+  const isDate = question.questionType === "date";
+  const isNumber = question.questionType === "number";
+  const isCheckbox = question.questionType === "checkbox";
 
   // Bulk-Import: Textarea, eine Option pro Zeile.
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -208,7 +232,7 @@ function QuestionCard({
   function handleTypeChange(type: QuestionType) {
     const patch: Partial<EditorQuestion> = { questionType: type };
     if (
-      (type === "single_choice" || type === "multiple_choice") &&
+      (type === "single_choice" || type === "multi_choice" || type === "dropdown") &&
       question.options.length === 0
     ) {
       patch.options = defaultChoiceOptions();
@@ -492,7 +516,169 @@ function QuestionCard({
             </div>
           )}
 
-          {/* Text-Config */}
+          {/* Date-Config (HTML5 native input type=date — keine Custom-Picker-UX) */}
+          {isDate && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Minimum (optional)</Label>
+                  <input
+                    type="date"
+                    value={question.dateMin}
+                    onChange={(e) => onUpdate({ dateMin: e.target.value })}
+                    data-field="date_min"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <Label>Maximum (optional)</Label>
+                  <input
+                    type="date"
+                    value={question.dateMax}
+                    onChange={(e) => onUpdate({ dateMax: e.target.value })}
+                    data-field="date_max"
+                    className={inputClass}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label>Standardwert (optional)</Label>
+                  <input
+                    type="date"
+                    value={question.dateDefault}
+                    onChange={(e) => onUpdate({ dateDefault: e.target.value })}
+                    data-field="date_default"
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id={`req-${question._id}`}
+                  checked={question.required}
+                  onChange={(e) => onUpdate({ required: e.target.checked })}
+                  data-field="date_required"
+                  className="rounded"
+                />
+                <label
+                  htmlFor={`req-${question._id}`}
+                  className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
+                >
+                  Pflichtfeld
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* Number-Config */}
+          {isNumber && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Minimum (optional)</Label>
+                  <input
+                    type="number"
+                    value={question.numberMin}
+                    onChange={(e) => onUpdate({ numberMin: e.target.value })}
+                    data-field="number_min"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <Label>Maximum (optional)</Label>
+                  <input
+                    type="number"
+                    value={question.numberMax}
+                    onChange={(e) => onUpdate({ numberMax: e.target.value })}
+                    data-field="number_max"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <Label>Schrittweite</Label>
+                  <input
+                    type="number"
+                    value={question.numberStep}
+                    onChange={(e) => onUpdate({ numberStep: e.target.value })}
+                    data-field="number_step"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <Label>Einheit (optional, z.B. kWh)</Label>
+                  <input
+                    type="text"
+                    value={question.numberUnit}
+                    onChange={(e) => onUpdate({ numberUnit: e.target.value })}
+                    data-field="number_unit"
+                    placeholder="kWh"
+                    className={inputClass}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label>Standardwert (optional)</Label>
+                  <input
+                    type="number"
+                    value={question.numberDefault}
+                    onChange={(e) => onUpdate({ numberDefault: e.target.value })}
+                    data-field="number_default"
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id={`req-${question._id}`}
+                  checked={question.required}
+                  onChange={(e) => onUpdate({ required: e.target.checked })}
+                  data-field="number_required"
+                  className="rounded"
+                />
+                <label
+                  htmlFor={`req-${question._id}`}
+                  className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
+                >
+                  Pflichtfeld
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* Checkbox-Config (Single-Checkbox für DSGVO/Newsletter) */}
+          {isCheckbox && (
+            <div className="space-y-3">
+              <div>
+                <Label>Label rechts neben der Checkbox</Label>
+                <input
+                  type="text"
+                  value={question.checkboxLabel}
+                  onChange={(e) => onUpdate({ checkboxLabel: e.target.value })}
+                  data-field="checkbox_label"
+                  placeholder="Ja, ich stimme zu"
+                  className={inputClass}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id={`req-${question._id}`}
+                  checked={question.required}
+                  onChange={(e) => onUpdate({ required: e.target.checked })}
+                  data-field="checkbox_required"
+                  className="rounded"
+                />
+                <label
+                  htmlFor={`req-${question._id}`}
+                  className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
+                >
+                  Pflichtfeld (muss vom User aktiviert werden)
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* Text-Config (auch für email/tel) */}
           {isText && (
             <div className="space-y-3">
               <div>

@@ -14,10 +14,16 @@ export interface FunnelTheme {
 
 export type QuestionType =
   | 'single_choice'
-  | 'multiple_choice'
+  | 'multi_choice'
   | 'short_text'
   | 'long_text'
   | 'slider'
+  | 'email'
+  | 'tel'
+  | 'date'
+  | 'number'
+  | 'dropdown'
+  | 'checkbox'
 
 export interface Option {
   label: string
@@ -41,13 +47,34 @@ export interface SliderConfig {
   openMax?: boolean
 }
 
+export interface DateConfig {
+  min?: string       // ISO YYYY-MM-DD
+  max?: string
+  default?: string
+  required?: boolean
+}
+
+export interface NumberConfig {
+  min?: number
+  max?: number
+  step?: number
+  unit?: string
+  default?: number
+  required?: boolean
+}
+
+export interface CheckboxConfig {
+  label?: string     // Text rechts neben der Box
+  required?: boolean
+}
+
 export interface QuestionConfig {
   id: string
   title: string
   subtitle?: string
   questionType: QuestionType
   options: Option[]
-  config: TextConfig | SliderConfig | Record<string, never>
+  config: TextConfig | SliderConfig | DateConfig | NumberConfig | CheckboxConfig | Record<string, never>
   visible: boolean
 }
 
@@ -142,7 +169,7 @@ export interface EditorQuestion {
   title: string
   subtitle: string
   visible: boolean
-  // text-Typen:
+  // shared: text, long_text, email, tel:
   required: boolean
   placeholder: string
   maxLength: string
@@ -152,8 +179,20 @@ export interface EditorQuestion {
   sliderStep: string
   sliderUnit: string
   sliderDefault: string
-  // choice-Typen:
+  // choice + dropdown:
   options: EditorOption[]
+  // date (alle ISO YYYY-MM-DD):
+  dateMin: string
+  dateMax: string
+  dateDefault: string
+  // number:
+  numberMin: string
+  numberMax: string
+  numberStep: string
+  numberDefault: string
+  numberUnit: string      // optional, z.B. "kWh", "Stück"
+  // checkbox (Single-Checkbox, z.B. DSGVO/Newsletter):
+  checkboxLabel: string   // Text rechts neben der Box, z.B. "Ja, ich stimme zu"
 }
 
 export interface EditorState {
