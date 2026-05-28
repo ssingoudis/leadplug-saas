@@ -111,6 +111,53 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ## History
 
+- **Aufgabe 31 — Phase C.3 (6 neue Question-Field-Types + multi_choice rename) ✅ (2026-05-28)**
+
+  Erste Phase-C-Aufgabe. Builder kann jetzt 11 Field-Types statt 5: alte 5 (single_choice, multi_choice, short_text, long_text, slider) + 6 neue (email, tel, date, number, dropdown, checkbox). Submit-Page (Kontaktformular) unverändert — neue Types sind ausschließlich auf Question-Pages. Code live (Commit `3db419a`), Production-Smoke-Test grün.
+
+  **Keine DB-Migration:** field_type-Enum war seit Aufgabe 30a schon vollständig (alle 11 + radio + plz reserved).
+
+  **Rename multiple_choice → multi_choice** durchgängig — DB hatte es seit Aufgabe 30a schon richtig (mapping in Migration), App-Code zog nach. 15 Stellen über 8 Files, sauber konsistent DB ↔ EditorState ↔ UI.
+
+  **Was gestrichen wurde:** URL (niche für DACH-Solar-Funnels), File Upload (steht explizit im Post-Launch on-demand-Bucket der Fokus-Roadmap), Address (PLZ reicht für Region-Routing — vollständige Adresse ist Versand-Use-Case, nicht Lead-Erfassung).
+
+  **App-Code-Refactor (9 Files):**
+  - `types/index.ts`: QuestionType-Union 5 → 11. EditorQuestion erweitert um dateMin/Max/Default, numberMin/Max/Step/Default/Unit, checkboxLabel (alle top-level, konsistent mit slider-Pattern). QuestionConfig.config-Union um DateConfig, NumberConfig, CheckboxConfig erweitert.
+  - `components/tenant-editor/defaults.ts`: DEFAULT_QUESTION + newQuestion-Helper in SectionFragen.tsx mit neuen Feldern initialisiert.
+  - `components/tenant-editor/SectionFragen.tsx`: QUESTION_TYPE_LABELS mit 11 deutschen Labels (Einfachauswahl, Mehrfachauswahl, Kurztext, Langtext, Schieberegler, E-Mail, Telefon, Datum, Zahl, Dropdown, Checkbox). `isChoice` deckt jetzt single_choice + multi_choice + dropdown ab; `isText` deckt short_text + long_text + email + tel ab. 3 neue Config-UI-Blocks (Date mit Min/Max/Default + Required, Number mit Min/Max/Step/Unit/Default + Required, Checkbox mit Label + Required). handleTypeChange initialisiert Default-Optionen auch für dropdown. isQuestionField erweitert um date_*/number_*/checkbox_*-Prefixe.
+  - `components/funnel.tsx`: text-Block deckt jetzt short_text + email + tel ab (gemeinsamer Renderer mit dynamischem `type=…`). Date: HTML5 `<input type=date>` mit min/max/default. Number: `<input type=number>` mit min/max/step + optionalem Unit-Suffix rechts. Dropdown: native `<select>` mit "Bitte wählen…" als leerer Default-Option. Checkbox: Single-Boolean als Klick-Label mit primary-Border bei aktiviert. `isWeiterDisabled`-Sonderfall: checkbox required → value === "true". multi_choice rename in 3 Vergleichen + 1 Kommentar.
+  - `lib/editorUtils.ts`: zentraler `buildQuestionConfig`-Helper für alle Type-spezifischen config-jsonb. OPTION_BASED_TYPES + TEXTISH_TYPES Sets. questionTypeToFieldType + fieldTypeToQuestionType vereinfacht zu 1:1 (VALID_QUESTION_TYPES als Whitelist; `radio` + `plz` sind Submit-Page-only und fallen auf single_choice zurück). editorStateToPagesAndFields: `userControlsRequired` und `hasPlaceholder` Sets steuern wann required/placeholder vom User kommen vs. hardcoded true sind. dbToEditorState: Date/Number/Checkbox-Felder werden Type-spezifisch aus DB-config befüllt (z.B. dateMin nur wenn questionType==='date').
+  - `lib/getTenantConfig.ts`: gleiche Vereinfachung für Widget-Read.
+  - `lib/resolveAnswer.ts`: Date lokalisiert auf de-DE (DD.MM.YYYY), Checkbox "Ja"/"Nein"-Anzeige. Choice-Pfad deckt jetzt auch dropdown ab (options-basiert).
+  - `components/tenant-editor/PreviewPanel.tsx`: buildMockAnswers für alle neuen Types (Email: "max@beispiel.de", Tel: "+49 123 456789", Date: heutiges Datum, Number: 42, Dropdown: erste option, Checkbox: "true").
+  - `components/tenant-editor/HealthCheckPanel.tsx`: Choice-Optionen-Check (≥2 Optionen, kein leerer Label) gilt jetzt auch für dropdown.
+
+  **Verifikation:**
+  - TypeScript: `tsc --noEmit` exit 0.
+  - Grep nach multiple_choice in .ts/.tsx: 0 Treffer.
+  - Production-Smoke-Test: `https://app.leadplug.de/demo-solar` rendert mit erster Frage "Worauf soll die Anlage installiert werden?" + Optionen, kein Regression auf Bestandsfunnels.
+
+  **Bekannte Trade-offs (für Folge-Sessions):**
+  - Dropdown-Optionen zeigen IconPicker in SectionFragen — Icons werden im Widget aber ignoriert. Fix in C.6 (Antwortoptionen-UX-Polish).
+  - Email/Tel keine clientside Format-Validation (Submit via JS, kein HTML5-Form-Submit-Trigger). Pflichtfeld-Check via isWeiterDisabled reicht für minimal-funktional. Echte Email-Format-Validation könnte später hinzukommen.
+  - Custom-Picker für Date (statt Browser-native) wäre nice — UX-Polish-Sache, kommt wenn explizit gefordert.
+  - Question-Page-Field-Types email/tel/date landen in `submissions.answers`, NICHT in `submissions.contact`. Submit-Page bleibt Single-Source-of-Truth für Lead-Kontakt. Wenn Stavros' Vision "Kontaktformular optional, Email vorne abfragen" kommt → eigene Aufgabe (datenmodell-Migration nötig).
+  - components/funnel.tsx ist auf ~1170 Zeilen gewachsen. CLAUDE.md §11 hands-off-Regel bleibt. Auslagerung in `components/funnel/fields/*` kommt wenn Datei wirklich unhandhabbar wird (eher bei 1800-2000 Zeilen oder bei Pro-Plan-Custom-Renderern).
+
+  **Nicht in dieser Aufgabe (eigene Sessions):**
+  - Editor-Layout-Refactor (3-Spalten WYSIWYG mit Pages-Liste links / Canvas-Editor mittig / Properties rechts — von Stavros visualisiert) → eigene Aufgabe (vermutlich 2-3 Wochen)
+  - Multi-Field-Pages → bleibt 1 Field je Question-Page
+  - Logic Jumps / FlowSplit / Conditional Split → Phase C.4
+  - Page-Builder-Elemente (Image, Text-Block aus Stavros' Screenshot 2 "Page Builder") → später
+  - File Upload, URL, Address, Signature, Hidden Field → bewusst raus, im Post-Launch on-demand-Bucket der Fokus-Roadmap
+
+  *Branch:* `feature/aufgabe-31-new-field-types` mit `--no-ff` in main gemerged.
+
+  *Commits:*
+  - `df7e2e2` feat(builder): Aufgabe 31 (Phase C.3) — 6 neue Question-Field-Types + multi_choice rename
+  - `3db419a` Merge auf main (Vercel-Auto-Deploy getriggert)
+  - + finaler Doku-Commit (Roadmap auf C.3 ✅)
+
 - **Aufgabe 30 — Phase B.5 (pages + fields Schema-Foundation) ✅ (2026-05-28)**
 
   Beide Migrationen auf Production appliziert (30a additive + Daten-Migration in einer Transaktion, 30b DROP), Code-Refactor live auf Vercel (Commit `048d56b`), Production-Smoke-Test grün (`https://app.leadplug.de/demo-solar` rendert sauber via neuen pages→fields-Join), supabase-schema.md regeneriert, Roadmap auf ✅. **Phase B damit abgeschlossen** — B.7 (updated_at-Trigger-Konsistenz) wurde mit B.5 erledigt (pages + fields bekamen den Trigger direkt in 30a).

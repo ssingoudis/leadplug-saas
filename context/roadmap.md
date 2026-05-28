@@ -148,7 +148,7 @@ Reihenfolge laut [`../CLAUDE.md`](../CLAUDE.md) §5:
 |---|---|---|
 | C.1 | Pages + Layers Tabs im Editor (Hierarchie-Sicht) | 4-6 Tage |
 | C.2 | Theme-Panel im Editor (exponiert vorhandene CSS-Vars + Logo-Upload) | 2-3 Tage |
-| C.3 | Mehr Feldtypen im Builder (Email, Tel, Date, Number, Dropdown, Checkbox) — Foundation aus B.5 nutzen | 3-5 Tage |
+| C.3 ✅ | ~~Mehr Feldtypen im Builder (Email, Tel, Date, Number, Dropdown, Checkbox)~~ — Aufgabe 31, 2026-05-28. URL/File-Upload/Address bewusst gestrichen, `multi_choice`-Rename mit drin. | 3-5 Tage |
 | C.4 | **Logic Jumps** (per Frage: "springe zu X wenn Antwort = Y") — neue Tabelle oder JSONB | 3-4 Tage |
 | C.5 | Webhook-Export Code (Delivery, Retry, Signatur) — nutzt B.6-Schema | 3-5 Tage |
 | C.6 | Antwortoptionen-UX-Polish + icon_url Layout-Anpassung (Bild oben vs. SVG zentriert) | 1-2 Tage |
