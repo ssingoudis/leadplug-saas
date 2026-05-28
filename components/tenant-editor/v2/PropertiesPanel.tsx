@@ -25,6 +25,7 @@ import {
   questionMeta,
   SUBMIT_META,
   SUCCESS_META,
+  CUSTOM_META,
   contactFieldTypeLabel,
   QUESTION_TYPE_OPTIONS,
 } from "./fieldMeta";
@@ -43,6 +44,11 @@ interface Props {
   onAddContactField: (type: ContactFieldConfig["type"]) => void;
   onDeleteContactField: (key: string) => void;
   onReorderContactFields: (next: ContactFieldConfig[]) => void;
+  // Aufgabe 38: Custom-Multi-Field-Page Field-Operationen (pro page index + field key)
+  onPatchCustomField: (pageIndex: number, fieldKey: string, patch: Partial<ContactFieldConfig>) => void;
+  onAddCustomField: (pageIndex: number, type: ContactFieldConfig["type"]) => void;
+  onDeleteCustomField: (pageIndex: number, fieldKey: string) => void;
+  onReorderCustomFields: (pageIndex: number, next: ContactFieldConfig[]) => void;
   // C.1c WYSIWYG-Edit: bidirektionaler Sync mit CenterCanvas-Selektion
   selectedFieldRef: string;
   onSelectFieldRef: (ref: string) => void;
@@ -58,12 +64,31 @@ export function PropertiesPanel({
   onAddContactField,
   onDeleteContactField,
   onReorderContactFields,
+  onPatchCustomField,
+  onAddCustomField,
+  onDeleteCustomField,
+  onReorderCustomFields,
   selectedFieldRef,
   onSelectFieldRef,
 }: Props) {
+  // Aufgabe 38: Custom-Page sitzt in state.questions[] mit kind="custom"
+  const currentStep = selected.kind === "question" ? state.questions[selected.questionIndex] : null;
+  const isCustomPage = currentStep?.kind === "custom";
+
   return (
     <aside className="flex h-full w-full flex-col overflow-y-auto border-l border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-      {selected.kind === "question" ? (
+      {selected.kind === "question" && isCustomPage ? (
+        <CustomPageProps
+          state={state}
+          index={selected.questionIndex}
+          onPatchQuestion={onPatchQuestion}
+          onDelete={() => onDeleteQuestion(selected.questionIndex)}
+          onPatchCustomField={(key, patch) => onPatchCustomField(selected.questionIndex, key, patch)}
+          onAddCustomField={(type) => onAddCustomField(selected.questionIndex, type)}
+          onDeleteCustomField={(key) => onDeleteCustomField(selected.questionIndex, key)}
+          onReorderCustomFields={(next) => onReorderCustomFields(selected.questionIndex, next)}
+        />
+      ) : selected.kind === "question" ? (
         <QuestionProps
           state={state}
           index={selected.questionIndex}
@@ -320,6 +345,146 @@ function SubmitProps({
         <p className="px-1 text-xs text-gray-400 dark:text-gray-500">
           Das Kontaktformular ist Pflicht und kann nicht gelöscht werden.
         </p>
+      </Section>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Aufgabe 38: CustomPageProps — Karte mit mehreren Feldern
+   Re-uses SubmitProps pattern (Section "Seite" mit Titel/Subtitle + Section "Felder" mit
+   Drag-Reorder + AddContactFieldPicker). Unterschied: kein Submit-Toggle, kein Button-Text,
+   und Page ist löschbar (nicht Pflicht wie das Kontaktformular).
+   ───────────────────────────────────────────────────────────────────────────── */
+
+function CustomPageProps({
+  state,
+  index,
+  onPatchQuestion,
+  onDelete,
+  onPatchCustomField,
+  onAddCustomField,
+  onDeleteCustomField,
+  onReorderCustomFields,
+}: {
+  state: EditorState;
+  index: number;
+  onPatchQuestion: (index: number, patch: Partial<EditorQuestion>) => void;
+  onDelete: () => void;
+  onPatchCustomField: (key: string, patch: Partial<ContactFieldConfig>) => void;
+  onAddCustomField: (type: ContactFieldConfig["type"]) => void;
+  onDeleteCustomField: (key: string) => void;
+  onReorderCustomFields: (next: ContactFieldConfig[]) => void;
+}) {
+  const page = state.questions[index];
+  const [showAddPicker, setShowAddPicker] = useState(false);
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  if (!page || page.kind !== "custom") {
+    return <div className="p-6 text-sm text-gray-500 dark:text-gray-400">Keine Karte ausgewählt.</div>;
+  }
+  const fields = page.customFields ?? [];
+
+  function handleDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIdx = fields.findIndex((f) => f.key === active.id);
+    const newIdx = fields.findIndex((f) => f.key === over.id);
+    if (oldIdx < 0 || newIdx < 0) return;
+    onReorderCustomFields(arrayMove(fields, oldIdx, newIdx));
+  }
+
+  return (
+    <div className="flex flex-col">
+      <Header kindLabel={CUSTOM_META.label} kindIcon={CUSTOM_META.icon} pillClass={CUSTOM_META.pillClass} />
+
+      <Section title="Seite">
+        <Field label="Überschrift">
+          <TextInput
+            value={page.title}
+            onChange={(v) => onPatchQuestion(index, { title: v })}
+            placeholder="z. B. Adresse eingeben"
+          />
+        </Field>
+        <Field label="Untertitel (optional)">
+          <TextInput
+            value={page.subtitle}
+            onChange={(v) => onPatchQuestion(index, { subtitle: v })}
+            placeholder="z. B. Wir benötigen deine Anschrift für ein Angebot."
+          />
+        </Field>
+        <Toggle
+          label="Sichtbar im Funnel"
+          enabled={page.visible !== false}
+          onToggle={(next) => onPatchQuestion(index, { visible: next })}
+        />
+      </Section>
+
+      <Section title="Felder dieser Karte">
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext
+            items={fields.map((f) => f.key)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="flex flex-col gap-1.5">
+              {fields.map((f) => (
+                <SortableContactFieldRow
+                  key={f.key}
+                  field={f}
+                  expanded={expandedKey === f.key}
+                  onToggle={() => setExpandedKey((prev) => (prev === f.key ? null : f.key))}
+                  onPatch={(patch) => onPatchCustomField(f.key, patch)}
+                  onDelete={() => onDeleteCustomField(f.key)}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+
+        {fields.length === 0 && (
+          <p className="px-1 py-2 text-xs text-gray-400 dark:text-gray-500">
+            Noch keine Felder. Mit „Feld hinzufügen" anlegen.
+          </p>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setShowAddPicker(true)}
+          className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:border-primary hover:text-primary dark:border-gray-700 dark:text-gray-400"
+        >
+          <Plus size={14} />
+          Feld hinzufügen
+        </button>
+
+        <AddContactFieldPicker
+          open={showAddPicker}
+          onClose={() => setShowAddPicker(false)}
+          onSelect={(type) => onAddCustomField(type)}
+        />
+      </Section>
+
+      <Section>
+        <button
+          type="button"
+          onClick={() => {
+            if (
+              confirm(
+                "Diese Karte wirklich löschen? Diese Aktion kann nur durch Verwerfen ungespeicherter Änderungen rückgängig gemacht werden.",
+              )
+            ) {
+              onDelete();
+            }
+          }}
+          className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-900/20"
+        >
+          <Trash2 size={14} />
+          Karte löschen
+        </button>
       </Section>
     </div>
   );

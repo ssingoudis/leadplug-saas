@@ -97,6 +97,21 @@ export function buildQuestions(
   return questions
     .filter((q) => q.visible !== false)
     .map((q) => {
+      // Aufgabe 38: Custom-Pages durchreichen mit ihren customFields
+      if (q.kind === "custom") {
+        return {
+          id: q.questionKey || q._id,
+          title: q.title,
+          subtitle: q.subtitle || undefined,
+          questionType: "single_choice" as const,
+          visible: q.visible,
+          options: [],
+          config: {},
+          kind: "custom" as const,
+          customFields: (q.customFields ?? []).filter((f) => f.visible),
+        };
+      }
+
       let opts$1: typeof q.options;
       if (OPTION_BASED_TYPES.has(q.questionType)) {
         opts$1 = opts.keepEmpty ? q.options : q.options.filter((o) => o.label.trim());
@@ -123,6 +138,7 @@ export function buildQuestions(
         visible: q.visible,
         options: mapped,
         config: buildQuestionConfig(q),
+        kind: "question" as const,
       };
     });
 }
@@ -261,7 +277,7 @@ function newPageId(): string {
 export interface PageInsertRow {
   id: string;
   funnel_id: string;
-  page_type: "question" | "submit" | "success";
+  page_type: "question" | "submit" | "success" | "custom";
   sort_order: number;
   config: Record<string, unknown>;
 }
@@ -290,9 +306,46 @@ export function editorStateToPagesAndFields(
   const pages: PageInsertRow[] = [];
   const fields: FieldInsertRow[] = [];
 
-  // Question-Pages + Question-Fields
+  // Steps (question + custom Pages interleaved nach Array-Reihenfolge)
   state.questions.forEach((q, idx) => {
     const pageId = newPageId();
+
+    // Aufgabe 38: Custom-Page = Multi-Field-Karte, kein klassischer 1-Field-Step
+    if (q.kind === "custom") {
+      pages.push({
+        id: pageId,
+        funnel_id: funnelId,
+        page_type: "custom",
+        sort_order: idx,
+        // Title + Subtitle der Custom-Karte landen im page-config, damit das Custom-Page-Field
+        // selbst keinen "labeled" page-title rendern muss — saubere Trennung.
+        config: {
+          title: q.title || "",
+          subtitle: q.subtitle || "",
+          page_key: q.questionKey || "",
+        },
+      });
+
+      // Custom-Fields wie Submit-Fields persistieren
+      (q.customFields ?? []).forEach((cf) => {
+        fields.push({
+          page_id: pageId,
+          field_key: cf.key,
+          field_type: CONTACT_TYPE_TO_FIELD_TYPE[cf.type],
+          label: cf.label,
+          subtitle: null,
+          placeholder: cf.placeholder ?? null,
+          visible: cf.visible,
+          required: cf.required,
+          sort_order: cf.sort_order,
+          options: cf.type === "radio" ? cf.options ?? [] : [],
+          config: {},
+        });
+      });
+      return;
+    }
+
+    // Klassische Question-Page (1 Field)
     pages.push({
       id: pageId,
       funnel_id: funnelId,
@@ -450,8 +503,10 @@ function fieldTypeToQuestionType(ft: string): QuestionType {
 export interface DbPageRow {
   id: string;
   funnel_id: string;
-  page_type: "question" | "submit" | "success";
+  page_type: "question" | "submit" | "success" | "custom";
   sort_order: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  config?: Record<string, any> | null;
 }
 
 export interface DbFieldRow {
@@ -488,15 +543,50 @@ export function dbToEditorState(
     list.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
   }
 
-  // Pages nach Typ getrennt sammeln (sortiert nach sort_order)
-  const questionPages = pages
-    .filter((p) => p.page_type === "question")
+  // Pages nach Typ getrennt sammeln (sortiert nach sort_order).
+  // Aufgabe 38: question + custom werden zu einer einzigen ordered Steps-Liste — in EditorState
+  // gibt's nur state.questions, das beide Kinds (kind="question" | "custom") aufnimmt.
+  const stepPages = pages
+    .filter((p) => p.page_type === "question" || p.page_type === "custom")
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
   const submitPage = pages.find((p) => p.page_type === "submit");
 
-  // EditorQuestions aus Question-Pages bauen (1 Field je Page erwartet, defensiv erstes nehmen)
-  const questions: EditorQuestion[] = questionPages.map((page) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pageConfigById = new Map<string, Record<string, any>>();
+  for (const p of pages as Array<{ id: string; config?: Record<string, unknown> }>) {
+    pageConfigById.set(p.id, (p.config ?? {}) as Record<string, unknown>);
+  }
+
+  const questions: EditorQuestion[] = stepPages.map((page) => {
     const pageFields = fieldsByPage.get(page.id) ?? [];
+
+    // Aufgabe 38: Custom-Multi-Field-Page rekonstruieren
+    if (page.page_type === "custom") {
+      const pageCfg = pageConfigById.get(page.id) ?? {};
+      const customFields: ContactFieldConfig[] = pageFields.map((f) => ({
+        key: f.field_key,
+        type: fieldTypeToContactType(f.field_type),
+        label: f.label ?? "",
+        placeholder: f.placeholder ?? undefined,
+        required: f.required ?? false,
+        visible: f.visible ?? true,
+        sort_order: f.sort_order ?? 0,
+        options:
+          f.field_type === "radio" && Array.isArray(f.options)
+            ? (f.options as string[])
+            : undefined,
+      }));
+      return {
+        ...emptyEditorQuestion(page.id),
+        kind: "custom",
+        questionKey: typeof pageCfg.page_key === "string" ? pageCfg.page_key : "",
+        title: typeof pageCfg.title === "string" ? pageCfg.title : "",
+        subtitle: typeof pageCfg.subtitle === "string" ? pageCfg.subtitle : "",
+        visible: true,
+        customFields,
+      };
+    }
+
     const f = pageFields[0];
     if (!f) {
       // Defensive: Question-Page ohne Field → Leerstring-Question (sollte nie passieren)
@@ -510,6 +600,7 @@ export function dbToEditorState(
     return {
       _id: uid(),
       dbId: f.id,
+      kind: "question",
       questionKey: f.field_key,
       questionType,
       title: f.label ?? "",

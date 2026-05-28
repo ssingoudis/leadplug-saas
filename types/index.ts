@@ -72,6 +72,10 @@ export interface QuestionConfig {
   options: Option[]
   config: TextConfig | SliderConfig | DateConfig | NumberConfig | CheckboxConfig | Record<string, never>
   visible: boolean
+  // Aufgabe 38: Diskriminator. "question" (Default für Backward-Compat) = 1-Field-pro-Step.
+  // "custom" = Multi-Field-Karte. customFields ist dann gesetzt, questionType/options/config werden ignoriert.
+  kind?: 'question' | 'custom'
+  customFields?: ContactFieldConfig[]
 }
 
 // Konfiguration eines einzelnen Kontaktformular-Felds (kommt aus den Fields der submit-Page).
@@ -188,6 +192,11 @@ export interface EditorQuestion {
   numberUnit: string      // optional, z.B. "kWh", "Stück"
   // checkbox (Single-Checkbox, z.B. DSGVO/Newsletter):
   checkboxLabel: string   // Text rechts neben der Box, z.B. "Ja, ich stimme zu"
+  // Aufgabe 38: Diskriminator. "question" (Default) = klassisch 1-Field-pro-Step.
+  // "custom" = Multi-Field-Karte. customFields ist dann gesetzt, alle question-spezifischen
+  // Felder (questionType, options, slider*, etc.) werden ignoriert.
+  kind?: 'question' | 'custom'
+  customFields?: ContactFieldConfig[]
 }
 
 export interface EditorState {

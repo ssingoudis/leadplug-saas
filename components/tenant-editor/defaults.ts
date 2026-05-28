@@ -48,9 +48,64 @@ export const DEFAULT_CONTACT_FIELDS: ContactFieldConfig[] = [
   },
 ];
 
+// Aufgabe 38: Factory für neue Custom-Multi-Field-Pages.
+// Default-Layout: 2 Felder (Name + Email) als sinnvolle Startbasis. Tenant erweitert via Properties-Panel.
+export function makeDefaultCustomPage(): EditorQuestion {
+  const rand = Math.random().toString(36).slice(2, 8);
+  return {
+    _id: `q_custom_${Date.now().toString(36)}_${rand}`,
+    dbId: undefined,
+    kind: "custom",
+    questionKey: `karte_${rand}`,
+    questionType: "single_choice", // unused for custom — fallback to satisfy type
+    title: "Neue Karte",
+    subtitle: "",
+    visible: true,
+    required: false,
+    placeholder: "",
+    maxLength: "",
+    sliderMin: "0",
+    sliderMax: "100",
+    sliderStep: "1",
+    sliderUnit: "",
+    sliderDefault: "50",
+    options: [],
+    dateMin: "",
+    dateMax: "",
+    dateDefault: "",
+    numberMin: "",
+    numberMax: "",
+    numberStep: "1",
+    numberDefault: "",
+    numberUnit: "",
+    checkboxLabel: "",
+    customFields: [
+      {
+        key: "name",
+        type: "text",
+        label: "Vor- und Nachname",
+        placeholder: "Max Mustermann",
+        required: true,
+        visible: true,
+        sort_order: 0,
+      },
+      {
+        key: "email",
+        type: "email",
+        label: "E-Mail-Adresse",
+        placeholder: "max@beispiel.de",
+        required: true,
+        visible: true,
+        sort_order: 1,
+      },
+    ],
+  };
+}
+
 export const DEFAULT_QUESTION: EditorQuestion = {
   _id: "default_q1",
   dbId: undefined,
+  kind: "question",
   questionKey: "interesse",
   questionType: "single_choice",
   title: "Was interessiert Sie?",

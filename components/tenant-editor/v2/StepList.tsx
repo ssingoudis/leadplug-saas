@@ -21,7 +21,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import type { EditorState, EditorQuestion, QuestionType } from "@/types";
 import { StepPill } from "./StepPill";
-import { questionMeta, SUBMIT_META, SUCCESS_META } from "./fieldMeta";
+import { questionMeta, SUBMIT_META, SUCCESS_META, CUSTOM_META } from "./fieldMeta";
 import type { SelectedStep } from "./types";
 import { isSameStep } from "./types";
 import { AddElementModal } from "./AddElementModal";
@@ -34,6 +34,8 @@ interface Props {
   onReorder: (nextQuestions: EditorQuestion[]) => void;
   onAddQuestion: (type: QuestionType, atIndex?: number) => void;
   onAddVorlage: (vorlage: Vorlage, atIndex?: number) => void;
+  // Aufgabe 38: Karte mit mehreren Feldern
+  onAddCustomPage: (atIndex?: number) => void;
 }
 
 export function StepList({
@@ -43,6 +45,7 @@ export function StepList({
   onReorder,
   onAddQuestion,
   onAddVorlage,
+  onAddCustomPage,
 }: Props) {
   // null = Modal zu, number = Modal offen und neue Frage wird an dieser Position eingefügt.
   // questions.length = an's Ende anfügen (= aktuelles Default-Verhalten).
@@ -115,6 +118,9 @@ export function StepList({
         }}
         onSelectVorlage={(vorlage) => {
           if (insertIndex !== null) onAddVorlage(vorlage, insertIndex);
+        }}
+        onSelectCustomPage={() => {
+          if (insertIndex !== null) onAddCustomPage(insertIndex);
         }}
       />
 
@@ -200,12 +206,16 @@ function SortableQuestionItem({
     opacity: isDragging ? 0.85 : undefined,
   };
 
+  // Aufgabe 38: Custom-Pages teilen sich state.questions[] mit klassischen Question-Pages.
+  // Visualisierung wechselt zu CUSTOM_META (orange Pill) damit man sie sofort als anders erkennt.
+  const meta = question.kind === "custom" ? CUSTOM_META : questionMeta(question.questionType);
+
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
       <StepPill
         number={number}
         title={question.title}
-        meta={questionMeta(question.questionType)}
+        meta={meta}
         selected={selected}
         hidden={question.visible === false}
         draggable

@@ -128,6 +128,60 @@ Total bis Launch: ~9-13 Tage Engineering + Stripe-Setup.
 
 ## History
 
+- **Aufgabe 38 — Custom Multi-Field-Pages (Karten mit beliebig vielen Feldern, überall platzierbar) ✅ (2026-05-28)**
+
+  Strukturelle Erweiterung mitten im Polish-Loop. Stavros hat erkannt: die Submit-Page ist im Kern eine Multi-Field-Karte mit Titel + N hide/show-baren Feldern + Validation pro Field-Typ — wir verstecken das Pattern nur künstlich am Ende. Lösung: generische „Custom Multi-Field Page" als 3. Page-Type, überall im Funnel platzierbar.
+
+  **Schema:** `ALTER TYPE page_type ADD VALUE 'custom'` — additive Migration, kein Daten-Touch, bestehende Funnels bleiben unverändert. PG kein DROP VALUE → DOWN-File dokumentiert manuelle Recovery-Pfade.
+
+  **Datenmodell:**
+  - `state.questions[]` bleibt single ordered Liste — beide Page-Typen (`kind: "question" | "custom"`) leben gemischt drin, sortiert nach Array-Position
+  - Custom-Pages haben `customFields: ContactFieldConfig[]` (= dieselbe Type wie Submit-Page Contact-Fields, Reuse statt Duplikation)
+  - Title/Subtitle der Custom-Page landen in `pages.config jsonb` ({title, subtitle, page_key}), Fields normal in `fields`-Tabelle
+  - Antworten in `submissions.answers` jsonb keyed by `field_key` (gleich wie Question-Pages)
+
+  **Widget (`components/funnel.tsx`):**
+  - Neuer abgeleiteter Zustand `isCustomStep` (`currentQuestion.kind === "custom"`)
+  - `isChoiceType` und `isWeiterDisabled` mit Custom-Branch erweitert: Custom = nie auto-advance, OK-Button validiert alle required Custom-Fields per `validateContactField`
+  - Eigener Render-Block für Custom-Step direkt vor den question-Type-Renders, rendert die `customFields` als vertikalen Stack (radio + text/email/tel/plz wie Submit-Page)
+  - Auto-Advance-Branch (single_choice) schützt jetzt explizit gegen `kind === "custom"` (Fallback-questionType "single_choice" sonst hätte fälschlich getriggert)
+
+  **Editor-UI:**
+  - `fieldMeta.ts` — neues `CUSTOM_META` (Orange-Pill, „▥"-Icon) für visuelle Differenzierung in der StepList
+  - `defaults.ts` — `makeDefaultCustomPage()`-Factory: neue Karte kommt mit 2 Default-Fields (Name + Email) damit Tenant einen Startpunkt hat
+  - `AddElementModal.tsx` — neuer Top-Section „Karte mit mehreren Feldern" (über Vorlagen + Einzelfeldern), 1 Klick legt Custom-Page an
+  - `StepList.tsx` — Custom-Pages nutzen CUSTOM_META statt questionMeta für StepPill-Rendering
+  - `PropertiesPanel.tsx` — neue `CustomPageProps` Section: Title + Subtitle + Sichtbarkeit + Drag-Reorder der Custom-Fields + AddContactFieldPicker-Reuse + Lösch-Button (anders als Kontaktformular ist Custom-Page löschbar)
+  - `EditorShellV2.tsx` — 5 neue Handler: `handleAddCustomPage`, `handlePatchCustomField`, `handleAddCustomField`, `handleDeleteCustomField`, `handleReorderCustomFields`
+
+  **Mapping (`lib/editorUtils.ts` + `lib/getTenantConfig.ts`):**
+  - Read-Pfad: `pages` mit `page_type === "custom"` interleaved sortiert mit question-Pages, jeweils zur `EditorQuestion` mit `kind: "custom"` + customFields rekonstruiert
+  - Write-Pfad: für jeden `state.questions[]`-Entry wird je nach `kind` entweder eine question-Page (1 Field) oder eine custom-Page (N Fields, Title/Subtitle in page-config) angelegt
+  - `pages.config` muss jetzt mitgequeriert werden (war vorher nicht im SELECT) — beide Stellen aktualisiert (`getTenantConfig`-SQL-Query + Tenant-Funnels-API)
+  - `buildQuestions(state)` reicht Custom-Pages mit `kind: "custom"` + sichtbaren `customFields` an's Widget durch
+
+  **Aufgabe-37-Refix-Nebeneffekt:** Custom-Pages haben durch die mehreren Felder mehr vertikalen Content und nutzen die `p-4 @md:p-8` Standard-Card-Padding — Beweis dass der Polish-Fix funktioniert.
+
+  **Wie testen:**
+  1. Editor öffnen → „Frage hinzufügen" → Modal zeigt „Karte mit mehreren Feldern" als Top-Option → Klick legt orange Custom-Page mit Default Name+Email an
+  2. Custom-Page-Properties: Titel + Untertitel anpassen, Felder per Picker hinzufügen (z.B. PLZ + Telefon), Felder per Drag reordnen, Sichtbarkeit umschalten
+  3. „Funnel testen" → Custom-Page rendert als Multi-Field-Karte mit Back+OK-Bar, Validation blockiert OK wenn required Field leer
+  4. Speichern → Reload → Custom-Page mit allen Feldern persistiert (page_type='custom' in DB, Fields normal)
+
+  **Files:**
+  - Migration `aufgabe_38_add_custom_page_type` (additive Enum-Value, lokal + Production)
+  - `types/index.ts`: kind + customFields auf EditorQuestion und QuestionConfig
+  - `lib/editorUtils.ts`: kind-Branch in editorStateToPagesAndFields + dbToEditorState + buildQuestions + Type-Updates auf DbPageRow + PageInsertRow
+  - `lib/getTenantConfig.ts`: kind-Branch in mapDbRow + SQL-Query um `config` ergänzt
+  - `app/api/tenant/funnels/[slug]/route.ts`, `app/dashboard/funnels/[slug]/edit/page.tsx`: `config` zur pages-SELECT-Liste
+  - `components/tenant-editor/defaults.ts`: makeDefaultCustomPage + DEFAULT_QUESTION explizit kind="question"
+  - `components/tenant-editor/v2/fieldMeta.ts`: CUSTOM_META + CUSTOM_PILL + category "custom"
+  - `components/tenant-editor/v2/AddElementModal.tsx`: neue Top-Section + onSelectCustomPage-Prop
+  - `components/tenant-editor/v2/StepList.tsx`: kind-basierte Meta-Selection für Pill-Render + onAddCustomPage-Prop
+  - `components/tenant-editor/v2/PropertiesPanel.tsx`: neue CustomPageProps-Komponente + 4 neue Handler-Props
+  - `components/tenant-editor/v2/EditorShellV2.tsx`: 5 neue Handler + makeDefaultCustomPage-Import + Prop-Wiring
+  - `components/funnel.tsx`: isCustomStep + visibleCustomFields + isCustomStepValid + Custom-Render-Block + Auto-Advance-Guard
+
 - **C.2 — Theme-Panel (Brand-Farbe, Schrift, Layout) ✅ (2026-05-28)**
 
   Fünfter und finaler Sprint-Schritt. Macht die Theme-Felder, die seit Phase B in der DB stehen und vom Widget gerendert werden, im Builder editierbar — vorher musste man Brand-Color, Font, Border-Radius manuell in der DB ändern.

@@ -46,7 +46,7 @@ export async function GET(
 
   const { data: pageRows } = await supabase
     .from("pages")
-    .select("id, funnel_id, page_type, sort_order")
+    .select("id, funnel_id, page_type, sort_order, config")
     .eq("funnel_id", funnelRow.id)
     .order("sort_order", { ascending: true });
 

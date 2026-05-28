@@ -11,6 +11,7 @@ import { PropertiesPanel } from "./PropertiesPanel";
 import { ThemePanel } from "./ThemePanel";
 import type { SelectedStep } from "./types";
 import type { Vorlage } from "./vorlagen";
+import { makeDefaultCustomPage } from "@/components/tenant-editor/defaults";
 
 interface Props {
   initialState: EditorState;
@@ -208,6 +209,85 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
       setSelected({ kind: "question", questionIndex: insertAt });
     },
     [state.questions.length],
+  );
+
+  // Aufgabe 38: neue Custom-Multi-Field-Karte hinzufügen
+  const handleAddCustomPage = useCallback(
+    (atIndex?: number) => {
+      const newPage = makeDefaultCustomPage();
+      setState((prev) => {
+        const insertAt = atIndex ?? prev.questions.length;
+        const next = [...prev.questions];
+        next.splice(insertAt, 0, newPage);
+        return { ...prev, questions: next };
+      });
+      const insertAt = atIndex ?? state.questions.length;
+      setSelected({ kind: "question", questionIndex: insertAt });
+    },
+    [state.questions.length],
+  );
+
+  // Aufgabe 38: Patch eines Felds innerhalb einer Custom-Page
+  const handlePatchCustomField = useCallback(
+    (pageIndex: number, fieldKey: string, patch: Partial<ContactFieldConfig>) => {
+      setState((prev) => {
+        const next = [...prev.questions];
+        const page = next[pageIndex];
+        if (!page || page.kind !== "custom") return prev;
+        const fields = (page.customFields ?? []).map((f) =>
+          f.key === fieldKey ? { ...f, ...patch } : f,
+        );
+        next[pageIndex] = { ...page, customFields: fields };
+        return { ...prev, questions: next };
+      });
+    },
+    [],
+  );
+
+  // Aufgabe 38: neues Feld einer Custom-Page hinzufügen
+  const handleAddCustomField = useCallback(
+    (pageIndex: number, type: ContactFieldConfig["type"]) => {
+      setState((prev) => {
+        const next = [...prev.questions];
+        const page = next[pageIndex];
+        if (!page || page.kind !== "custom") return prev;
+        const existing = page.customFields ?? [];
+        const newField = defaultContactField(type, existing);
+        next[pageIndex] = { ...page, customFields: [...existing, newField] };
+        return { ...prev, questions: next };
+      });
+    },
+    [],
+  );
+
+  // Aufgabe 38: Feld einer Custom-Page löschen
+  const handleDeleteCustomField = useCallback(
+    (pageIndex: number, fieldKey: string) => {
+      setState((prev) => {
+        const next = [...prev.questions];
+        const page = next[pageIndex];
+        if (!page || page.kind !== "custom") return prev;
+        const fields = (page.customFields ?? []).filter((f) => f.key !== fieldKey);
+        next[pageIndex] = { ...page, customFields: fields };
+        return { ...prev, questions: next };
+      });
+    },
+    [],
+  );
+
+  // Aufgabe 38: Felder einer Custom-Page neu sortieren
+  const handleReorderCustomFields = useCallback(
+    (pageIndex: number, nextFields: ContactFieldConfig[]) => {
+      setState((prev) => {
+        const next = [...prev.questions];
+        const page = next[pageIndex];
+        if (!page || page.kind !== "custom") return prev;
+        const reindexed = nextFields.map((f, idx) => ({ ...f, sort_order: idx }));
+        next[pageIndex] = { ...page, customFields: reindexed };
+        return { ...prev, questions: next };
+      });
+    },
+    [],
   );
 
   const handleDeleteQuestion = useCallback(
@@ -558,6 +638,7 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
               onReorder={handleReorder}
               onAddQuestion={handleAddQuestion}
               onAddVorlage={handleAddVorlage}
+              onAddCustomPage={handleAddCustomPage}
             />
             <CenterCanvas
               state={state}
@@ -583,6 +664,10 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
               onAddContactField={handleAddContactField}
               onDeleteContactField={handleDeleteContactField}
               onReorderContactFields={handleReorderContactFields}
+              onPatchCustomField={handlePatchCustomField}
+              onAddCustomField={handleAddCustomField}
+              onDeleteCustomField={handleDeleteCustomField}
+              onReorderCustomFields={handleReorderCustomFields}
               selectedFieldRef={selectedFieldRef}
               onSelectFieldRef={setSelectedFieldRef}
             />
