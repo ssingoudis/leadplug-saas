@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
-import { dbToEditorState } from "@/lib/editorUtils";
+import { dbToEditorState, type DbPageRow, type DbFieldRow } from "@/lib/editorUtils";
 import FunnelEditorClient from "./FunnelEditorClient";
 
 interface Props {
@@ -32,13 +32,21 @@ export default async function EditFunnelPage({ params }: Props) {
 
   if (!funnelRow) notFound();
 
-  const { data: questionRows } = await supabase
-    .from("funnel_questions")
-    .select("*")
+  const { data: pageRows } = await supabase
+    .from("pages")
+    .select("id, funnel_id, page_type, sort_order")
     .eq("funnel_id", funnelRow.id)
     .order("sort_order", { ascending: true });
 
-  const initialState = dbToEditorState(funnelRow, questionRows ?? []);
+  const pageIds = (pageRows ?? []).map((p) => p.id);
+  const { data: fieldRows } = pageIds.length > 0
+    ? await supabase
+        .from("fields")
+        .select("id, page_id, field_key, field_type, label, subtitle, placeholder, visible, required, sort_order, options, config")
+        .in("page_id", pageIds)
+    : { data: [] as DbFieldRow[] };
+
+  const initialState = dbToEditorState(funnelRow, (pageRows ?? []) as DbPageRow[], (fieldRows ?? []) as DbFieldRow[]);
 
   return (
     <FunnelEditorClient

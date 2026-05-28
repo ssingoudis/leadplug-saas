@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import type { TenantConfig, FunnelFont, ContactFieldConfig } from '@/types'
+import type { TenantConfig, FunnelFont, ContactFieldConfig, QuestionType, QuestionConfig } from '@/types'
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-_]*$/
 
@@ -21,18 +21,119 @@ const DEFAULT_CONTACT_FIELDS: ContactFieldConfig[] = [
   { key: 'email',   type: 'email',  label: 'E-Mail',            placeholder: 'E-Mail',            required: true,  visible: true, sort_order: 3 },
 ]
 
+// Rückmapping für Submit-Page-Fields → ContactFieldConfig.type (Widget-API stabil halten).
+function fieldTypeToContactType(ft: string): ContactFieldConfig['type'] {
+  switch (ft) {
+    case 'short_text': return 'text'
+    case 'email':      return 'email'
+    case 'tel':        return 'tel'
+    case 'plz':        return 'plz'
+    case 'radio':      return 'radio'
+    default:           return 'text' // defensive fallback
+  }
+}
+
+// Rückmapping für Question-Page-Fields → QuestionType.
+function fieldTypeToQuestionType(ft: string): QuestionType {
+  switch (ft) {
+    case 'single_choice': return 'single_choice'
+    case 'multi_choice':  return 'multiple_choice'
+    case 'short_text':    return 'short_text'
+    case 'long_text':     return 'long_text'
+    case 'slider':        return 'slider'
+    default:              return 'single_choice'
+  }
+}
+
+interface DbField {
+  field_key: string
+  field_type: string
+  label: string
+  subtitle: string | null
+  placeholder: string | null
+  visible: boolean
+  required: boolean
+  sort_order: number
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  options: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  config: any
+}
+
+interface DbPage {
+  id: string
+  page_type: 'question' | 'submit' | 'success'
+  sort_order: number
+  fields: DbField[] | null
+}
+
 // neue Datenbank widget-funnel
-// funnels-Zeile mit joins auf tenants, themes, funnel_questions → TenantConfig
+// funnels-Zeile mit joins auf tenants + pages(fields) → TenantConfig
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapDbRow(row: Record<string, any>): TenantConfig {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tenant: Record<string, any> = row.tenants ?? {}
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const theme: Record<string, any>  = row
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const questions: Record<string, any>[] = Array.isArray(row.funnel_questions)
-    ? row.funnel_questions
-    : []
+  const pages: DbPage[] = Array.isArray(row.pages) ? row.pages : []
+
+  // Question-Pages (sortiert) → questions[]
+  const questionPages = pages
+    .filter((p) => p.page_type === 'question')
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+
+  const questions: QuestionConfig[] = questionPages.map((page) => {
+    const pageFields = Array.isArray(page.fields)
+      ? [...page.fields].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+      : []
+    const f = pageFields[0]
+    if (!f) {
+      // Defensive: Question-Page ohne Field
+      return {
+        id: page.id,
+        title: '',
+        questionType: 'single_choice',
+        visible: true,
+        options: [],
+        config: {},
+      }
+    }
+    const opts = Array.isArray(f.options) ? f.options : []
+    return {
+      id: f.field_key,
+      title: f.label,
+      subtitle: f.subtitle ?? undefined,
+      questionType: fieldTypeToQuestionType(f.field_type),
+      visible: f.visible ?? true,
+      config: f.config ?? {},
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      options: opts.map((o: Record<string, any>) => ({
+        label:   o.label,
+        value:   o.value,
+        iconKey: o.icon_key ?? '',
+        iconUrl: o.icon_url ?? undefined,
+      })),
+    }
+  })
+
+  // Submit-Page → contactFields[]
+  const submitPage = pages.find((p) => p.page_type === 'submit')
+  const contactFields: ContactFieldConfig[] = submitPage && Array.isArray(submitPage.fields) && submitPage.fields.length > 0
+    ? [...submitPage.fields]
+        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+        .map((f) => ({
+          key:         f.field_key,
+          type:        fieldTypeToContactType(f.field_type),
+          label:       f.label,
+          placeholder: f.placeholder ?? undefined,
+          required:    f.required ?? false,
+          visible:     f.visible ?? true,
+          sort_order:  f.sort_order ?? 0,
+          options:     f.field_type === 'radio' && Array.isArray(f.options)
+            ? (f.options as string[])
+            : undefined,
+        }))
+    : DEFAULT_CONTACT_FIELDS
 
   return {
     id:                tenant.id,
@@ -67,25 +168,8 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
     billingModel:         tenant.billing_model,
     leadPrice:    Number(tenant.lead_price ?? 0),
     billingPrice: tenant.billing_price != null ? Number(tenant.billing_price) : undefined,
-    contactFields: Array.isArray(row.contact_fields) ? row.contact_fields as ContactFieldConfig[] : DEFAULT_CONTACT_FIELDS,
-    questions: questions
-      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-      .map((q) => ({
-        id:           q.question_key,
-        title:        q.title,
-        subtitle:     q.subtitle ?? undefined,
-        questionType: q.question_type ?? 'single_choice',
-        visible:      q.visible ?? true,
-        config:       q.config ?? {},
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        options: (Array.isArray(q.options) ? q.options as Record<string, any>[] : [])
-          .map((o) => ({
-            label:   o.label,
-            value:   o.value,
-            iconKey: o.icon_key ?? '',
-            iconUrl: o.icon_url ?? undefined,
-          })),
-      })),
+    contactFields,
+    questions,
   }
 }
 
@@ -103,7 +187,7 @@ function getSupabase() {
 }
 
 // neue Datenbank widget-funnel
-// Abfrage auf funnels (slug), joined mit tenants + themes + questions
+// Abfrage auf funnels (slug), joined mit tenants + pages → fields
 async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
   const supabase = getSupabase()
   if (!supabase) return null
@@ -115,7 +199,6 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
       response_message, contact_form_subtitle, privacy_policy_url,
       privacy_text, answers_overview_label, footer_text,
       footer_company_name, footer_email, footer_phone,
-      contact_fields,
       email_sender_local, notification_email,
       primary_color, text_color, background_color, page_background_color,
       font, border_radius, max_width,
@@ -123,8 +206,12 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
         id, company_name, website, is_active,
         billing_model, lead_price, billing_price
       ),
-      funnel_questions!funnel_questions_funnel_id_fkey (
-        sort_order, question_key, title, subtitle, question_type, visible, options, config
+      pages!pages_funnel_id_fkey (
+        id, page_type, sort_order,
+        fields!fields_page_id_fkey (
+          field_key, field_type, label, subtitle, placeholder,
+          visible, required, sort_order, options, config
+        )
       )
     `)
     .eq('slug', slug)

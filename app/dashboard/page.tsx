@@ -15,7 +15,7 @@ async function getData() {
     { data: funnels },
     { data: submissions },
     { data: chartRows },
-    { data: questionRows },
+    { data: questionPageRows },
   ] = await Promise.all([
     supabase
       .from('funnels')
@@ -30,10 +30,21 @@ async function getData() {
       .from('submissions')
       .select('created_at')
       .gte('created_at', since14.toISOString()),
+    // Frage-Metadaten: pages mit page_type='question' + ihre Fields (genau 1 pro Page)
     supabase
-      .from('funnel_questions')
-      .select('funnel_id, question_key, title, options'),
+      .from('pages')
+      .select('id, funnel_id')
+      .eq('page_type', 'question'),
   ])
+
+  // Frage-Fields nachladen (Field hat field_key, label, options — entspricht alter funnel_questions-Shape)
+  const questionPageIds = (questionPageRows ?? []).map((p) => p.id)
+  const { data: questionFieldRows } = questionPageIds.length > 0
+    ? await supabase
+        .from('fields')
+        .select('page_id, field_key, label, options')
+        .in('page_id', questionPageIds)
+    : { data: [] as { page_id: string; field_key: string; label: string; options: unknown }[] }
 
   // Funnel-Name-Map + slug-by-id für Questions-Aggregation
   const funnelNameMap: Record<string, string> = {}
@@ -43,16 +54,24 @@ async function getData() {
     funnelSlugById.set(f.id, f.slug)
   }
 
-  // Questions per Funnel-Slug indexieren (über funnel_id → slug)
+  // page_id → funnel_id Lookup
+  const funnelIdByPageId = new Map<string, string>()
+  for (const p of (questionPageRows ?? []) as { id: string; funnel_id: string }[]) {
+    funnelIdByPageId.set(p.id, p.funnel_id)
+  }
+
+  // Questions (von Question-Pages) per Funnel-Slug indexieren
   const questionsByFunnel = new Map<string, TenantSubmission['questions']>()
-  for (const q of (questionRows ?? []) as { funnel_id: string; question_key: string; title: string; options: unknown }[]) {
-    const slug = funnelSlugById.get(q.funnel_id)
+  for (const f of (questionFieldRows ?? []) as { page_id: string; field_key: string; label: string; options: unknown }[]) {
+    const funnelId = funnelIdByPageId.get(f.page_id)
+    if (!funnelId) continue
+    const slug = funnelSlugById.get(funnelId)
     if (!slug) continue
     const list = questionsByFunnel.get(slug) ?? []
     list.push({
-      question_key: q.question_key,
-      title: q.title,
-      options: Array.isArray(q.options) ? q.options as { value: string; label: string }[] : [],
+      question_key: f.field_key,
+      title: f.label,
+      options: Array.isArray(f.options) ? f.options as { value: string; label: string }[] : [],
     })
     questionsByFunnel.set(slug, list)
   }

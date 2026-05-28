@@ -3,8 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   editorStateToFunnelRow,
-  editorQuestionsToDbRows,
+  editorStateToPagesAndFields,
   dbToEditorState,
+  type DbPageRow,
+  type DbFieldRow,
 } from "@/lib/editorUtils";
 import type { EditorState } from "@/types";
 
@@ -42,13 +44,21 @@ export async function GET(
     return NextResponse.json({ error: "Funnel nicht gefunden" }, { status: 404 });
   }
 
-  const { data: questionRows } = await supabase
-    .from("funnel_questions")
-    .select("*")
+  const { data: pageRows } = await supabase
+    .from("pages")
+    .select("id, funnel_id, page_type, sort_order")
     .eq("funnel_id", funnelRow.id)
     .order("sort_order", { ascending: true });
 
-  const state = dbToEditorState(funnelRow, questionRows ?? []);
+  const pageIds = (pageRows ?? []).map((p) => p.id);
+  const { data: fieldRows } = pageIds.length > 0
+    ? await supabase
+        .from("fields")
+        .select("id, page_id, field_key, field_type, label, subtitle, placeholder, visible, required, sort_order, options, config")
+        .in("page_id", pageIds)
+    : { data: [] as DbFieldRow[] };
+
+  const state = dbToEditorState(funnelRow, (pageRows ?? []) as DbPageRow[], (fieldRows ?? []) as DbFieldRow[]);
 
   return NextResponse.json({
     state,
@@ -98,16 +108,21 @@ export async function PUT(
     return NextResponse.json({ error: "Funnel nicht gefunden" }, { status: 404 });
   }
 
-  // Fragen: alte löschen, neue einfügen (RLS filtert beides auf eigene Funnels)
-  await supabase.from("funnel_questions").delete().eq("funnel_id", updatedFunnel.id);
+  // Pages: alle alten löschen (CASCADE entfernt Fields mit), neue einfügen.
+  // RLS filtert beides auf eigene Funnels.
+  await supabase.from("pages").delete().eq("funnel_id", updatedFunnel.id);
 
-  if (state.questions.length > 0) {
-    const questionRows = editorQuestionsToDbRows(state.questions, updatedFunnel.id);
-    const { error: qErr } = await supabase
-      .from("funnel_questions")
-      .insert(questionRows);
-    if (qErr) {
-      return NextResponse.json({ error: qErr.message }, { status: 500 });
+  const { pages, fields } = editorStateToPagesAndFields(state, updatedFunnel.id);
+
+  const { error: pagesErr } = await supabase.from("pages").insert(pages);
+  if (pagesErr) {
+    return NextResponse.json({ error: pagesErr.message }, { status: 500 });
+  }
+
+  if (fields.length > 0) {
+    const { error: fieldsErr } = await supabase.from("fields").insert(fields);
+    if (fieldsErr) {
+      return NextResponse.json({ error: fieldsErr.message }, { status: 500 });
     }
   }
 
@@ -142,7 +157,7 @@ export async function DELETE(
   }
 
   // Submissions vorab löschen (kein FK, Snapshot-Pattern — wird nicht via Cascade entfernt).
-  // funnel_view_logs + funnel_questions werden via FK-CASCADE beim Funnel-Delete entfernt.
+  // funnel_view_logs + pages + fields werden via FK-CASCADE beim Funnel-Delete entfernt.
   await supabase.from("submissions").delete().eq("funnel_slug", slug);
   const { error } = await supabase.from("funnels").delete().eq("id", funnel.id);
 

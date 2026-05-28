@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Tenant not found' }, { status: 404 })
   }
 
-  // 5. Dynamische Feldvalidierung gegen contact_fields aus der DB
+  // 5. Dynamische Feldvalidierung gegen contactFields (aus submit-Page-Fields via getTenantConfig)
   const visibleRequired = tenantConfig.contactFields.filter((f) => f.visible && f.required)
   for (const field of visibleRequired) {
     const err = validateContactField(field, contact[field.key] ?? '')
