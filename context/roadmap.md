@@ -181,7 +181,7 @@ Pflicht-Tasks bevor zahlende Kunden draufdürfen. **Kein Onboarding-Wizard** —
 | Schritt | Was | Aufwand |
 |---|---|---|
 | D.1 | Stripe von Test- auf Live-Modus umstellen (Anleitung: `project-overview.md` §9) | 1 Tag |
-| **D.2** | **Conversion-Tracking via postMessage** (Meta Pixel + Google Ads CAPI). Widget sendet bei Submit ein `postMessage`; parent-Seite ruft `fbq('track','Lead')` / `gtag('event','conversion')` auf. Doku-Snippet für Agenturen. **Performance-Marketing-Blocker — ohne das kaufen Performance-Agenturen nicht.** | 1-2 Tage |
+| **D.2** | **Conversion-Tracking via postMessage + Script-Loader-Embed** (Typeform-Stil). Zwei Stränge zusammen, weil derselbe Mechanismus: ① Widget sendet bei Submit ein `postMessage`; parent-Seite ruft `fbq('track','Lead')` / `gtag('event','conversion')` auf. ② Tenant kopiert ab jetzt `<div data-leadplug="slug"></div><script src="https://app.leadplug.de/embed.js"></script>` statt full iframe-Snippet — unser Script lädt iframe + verdrahtet postMessage + Conversion-Hook. **Vorteil:** Embed-Bugs/Verbesserungen werden zentral deployed (Tenants müssen nicht neu kopieren). Aktuelles iframe-Snippet (`lib/embedSnippet.ts`) bleibt als Fallback. **Performance-Marketing-Blocker — ohne das kaufen Performance-Agenturen nicht.** | 2-3 Tage |
 | D.3 | 3-5 Demo-Funnels als Templates (Solar, Anwalt, Coach, Versicherung, …). Reine Content-Arbeit, kein Engineering. Anker für Sales-Pitch + Startpunkt für neue Tenants. | 2-3 Tage |
 
 Direkt nach D.3: **Launch** + Direct-Sales an DACH-Marketing-Agenturen (siehe `builder-fokus-roadmap.html`).

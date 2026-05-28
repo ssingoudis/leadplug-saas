@@ -128,6 +128,22 @@ Total bis Launch: ~9-13 Tage Engineering + Stripe-Setup.
 
 ## History
 
+- **Embed-Snippet-Hardening + D.2-Erweiterung um Script-Loader-Embed ✅ (2026-05-28)**
+
+  Stavros' Frage „ist mein iframe gut gebaut?" → kritische Bewertung + 3 kleine Hardenings im `lib/embedSnippet.ts`:
+
+  1. **Origin-Check** — `if (e.origin !== ALLOWED) return;` mit `new URL(url).origin`. Schützt gegen fremde iframes auf der Tenant-Seite (Google-Ads, Cookie-Banner, etc.) die zufällig oder böswillig `funnel-resize`-shaped Messages senden könnten.
+  2. **Height-Clamp** — `if (!h || h < 100 || h > 10000) return;` (statt `h > 0`). Defensive gegen versehentliche scrollHeight-Ausreißer.
+  3. **`loading="lazy"` entfernt** — Lead-Funnels sitzen typisch above-the-fold, lazy verschärft nur Boot-Race-Edge-Cases (siehe gestern: nur per Console-Inject reproduziert) ohne Speed-Gewinn.
+
+  Plus: Script in IIFE gewrapped (`(function(){...})();`) — verhindert Variable-Leaks im Parent-Window. Minified-Style (kompakt) damit Tenants den Code-Block visuell verstehen.
+
+  **Wichtige Limitation transparent dokumentiert:** Diese Hardenings landen nur in NEUEN Snippets. **Bestehende Embeds auf Tenant-Seiten laufen mit der alten Logik weiter** — funktionieren ohne Bruch, kriegen aber die Hardenings nicht. Saubere Lösung dafür ist Aufgabe D.2 mit Script-Loader-Embed (Tenants kopieren `<script src="…/embed.js">` statt full Snippet → wir können das Script jederzeit zentral updaten ohne Tenant-Aktion).
+
+  **D.2 in roadmap.md erweitert:** zusammengelegt mit Script-Loader-Embed (Typeform-Stil) weil beide denselben postMessage-Mechanismus nutzen. Aufwand 1-2 Tage → 2-3 Tage. iframe-Snippet bleibt als Fallback.
+
+  **Files:** `lib/embedSnippet.ts`, `context/roadmap.md`, `context/current-feature.md`.
+
 - **Polish-Runde 2 nach Aufgabe 39 — Cleanup + Date-Picker + 4 weitere ContactField-Types ✅ (2026-05-28)**
 
   Quick-Wins-Sprint vor Pause. 5 Punkte (A-E) abgehakt:
