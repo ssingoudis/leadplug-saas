@@ -51,7 +51,7 @@ export interface QuestionConfig {
   visible: boolean
 }
 
-// Konfiguration eines einzelnen Kontaktformular-Felds (kommt aus funnels.contact_fields JSONB).
+// Konfiguration eines einzelnen Kontaktformular-Felds (kommt aus den Fields der submit-Page).
 export interface ContactFieldConfig {
   key:          string                           // Eindeutiger Bezeichner, z.B. "name", "email", "plz"
   type:         'radio' | 'text' | 'email' | 'tel' | 'plz'

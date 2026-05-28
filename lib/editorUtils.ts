@@ -1,6 +1,7 @@
 import type {
   EditorState,
   EditorQuestion,
+  QuestionType,
   QuestionConfig,
   FunnelConfig,
   FunnelTheme,
@@ -151,7 +152,6 @@ export function editorStateToFunnelRow(
     font: state.font || null,
     border_radius: state.borderRadius || null,
     max_width: state.maxWidth || null,
-    contact_fields: state.contactFields,
     is_active: state.isActive,
   };
 }
@@ -170,37 +170,95 @@ export async function generateRandomSlug(admin: any): Promise<string> {
   }
 }
 
-export function editorQuestionsToDbRows(
-  questions: EditorQuestion[],
+// =============================================================================
+// EDITOR STATE → PAGES + FIELDS (Insert-Payload für API Routes)
+// =============================================================================
+
+// Mapping ContactFieldConfig.type → field_type-Enum-Wert.
+// "text" wird zu "short_text" weil das DB-Enum kein "text" hat (Roadmap-Konsolidierung).
+const CONTACT_TYPE_TO_FIELD_TYPE: Record<ContactFieldConfig["type"], string> = {
+  text: "short_text",
+  email: "email",
+  tel: "tel",
+  plz: "plz",
+  radio: "radio",
+};
+
+// Mapping QuestionType → field_type-Enum-Wert.
+// Nur "multiple_choice" muss zu "multi_choice" gemappt werden (Roadmap-Schreibweise),
+// alle anderen sind 1:1 identisch.
+function questionTypeToFieldType(qt: QuestionType): string {
+  return qt === "multiple_choice" ? "multi_choice" : qt;
+}
+
+// Erzeugt eine kryptographisch sichere UUID (v4). Wird benötigt, um Page-IDs
+// vorab zu generieren, damit Fields ihre page_id im selben Insert-Batch
+// referenzieren können.
+function newPageId(): string {
+  // crypto.randomUUID() ist seit Node 19 + allen modernen Browsern verfügbar.
+  // Server-side: über Next.js' globales `crypto`-Polyfill verfügbar (Node 20+).
+  return crypto.randomUUID();
+}
+
+export interface PageInsertRow {
+  id: string;
+  funnel_id: string;
+  page_type: "question" | "submit" | "success";
+  sort_order: number;
+  config: Record<string, unknown>;
+}
+
+export interface FieldInsertRow {
+  page_id: string;
+  field_key: string;
+  field_type: string;
+  label: string;
+  subtitle: string | null;
+  placeholder: string | null;
+  visible: boolean;
+  required: boolean;
+  sort_order: number;
+  options: unknown;
+  config: Record<string, unknown>;
+}
+
+// Baut die Insert-Payload für pages + fields aus dem EditorState.
+// Struktur pro Funnel: N × question-Pages (1 Field je Page) → 1 × submit-Page
+// (alle contactFields als Fields) → 1 × success-Page (leer).
+export function editorStateToPagesAndFields(
+  state: EditorState,
   funnelId: string,
-): Record<string, unknown>[] {
-  return questions.map((q, idx) => ({
-    funnel_id: funnelId,
-    question_key: q.questionKey,
-    title: q.title,
-    subtitle: q.subtitle || null,
-    question_type: q.questionType,
-    visible: q.visible,
-    sort_order: idx,
-    config:
-      q.questionType === "slider"
-        ? {
-            min: Number(q.sliderMin) || 0,
-            max: Number(q.sliderMax) || 100,
-            step: Number(q.sliderStep) || 1,
-            default: Number(q.sliderDefault) || 50,
-            unit: q.sliderUnit || "",
-          }
-        : q.questionType === "short_text" || q.questionType === "long_text"
-          ? {
-              placeholder: q.placeholder || undefined,
-              maxLength: q.maxLength ? Number(q.maxLength) : undefined,
-              required: q.required,
-            }
-          : {},
-    options:
-      q.questionType === "single_choice" ||
-      q.questionType === "multiple_choice"
+): { pages: PageInsertRow[]; fields: FieldInsertRow[] } {
+  const pages: PageInsertRow[] = [];
+  const fields: FieldInsertRow[] = [];
+
+  // Question-Pages + Question-Fields
+  state.questions.forEach((q, idx) => {
+    const pageId = newPageId();
+    pages.push({
+      id: pageId,
+      funnel_id: funnelId,
+      page_type: "question",
+      sort_order: idx,
+      config: {},
+    });
+
+    const isText = q.questionType === "short_text" || q.questionType === "long_text";
+    const isSlider = q.questionType === "slider";
+    const isChoice =
+      q.questionType === "single_choice" || q.questionType === "multiple_choice";
+
+    fields.push({
+      page_id: pageId,
+      field_key: q.questionKey,
+      field_type: questionTypeToFieldType(q.questionType),
+      label: q.title,
+      subtitle: q.subtitle || null,
+      placeholder: isText ? q.placeholder || null : null,
+      visible: q.visible,
+      required: isText ? q.required : true,
+      sort_order: 0,
+      options: isChoice
         ? q.options
             .filter((o) => o.label.trim())
             .map((o, oidx) => ({
@@ -211,58 +269,222 @@ export function editorQuestionsToDbRows(
               sort_order: oidx,
             }))
         : [],
-  }));
+      config: isSlider
+        ? {
+            min: Number(q.sliderMin) || 0,
+            max: Number(q.sliderMax) || 100,
+            step: Number(q.sliderStep) || 1,
+            default: Number(q.sliderDefault) || 50,
+            unit: q.sliderUnit || "",
+          }
+        : isText
+          ? {
+              ...(q.placeholder ? { placeholder: q.placeholder } : {}),
+              ...(q.maxLength ? { maxLength: Number(q.maxLength) } : {}),
+              required: q.required,
+            }
+          : {},
+    });
+  });
+
+  // Submit-Page mit allen ContactFields
+  const submitPageId = newPageId();
+  pages.push({
+    id: submitPageId,
+    funnel_id: funnelId,
+    page_type: "submit",
+    sort_order: state.questions.length,
+    config: {},
+  });
+
+  state.contactFields.forEach((cf) => {
+    fields.push({
+      page_id: submitPageId,
+      field_key: cf.key,
+      field_type: CONTACT_TYPE_TO_FIELD_TYPE[cf.type],
+      label: cf.label,
+      subtitle: null,
+      placeholder: cf.placeholder ?? null,
+      visible: cf.visible,
+      required: cf.required,
+      sort_order: cf.sort_order,
+      options: cf.type === "radio" ? cf.options ?? [] : [],
+      config: {},
+    });
+  });
+
+  // Success-Page (leer, nur Marker)
+  pages.push({
+    id: newPageId(),
+    funnel_id: funnelId,
+    page_type: "success",
+    sort_order: state.questions.length + 1,
+    config: {},
+  });
+
+  return { pages, fields };
 }
 
 // =============================================================================
-// DB ROW → EDITOR STATE (für Edit-Seite)
+// PAGES + FIELDS → EDITOR STATE (für Edit-Seite)
 // =============================================================================
+
+// Rückmapping field_type → ContactFieldConfig.type für Submit-Page-Fields.
+// Inverse von CONTACT_TYPE_TO_FIELD_TYPE. Unbekannte field_types fallen auf
+// "text" zurück, damit das Widget sie zumindest als Texteingabe rendert.
+function fieldTypeToContactType(ft: string): ContactFieldConfig["type"] {
+  switch (ft) {
+    case "short_text":
+      return "text";
+    case "email":
+      return "email";
+    case "tel":
+      return "tel";
+    case "plz":
+      return "plz";
+    case "radio":
+      return "radio";
+    default:
+      return "text";
+  }
+}
+
+// Rückmapping field_type → QuestionType für Question-Page-Fields.
+function fieldTypeToQuestionType(ft: string): QuestionType {
+  switch (ft) {
+    case "single_choice":
+      return "single_choice";
+    case "multi_choice":
+      return "multiple_choice";
+    case "short_text":
+      return "short_text";
+    case "long_text":
+      return "long_text";
+    case "slider":
+      return "slider";
+    default:
+      // Defensive: bei zukünftigen field_types fallback auf single_choice
+      return "single_choice";
+  }
+}
+
+export interface DbPageRow {
+  id: string;
+  funnel_id: string;
+  page_type: "question" | "submit" | "success";
+  sort_order: number;
+}
+
+export interface DbFieldRow {
+  id: string;
+  page_id: string;
+  field_key: string;
+  field_type: string;
+  label: string;
+  subtitle: string | null;
+  placeholder: string | null;
+  visible: boolean;
+  required: boolean;
+  sort_order: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  options: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  config: any;
+}
 
 export function dbToEditorState(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   funnelRow: Record<string, any>,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  questionRows: Record<string, any>[],
+  pages: DbPageRow[],
+  fields: DbFieldRow[],
 ): EditorState {
-  const questions: EditorQuestion[] = questionRows
-    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-    .map((q) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const opts: Record<string, any>[] = Array.isArray(q.options)
-        ? q.options
-        : [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const cfg: Record<string, any> = q.config ?? {};
+  // Fields nach page_id gruppieren (sortiert nach sort_order innerhalb der Page)
+  const fieldsByPage = new Map<string, DbFieldRow[]>();
+  for (const f of fields) {
+    const list = fieldsByPage.get(f.page_id) ?? [];
+    list.push(f);
+    fieldsByPage.set(f.page_id, list);
+  }
+  for (const [, list] of fieldsByPage) {
+    list.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  }
+
+  // Pages nach Typ getrennt sammeln (sortiert nach sort_order)
+  const questionPages = pages
+    .filter((p) => p.page_type === "question")
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  const submitPage = pages.find((p) => p.page_type === "submit");
+
+  // EditorQuestions aus Question-Pages bauen (1 Field je Page erwartet, defensiv erstes nehmen)
+  const questions: EditorQuestion[] = questionPages.map((page) => {
+    const pageFields = fieldsByPage.get(page.id) ?? [];
+    const f = pageFields[0];
+    if (!f) {
+      // Defensive: Question-Page ohne Field → Leerstring-Question (sollte nie passieren)
       return {
         _id: uid(),
-        dbId: q.id,
-        questionKey: q.question_key,
-        questionType: q.question_type ?? "single_choice",
-        title: q.title ?? "",
-        subtitle: q.subtitle ?? "",
-        visible: q.visible ?? true,
-        required: cfg.required !== false,
-        placeholder: cfg.placeholder ?? "",
-        maxLength: cfg.maxLength ? String(cfg.maxLength) : "",
-        sliderMin: cfg.min != null ? String(cfg.min) : "0",
-        sliderMax: cfg.max != null ? String(cfg.max) : "100",
-        sliderStep: cfg.step != null ? String(cfg.step) : "1",
-        sliderUnit: cfg.unit ?? "",
-        sliderDefault: cfg.default != null ? String(cfg.default) : "50",
-        options: opts.map((o) => ({
-          _id: uid(),
-          label: o.label ?? "",
-          value: o.value ?? "",
-          iconKey: o.icon_key ?? "",
-          iconUrl: o.icon_url ?? "",
-        })),
+        dbId: page.id,
+        questionKey: "",
+        questionType: "single_choice",
+        title: "",
+        subtitle: "",
+        visible: true,
+        required: true,
+        placeholder: "",
+        maxLength: "",
+        sliderMin: "0",
+        sliderMax: "100",
+        sliderStep: "1",
+        sliderUnit: "",
+        sliderDefault: "50",
+        options: [],
       };
-    });
+    }
 
-  const contactFields: ContactFieldConfig[] = Array.isArray(
-    funnelRow.contact_fields,
-  )
-    ? (funnelRow.contact_fields as ContactFieldConfig[])
+    const cfg = (f.config ?? {}) as Record<string, unknown>;
+    const opts = Array.isArray(f.options) ? f.options : [];
+
+    return {
+      _id: uid(),
+      dbId: f.id,
+      questionKey: f.field_key,
+      questionType: fieldTypeToQuestionType(f.field_type),
+      title: f.label ?? "",
+      subtitle: f.subtitle ?? "",
+      visible: f.visible ?? true,
+      required: f.required ?? true,
+      placeholder: f.placeholder ?? (typeof cfg.placeholder === "string" ? cfg.placeholder : ""),
+      maxLength: cfg.maxLength != null ? String(cfg.maxLength) : "",
+      sliderMin: cfg.min != null ? String(cfg.min) : "0",
+      sliderMax: cfg.max != null ? String(cfg.max) : "100",
+      sliderStep: cfg.step != null ? String(cfg.step) : "1",
+      sliderUnit: typeof cfg.unit === "string" ? cfg.unit : "",
+      sliderDefault: cfg.default != null ? String(cfg.default) : "50",
+      options: opts.map((o: Record<string, unknown>) => ({
+        _id: uid(),
+        label: typeof o.label === "string" ? o.label : "",
+        value: typeof o.value === "string" ? o.value : "",
+        iconKey: typeof o.icon_key === "string" ? o.icon_key : "",
+        iconUrl: typeof o.icon_url === "string" ? o.icon_url : "",
+      })),
+    };
+  });
+
+  // ContactFields aus Submit-Page-Fields bauen
+  const contactFields: ContactFieldConfig[] = submitPage
+    ? (fieldsByPage.get(submitPage.id) ?? []).map((f) => ({
+        key: f.field_key,
+        type: fieldTypeToContactType(f.field_type),
+        label: f.label ?? "",
+        placeholder: f.placeholder ?? undefined,
+        required: f.required ?? false,
+        visible: f.visible ?? true,
+        sort_order: f.sort_order ?? 0,
+        options:
+          f.field_type === "radio" && Array.isArray(f.options)
+            ? (f.options as string[])
+            : undefined,
+      }))
     : DEFAULT_CONTACT_FIELDS;
 
   return {

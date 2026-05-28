@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   editorStateToFunnelRow,
-  editorQuestionsToDbRows,
+  editorStateToPagesAndFields,
   generateRandomSlug,
 } from "@/lib/editorUtils";
 import type { EditorState } from "@/types";
@@ -104,13 +104,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: funnelErr?.message ?? "Insert failed" }, { status: 500 });
   }
 
-  if (state.questions.length > 0) {
-    const questionRows = editorQuestionsToDbRows(state.questions, insertedFunnel.id);
-    const { error: qErr } = await supabase
-      .from("funnel_questions")
-      .insert(questionRows);
-    if (qErr) {
-      return NextResponse.json({ error: qErr.message }, { status: 500 });
+  // Pages + Fields anlegen (immer mindestens 1 submit-Page + 1 success-Page,
+  // auch wenn der Funnel keine Question-Pages hat).
+  const { pages, fields } = editorStateToPagesAndFields(state, insertedFunnel.id);
+
+  const { error: pagesErr } = await supabase.from("pages").insert(pages);
+  if (pagesErr) {
+    return NextResponse.json({ error: pagesErr.message }, { status: 500 });
+  }
+
+  if (fields.length > 0) {
+    const { error: fieldsErr } = await supabase.from("fields").insert(fields);
+    if (fieldsErr) {
+      return NextResponse.json({ error: fieldsErr.message }, { status: 500 });
     }
   }
 
