@@ -34,13 +34,29 @@ interface Step {
 function buildMockAnswers(questions: QuestionConfig[]): Record<string, string> {
   const answers: Record<string, string> = {};
   for (const q of questions) {
-    if (q.questionType === "single_choice" || q.questionType === "multiple_choice") {
+    if (
+      q.questionType === "single_choice" ||
+      q.questionType === "multi_choice" ||
+      q.questionType === "dropdown"
+    ) {
       const first = q.options[0];
       if (first) answers[q.id] = first.value;
     } else if (q.questionType === "short_text") {
       answers[q.id] = "Beispieltext";
     } else if (q.questionType === "long_text") {
       answers[q.id] = "Hier steht ein längerer Beispieltext für diese Frage.";
+    } else if (q.questionType === "email") {
+      answers[q.id] = "max@beispiel.de";
+    } else if (q.questionType === "tel") {
+      answers[q.id] = "+49 123 456789";
+    } else if (q.questionType === "date") {
+      answers[q.id] = new Date().toISOString().slice(0, 10);
+    } else if (q.questionType === "number") {
+      const cfg = q.config as { default?: number; min?: number; max?: number };
+      const val = cfg.default ?? cfg.min ?? 42;
+      answers[q.id] = String(val);
+    } else if (q.questionType === "checkbox") {
+      answers[q.id] = "true";
     } else if (q.questionType === "slider") {
       const cfg = q.config as { default?: number; min?: number; max?: number };
       const val = cfg.default ?? Math.round(((cfg.min ?? 0) + (cfg.max ?? 100)) / 2);

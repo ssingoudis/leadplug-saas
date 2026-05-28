@@ -69,6 +69,15 @@ export const DEFAULT_QUESTION: EditorQuestion = {
     { _id: "default_opt2", label: "Option B", value: "option_b", iconKey: "", iconUrl: "" },
     { _id: "default_opt3", label: "Option C", value: "option_c", iconKey: "", iconUrl: "" },
   ],
+  dateMin: "",
+  dateMax: "",
+  dateDefault: "",
+  numberMin: "",
+  numberMax: "",
+  numberStep: "1",
+  numberDefault: "",
+  numberUnit: "",
+  checkboxLabel: "Ja, ich stimme zu",
 };
 
 export const DEFAULT_EDITOR_STATE: EditorState = {

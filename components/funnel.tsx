@@ -13,6 +13,9 @@ import type {
   QuestionConfig,
   TextConfig,
   SliderConfig,
+  DateConfig,
+  NumberConfig,
+  CheckboxConfig,
   ContactFieldConfig,
 } from "@/types";
 
@@ -308,11 +311,16 @@ export function Funnel({
   const isQuestionRequired = (currentQuestion?.config as TextConfig)?.required !== false;
 
   // Weiter is disabled when the current field is required and still empty.
+  // Sonderfälle:
+  //   - slider hat immer default → nie disabled
+  //   - checkbox: required heißt "muss aktiviert sein" → value === "true"
   const isWeiterDisabled =
     showWeiterButton &&
     currentQuestion?.questionType !== "slider" &&
     isQuestionRequired &&
-    !currentAnswer.trim();
+    (currentQuestion?.questionType === "checkbox"
+      ? currentAnswer !== "true"
+      : !currentAnswer.trim());
 
   // Slider config and current value — null when the current question is not a slider.
   const sliderConfig =
@@ -627,13 +635,13 @@ export function Funnel({
                   )}
                 </div>
 
-                {/* single_choice / multiple_choice */}
+                {/* single_choice / multi_choice */}
                 {(currentQuestion.questionType === "single_choice" ||
-                  currentQuestion.questionType === "multiple_choice") && (
+                  currentQuestion.questionType === "multi_choice") && (
                   <div className="flex items-center justify-center mb-3">
                     <div className={cn("grid gap-3 w-full", gridClasses)}>
                       {currentQuestion.options.map((option, idx) => {
-                        const isMultiple     = currentQuestion.questionType === "multiple_choice";
+                        const isMultiple     = currentQuestion.questionType === "multi_choice";
                         const selectedValues = answers[currentQuestion.id]?.split(",").filter(Boolean) ?? [];
                         const isSelected     = isMultiple
                           ? selectedValues.includes(option.value)
@@ -662,7 +670,7 @@ export function Funnel({
                               ...hl(`option_${idx}`),
                             }}
                           >
-                            {/* Checkmark — nur bei multiple_choice + selected */}
+                            {/* Checkmark — nur bei multi_choice + selected */}
                             {isMultiple && isSelected && (
                               <div
                                 className="absolute top-2 right-2 z-30 w-6 h-6 rounded-full flex items-center justify-center"
@@ -775,11 +783,17 @@ export function Funnel({
                   </div>
                 )}
 
-                {/* short_text */}
-                {currentQuestion.questionType === "short_text" && (
+                {/* short_text / email / tel — alle Variants von `<input type=…>` mit placeholder + required */}
+                {(currentQuestion.questionType === "short_text" ||
+                  currentQuestion.questionType === "email" ||
+                  currentQuestion.questionType === "tel") && (
                   <div className="mb-3">
                     <input
-                      type="text"
+                      type={
+                        currentQuestion.questionType === "email" ? "email"
+                        : currentQuestion.questionType === "tel" ? "tel"
+                        : "text"
+                      }
                       value={answers[currentQuestion.id] ?? ""}
                       onChange={(e) =>
                         setAnswers((prev) => ({ ...prev, [currentQuestion.id]: e.target.value }))
@@ -806,6 +820,146 @@ export function Funnel({
                     />
                   </div>
                 )}
+
+                {/* date — HTML5 native (kein Custom-Picker, minimal-funktional) */}
+                {currentQuestion.questionType === "date" && (() => {
+                  const dateCfg = currentQuestion.config as DateConfig;
+                  const value = answers[currentQuestion.id] ?? dateCfg.default ?? "";
+                  return (
+                    <div className="mb-3">
+                      <input
+                        type="date"
+                        value={value}
+                        min={dateCfg.min || undefined}
+                        max={dateCfg.max || undefined}
+                        onChange={(e) =>
+                          setAnswers((prev) => ({ ...prev, [currentQuestion.id]: e.target.value }))
+                        }
+                        data-edit-field="text_input"
+                        className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
+                        style={{
+                          borderColor:     theme.borderColor,
+                          backgroundColor: theme.inputBgColor,
+                          color:           theme.textColor,
+                          borderRadius:    theme.borderRadius,
+                          ...hl("text_input"),
+                        }}
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor     = theme.primaryColor;
+                          e.currentTarget.style.backgroundColor = theme.backgroundColor;
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor     = theme.borderColor;
+                          e.currentTarget.style.backgroundColor = theme.inputBgColor;
+                        }}
+                      />
+                    </div>
+                  );
+                })()}
+
+                {/* number — HTML5 native input type=number + optional Unit-Suffix */}
+                {currentQuestion.questionType === "number" && (() => {
+                  const numCfg = currentQuestion.config as NumberConfig;
+                  const value = answers[currentQuestion.id] ?? (numCfg.default != null ? String(numCfg.default) : "");
+                  return (
+                    <div className="mb-3 flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={value}
+                        min={numCfg.min}
+                        max={numCfg.max}
+                        step={numCfg.step ?? 1}
+                        onChange={(e) =>
+                          setAnswers((prev) => ({ ...prev, [currentQuestion.id]: e.target.value }))
+                        }
+                        data-edit-field="text_input"
+                        className="flex-1 px-4 py-3 border rounded-lg transition-colors outline-none text-base"
+                        style={{
+                          borderColor:     theme.borderColor,
+                          backgroundColor: theme.inputBgColor,
+                          color:           theme.textColor,
+                          borderRadius:    theme.borderRadius,
+                          ...hl("text_input"),
+                        }}
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor     = theme.primaryColor;
+                          e.currentTarget.style.backgroundColor = theme.backgroundColor;
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor     = theme.borderColor;
+                          e.currentTarget.style.backgroundColor = theme.inputBgColor;
+                        }}
+                      />
+                      {numCfg.unit && (
+                        <span className="text-base font-medium shrink-0" style={{ color: theme.textColorMuted }}>
+                          {numCfg.unit}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* dropdown — `<select>` mit options aus DB (gleiches Schema wie choice) */}
+                {currentQuestion.questionType === "dropdown" && (
+                  <div className="mb-3">
+                    <select
+                      value={answers[currentQuestion.id] ?? ""}
+                      onChange={(e) =>
+                        setAnswers((prev) => ({ ...prev, [currentQuestion.id]: e.target.value }))
+                      }
+                      data-edit-field="text_input"
+                      className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
+                      style={{
+                        borderColor:     theme.borderColor,
+                        backgroundColor: theme.inputBgColor,
+                        color:           theme.textColor,
+                        borderRadius:    theme.borderRadius,
+                        ...hl("text_input"),
+                      }}
+                    >
+                      <option value="">Bitte wählen…</option>
+                      {currentQuestion.options.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* checkbox — Single-Boolean (z.B. DSGVO/Newsletter) */}
+                {currentQuestion.questionType === "checkbox" && (() => {
+                  const cbCfg = currentQuestion.config as CheckboxConfig;
+                  const isChecked = answers[currentQuestion.id] === "true";
+                  return (
+                    <label
+                      className="mb-3 flex items-start gap-3 cursor-pointer p-4 rounded-lg border"
+                      data-edit-field="text_input"
+                      style={{
+                        borderColor: isChecked ? theme.primaryColor : theme.borderColor,
+                        backgroundColor: theme.inputBgColor,
+                        borderRadius: theme.borderRadius,
+                        ...hl("text_input"),
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) =>
+                          setAnswers((prev) => ({
+                            ...prev,
+                            [currentQuestion.id]: e.target.checked ? "true" : "false",
+                          }))
+                        }
+                        className="mt-0.5 shrink-0"
+                        style={{ accentColor: theme.primaryColor }}
+                      />
+                      <span className="text-sm leading-snug" style={{ color: theme.textColor }}>
+                        {cbCfg.label || "Ich stimme zu"}
+                      </span>
+                    </label>
+                  );
+                })()}
               </div>
 
             ) : (

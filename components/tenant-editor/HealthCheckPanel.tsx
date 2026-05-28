@@ -40,7 +40,11 @@ function computeIssues(state: EditorState): Issue[] {
         questionIndex: vIdx,
       });
     }
-    if (q.questionType === "single_choice" || q.questionType === "multiple_choice") {
+    if (
+      q.questionType === "single_choice" ||
+      q.questionType === "multi_choice" ||
+      q.questionType === "dropdown"
+    ) {
       const emptyOpts = q.options.filter((o) => !o.label.trim()).length;
       if (emptyOpts > 0) {
         issues.push({
