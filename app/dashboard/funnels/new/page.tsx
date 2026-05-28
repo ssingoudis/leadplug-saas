@@ -2,8 +2,15 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { DEFAULT_EDITOR_STATE } from "@/components/tenant-editor/defaults";
 import FunnelEditorClient from "./FunnelEditorClient";
+import FunnelEditorClientV2 from "./FunnelEditorClientV2";
 
-export default async function NewFunnelPage() {
+interface Props {
+  searchParams: Promise<{ v?: string }>;
+}
+
+export default async function NewFunnelPage({ searchParams }: Props) {
+  const { v } = await searchParams;
+  const useV2 = v === "2";
   const supabase = await createClient();
   const {
     data: { user },
@@ -23,6 +30,15 @@ export default async function NewFunnelPage() {
     ...DEFAULT_EDITOR_STATE,
     notificationEmail: user.email ?? "",
   };
+
+  if (useV2) {
+    return (
+      <FunnelEditorClientV2
+        initialState={initialState}
+        companyName={tenant.company_name ?? ""}
+      />
+    );
+  }
 
   return (
     <FunnelEditorClient
