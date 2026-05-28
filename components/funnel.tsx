@@ -19,7 +19,6 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
-import { renderIcon } from "@/components/icons";
 import { resolveAnswer } from "@/lib/resolveAnswer";
 import { validateContactField } from "@/lib/validateContactField";
 import type {
@@ -215,6 +214,10 @@ interface FunnelProps {
   onReorderOptions?: (fromIdx: number, toIdx: number) => void;
   onDuplicateOption?: (idx: number) => void;
   onDeleteOption?: (idx: number) => void;
+  // Partial-Submissions: feuert (debounced) wenn answers oder contactData sich ändern.
+  // Live-Mode: TenantFunnelClient POSTet das an /api/track-progress.
+  // Editor-Mode: undefined → kein Tracking.
+  onAnswersChange?: (data: { answers: Record<string, string>; contact: Record<string, string> }) => void;
   onSubmit?: (data: {
     answers: Record<string, string>;
     contact: Record<string, string>;
@@ -242,6 +245,7 @@ export function Funnel({
   onReorderOptions,
   onDuplicateOption,
   onDeleteOption,
+  onAnswersChange,
   onSubmit,
 }: FunnelProps) {
 
@@ -499,6 +503,16 @@ export function Funnel({
     }
   }, [currentStep, isContactStep, isSubmitted, onStepChange]);
 
+  // Partial-Submissions: feuere debounced 600ms nach jeder Antwort-Änderung den onAnswersChange-Callback.
+  // In editMode oder ohne Callback: No-Op. Submitted-State auch No-Op (dort wird /api/submit aufgerufen).
+  useEffect(() => {
+    if (!onAnswersChange || editMode || isSubmitted) return;
+    const timer = window.setTimeout(() => {
+      onAnswersChange({ answers, contact: contactData });
+    }, 600);
+    return () => window.clearTimeout(timer);
+  }, [answers, contactData, onAnswersChange, editMode, isSubmitted]);
+
   // Sends the widget height to the parent frame after every layout change via postMessage.
   // The ResizeObserver re-fires automatically on step transitions and after fonts load.
   // Only active when the widget is embedded in an iframe (window.parent !== window).
@@ -754,7 +768,7 @@ export function Funnel({
 
                   const renderOptionContent = (option: typeof currentQuestion.options[0], idx: number, isSelected: boolean) => {
                     const letter = String.fromCharCode(65 + idx);
-                    const indicator = !option.iconKey && !option.iconUrl ? (
+                    const indicator = (
                       <span
                         aria-hidden="true"
                         className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded font-mono text-[11px] font-bold border"
@@ -765,10 +779,6 @@ export function Funnel({
                         }}
                       >
                         {letter}
-                      </span>
-                    ) : (
-                      <span className="shrink-0 inline-flex items-center justify-center" style={{ width: 24, height: 24 }}>
-                        {renderIcon(option.iconKey, option.iconUrl, isSelected ? theme.primaryColor : theme.textColorMuted, 22)}
                       </span>
                     );
                     const multiCheckbox = isMultiple ? (
@@ -955,17 +965,11 @@ export function Funnel({
                   </div>
                 )}
 
-                {/* short_text / email / tel — Underline-only Style */}
-                {(currentQuestion.questionType === "short_text" ||
-                  currentQuestion.questionType === "email" ||
-                  currentQuestion.questionType === "tel") && (
+                {/* short_text — Underline-only Style */}
+                {currentQuestion.questionType === "short_text" && (
                   <div className="mb-3">
                     <input
-                      type={
-                        currentQuestion.questionType === "email" ? "email"
-                        : currentQuestion.questionType === "tel" ? "tel"
-                        : "text"
-                      }
+                      type="text"
                       value={answers[currentQuestion.id] ?? ""}
                       onChange={(e) =>
                         setAnswers((prev) => ({ ...prev, [currentQuestion.id]: e.target.value }))
@@ -1336,8 +1340,6 @@ export function Funnel({
                 </button>
                 {(currentQuestion.questionType === "short_text" ||
                   currentQuestion.questionType === "long_text" ||
-                  currentQuestion.questionType === "email" ||
-                  currentQuestion.questionType === "tel" ||
                   currentQuestion.questionType === "number") && (
                   <span className="hidden text-xs @md:inline font-light" style={{ color: theme.textColorMuted }}>
                     Drücke <kbd className="font-mono font-semibold">Enter ↵</kbd>

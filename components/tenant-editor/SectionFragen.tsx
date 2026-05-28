@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { uid, toKey, toSlug } from "@/lib/editorUtils";
-import { IconPicker } from "@/components/dashboard/IconPicker";
 import type { EditorQuestion, EditorOption, EditorState, QuestionType } from "@/types";
 
 interface Props {
@@ -46,8 +45,6 @@ const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   short_text: "Kurztext",
   long_text: "Langtext",
   slider: "Schieberegler",
-  email: "E-Mail",
-  tel: "Telefon",
   date: "Datum",
   number: "Zahl",
   dropdown: "Dropdown",
@@ -71,7 +68,7 @@ function Label({ children }: { children: React.ReactNode }) {
 function newOption(label = ""): EditorOption {
   const id = uid();
   // value = Slug aus Label wenn vorhanden, sonst _id als eindeutiger Startwert.
-  return { _id: id, label, value: label ? toSlug(label) : id, iconKey: "", iconUrl: "" };
+  return { _id: id, label, value: label ? toSlug(label) : id };
 }
 
 // Drei vorausgefüllte Beispiel-Optionen — User überschreibt nur den Text statt vor einem leeren Feld zu stehen.
@@ -157,9 +154,7 @@ function QuestionCard({
     question.questionType === "dropdown";
   const isText =
     question.questionType === "short_text" ||
-    question.questionType === "long_text" ||
-    question.questionType === "email" ||
-    question.questionType === "tel";
+    question.questionType === "long_text";
   const isSlider = question.questionType === "slider";
   const isDate = question.questionType === "date";
   const isNumber = question.questionType === "number";
@@ -215,10 +210,6 @@ function QuestionCard({
     let n = 2;
     while (siblings.includes(value)) value = `${base}-${n++}`;
     onUpdate({ options: updateOption(question.options, opt._id, { label, value }) });
-  }
-
-  function handleOptionIconChange(optId: string, iconKey: string) {
-    onUpdate({ options: updateOption(question.options, optId, { iconKey }) });
   }
 
   function addOption() {
@@ -372,10 +363,6 @@ function QuestionCard({
               <div className="space-y-2">
                 {question.options.map((opt, idx) => (
                   <div key={opt._id} className="flex items-center gap-2">
-                    <IconPicker
-                      value={opt.iconKey}
-                      onChange={(key) => handleOptionIconChange(opt._id, key)}
-                    />
                     <input
                       type="text"
                       value={opt.label}

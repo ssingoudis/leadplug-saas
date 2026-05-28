@@ -21,7 +21,7 @@ function makeId(): string {
 }
 
 function makeOption(label: string) {
-  return { _id: makeId(), label, value: "", iconKey: "", iconUrl: "" };
+  return { _id: makeId(), label, value: "" };
 }
 
 /**
@@ -75,12 +75,12 @@ const KONTAKT: Vorlage = {
     name.placeholder = "Vor- und Nachname";
 
     const email = blankQuestion();
-    email.questionType = "email";
+    email.questionType = "short_text";
     email.title = "Deine E-Mail-Adresse?";
     email.placeholder = "z. B. name@firma.de";
 
     const tel = blankQuestion();
-    tel.questionType = "tel";
+    tel.questionType = "short_text";
     tel.title = "Unter welcher Nummer können wir dich erreichen?";
     tel.placeholder = "+49 …";
 

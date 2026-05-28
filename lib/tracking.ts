@@ -77,6 +77,60 @@ export async function logSubmission(params: {
   }
 }
 
+/**
+ * Partial-Submissions: UPSERT by session_id. Wird vom Widget bei jedem Antwort-Commit gefeuert.
+ * Wenn completed=true: setzt completed_at=NOW() (= finaler Submit, triggert downstream Mails/Webhooks).
+ * Sonst: completed_at bleibt NULL = "abgebrochen / in Bearbeitung".
+ * Idempotent: gleicher sessionId-Aufruf ist sicher mehrfach aufrufbar.
+ */
+export async function upsertSubmissionProgress(params: {
+  sessionId: string
+  funnelSlug: string
+  tenantId: string
+  contact: ContactData
+  answers: Record<string, string>
+  leadPrice: number
+  sourceUrl: string
+  userAgent: string
+  ipAddress?: string
+  completed?: boolean
+}): Promise<string | null> {
+  const supabase = getSupabase()
+  if (!supabase) return null
+
+  try {
+    const row: Record<string, unknown> = {
+      session_id:  params.sessionId,
+      funnel_slug: params.funnelSlug,
+      tenant_id:   params.tenantId,
+      contact:     params.contact,
+      answers:     params.answers,
+      lead_price:  params.leadPrice,
+      source_url:  params.sourceUrl,
+      user_agent:  params.userAgent,
+      ip_address:  params.ipAddress ?? null,
+    }
+    if (params.completed) {
+      row.completed_at = new Date().toISOString()
+    }
+
+    const { data, error } = await supabase
+      .from('submissions')
+      .upsert(row, { onConflict: 'session_id' })
+      .select('id')
+      .single()
+
+    if (error) {
+      console.error('Supabase upsert progress error:', error)
+      return null
+    }
+    return data?.id ?? null
+  } catch (err) {
+    console.error('Supabase upsert progress exception:', err)
+    return null
+  }
+}
+
 export async function updateEmailStatus(
   submissionId: string,
   customerSent: boolean,

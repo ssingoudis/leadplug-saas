@@ -65,9 +65,9 @@ export const DEFAULT_QUESTION: EditorQuestion = {
   sliderUnit: "",
   sliderDefault: "50",
   options: [
-    { _id: "default_opt1", label: "Option A", value: "option_a", iconKey: "", iconUrl: "" },
-    { _id: "default_opt2", label: "Option B", value: "option_b", iconKey: "", iconUrl: "" },
-    { _id: "default_opt3", label: "Option C", value: "option_c", iconKey: "", iconUrl: "" },
+    { _id: "default_opt1", label: "Option A", value: "option_a" },
+    { _id: "default_opt2", label: "Option B", value: "option_b" },
+    { _id: "default_opt3", label: "Option C", value: "option_c" },
   ],
   dateMin: "",
   dateMax: "",

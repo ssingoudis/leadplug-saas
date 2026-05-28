@@ -29,8 +29,6 @@ const SUCCESS_PILL =
 const QUESTION_META: Record<QuestionType, FieldMeta> = {
   short_text: { label: "Text", category: "text", pillClass: TEXT_PILL, icon: "T" },
   long_text: { label: "Lang-Text", category: "text", pillClass: TEXT_PILL, icon: "¶" },
-  email: { label: "E-Mail", category: "text", pillClass: TEXT_PILL, icon: "@" },
-  tel: { label: "Telefon", category: "text", pillClass: TEXT_PILL, icon: "☎" },
   single_choice: { label: "Einfachauswahl", category: "choice", pillClass: CHOICE_PILL, icon: "◉" },
   multi_choice: { label: "Mehrfachauswahl", category: "choice", pillClass: CHOICE_PILL, icon: "☑" },
   dropdown: { label: "Dropdown", category: "dropdown", pillClass: DROPDOWN_PILL, icon: "▽" },

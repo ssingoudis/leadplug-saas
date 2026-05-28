@@ -88,8 +88,6 @@ const OPTION_BASED_TYPES = new Set<QuestionType>([
 const TEXTISH_TYPES = new Set<QuestionType>([
   "short_text",
   "long_text",
-  "email",
-  "tel",
 ]);
 
 export function buildQuestions(
@@ -115,8 +113,6 @@ export function buildQuestions(
         return {
           label: o.label,
           value,
-          iconKey: o.iconKey || "",
-          iconUrl: o.iconUrl || undefined,
         };
       });
       return {
@@ -144,8 +140,6 @@ function buildQuestionConfig(q: EditorQuestion): Record<string, unknown> {
       };
     case "short_text":
     case "long_text":
-    case "email":
-    case "tel":
       return {
         ...(q.placeholder ? { placeholder: q.placeholder } : {}),
         ...(q.maxLength ? { maxLength: Number(q.maxLength) } : {}),
@@ -332,8 +326,6 @@ export function editorStateToPagesAndFields(
             .map((o, oidx) => ({
               label: o.label,
               value: o.value || toKey(o.label),
-              icon_key: o.iconKey || "",
-              icon_url: o.iconUrl || null,
               sort_order: oidx,
             }))
         : [],
@@ -435,16 +427,14 @@ function emptyEditorQuestion(pageId: string): EditorQuestion {
 }
 
 // Rückmapping field_type → QuestionType für Question-Page-Fields.
-// Seit Aufgabe 31 sind alle QuestionType-Werte 1:1 valide field_type-Werte.
-// `radio` + `plz` sind Submit-Page-only und fallen auf single_choice zurück.
+// `email`/`tel`/`radio`/`plz` sind Submit-Page-only (= ContactField-Types) und fallen auf single_choice/short_text zurück
+// falls sie versehentlich auf einer Question-Page liegen (Type-Cleanup Aufgabe 34).
 const VALID_QUESTION_TYPES: ReadonlySet<string> = new Set([
   "single_choice",
   "multi_choice",
   "short_text",
   "long_text",
   "slider",
-  "email",
-  "tel",
   "date",
   "number",
   "dropdown",
@@ -537,8 +527,6 @@ export function dbToEditorState(
         _id: uid(),
         label: typeof o.label === "string" ? o.label : "",
         value: typeof o.value === "string" ? o.value : "",
-        iconKey: typeof o.icon_key === "string" ? o.icon_key : "",
-        iconUrl: typeof o.icon_url === "string" ? o.icon_url : "",
       })),
       // Date
       dateMin: questionType === "date" && typeof cfg.min === "string" ? cfg.min : "",

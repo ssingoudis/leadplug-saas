@@ -107,10 +107,8 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
       config: f.config ?? {},
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       options: opts.map((o: Record<string, any>) => ({
-        label:   o.label,
-        value:   o.value,
-        iconKey: o.icon_key ?? '',
-        iconUrl: o.icon_url ?? undefined,
+        label: o.label,
+        value: o.value,
       })),
     }
   })

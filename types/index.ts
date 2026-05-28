@@ -18,8 +18,6 @@ export type QuestionType =
   | 'short_text'
   | 'long_text'
   | 'slider'
-  | 'email'
-  | 'tel'
   | 'date'
   | 'number'
   | 'dropdown'
@@ -28,8 +26,6 @@ export type QuestionType =
 export interface Option {
   label: string
   value: string
-  iconKey: string
-  iconUrl?: string
 }
 
 export interface TextConfig {
@@ -157,8 +153,6 @@ export interface EditorOption {
   _id: string       // temporäre React-Key-ID, wird nicht in DB gespeichert
   label: string
   value: string     // auto-slug aus label, stabil nach erster Erstellung
-  iconKey: string
-  iconUrl: string
 }
 
 export interface EditorQuestion {

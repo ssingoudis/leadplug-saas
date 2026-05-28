@@ -73,8 +73,8 @@ function defaultQuestion(type: QuestionType): EditorQuestion {
     sliderDefault: "",
     options: needsOptions
       ? [
-          { _id: makeId(), label: "Option A", value: "", iconKey: "", iconUrl: "" },
-          { _id: makeId(), label: "Option B", value: "", iconKey: "", iconUrl: "" },
+          { _id: makeId(), label: "Option A", value: "" },
+          { _id: makeId(), label: "Option B", value: "" },
         ]
       : [],
     dateMin: "",
@@ -274,8 +274,6 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
         _id: `opt_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
         label: "",
         value: "",
-        iconKey: "",
-        iconUrl: "",
       };
       next[qIdx] = { ...q, options: [...q.options, newOption] };
       return { ...prev, questions: next };

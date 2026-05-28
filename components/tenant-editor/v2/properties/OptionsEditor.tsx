@@ -55,7 +55,7 @@ export function OptionsEditor({ value, onChange }: Props) {
   function addOption() {
     onChange([
       ...value,
-      { _id: makeId(), label: "", value: "", iconKey: "", iconUrl: "" },
+      { _id: makeId(), label: "", value: "" },
     ]);
   }
 

@@ -45,10 +45,6 @@ function buildMockAnswers(questions: QuestionConfig[]): Record<string, string> {
       answers[q.id] = "Beispieltext";
     } else if (q.questionType === "long_text") {
       answers[q.id] = "Hier steht ein längerer Beispieltext für diese Frage.";
-    } else if (q.questionType === "email") {
-      answers[q.id] = "max@beispiel.de";
-    } else if (q.questionType === "tel") {
-      answers[q.id] = "+49 123 456789";
     } else if (q.questionType === "date") {
       answers[q.id] = new Date().toISOString().slice(0, 10);
     } else if (q.questionType === "number") {
