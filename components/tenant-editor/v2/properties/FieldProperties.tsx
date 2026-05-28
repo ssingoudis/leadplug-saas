@@ -41,14 +41,21 @@ function QuestionFieldProps({
   const isNumber = type === "number";
   const isDate = type === "date";
   const isCheckbox = type === "checkbox";
+  // Aufgabe 39: neue Element-Types
+  const isRating = type === "rating";
+  const isScale = type === "scale";
+  const isStatement = type === "statement";
 
   return (
     <div className="flex flex-col gap-3">
-      <Toggle
-        label="Pflichtfeld"
-        enabled={question.required !== false}
-        onToggle={(v) => onPatch({ required: v })}
-      />
+      {/* Aufgabe 39: Statement hat keinen Input → kein required-Toggle */}
+      {!isStatement && (
+        <Toggle
+          label="Pflichtfeld"
+          enabled={question.required !== false}
+          onToggle={(v) => onPatch({ required: v })}
+        />
+      )}
 
       {isText && (
         <>
@@ -146,6 +153,60 @@ function QuestionFieldProps({
             placeholder="z. B. Ja, ich stimme der Datenschutzerklärung zu"
           />
         </Field>
+      )}
+
+      {/* Aufgabe 39: Rating-Properties */}
+      {isRating && (
+        <Field label="Anzahl Sterne (1-10)">
+          <TextInput
+            value={question.ratingMaxStars ?? "5"}
+            onChange={(v) => onPatch({ ratingMaxStars: v })}
+            placeholder="5"
+          />
+        </Field>
+      )}
+
+      {/* Aufgabe 39: Scale-Properties */}
+      {isScale && (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Minimum">
+              <TextInput
+                value={question.scaleMin ?? "0"}
+                onChange={(v) => onPatch({ scaleMin: v })}
+                placeholder="0"
+              />
+            </Field>
+            <Field label="Maximum">
+              <TextInput
+                value={question.scaleMax ?? "10"}
+                onChange={(v) => onPatch({ scaleMax: v })}
+                placeholder="10"
+              />
+            </Field>
+          </div>
+          <Field label="Label links (optional)">
+            <TextInput
+              value={question.scaleLabelLeft ?? ""}
+              onChange={(v) => onPatch({ scaleLabelLeft: v })}
+              placeholder="z. B. Sehr unwahrscheinlich"
+            />
+          </Field>
+          <Field label="Label rechts (optional)">
+            <TextInput
+              value={question.scaleLabelRight ?? ""}
+              onChange={(v) => onPatch({ scaleLabelRight: v })}
+              placeholder="z. B. Sehr wahrscheinlich"
+            />
+          </Field>
+        </>
+      )}
+
+      {/* Aufgabe 39: Statement hat keine Field-spezifischen Properties — Title/Subtitle reichen */}
+      {isStatement && (
+        <p className="px-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+          Info-Block ohne Eingabe. Wird mit Titel + Untertitel angezeigt und per OK-Klick weitergeführt — keine Antwort wird gespeichert.
+        </p>
       )}
     </div>
   );

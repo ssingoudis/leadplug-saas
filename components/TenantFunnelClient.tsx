@@ -114,6 +114,7 @@ export function TenantFunnelClient({ config }: Props) {
       publicEmail={config.publicEmail}
       publicPhone={config.phone}
       skipSubmitStep={config.skipSubmitStep}
+      redirectUrl={config.redirectUrl}
       onSubmit={handleSubmit}
       onAnswersChange={handleAnswersChange}
     />

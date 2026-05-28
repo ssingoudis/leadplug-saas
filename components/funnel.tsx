@@ -225,6 +225,8 @@ interface FunnelProps {
   }) => void;
   // Aufgabe 35: wenn true, kein Submit-Schritt — Funnel feuert /api/submit direkt nach letzter Frage.
   skipSubmitStep?: boolean;
+  // Aufgabe 39: End-Screen-Redirect-Modus. Wenn gesetzt, Widget redirected nach Submit auf diese URL.
+  redirectUrl?: string;
 }
 
 export function Funnel({
@@ -250,6 +252,7 @@ export function Funnel({
   onAnswersChange,
   onSubmit,
   skipSubmitStep = false,
+  redirectUrl,
 }: FunnelProps) {
 
   // Editor-Preview-Highlight (Standard): outline AUSSERHALB des Elements (offset +3px).
@@ -370,8 +373,11 @@ export function Funnel({
 
   // Aufgabe 38: Custom-Multi-Field-Page (kind="custom") wird wie ein Multi-Field-Step behandelt.
   const isCustomStep     = !isContactStep && currentQuestion?.kind === "custom";
-  // single_choice auto-advances on click; all other types (incl. custom) need an explicit Weiter button.
-  const isChoiceType     = !isContactStep && !isCustomStep && currentQuestion?.questionType === "single_choice";
+  // Aufgabe 39: Welcome-Page = Intro mit Button, Statement = Info ohne Input.
+  const isWelcomeStep    = !isContactStep && currentQuestion?.kind === "welcome";
+  const isStatementStep  = !isContactStep && currentQuestion?.questionType === "statement";
+  // single_choice auto-advances on click; all other types (incl. custom/welcome/rating/scale/statement) need an explicit Weiter button.
+  const isChoiceType     = !isContactStep && !isCustomStep && !isWelcomeStep && currentQuestion?.questionType === "single_choice";
   const showWeiterButton = !isContactStep && !isChoiceType;
 
   const currentAnswer      = currentQuestion ? (answers[currentQuestion.id] ?? "") : "";
@@ -392,15 +398,23 @@ export function Funnel({
   //   - slider hat immer default → nie disabled
   //   - checkbox: required heißt "muss aktiviert sein" → value === "true"
   //   - custom: alle required Fields müssen valide sein
+  //   - welcome + statement: nie disabled (Button-Klick advances ohne Input)
+  //   - rating + scale: nur required wenn config.required !== false; Wert > 0 bzw. nicht leer
+  const ratingScaleConfig = (currentQuestion?.config as { required?: boolean }) ?? {};
   const isWeiterDisabled =
     showWeiterButton &&
+    !isWelcomeStep && !isStatementStep &&
     (isCustomStep
       ? !isCustomStepValid
-      : currentQuestion?.questionType !== "slider" &&
-        isQuestionRequired &&
-        (currentQuestion?.questionType === "checkbox"
-          ? currentAnswer !== "true"
-          : !currentAnswer.trim()));
+      : currentQuestion?.questionType === "rating"
+        ? ratingScaleConfig.required !== false && !currentAnswer.trim()
+        : currentQuestion?.questionType === "scale"
+          ? ratingScaleConfig.required !== false && !currentAnswer.trim()
+          : currentQuestion?.questionType !== "slider" &&
+            isQuestionRequired &&
+            (currentQuestion?.questionType === "checkbox"
+              ? currentAnswer !== "true"
+              : !currentAnswer.trim()));
 
   // Slider config and current value — null when the current question is not a slider.
   const sliderConfig =
@@ -538,6 +552,28 @@ export function Funnel({
     setIsSubmitted(true);
     onSubmit?.({ answers, contact: contactData, honeypot });
   };
+
+  // Aufgabe 39: End-Screen-Redirect-Modus. Wenn redirectUrl gesetzt UND wir gerade
+  // submitted haben → kurze Success-Anzeige (~1500ms damit Tracking-Pixel feuern können),
+  // dann window.location.replace. Im editMode/onFieldClick-Mode (Builder-Preview) NICHT
+  // redirecten, sonst springt der Editor weg.
+  useEffect(() => {
+    if (!isSubmitted) return;
+    if (editMode || onFieldClick) return;
+    if (!redirectUrl) return;
+    const trimmed = redirectUrl.trim();
+    if (!trimmed) return;
+    const target = trimmed.startsWith("http") ? trimmed : `https://${trimmed}`;
+    const timer = window.setTimeout(() => {
+      try {
+        window.location.replace(target);
+      } catch {
+        // Notfall: window.location.href fallback
+        window.location.href = target;
+      }
+    }, 1500);
+    return () => window.clearTimeout(timer);
+  }, [isSubmitted, redirectUrl, editMode, onFieldClick]);
 
   // ---------------------------------------------------------------------------
   // Effects
@@ -772,31 +808,32 @@ export function Funnel({
             -------------------------------------------------------------- */}
             {!isContactStep ? (
               <div>
-                {/* Solo-Zurück + Step-Counter als optisches Paar — selbe Design-Language wie der Bottom-Back-Button,
-                    nur Icon-only Quadrat (kein Text), neben dem Step-Counter-Chip. Visuelle Konsistenz statt Text-Link. */}
-                <div className="mb-3 flex items-center gap-2 font-mono text-xs" style={{ color: theme.primaryColor }}>
-                  {!editMode && !showWeiterButton && currentStep > 0 && (
-                    <button
-                      type="button"
-                      onClick={handleBack}
-                      aria-label="Zurück"
-                      title="Zurück"
-                      className="inline-flex h-5 w-5 items-center justify-center transition-colors"
-                      style={{
-                        backgroundColor: theme.tintColor,
-                        color: theme.primaryColor,
-                        borderRadius: theme.borderRadius,
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.tintColorHover; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = theme.tintColor; }}
-                    >
-                      <ChevronLeft size={11} strokeWidth={2.5} />
-                    </button>
-                  )}
-                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded px-1.5 text-[11px] font-semibold" style={{ backgroundColor: theme.primaryColor, color: "#ffffff" }}>
-                    {currentStep + 1}
-                  </span>
-                </div>
+                {/* Aufgabe 39: Welcome-Step hat keinen Step-Counter (Intro-Step vor dem eigentlichen Flow) */}
+                {!isWelcomeStep && (
+                  <div className="mb-3 flex items-center gap-2 font-mono text-xs" style={{ color: theme.primaryColor }}>
+                    {!editMode && !showWeiterButton && currentStep > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleBack}
+                        aria-label="Zurück"
+                        title="Zurück"
+                        className="inline-flex h-5 w-5 items-center justify-center transition-colors"
+                        style={{
+                          backgroundColor: theme.tintColor,
+                          color: theme.primaryColor,
+                          borderRadius: theme.borderRadius,
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.tintColorHover; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = theme.tintColor; }}
+                      >
+                        <ChevronLeft size={11} strokeWidth={2.5} />
+                      </button>
+                    )}
+                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded px-1.5 text-[11px] font-semibold" style={{ backgroundColor: theme.primaryColor, color: "#ffffff" }}>
+                      {currentStep + 1}
+                    </span>
+                  </div>
+                )}
 
                 <div className="mb-6 @lg:mb-8">
                   <EditableText
@@ -1250,6 +1287,48 @@ export function Funnel({
                   </div>
                 )}
 
+                {/* Aufgabe 39: rating — 1-N Sterne mit Hover-Preview, Click setzt Antwort */}
+                {currentQuestion.questionType === "rating" && (() => {
+                  const cfg = currentQuestion.config as { maxStars?: number };
+                  const maxStars = Math.max(1, Math.min(10, cfg.maxStars ?? 5));
+                  const currentVal = Number(answers[currentQuestion.id]) || 0;
+                  return (
+                    <RatingStars
+                      maxStars={maxStars}
+                      value={currentVal}
+                      onChange={(v) => setAnswers((prev) => ({ ...prev, [currentQuestion.id]: String(v) }))}
+                      primaryColor={theme.primaryColor}
+                      mutedColor={theme.textColorMuted}
+                    />
+                  );
+                })()}
+
+                {/* Aufgabe 39: scale — 0-N Buttons in a row (NPS-Style) mit optionalen Labels links/rechts */}
+                {currentQuestion.questionType === "scale" && (() => {
+                  const cfg = currentQuestion.config as { min?: number; max?: number; labelLeft?: string; labelRight?: string };
+                  const min = cfg.min ?? 0;
+                  const max = cfg.max ?? 10;
+                  const currentVal = answers[currentQuestion.id] ?? "";
+                  return (
+                    <ScaleButtons
+                      min={min}
+                      max={max}
+                      value={currentVal}
+                      onChange={(v) => setAnswers((prev) => ({ ...prev, [currentQuestion.id]: v }))}
+                      labelLeft={cfg.labelLeft}
+                      labelRight={cfg.labelRight}
+                      primaryColor={theme.primaryColor}
+                      tintColor={theme.tintColor}
+                      tintColorHover={theme.tintColorHover}
+                      textColor={theme.textColor}
+                      mutedColor={theme.textColorMuted}
+                      borderRadius={theme.borderRadius}
+                    />
+                  );
+                })()}
+
+                {/* Aufgabe 39: statement — Info-Block ohne Input. Render = nichts (Title + Subtitle reichen). */}
+
                 {/* checkbox — Single-Boolean (z.B. DSGVO/Newsletter), Typeform-Light-Style */}
                 {currentQuestion.questionType === "checkbox" && (() => {
                   const cbCfg = currentQuestion.config as CheckboxConfig;
@@ -1505,7 +1584,9 @@ export function Funnel({
                   onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.backgroundColor = theme.primaryColorHover; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = theme.primaryColor; }}
                 >
-                  {skipSubmitStep && isLastQuestion ? "Absenden" : "OK"}
+                  {isWelcomeStep
+                    ? (currentQuestion?.config as { buttonLabel?: string })?.buttonLabel || "Los geht's →"
+                    : skipSubmitStep && isLastQuestion ? "Absenden" : "OK"}
                 </button>
               </div>
             )}
@@ -1553,6 +1634,130 @@ function BackButton({
     >
       <ChevronLeft size={16} strokeWidth={2.5} />
     </button>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Aufgabe 39: RatingStars — 1-N Sterne mit Hover-Preview (Typeform/Tally-Style).
+   Klick setzt Wert. Hover füllt bis zur gehoverten Position. Wert als String "1"..."N".
+   ────────────────────────────────────────────────────────────────────────────── */
+
+function RatingStars({
+  maxStars,
+  value,
+  onChange,
+  primaryColor,
+  mutedColor,
+}: {
+  maxStars: number;
+  value: number;
+  onChange: (v: number) => void;
+  primaryColor: string;
+  mutedColor: string;
+}) {
+  const [hovered, setHovered] = useState<number | null>(null);
+  const display = hovered ?? value;
+  return (
+    <div
+      className="mb-3 flex items-center gap-1 @md:gap-1.5"
+      onMouseLeave={() => setHovered(null)}
+    >
+      {Array.from({ length: maxStars }, (_, i) => i + 1).map((n) => {
+        const filled = n <= display;
+        return (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onChange(n)}
+            onMouseEnter={() => setHovered(n)}
+            aria-label={`${n} von ${maxStars} Sternen`}
+            className="inline-flex h-10 w-10 @md:h-12 @md:w-12 items-center justify-center transition-colors"
+            style={{ color: filled ? primaryColor : mutedColor, opacity: filled ? 1 : 0.4 }}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill={filled ? "currentColor" : "none"}
+              stroke="currentColor"
+              strokeWidth={1.5}
+              className="h-7 w-7 @md:h-9 @md:w-9"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+            </svg>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Aufgabe 39: ScaleButtons — 0-N Buttons in einer Reihe (NPS-Style).
+   Aktiver Button = full Brand. Optionale Labels links/rechts unter den Buttons.
+   ────────────────────────────────────────────────────────────────────────────── */
+
+function ScaleButtons({
+  min,
+  max,
+  value,
+  onChange,
+  labelLeft,
+  labelRight,
+  primaryColor,
+  tintColor,
+  tintColorHover,
+  textColor,
+  mutedColor,
+  borderRadius,
+}: {
+  min: number;
+  max: number;
+  value: string;
+  onChange: (v: string) => void;
+  labelLeft?: string;
+  labelRight?: string;
+  primaryColor: string;
+  tintColor: string;
+  tintColorHover: string;
+  textColor: string;
+  mutedColor: string;
+  borderRadius: string;
+}) {
+  const range = Array.from({ length: Math.max(0, max - min + 1) }, (_, i) => min + i);
+  return (
+    <div className="mb-3">
+      <div className="flex flex-wrap items-center gap-1.5 @md:gap-2">
+        {range.map((n) => {
+          const active = String(n) === value;
+          return (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onChange(String(n))}
+              className="inline-flex h-10 min-w-10 @md:h-12 @md:min-w-12 items-center justify-center px-2 text-sm @md:text-base font-medium transition-colors"
+              style={{
+                backgroundColor: active ? primaryColor : tintColor,
+                color: active ? "#ffffff" : textColor,
+                borderRadius,
+              }}
+              onMouseEnter={(e) => {
+                if (!active) e.currentTarget.style.backgroundColor = tintColorHover;
+              }}
+              onMouseLeave={(e) => {
+                if (!active) e.currentTarget.style.backgroundColor = tintColor;
+              }}
+            >
+              {n}
+            </button>
+          );
+        })}
+      </div>
+      {(labelLeft || labelRight) && (
+        <div className="mt-2 flex items-baseline justify-between text-xs @md:text-sm font-light" style={{ color: mutedColor }}>
+          <span>{labelLeft}</span>
+          <span>{labelRight}</span>
+        </div>
+      )}
+    </div>
   );
 }
 

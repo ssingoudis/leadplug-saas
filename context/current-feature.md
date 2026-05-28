@@ -128,6 +128,58 @@ Total bis Launch: ~9-13 Tage Engineering + Stripe-Setup.
 
 ## History
 
+- **Aufgabe 39 — Page+Elements-Erweiterung: Welcome + Rating/Scale/Statement + End-Screen-Redirect + Builder-Cleanup ✅ (2026-05-28)**
+
+  Strukturell-feature-getriebene Erweiterung im Polish-Loop. Stavros' Vision: Builder muss mehr Element-Types haben (besonders Rating/Scale für Lead-Quali-Karten), Welcome- und End-Screens sollen erstklassige Konzepte sein. Außerdem gestrichene Vorlagen-Section (Stavros: „die sind imo schrott") + Custom-Karte als primäre Action prominent.
+
+  **Drei strategische Pfade in einem Sprint:**
+
+  1. **Neue Element-Types:** `rating` (1-N Sterne mit Hover-Preview), `scale` (0-N Buttons NPS-Style mit optionalen left/right Labels), `statement` (Info-Block ohne Input). Statt vollständigem Page+Elements-Refactor (~3 Tage) pragmatisch in QuestionType-Union ergänzt — ~80% Code-Reuse von slider/number-Pattern.
+  2. **Welcome-Screen** als neue `kind="welcome"` Variante + neue `page_type='welcome'`. Eigene Pill-Farbe (indigo). Renders: kein Step-Counter, eigener Button-Label (z.B. „Los geht's →"), Click → handleNext.
+  3. **End-Screen-Redirect-Modus:** `funnels.redirect_url text NULL`. Wenn gesetzt → Widget zeigt Success-Page 1.5s an (für Tracking-Pixel) + window.location.replace(url). Toggle im Success-Page-PropertiesPanel.
+
+  **Schema-Migration `aufgabe_39_page_elements` (additive):**
+  - `ALTER TYPE page_type ADD VALUE 'welcome'`
+  - `ALTER TYPE field_type ADD VALUE 'rating' | 'scale' | 'statement'`
+  - `ALTER TABLE funnels ADD COLUMN redirect_url text NULL`
+  - PG erlaubt kein DROP VALUE — DOWN-File dokumentiert manuellen Recovery-Pfad
+
+  **Editor-Cleanup (Stavros-Forderungen):**
+  - **Vorlagen-Section komplett raus** aus AddElementModal — „Kontakt/Adresse/Ja-Nein"-Vorlagen waren Schrott (Custom-Pages erfüllen denselben Zweck flexibler)
+  - **Custom-Karte als prominentes Top-Element** im AddElementModal (statt unten als Section-Item)
+  - **Adresse-Quick-Card** als neuer Top-Button → erzeugt Custom-Page vorausgefüllt mit Straße/Hausnr/PLZ/Ort
+  - **Welcome-Screen-Button** als 3. Top-Card-Option
+  - **Auto-Advance bleibt nur single_choice** (Rating/Scale/Statement haben OK-Button, Welcome hat Custom-Button-Label)
+
+  **Files:**
+  - Migration `aufgabe_39_page_elements.sql` (lokal + Production via mcp__supabase__apply_migration)
+  - `types/index.ts`: 3 neue QuestionType-Werte, RatingConfig + ScaleConfig + StatementConfig + WelcomeConfig, EditorQuestion erweitert um ratingMaxStars/scaleMin/scaleMax/scaleLabelLeft/scaleLabelRight/welcomeButtonLabel + kind="welcome", EditorState.redirectUrl, TenantConfig.redirectUrl
+  - `lib/editorUtils.ts`: page_type "welcome" in beide Mapping-Pfade, neue field_type-configs in buildQuestionConfig (rating/scale/statement), dbToEditorState liest config-Werte zurück, buildQuestions reicht kind="welcome" durch, VALID_QUESTION_TYPES erweitert, editorStateToFunnelRow schreibt redirect_url
+  - `lib/getTenantConfig.ts`: page_type "welcome" im Filter + Render, redirect_url im SELECT + Mapping, VALID_QUESTION_TYPES für neue Types
+  - `components/funnel.tsx`: isWelcomeStep + isStatementStep + isCustomStep-Branching, neue render-Blocks für rating + scale (eigene RatingStars + ScaleButtons Helper-Components), Welcome rendert ohne Step-Counter, OK-Button-Label berücksichtigt kind="welcome" + welcomeButtonLabel, useEffect für End-Screen-Redirect nach Submit (1.5s delay), redirectUrl als neuer Prop
+  - `components/TenantFunnelClient.tsx`: redirectUrl-Prop durchreichen
+  - `components/tenant-editor/defaults.ts`: makeDefaultWelcomePage + makeAddressCustomPage + Default redirectUrl
+  - `components/tenant-editor/v2/fieldMeta.ts`: QUESTION_META erweitert um rating/scale/statement (yellow + gray pills), WELCOME_META export (indigo)
+  - `components/tenant-editor/v2/AddElementModal.tsx`: komplett refactored — Vorlagen weg, neue Top-Section mit 3 Karten (Custom/Adresse/Welcome), Einzelne-Felder-Grid mit den neuen Types automatisch über QUESTION_TYPE_OPTIONS
+  - `components/tenant-editor/v2/StepList.tsx`: kind-basierte Meta-Selection (welcome → WELCOME_META), onAddAddressCard + onAddWelcome Props
+  - `components/tenant-editor/v2/EditorShellV2.tsx`: handleAddVorlage entfernt, handleAddAddressCard + handleAddWelcome hinzu, Imports + Wiring
+  - `components/tenant-editor/v2/PropertiesPanel.tsx`: neue WelcomeProps-Section (kind="welcome"), SuccessProps erweitert um Redirect-Mode-Toggle + URL-Input
+  - `components/tenant-editor/v2/properties/FieldProperties.tsx`: neue Properties-Blocks für rating (max stars) + scale (min/max/labels) + statement (Hinweistext), required-Toggle für statement ausgeblendet
+
+  **Wie testen:**
+  1. Editor → „Frage hinzufügen" → neues Modal: 3 Karten oben (Custom / Adresse / Welcome), unten Einzelne Felder (jetzt mit Sterne-Rating / Skala / Info-Block dabei)
+  2. Welcome-Screen anlegen → Title/Subtitle/Button-Label im Right-Panel anpassen → „Funnel testen" → Welcome ist erster Step ohne Step-Counter
+  3. Rating-Frage anlegen → Properties: Anzahl Sterne anpassen → „Funnel testen" → Hover über Sterne zeigt Preview, Click setzt Wert
+  4. Skala-Frage anlegen → min/max/Labels anpassen → Test → NPS-Style Buttons mit Labels darunter
+  5. Adresse-Quick-Card → Custom-Page mit 4 Adress-Feldern direkt vorbefüllt
+  6. End-Screen-Redirect: Erfolgsseite wählen → Toggle „Nach Submit auf URL weiterleiten" → URL eintragen → Test → nach Submit zeigt Success-Page 1.5s + redirect
+
+  **Bewusst NICHT in Aufgabe 39:**
+  - Vollumbau zu Page+Elements-Model (Pages enthalten N beliebige Elements aller Typen) — pragmatisch über kind-Diskriminator gelöst statt Schema-Reset
+  - Image-Element (braucht Storage-Bucket-Setup, Stavros hatte Logo abgelehnt — defer)
+  - Page+Elements-Tree-Editor (Stavros hat das selbst als „später" markiert)
+  - WYSIWYG-Inline-Edit war schon da (EditableText im Widget greift via fieldRef auf state.questions[i].title — funktioniert für alle kinds)
+
 - **Aufgabe 38 — Custom Multi-Field-Pages (Karten mit beliebig vielen Feldern, überall platzierbar) ✅ (2026-05-28)**
 
   Strukturelle Erweiterung mitten im Polish-Loop. Stavros hat erkannt: die Submit-Page ist im Kern eine Multi-Field-Karte mit Titel + N hide/show-baren Feldern + Validation pro Field-Typ — wir verstecken das Pattern nur künstlich am Ende. Lösung: generische „Custom Multi-Field Page" als 3. Page-Type, überall im Funnel platzierbar.

@@ -4,31 +4,37 @@ import { useEffect } from "react";
 import { X } from "lucide-react";
 import type { QuestionType } from "@/types";
 import { questionMeta, QUESTION_TYPE_OPTIONS, CUSTOM_META } from "./fieldMeta";
-import { VORLAGEN, type Vorlage } from "./vorlagen";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   /** Einzel-Feld: legt eine question-Page mit genau diesem Type an. */
   onSelectType: (type: QuestionType) => void;
-  /** Vorlage: legt mehrere question-Pages auf einmal an. */
-  onSelectVorlage: (vorlage: Vorlage) => void;
-  /** Aufgabe 38: Karte mit mehreren Feldern (Multi-Field Custom-Page). */
+  /** Aufgabe 38: Karte mit mehreren Feldern (Multi-Field Custom-Page) — Default-Karte mit Name+Email. */
   onSelectCustomPage: () => void;
+  /** Aufgabe 39: Adresse-Quick-Card (Multi-Field Custom-Page vorausgefüllt mit Straße/Hausnr/PLZ/Ort). */
+  onSelectAddressCard: () => void;
+  /** Aufgabe 39: Welcome-Screen (Intro-Step am Anfang). */
+  onSelectWelcome: () => void;
 }
 
 /**
- * Kategorien-Gruppierung für das Grid — Reihenfolge orientiert sich am FormFlow-Vorbild
- * (Text → Auswahl → Numerisch). Werte stammen aus QUESTION_TYPE_OPTIONS,
- * Gruppierung per category-Field aus fieldMeta.
+ * Kategorien-Gruppierung für das Einzelfeld-Grid. Aufgabe 39 fügt eine "Bewertung"-Sektion hinzu.
  */
 const GROUPS: { key: string; label: string; categories: string[] }[] = [
-  { key: "text", label: "Text-Eingabe", categories: ["text"] },
+  { key: "text", label: "Text & Info", categories: ["text"] },
   { key: "choice", label: "Auswahl", categories: ["choice", "dropdown"] },
   { key: "numeric", label: "Numerisch & Datum", categories: ["numeric"] },
 ];
 
-export function AddElementModal({ open, onClose, onSelectType, onSelectVorlage, onSelectCustomPage }: Props) {
+export function AddElementModal({
+  open,
+  onClose,
+  onSelectType,
+  onSelectCustomPage,
+  onSelectAddressCard,
+  onSelectWelcome,
+}: Props) {
   // ESC schließt das Modal.
   useEffect(() => {
     if (!open) return;
@@ -56,7 +62,7 @@ export function AddElementModal({ open, onClose, onSelectType, onSelectVorlage, 
               Neue Seite
             </span>
             <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
-              Welchen Fragetyp möchtest du hinzufügen?
+              Was möchtest du hinzufügen?
             </h2>
           </div>
           <button
@@ -70,85 +76,70 @@ export function AddElementModal({ open, onClose, onSelectType, onSelectVorlage, 
         </header>
 
         <div className="max-h-[70vh] overflow-y-auto p-5">
-          {/* Aufgabe 38: Karte mit mehreren Feldern — eigene Top-Section, klar abgegrenzt */}
+          {/* Aufgabe 39: Karten + Quick-Shortcuts (Adresse, Welcome) — prominent oben */}
           <div className="mb-6">
-            <div className="mb-2 flex items-baseline justify-between">
-              <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                Karte mit mehreren Feldern
-              </h3>
-              <span className="text-[10px] text-gray-400 dark:text-gray-500">
-                Mehrere Felder auf einer Seite — wie das Kontaktformular am Ende
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                onSelectCustomPage();
-                onClose();
-              }}
-              className="group flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 text-left transition-all hover:border-primary hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:hover:border-primary"
-            >
-              <span
-                className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-base ${CUSTOM_META.pillClass}`}
+            <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              Karten & Quick-Adds
+            </h3>
+            <div className="grid grid-cols-1 gap-2 @md:grid-cols-2">
+              {/* Custom-Karte */}
+              <button
+                type="button"
+                onClick={() => { onSelectCustomPage(); onClose(); }}
+                className="group flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 text-left transition-all hover:border-primary hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:hover:border-primary"
               >
-                {CUSTOM_META.icon}
-              </span>
-              <div className="flex min-w-0 flex-1 flex-col">
-                <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                  Custom-Karte hinzufügen
+                <span className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-base ${CUSTOM_META.pillClass}`}>
+                  {CUSTOM_META.icon}
                 </span>
-                <span className="text-[11px] leading-snug text-gray-500 dark:text-gray-400">
-                  Eigene Überschrift + beliebig viele Felder (Name, E-Mail, Telefon, PLZ, …) mit Validation.
-                </span>
-              </div>
-            </button>
-          </div>
-
-          {/* Vorlagen-Sektion */}
-          <div className="mb-6">
-            <div className="mb-2 flex items-baseline justify-between">
-              <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                Vorlagen
-              </h3>
-              <span className="text-[10px] text-gray-400 dark:text-gray-500">
-                Fertige Sets — fügen mehrere Schritte auf einmal hinzu
-              </span>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {VORLAGEN.map((v) => (
-                <button
-                  key={v.key}
-                  type="button"
-                  onClick={() => {
-                    onSelectVorlage(v);
-                    onClose();
-                  }}
-                  className="group flex flex-col items-start gap-1.5 rounded-xl border border-gray-200 bg-white p-3 text-left transition-all hover:border-primary hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:hover:border-primary"
-                >
-                  <span
-                    className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-base ${v.pillClass}`}
-                  >
-                    {v.icon}
-                  </span>
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white">{v.label}</span>
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">Eigene Karte</span>
                   <span className="text-[11px] leading-snug text-gray-500 dark:text-gray-400">
-                    {v.description}
+                    Mehrere Felder auf einer Seite. Start mit Name + E-Mail.
                   </span>
-                </button>
-              ))}
+                </div>
+              </button>
+
+              {/* Adresse-Quick-Card */}
+              <button
+                type="button"
+                onClick={() => { onSelectAddressCard(); onClose(); }}
+                className="group flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 text-left transition-all hover:border-primary hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:hover:border-primary"
+              >
+                <span className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-base ${CUSTOM_META.pillClass}`}>
+                  ⌖
+                </span>
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">Adresse</span>
+                  <span className="text-[11px] leading-snug text-gray-500 dark:text-gray-400">
+                    Karte mit Straße + Hausnr + PLZ + Ort.
+                  </span>
+                </div>
+              </button>
+
+              {/* Welcome-Screen */}
+              <button
+                type="button"
+                onClick={() => { onSelectWelcome(); onClose(); }}
+                className="group flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 text-left transition-all hover:border-primary hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:hover:border-primary"
+              >
+                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-indigo-100 text-indigo-700 border-indigo-200 text-base dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800">
+                  ▷
+                </span>
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">Welcome-Screen</span>
+                  <span className="text-[11px] leading-snug text-gray-500 dark:text-gray-400">
+                    Intro-Step am Anfang mit Titel + Button.
+                  </span>
+                </div>
+              </button>
             </div>
           </div>
 
           {/* Einzelne Felder */}
           <div className="border-t border-gray-200 pt-4 dark:border-gray-800">
-            <div className="mb-2 flex items-baseline justify-between">
-              <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                Einzelne Felder
-              </h3>
-              <span className="text-[10px] text-gray-400 dark:text-gray-500">
-                Eigene Frage — ein Schritt mit einem Feld
-              </span>
-            </div>
+            <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              Einzelne Felder
+            </h3>
 
             {GROUPS.map((group) => {
               const items = QUESTION_TYPE_OPTIONS.filter((opt) =>
@@ -160,22 +151,17 @@ export function AddElementModal({ open, onClose, onSelectType, onSelectVorlage, 
                   <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
                     {group.label}
                   </h4>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2 @md:grid-cols-3">
                     {items.map((opt) => {
                       const meta = questionMeta(opt.value);
                       return (
                         <button
                           key={opt.value}
                           type="button"
-                          onClick={() => {
-                            onSelectType(opt.value);
-                            onClose();
-                          }}
+                          onClick={() => { onSelectType(opt.value); onClose(); }}
                           className="group flex items-center gap-2.5 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-left transition-all hover:border-primary hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:hover:border-primary"
                         >
-                          <span
-                            className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-sm font-bold ${meta.pillClass}`}
-                          >
+                          <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-sm font-bold ${meta.pillClass}`}>
                             {meta.icon}
                           </span>
                           <span className="truncate text-sm font-medium text-gray-800 dark:text-gray-200 group-hover:text-gray-900 dark:group-hover:text-white">
