@@ -2,17 +2,13 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import { dbToEditorState, type DbPageRow, type DbFieldRow } from "@/lib/editorUtils";
 import FunnelEditorClient from "./FunnelEditorClient";
-import FunnelEditorClientV2 from "./FunnelEditorClientV2";
 
 interface Props {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ v?: string }>;
 }
 
-export default async function EditFunnelPage({ params, searchParams }: Props) {
+export default async function EditFunnelPage({ params }: Props) {
   const { slug } = await params;
-  const { v } = await searchParams;
-  const useV2 = v === "2";
 
   const supabase = await createClient();
   const {
@@ -51,16 +47,6 @@ export default async function EditFunnelPage({ params, searchParams }: Props) {
     : { data: [] as DbFieldRow[] };
 
   const initialState = dbToEditorState(funnelRow, (pageRows ?? []) as DbPageRow[], (fieldRows ?? []) as DbFieldRow[]);
-
-  if (useV2) {
-    return (
-      <FunnelEditorClientV2
-        initialState={initialState}
-        originalSlug={slug}
-        companyName={tenant.company_name ?? ""}
-      />
-    );
-  }
 
   return (
     <FunnelEditorClient

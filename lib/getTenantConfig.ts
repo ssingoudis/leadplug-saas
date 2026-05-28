@@ -167,6 +167,7 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
     billingPrice: tenant.billing_price != null ? Number(tenant.billing_price) : undefined,
     contactFields,
     questions,
+    skipSubmitStep: row.skip_submit_step ?? false,
   }
 }
 
@@ -197,6 +198,7 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
       privacy_text, answers_overview_label, footer_text,
       footer_company_name, footer_email, footer_phone,
       email_sender_local, notification_email,
+      skip_submit_step,
       primary_color, text_color, background_color, page_background_color,
       font, border_radius, max_width,
       tenants!funnels_tenant_id_fkey (

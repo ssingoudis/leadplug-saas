@@ -210,6 +210,7 @@ export function editorStateToFunnelRow(
     border_radius: state.borderRadius || null,
     max_width: state.maxWidth || null,
     is_active: state.isActive,
+    skip_submit_step: state.skipSubmitStep,
   };
 }
 
@@ -584,6 +585,7 @@ export function dbToEditorState(
     notificationEmail: funnelRow.notification_email ?? "",
     emailSenderLocal: funnelRow.email_sender_local ?? "",
     isActive: funnelRow.is_active ?? true,
+    skipSubmitStep: funnelRow.skip_submit_step ?? false,
     questions,
     contactFields,
   };

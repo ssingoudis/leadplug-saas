@@ -17,10 +17,12 @@ async function getKontakteData(): Promise<{ leads: LeadRow[]; funnels: FunnelOpt
   if (!tenant) return { leads: [], funnels: [] }
 
   const [{ data: submissions }, { data: funnels }] = await Promise.all([
+    // Kontakte-Übersicht zeigt nur abgeschlossene Submissions (Abbrecher sind in Lead-Inbox).
     supabase
       .from('submissions')
       .select('id, contact, funnel_slug, created_at')
       .eq('tenant_id', tenant.id)
+      .not('completed_at', 'is', null)
       .order('created_at', { ascending: false }),
     supabase
       .from('funnels')

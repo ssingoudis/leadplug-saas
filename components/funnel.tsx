@@ -223,6 +223,8 @@ interface FunnelProps {
     contact: Record<string, string>;
     honeypot: string;
   }) => void;
+  // Aufgabe 35: wenn true, kein Submit-Schritt — Funnel feuert /api/submit direkt nach letzter Frage.
+  skipSubmitStep?: boolean;
 }
 
 export function Funnel({
@@ -247,6 +249,7 @@ export function Funnel({
   onDeleteOption,
   onAnswersChange,
   onSubmit,
+  skipSubmitStep = false,
 }: FunnelProps) {
 
   // Editor-Preview-Highlight (Standard): outline AUSSERHALB des Elements (offset +3px).
@@ -345,10 +348,12 @@ export function Funnel({
   // Derived state
   // ---------------------------------------------------------------------------
 
-  const totalSteps      = visibleQuestions.length + 1; // +1 for the contact form
-  const isContactStep   = currentStep === visibleQuestions.length;
-  const progress        = ((currentStep + 1) / totalSteps) * 100;
+  // Aufgabe 35: im Skip-Mode entfällt der Kontakt-Step — totalSteps = nur Fragen.
+  const totalSteps      = visibleQuestions.length + (skipSubmitStep ? 0 : 1);
+  const isContactStep   = !skipSubmitStep && currentStep === visibleQuestions.length;
+  const progress        = ((currentStep + 1) / Math.max(totalSteps, 1)) * 100;
   const currentQuestion = visibleQuestions[currentStep];
+  const isLastQuestion  = currentStep === visibleQuestions.length - 1;
 
   // Alle sichtbaren Pflichtfelder müssen einen gültigen Wert haben.
   const isValid = visibleContactFields
@@ -411,21 +416,41 @@ export function Funnel({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onReorderOptions, currentQuestion]);
 
+  // Aufgabe 35: Auto-Finish im Skip-Mode. Wird sowohl vom Auto-Advance (Single-Choice)
+  // als auch vom Weiter-Button am Ende der letzten Frage gerufen.
+  // Verwendet Funktional-Update via Ref auf das letzte Answer-Snapshot, damit der gerade
+  // gesetzte Wert nicht durch eine async setState-Race verloren geht.
+  const autoFinish = useCallback(
+    (extraAnswer?: { questionId: string; value: string }) => {
+      const finalAnswers = extraAnswer
+        ? { ...answers, [extraAnswer.questionId]: extraAnswer.value }
+        : answers;
+      setIsSubmitted(true);
+      onSubmit?.({ answers: finalAnswers, contact: contactData, honeypot });
+    },
+    [answers, contactData, honeypot, onSubmit],
+  );
+
   // Single-choice: sets answer, then advances after 250ms so the selected color
   // is briefly visible before the step transition fires (Typeform-Pattern).
   // C.1c: editMode short-circuit — Builder-Klick auf Option soll selektieren/editieren, nicht advancen.
+  // Aufgabe 35: im Skip-Mode + letzter Frage feuert direkt /api/submit + zeigt Success.
   const handleSelect = useCallback(
     (questionId: string, value: string) => {
       if (editMode) return;
       setAnswers((prev) => ({ ...prev, [questionId]: value }));
       setTimeout(() => {
+        if (skipSubmitStep && isLastQuestion) {
+          autoFinish({ questionId, value });
+          return;
+        }
         if (currentStep < visibleQuestions.length) {
           setSlideDirection(1);
           setCurrentStep((prev) => prev + 1);
         }
       }, 250);
     },
-    [currentStep, visibleQuestions.length, editMode],
+    [currentStep, visibleQuestions.length, editMode, skipSubmitStep, isLastQuestion, autoFinish],
   );
 
   // Goes back one step. The zurück button is disabled at step 0.
@@ -438,11 +463,16 @@ export function Funnel({
   };
 
   // Advances to the next step. Used by the Weiter button on non-choice question types.
+  // Aufgabe 35: im Skip-Mode + letzter Frage Auto-Finish statt Step-Advance.
   const handleNext = useCallback(() => {
     if (editMode) return;
+    if (skipSubmitStep && isLastQuestion) {
+      autoFinish();
+      return;
+    }
     setSlideDirection(1);
     setCurrentStep((prev) => prev + 1);
-  }, [editMode]);
+  }, [editMode, skipSubmitStep, isLastQuestion, autoFinish]);
 
   // Multiple-choice: toggles `value` in/out of the comma-separated answer string for `questionId`.
   const handleToggleMultiple = useCallback(
@@ -700,7 +730,10 @@ export function Funnel({
             style={{ width: `${progress}%`, backgroundColor: theme.primaryColor }}
           />
         </div>
-        <div className="p-4 @md:p-8 @md:pb-20 overflow-hidden">
+        {/* Aufgabe 37: pb-20 immer (nicht erst @md), sonst überlappt die Floating-Nav den Content auf
+            schmalen Live-iFrames. Container-Query @md greift erst bei ~448px Card-Breite — viele
+            Live-Embeds sind schmaler. */}
+        <div className="p-4 pb-20 @md:p-8 overflow-hidden">
           <AnimatePresence mode="wait" custom={slideDirection} initial={false}>
             <motion.div
               key={`${isContactStep ? "contact" : "q"}-${currentStep}`}
@@ -1335,7 +1368,7 @@ export function Funnel({
                   onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.backgroundColor = theme.primaryColorHover; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = theme.primaryColor; }}
                 >
-                  OK
+                  {skipSubmitStep && isLastQuestion ? "Absenden" : "OK"}
                   <Check size={14} strokeWidth={2.5} />
                 </button>
                 {(currentQuestion.questionType === "short_text" ||
@@ -1355,7 +1388,7 @@ export function Funnel({
             In editMode versteckt damit's nicht mit der Edit-Selektion kollidiert. */}
         {!editMode && (
           <div
-            className="absolute bottom-4 right-4 flex items-center overflow-hidden border shadow-lg @container"
+            className="absolute bottom-4 right-4 z-10 flex items-center overflow-hidden border shadow-lg"
             style={{
               backgroundColor: theme.backgroundColor,
               borderColor: theme.borderColor,

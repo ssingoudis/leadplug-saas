@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server'
 import { getTenantConfig } from '@/lib/getTenantConfig'
-import { upsertSubmissionProgress, isRateLimited, updateEmailStatus, logHoneypot } from '@/lib/tracking'
+import {
+  upsertSubmissionProgress,
+  isRateLimited,
+  updateEmailStatus,
+  logHoneypot,
+  deriveContactFromAnswers,
+} from '@/lib/tracking'
 import { sendAllEmails } from '@/lib/sendEmails'
 import { validateContactField } from '@/lib/validateContactField'
 
@@ -80,12 +86,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Tenant not found' }, { status: 404 })
   }
 
-  // 5. Dynamische Feldvalidierung gegen contactFields (aus submit-Page-Fields via getTenantConfig)
-  const visibleRequired = tenantConfig.contactFields.filter((f) => f.visible && f.required)
-  for (const field of visibleRequired) {
-    const err = validateContactField(field, contact[field.key] ?? '')
-    if (err) {
-      return NextResponse.json({ error: `Validation failed: ${field.key}` }, { status: 400 })
+  // Aufgabe 35: Skip-Mode → keine Submit-Page-Validation (Submit-Page wird vom Widget gar nicht gerendert).
+  // Stattdessen contact aus answers synthetisieren (Pattern-Match auf Email/Telefon/Name), damit
+  // Pricing-Logik (contact->>'email') + Mail-Versand weiter funktionieren.
+  const skipMode = tenantConfig.skipSubmitStep ?? false
+  const effectiveContact = skipMode
+    ? { ...deriveContactFromAnswers(answers), ...contact }
+    : contact
+
+  // 5. Dynamische Feldvalidierung — nur wenn Submit-Page aktiv ist
+  if (!skipMode) {
+    const visibleRequired = tenantConfig.contactFields.filter((f) => f.visible && f.required)
+    for (const field of visibleRequired) {
+      const err = validateContactField(field, effectiveContact[field.key] ?? '')
+      if (err) {
+        return NextResponse.json({ error: `Validation failed: ${field.key}` }, { status: 400 })
+      }
     }
   }
 
@@ -98,7 +114,7 @@ export async function POST(req: Request) {
     sessionId,
     funnelSlug: tenant,
     tenantId:   tenantConfig.id,
-    contact,
+    contact:    effectiveContact,
     answers,
     leadPrice,
     sourceUrl,
@@ -111,7 +127,7 @@ export async function POST(req: Request) {
   let emailResults = { customer: false, tenant: false }
   try {
     emailResults = await sendAllEmails({
-      contact,
+      contact: effectiveContact,
       answers,
       tenantConfig,
       submittedAt: new Date(),

@@ -1,6 +1,34 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { ContactData } from '@/types'
 
+/**
+ * Aufgabe 35: Skip-Mode-Backstop. Wenn der Funnel keine Submit-Page hat
+ * (skip_submit_step=true), kommen die Lead-Daten aus den answers (Tenant
+ * baut Email/Telefon als reguläre Question-Pages ein).
+ * Damit die Pricing-Logik (`contact->>'email'`) weiter funktioniert und
+ * E-Mails an den Anfragenden gesendet werden können, synthetisieren wir
+ * `contact` aus den answers per Pattern-Match.
+ */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const PHONE_RE = /^[+]?[\d\s\-()]{6,}$/
+export function deriveContactFromAnswers(
+  answers: Record<string, string>,
+): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const [key, raw] of Object.entries(answers)) {
+    if (typeof raw !== 'string') continue
+    const val = raw.trim()
+    if (!val) continue
+    if (!out.email && EMAIL_RE.test(val)) out.email = val
+    if (!out.telefon && !EMAIL_RE.test(val) && PHONE_RE.test(val)) out.telefon = val
+    // Heuristik für name: Key enthält "name" und Value ist kein Email/Telefon
+    if (!out.name && /name/i.test(key) && !EMAIL_RE.test(val) && !PHONE_RE.test(val)) {
+      out.name = val
+    }
+  }
+  return out
+}
+
 let cachedClient: SupabaseClient | null = null
 
 function getSupabase(): SupabaseClient | null {

@@ -229,9 +229,26 @@ function SubmitProps({
     onReorderContactFields(arrayMove(state.contactFields, oldIdx, newIdx));
   }
 
+  const submitActive = !state.skipSubmitStep;
+
   return (
     <div className="flex flex-col">
       <Header kindLabel={SUBMIT_META.label} kindIcon={SUBMIT_META.icon} pillClass={SUBMIT_META.pillClass} />
+
+      <Section title="Submit-Schritt">
+        <Toggle
+          label="Submit-Schritt aktiviert"
+          enabled={submitActive}
+          onToggle={(next) => onPatch({ skipSubmitStep: !next })}
+        />
+        {!submitActive && (
+          <p className="px-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+            Der Funnel endet nach der letzten Frage und springt direkt zur Erfolgsseite.
+            Lead-Daten (Email, Name, …) musst du als reguläre Fragen einbauen, wenn du sie brauchst.
+            Die Felder unten bleiben gespeichert für später.
+          </p>
+        )}
+      </Section>
 
       <Section title="Seite">
         <Field label="Überschrift">
@@ -239,6 +256,7 @@ function SubmitProps({
             value={state.funnelTitle}
             onChange={(v) => onPatch({ funnelTitle: v })}
             placeholder="z. B. Letzter Schritt!"
+            disabled={!submitActive}
           />
         </Field>
         <Field label="Untertitel">
@@ -246,6 +264,7 @@ function SubmitProps({
             value={state.contactFormSubtitle}
             onChange={(v) => onPatch({ contactFormSubtitle: v })}
             placeholder="z. B. Wir melden uns innerhalb von 24h."
+            disabled={!submitActive}
           />
         </Field>
         <Field label="Button-Text">
@@ -253,6 +272,7 @@ function SubmitProps({
             value={state.submitButtonLabel}
             onChange={(v) => onPatch({ submitButtonLabel: v })}
             placeholder="z. B. Jetzt anfragen"
+            disabled={!submitActive}
           />
         </Field>
       </Section>
@@ -466,10 +486,12 @@ function TextInput({
   value,
   onChange,
   placeholder,
+  disabled,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  disabled?: boolean;
 }) {
   return (
     <input
@@ -477,7 +499,8 @@ function TextInput({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+      disabled={disabled}
+      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500 dark:disabled:bg-gray-800/40 dark:disabled:text-gray-500"
     />
   );
 }

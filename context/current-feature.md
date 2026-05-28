@@ -111,6 +111,118 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ## History
 
+- **C.2 — Theme-Panel (Brand-Farbe, Schrift, Layout) ✅ (2026-05-28)**
+
+  Fünfter und finaler Sprint-Schritt. Macht die Theme-Felder, die seit Phase B in der DB stehen und vom Widget gerendert werden, im Builder editierbar — vorher musste man Brand-Color, Font, Border-Radius manuell in der DB ändern.
+
+  **Stavros-Entscheidung im Scope:** Logo-Upload bewusst rausgenommen („das ist unnötig auch wenn manche Firmen das wollen"). C.2 ist damit reine Theme-Felder ohne Storage-Bucket-Setup.
+
+  **Was geht jetzt:** Klick auf den „Design"-Tab in der Top-Bar (war vorher disabled) → StepList verschwindet (Theme ist funnel-weit), Properties-Panel wird zum ThemePanel mit Color-Pickern, Font-Dropdown, Border-Radius-Slider mit 8 Stufen, Max-Width-Presets. CenterCanvas zeigt das Widget live mit den Änderungen.
+
+  **UI-Sections im Panel:**
+  - **Markenfarbe:** Brand · Text · Hintergrund Card · Seiten-Hintergrund (mit Klar/Transparent-Toggle für letzteres)
+  - **Schrift:** Dropdown (System / Inter / Poppins / Roboto)
+  - **Layout:** Ecken-Rundung-Slider (0/2/4/8/12/16/24/32 px) + Max-Width-Presets (480/600/720/900/100%)
+
+  **Files:**
+  - `components/tenant-editor/v2/ThemePanel.tsx` neu (~220 LOC): ColorField mit `<input type="color">` + Hex-Text-Input + optionalem Transparent-Toggle, Select-Wrapper mit inline-SVG-Chevron, Range-Slider auf Radius-Index, Section/Field/Header-Building-Blocks
+  - `components/tenant-editor/v2/TopTabs.tsx`: „Design"-Tab `disabled: false` (war als geplant aber tot eingebaut)
+  - `components/tenant-editor/v2/EditorShellV2.tsx`: Body rendert konditional — bei `activeTab === "design"` 2-Spalten-Layout (Canvas + ThemePanel), sonst 3-Pane wie gehabt
+
+  **Wie testen:**
+  1. Editor öffnen, „Design"-Tab klicken → StepList weg, ThemePanel rechts
+  2. Brand-Farbe ändern → CenterCanvas zeigt sofort den neuen Akzent
+  3. Border-Radius-Slider bewegen → Card-Ecken rundlicher/eckiger live
+  4. Speichern → Reload → Werte persistieren
+
+- **C.1d — v1-Editor Cutover ✅ (2026-05-28)**
+
+  Vierter Sprint-Schritt. Alter v1-Editor (Single-Pane mit Accordion) komplett entfernt. v2 (3-Pane WYSIWYG) ist seit Aufgabe 32 stabil, der `?v=2`-Flag war nur Übergangs-Schutz.
+
+  **Was raus ist:**
+  - 12 v1-Komponenten in `components/tenant-editor/` (FunnelEditorShell, EditorSidebar, PreviewPanel, EmailPreviewMockup, LeadEmailPreviewMockup, HealthCheckPanel, SectionAccordion, SectionFragen, SectionKontakt, SectionTexte, SectionDesign, SlugInput) — ~120 KB / ~3000 LOC
+  - 2 v1-Client-Wrapper (`FunnelEditorClient.tsx` in `[slug]/edit` und `new/`)
+  - `?v=2`-Routing-Conditional in beiden page.tsx-Files
+  - `searchParams: Promise<{ v?: string }>` Props weg
+
+  **Was bleibt:**
+  - `components/tenant-editor/defaults.ts` (DEFAULT_EDITOR_STATE, DEFAULT_QUESTION, DEFAULT_CONTACT_FIELDS — werden von v2 + lib/editorUtils genutzt)
+  - `components/tenant-editor/DeleteFunnelButton.tsx` (nicht editor-spezifisch, in FunnelCard verwendet)
+  - `components/tenant-editor/v2/*` (alles)
+
+  **Rename:** `FunnelEditorClientV2.tsx` → `FunnelEditorClient.tsx` in beiden Routen, damit das v2-Suffix konsistent verschwindet.
+
+- **Aufgabe 37 — Floating-Nav-Bug im Live-Widget gefixt ✅ (2026-05-28)**
+
+  Dritter Sprint-Schritt. Der Bottom-Right Floating-Nav (ChevronUp/Down für zurück/weiter) hat im Live-iFrame nicht wie erwartet gerendert — visuell überlappt sie auf schmalen Embeds den Content-Bereich. Im Builder war's nicht sichtbar, weil die Canvas dort immer ≥ 720px breit ist.
+
+  **Root cause:** Content-Div hatte `p-4 @md:p-8 @md:pb-20` — der 80px-Bottom-Padding wurde erst ab `@md` (~448px Card-Breite via Container-Query) angewendet. Live-Embeds in Sidebars / Mobile sind oft schmaler → kein pb-20, Floating-Nav (absolute bottom-4) klebt auf dem Content.
+
+  **Fix in `components/funnel.tsx`:**
+  - Content-Div: `p-4 pb-20 @md:p-8` — `pb-20` greift jetzt immer
+  - Floating-Nav-Wrapper: `z-10` hinzu (defensive Stacking-Garantie gegen die framer-motion AnimatePresence-Slide-Layer), unnötiger `@container` raus
+
+- **Aufgabe 36 — Lead-Inbox 3 Tabs (Completed / Abgebrochen-mit-Email / Abgebrochen-ohne-Email) ✅ (2026-05-28)**
+
+  Zweite Aufgabe im Builder-Final-Sprint. Macht die Partial-Submissions-Architektur von Aufgabe 34 im UI sichtbar — vorher liefen abgebrochene Sessions still in der DB ohne sinnvollen Tenant-Zugriff.
+
+  **Was geht jetzt:** `/dashboard/leads` zeigt 3 Tabs mit Badge-Counts pro Bucket. Default-Tab ist „Abgeschlossen". Tenant kann zu „Abgebrochen — mit E-Mail" wechseln und gezielt nachfassen (= wertvollster Lead-Pool laut Pricing-Logik) oder zu „Abgebrochen — ohne E-Mail" um Tracking-Spuren zu sehen.
+
+  **Bucket-Klassifikation** (Server-Side in `app/dashboard/leads/page.tsx`):
+  - `completed`: `completed_at IS NOT NULL` (finaler Submit-Klick wurde ausgelöst)
+  - `abandoned_with_email`: `completed_at IS NULL` UND `contact.email` befüllt
+  - `abandoned_without_email`: `completed_at IS NULL` UND keine Email
+
+  **Konsequente Konsistenz:** weitere Server-Queries gefiltert auf `completed_at IS NOT NULL`, damit Abbrecher nirgendwo als „echte Leads" erscheinen:
+  - `app/dashboard/page.tsx`: Recent-Leads-Liste + 14-Tage-Chart
+  - `app/dashboard/statistiken/page.tsx`: Monatliche Conversion-Counter
+  - `app/dashboard/kontakte/page.tsx`: CRM-Kontakte-Liste
+  - `app/dashboard/funnels/page.tsx`: Lead-Count pro Funnel
+
+  **Files:**
+  - `app/dashboard/TenantLeadsTable.tsx`: `bucket` + `completed_at` im Type, Tab-State, Bucket-Filter im `filtered`-Memo, Tab-UI mit aktiven/inaktiven Pills + Badge-Counts, Header-Titel reflektiert den aktiven Tab
+  - `app/dashboard/leads/page.tsx`: Query ergänzt um `completed_at`, Bucket-Computation pro Row
+  - `app/dashboard/page.tsx`: `.not('completed_at','is',null)` auf beiden Submissions-Queries, bucket=`'completed'` in der Mapping
+  - `app/dashboard/statistiken/page.tsx`: gleicher Filter auf Monthly-Conversion
+  - `app/dashboard/kontakte/page.tsx`: gleicher Filter auf CRM-Liste
+  - `app/dashboard/funnels/page.tsx`: gleicher Filter auf Lead-Count-pro-Funnel
+
+  **Wie testen:**
+  1. Funnel mit Skip-Mode ohne Submit-Page bauen + Email-Question dabei → halb durchklicken + Tab schließen → in Lead-Inbox-Tab „Abgebrochen — mit E-Mail" auftauchen
+  2. Funnel mit Submit-Page → komplett durchklicken → Tab „Abgeschlossen" hat den Lead
+  3. Funnel anfangen, ohne Email-Eingabe abbrechen → Tab „Abgebrochen — ohne E-Mail"
+
+- **Aufgabe 35 — Submit-Schritt optional + Skip-Mode mit Auto-Finish ✅ (2026-05-28)**
+
+  Erste von 5 Aufgaben im Builder-Final-Sprint (Branch `feature/builder-final-sprint`). Reihenfolge: 35 → 36 → 37 → C.1d → C.2, alles in einem Branch, ein Merge am Ende.
+
+  **Was geht jetzt:** Tenant kann auf der Submit-Page-Properties einen Toggle „Submit-Schritt aktiviert" ausschalten. Resultat: Widget endet nach der letzten Frage direkt auf der Erfolgsseite, der OK-Button der letzten Frage wird zu „Absenden" und feuert `/api/submit`. Bestehende Funnels bleiben auf Default `false` (= Submit-Page bleibt sichtbar), kein Verhalten-Drift.
+
+  **Pricing-Backstop für Skip-Mode:** Da im Skip-Mode kein Kontaktformular existiert, baut der Tenant Email/Telefon als reguläre Question-Pages ein. Damit die Partial-Submission-Pricing-Logik (`contact->>'email'`) weiter trifft, synthetisiert der Server `contact` per Pattern-Match aus answers (Email-Regex + Telefon-Regex + name-Key-Heuristik). Sowohl `/api/track-progress` als auch `/api/submit` nutzen diesen Backstop nur im Skip-Mode (nicht-Skip bleibt unverändert).
+
+  **Schema:**
+  - Migration `aufgabe_35_funnels_skip_submit_step`: `ALTER TABLE funnels ADD COLUMN skip_submit_step boolean NOT NULL DEFAULT false`. Additiv, reversibel via DOWN.
+  - Lokal: `supabase/migrations/20260528220000_aufgabe_35_funnels_skip_submit_step.sql` + DOWN.
+
+  **Files:**
+  - `types/index.ts`: `EditorState.skipSubmitStep` + `TenantConfig.skipSubmitStep`
+  - `components/tenant-editor/defaults.ts`: Default `false`
+  - `lib/editorUtils.ts`: Mapping in `editorStateToFunnelRow` + `dbToEditorState`
+  - `lib/getTenantConfig.ts`: Spalte in SELECT + Mapping
+  - `lib/tracking.ts`: neue Helper `deriveContactFromAnswers(answers)` mit Email/Phone/Name-Pattern-Match
+  - `components/tenant-editor/v2/PropertiesPanel.tsx`: Toggle „Submit-Schritt aktiviert" auf Submit-Page-Properties, disabled-Style für TextInput wenn Submit deaktiviert
+  - `components/tenant-editor/v2/StepList.tsx`: Submit-StepPill wird `hidden` + Titel „(übersprungen)" wenn skip aktiv
+  - `components/tenant-editor/v2/CenterCanvas.tsx`: neuer Placeholder `SubmitSkippedPlaceholder` wenn skip + Submit-Step im Editor ausgewählt
+  - `components/funnel.tsx`: neuer Prop `skipSubmitStep`, `totalSteps`/`isContactStep` respektieren Flag, `autoFinish`-Helper, `handleSelect` + `handleNext` feuern Auto-Finish auf letzter Frage, OK-Button-Label wechselt zu „Absenden"
+  - `components/TenantFunnelClient.tsx`: `skipSubmitStep` durch zu `<Funnel>`
+  - `app/api/submit/route.ts`: skipMode → keine Contact-Field-Validation + effectiveContact via `deriveContactFromAnswers` für Submission-Row + sendAllEmails
+  - `app/api/track-progress/route.ts`: gleicher Backstop für Partial-Submissions
+
+  **Wie testen:**
+  1. Editor: Funnel öffnen, „Kontaktformular" in der Sidebar wählen → Toggle „Submit-Schritt aktiviert" ausschalten → Canvas zeigt Placeholder, StepPill ist ausgegraut mit „(übersprungen)"
+  2. Save, dann „Funnel testen" → durchklicken bis letzte Frage → OK-Button heißt jetzt „Absenden" → Klick zeigt Success-Page
+  3. Live: Funnel ohne Submit-Schritt mit Email-Question-Page einbauen, Submit auslösen, in `submissions` prüfen: `contact->>'email'` ist befüllt aus answers
+
 - **Aufgabe 34 — C.1c WYSIWYG-Edit + Widget-Typeform-Redesign + Icons-Cleanup + Type-Cleanup + Partial-Submissions-Infra ✅ (2026-05-28)**
 
   Größte Aufgabe seit Phase B. Drei parallele Strategie-Stränge in einem Sprint. Zwei Checkpoint-Commits (`60ab73d`, `d5373fd`). +1310 / −1360 LOC netto, 44 Files. 2 DB-Migrationen direkt auf Production appliziert.

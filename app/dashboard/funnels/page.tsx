@@ -38,10 +38,12 @@ async function getFunnels(): Promise<FunnelItem[]> {
   const slugs = (funnels ?? []).map((f) => f.slug);
   const countMap: Record<string, number> = {};
   if (slugs.length > 0) {
+    // Funnel-Liste zeigt nur abgeschlossene Submissions als Lead-Count (keine Abbrecher).
     const { data: counts } = await supabase
       .from("submissions")
       .select("funnel_slug")
-      .in("funnel_slug", slugs);
+      .in("funnel_slug", slugs)
+      .not('completed_at', 'is', null);
     for (const row of counts ?? []) {
       if (row.funnel_slug) {
         countMap[row.funnel_slug] = (countMap[row.funnel_slug] ?? 0) + 1;

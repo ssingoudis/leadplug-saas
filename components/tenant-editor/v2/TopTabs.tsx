@@ -13,7 +13,7 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { key: "content", label: "Inhalt", disabled: false },
-  { key: "design", label: "Design", disabled: true },
+  { key: "design", label: "Design", disabled: false },
   { key: "logic", label: "Logik", badge: "bald", disabled: true },
   { key: "emails", label: "E-Mails", disabled: true },
   { key: "share", label: "Einbinden", disabled: true },

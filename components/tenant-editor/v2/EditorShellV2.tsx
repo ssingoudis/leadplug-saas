@@ -8,6 +8,7 @@ import { TopTabs, type TopTabKey } from "./TopTabs";
 import { StepList } from "./StepList";
 import { CenterCanvas } from "./CenterCanvas";
 import { PropertiesPanel } from "./PropertiesPanel";
+import { ThemePanel } from "./ThemePanel";
 import type { SelectedStep } from "./types";
 import type { Vorlage } from "./vorlagen";
 
@@ -527,44 +528,66 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
         {/* Tabs */}
         <TopTabs active={activeTab} onChange={setActiveTab} />
 
-        {/* 3-Pane Body */}
-        <div className="grid min-h-0 flex-1 grid-cols-[420px_minmax(0,1fr)_420px]">
-          <StepList
-            state={state}
-            selected={selected}
-            onSelect={setSelected}
-            onReorder={handleReorder}
-            onAddQuestion={handleAddQuestion}
-            onAddVorlage={handleAddVorlage}
-          />
-          <CenterCanvas
-            state={state}
-            selected={selected}
-            companyName={companyName}
-            isTestMode={isTestMode}
-            onToggleTestMode={() => setIsTestMode((t) => !t)}
-            selectedFieldRef={selectedFieldRef}
-            onSelectField={setSelectedFieldRef}
-            onTextChange={handleTextChange}
-            onAddOption={handleAddOption}
-            onReorderOptions={handleReorderOptions}
-            onDuplicateOption={handleDuplicateOption}
-            onDeleteOption={handleDeleteOption}
-          />
-          <PropertiesPanel
-            state={state}
-            selected={selected}
-            onPatch={handlePatch}
-            onPatchQuestion={handlePatchQuestion}
-            onDeleteQuestion={handleDeleteQuestion}
-            onPatchContactField={handlePatchContactField}
-            onAddContactField={handleAddContactField}
-            onDeleteContactField={handleDeleteContactField}
-            onReorderContactFields={handleReorderContactFields}
-            selectedFieldRef={selectedFieldRef}
-            onSelectFieldRef={setSelectedFieldRef}
-          />
-        </div>
+        {/* Body — Layout je nach Tab.
+            C.2: Design-Tab versteckt StepList (Theme ist funnel-weit, kein Step) und ersetzt
+            PropertiesPanel durch ThemePanel. CenterCanvas bleibt für Live-Preview. */}
+        {activeTab === "design" ? (
+          <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_420px]">
+            <CenterCanvas
+              state={state}
+              selected={selected}
+              companyName={companyName}
+              isTestMode={isTestMode}
+              onToggleTestMode={() => setIsTestMode((t) => !t)}
+              selectedFieldRef={selectedFieldRef}
+              onSelectField={setSelectedFieldRef}
+              onTextChange={handleTextChange}
+              onAddOption={handleAddOption}
+              onReorderOptions={handleReorderOptions}
+              onDuplicateOption={handleDuplicateOption}
+              onDeleteOption={handleDeleteOption}
+            />
+            <ThemePanel state={state} onPatch={handlePatch} />
+          </div>
+        ) : (
+          <div className="grid min-h-0 flex-1 grid-cols-[420px_minmax(0,1fr)_420px]">
+            <StepList
+              state={state}
+              selected={selected}
+              onSelect={setSelected}
+              onReorder={handleReorder}
+              onAddQuestion={handleAddQuestion}
+              onAddVorlage={handleAddVorlage}
+            />
+            <CenterCanvas
+              state={state}
+              selected={selected}
+              companyName={companyName}
+              isTestMode={isTestMode}
+              onToggleTestMode={() => setIsTestMode((t) => !t)}
+              selectedFieldRef={selectedFieldRef}
+              onSelectField={setSelectedFieldRef}
+              onTextChange={handleTextChange}
+              onAddOption={handleAddOption}
+              onReorderOptions={handleReorderOptions}
+              onDuplicateOption={handleDuplicateOption}
+              onDeleteOption={handleDeleteOption}
+            />
+            <PropertiesPanel
+              state={state}
+              selected={selected}
+              onPatch={handlePatch}
+              onPatchQuestion={handlePatchQuestion}
+              onDeleteQuestion={handleDeleteQuestion}
+              onPatchContactField={handlePatchContactField}
+              onAddContactField={handleAddContactField}
+              onDeleteContactField={handleDeleteContactField}
+              onReorderContactFields={handleReorderContactFields}
+              selectedFieldRef={selectedFieldRef}
+              onSelectFieldRef={setSelectedFieldRef}
+            />
+          </div>
+        )}
       </div>
     </>
   );
