@@ -6,7 +6,7 @@ import type { QuestionType, ContactFieldConfig } from "@/types";
  */
 export interface FieldMeta {
   label: string;
-  category: "text" | "choice" | "dropdown" | "numeric" | "submit" | "success";
+  category: "text" | "choice" | "dropdown" | "numeric" | "submit" | "success" | "custom";
   /** Tailwind-Klassen für die Step-Pill (light + dark Mode). */
   pillClass: string;
   /** Kurz-Icon-String für die Pill (1-2 Zeichen). */
@@ -25,6 +25,8 @@ const SUBMIT_PILL =
   "bg-pink-100 text-pink-700 border-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-800";
 const SUCCESS_PILL =
   "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800";
+const CUSTOM_PILL =
+  "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800";
 
 const QUESTION_META: Record<QuestionType, FieldMeta> = {
   short_text: { label: "Text", category: "text", pillClass: TEXT_PILL, icon: "T" },
@@ -62,6 +64,14 @@ export const SUCCESS_META: FieldMeta = {
   category: "success",
   pillClass: SUCCESS_PILL,
   icon: "✓",
+};
+
+// Aufgabe 38: Custom-Multi-Field-Page (Karte mit beliebig vielen Feldern, überall platzierbar).
+export const CUSTOM_META: FieldMeta = {
+  label: "Karte",
+  category: "custom",
+  pillClass: CUSTOM_PILL,
+  icon: "▥",
 };
 
 /** Kurzer Anzeige-Name für einen Kontaktfeld-Typ. */

@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
 import type { QuestionType } from "@/types";
-import { questionMeta, QUESTION_TYPE_OPTIONS } from "./fieldMeta";
+import { questionMeta, QUESTION_TYPE_OPTIONS, CUSTOM_META } from "./fieldMeta";
 import { VORLAGEN, type Vorlage } from "./vorlagen";
 
 interface Props {
@@ -13,6 +13,8 @@ interface Props {
   onSelectType: (type: QuestionType) => void;
   /** Vorlage: legt mehrere question-Pages auf einmal an. */
   onSelectVorlage: (vorlage: Vorlage) => void;
+  /** Aufgabe 38: Karte mit mehreren Feldern (Multi-Field Custom-Page). */
+  onSelectCustomPage: () => void;
 }
 
 /**
@@ -26,7 +28,7 @@ const GROUPS: { key: string; label: string; categories: string[] }[] = [
   { key: "numeric", label: "Numerisch & Datum", categories: ["numeric"] },
 ];
 
-export function AddElementModal({ open, onClose, onSelectType, onSelectVorlage }: Props) {
+export function AddElementModal({ open, onClose, onSelectType, onSelectVorlage, onSelectCustomPage }: Props) {
   // ESC schließt das Modal.
   useEffect(() => {
     if (!open) return;
@@ -68,6 +70,40 @@ export function AddElementModal({ open, onClose, onSelectType, onSelectVorlage }
         </header>
 
         <div className="max-h-[70vh] overflow-y-auto p-5">
+          {/* Aufgabe 38: Karte mit mehreren Feldern — eigene Top-Section, klar abgegrenzt */}
+          <div className="mb-6">
+            <div className="mb-2 flex items-baseline justify-between">
+              <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                Karte mit mehreren Feldern
+              </h3>
+              <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                Mehrere Felder auf einer Seite — wie das Kontaktformular am Ende
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                onSelectCustomPage();
+                onClose();
+              }}
+              className="group flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 text-left transition-all hover:border-primary hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:hover:border-primary"
+            >
+              <span
+                className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-base ${CUSTOM_META.pillClass}`}
+              >
+                {CUSTOM_META.icon}
+              </span>
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                  Custom-Karte hinzufügen
+                </span>
+                <span className="text-[11px] leading-snug text-gray-500 dark:text-gray-400">
+                  Eigene Überschrift + beliebig viele Felder (Name, E-Mail, Telefon, PLZ, …) mit Validation.
+                </span>
+              </div>
+            </button>
+          </div>
+
           {/* Vorlagen-Sektion */}
           <div className="mb-6">
             <div className="mb-2 flex items-baseline justify-between">

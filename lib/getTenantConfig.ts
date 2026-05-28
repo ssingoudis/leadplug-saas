@@ -61,8 +61,10 @@ interface DbField {
 
 interface DbPage {
   id: string
-  page_type: 'question' | 'submit' | 'success'
+  page_type: 'question' | 'submit' | 'success' | 'custom'
   sort_order: number
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  config?: Record<string, any> | null
   fields: DbField[] | null
 }
 
@@ -76,15 +78,48 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
   const theme: Record<string, any>  = row
   const pages: DbPage[] = Array.isArray(row.pages) ? row.pages : []
 
-  // Question-Pages (sortiert) → questions[]
-  const questionPages = pages
-    .filter((p) => p.page_type === 'question')
+  // Question + Custom-Pages (sortiert nach sort_order) → questions[]
+  // Aufgabe 38: Beide Page-Typen leben im selben ordered Array.
+  // Custom-Pages haben kind="custom" + customFields. Widget branched in der Render-Logik.
+  const stepPages = pages
+    .filter((p) => p.page_type === 'question' || p.page_type === 'custom')
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
 
-  const questions: QuestionConfig[] = questionPages.map((page) => {
+  const questions: QuestionConfig[] = stepPages.map((page) => {
     const pageFields = Array.isArray(page.fields)
       ? [...page.fields].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       : []
+
+    // Aufgabe 38: Custom-Multi-Field-Page
+    if (page.page_type === 'custom') {
+      const pageCfg = page.config ?? {}
+      const customFields: ContactFieldConfig[] = pageFields.map((f) => ({
+        key:         f.field_key,
+        type:        fieldTypeToContactType(f.field_type),
+        label:       f.label,
+        placeholder: f.placeholder ?? undefined,
+        required:    f.required ?? false,
+        visible:     f.visible ?? true,
+        sort_order:  f.sort_order ?? 0,
+        options:     f.field_type === 'radio' && Array.isArray(f.options)
+          ? (f.options as string[])
+          : undefined,
+      }))
+      return {
+        id: typeof pageCfg.page_key === 'string' && pageCfg.page_key ? pageCfg.page_key : page.id,
+        title: typeof pageCfg.title === 'string' ? pageCfg.title : '',
+        subtitle: typeof pageCfg.subtitle === 'string' ? pageCfg.subtitle : undefined,
+        // Custom-Page hat keinen klassischen questionType — Default-Wert nur fürs Type-System,
+        // wird vom Widget durch kind="custom" überschrieben/ignoriert.
+        questionType: 'single_choice',
+        visible: true,
+        options: [],
+        config: {},
+        kind: 'custom',
+        customFields,
+      }
+    }
+
     const f = pageFields[0]
     if (!f) {
       // Defensive: Question-Page ohne Field
@@ -95,6 +130,7 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
         visible: true,
         options: [],
         config: {},
+        kind: 'question',
       }
     }
     const opts = Array.isArray(f.options) ? f.options : []
@@ -110,6 +146,7 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
         label: o.label,
         value: o.value,
       })),
+      kind: 'question',
     }
   })
 
@@ -206,7 +243,7 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
         billing_model, lead_price, billing_price
       ),
       pages!pages_funnel_id_fkey (
-        id, page_type, sort_order,
+        id, page_type, sort_order, config,
         fields!fields_page_id_fkey (
           field_key, field_type, label, subtitle, placeholder,
           visible, required, sort_order, options, config

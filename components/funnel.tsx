@@ -368,24 +368,39 @@ export function Funnel({
     .filter((f) => f.required)
     .every((f) => !validateContactField(f, contactData[f.key] ?? ""));
 
-  // single_choice auto-advances on click; all other types need an explicit Weiter button.
-  const isChoiceType     = !isContactStep && currentQuestion?.questionType === "single_choice";
+  // Aufgabe 38: Custom-Multi-Field-Page (kind="custom") wird wie ein Multi-Field-Step behandelt.
+  const isCustomStep     = !isContactStep && currentQuestion?.kind === "custom";
+  // single_choice auto-advances on click; all other types (incl. custom) need an explicit Weiter button.
+  const isChoiceType     = !isContactStep && !isCustomStep && currentQuestion?.questionType === "single_choice";
   const showWeiterButton = !isContactStep && !isChoiceType;
 
   const currentAnswer      = currentQuestion ? (answers[currentQuestion.id] ?? "") : "";
   const isQuestionRequired = (currentQuestion?.config as TextConfig)?.required !== false;
 
+  // Visible Custom-Felder (für Render + Validation)
+  const visibleCustomFields = isCustomStep && currentQuestion?.customFields
+    ? currentQuestion.customFields.filter((f) => f.visible)
+    : [];
+
+  // Custom-Step ist disabled bis alle required Fields gültig sind.
+  const isCustomStepValid = visibleCustomFields
+    .filter((f) => f.required)
+    .every((f) => !validateContactField(f, answers[f.key] ?? ""));
+
   // Weiter is disabled when the current field is required and still empty.
   // Sonderfälle:
   //   - slider hat immer default → nie disabled
   //   - checkbox: required heißt "muss aktiviert sein" → value === "true"
+  //   - custom: alle required Fields müssen valide sein
   const isWeiterDisabled =
     showWeiterButton &&
-    currentQuestion?.questionType !== "slider" &&
-    isQuestionRequired &&
-    (currentQuestion?.questionType === "checkbox"
-      ? currentAnswer !== "true"
-      : !currentAnswer.trim());
+    (isCustomStep
+      ? !isCustomStepValid
+      : currentQuestion?.questionType !== "slider" &&
+        isQuestionRequired &&
+        (currentQuestion?.questionType === "checkbox"
+          ? currentAnswer !== "true"
+          : !currentAnswer.trim()));
 
   // Slider config and current value — null when the current question is not a slider.
   const sliderConfig =
@@ -824,8 +839,79 @@ export function Funnel({
                   )}
                 </div>
 
+                {/* Aufgabe 38: Custom-Multi-Field-Page — rendert N Felder als vertikale Stack,
+                    Werte werden in answers gespeichert (keyed by field.key). Submit-Page bleibt
+                    der finale Step. */}
+                {isCustomStep && (
+                  <div className="space-y-4 mb-2">
+                    {visibleCustomFields.map((field) => {
+                      const fieldValue = answers[field.key] ?? "";
+
+                      // --- Radio (z.B. Anrede) ---
+                      if (field.type === "radio" && field.options) {
+                        return (
+                          <div key={field.key}>
+                            <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
+                              {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
+                            </label>
+                            <div className="flex gap-5">
+                              {field.options.map((option) => (
+                                <label key={option} className="flex items-center gap-2 cursor-pointer min-h-11">
+                                  <div
+                                    className="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors"
+                                    style={{ borderColor: fieldValue === option ? theme.primaryColor : theme.borderColor }}
+                                  >
+                                    {fieldValue === option && (
+                                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: theme.primaryColor }} />
+                                    )}
+                                  </div>
+                                  <span style={{ color: theme.textColor }}>{option}</span>
+                                  <input
+                                    type="radio"
+                                    name={field.key}
+                                    value={option}
+                                    checked={fieldValue === option}
+                                    onChange={(e) =>
+                                      setAnswers((prev) => ({ ...prev, [field.key]: e.target.value }))
+                                    }
+                                    className="sr-only"
+                                  />
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // --- Text / Email / Tel / PLZ ---
+                      return (
+                        <div key={field.key}>
+                          <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
+                            {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
+                          </label>
+                          <input
+                            type={field.type === "plz" ? "text" : field.type}
+                            placeholder={field.placeholder ?? ""}
+                            value={fieldValue}
+                            onChange={(e) =>
+                              setAnswers((prev) => ({ ...prev, [field.key]: e.target.value }))
+                            }
+                            className="w-full bg-transparent border-b text-base @md:text-lg py-2 outline-none transition-colors font-light"
+                            style={{
+                              borderColor: theme.underlineColor,
+                              color: theme.textColor,
+                            }}
+                            onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
                 {/* single_choice / multi_choice — Typeform-Stil: Letter-Chip LINKS + Label RECHTS, vertikal gestapelt */}
-                {(currentQuestion.questionType === "single_choice" ||
+                {!isCustomStep && (currentQuestion.questionType === "single_choice" ||
                   currentQuestion.questionType === "multi_choice") && (() => {
                   const isMultiple = currentQuestion.questionType === "multi_choice";
                   const selectedValues = answers[currentQuestion.id]?.split(",").filter(Boolean) ?? [];
