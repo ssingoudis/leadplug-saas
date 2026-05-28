@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>LeadPlug — System-Architektur (visuell)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #f1f5f9;
+      font-family: 'Inter', system-ui, sans-serif;
+      color: #0f172a;
+      line-height: 1.5;
+      padding: 48px 24px 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container { width: 100%; max-width: 1180px; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* ── Header ── */
+    .page-header { text-align: center; margin-bottom: 32px; }
+    .page-header .pill {
+      display: inline-block;
+      background: #0f172a; color: #fff;
+      padding: 4px 12px; border-radius: 999px;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+    .page-header h1 {
+      font-size: 32px; font-weight: 800;
+      letter-spacing: -0.5px; margin-bottom: 8px;
+    }
+    .page-header p { font-size: 14px; color: #64748b; max-width: 720px; margin: 0 auto; }
+
+    /* ── Section ── */
+    .section { margin-bottom: 40px; }
+    .section-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 12px; margin-bottom: 14px;
+    }
+    .section-head h2 {
+      font-size: 15px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      color: #334155;
+    }
+    .section-head .hint { font-size: 12px; color: #64748b; }
+
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      border: 1px solid #e2e8f0;
+      padding: 20px 22px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    /* ── System Map (3 Worlds) ── */
+    .worlds {
+      display: grid;
+      grid-template-columns: 1fr 32px 1fr 32px 1fr;
+      align-items: stretch;
+      gap: 0;
+    }
+    .world {
+      background: #fff;
+      border-radius: 12px;
+      border: 2px solid;
+      padding: 18px 18px 14px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .world-1 { border-color: #2563eb; background: #eff6ff; }
+    .world-2 { border-color: #7c3aed; background: #f5f3ff; }
+    .world-3 { border-color: #16a34a; background: #f0fdf4; }
+    .world .badge {
+      align-self: flex-start;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 10px; font-weight: 800;
+      letter-spacing: 0.5px; text-transform: uppercase;
+    }
+    .world-1 .badge { background: #dbeafe; color: #1d4ed8; }
+    .world-2 .badge { background: #ede9fe; color: #6d28d9; }
+    .world-3 .badge { background: #dcfce7; color: #15803d; }
+    .world h3 { font-size: 16px; font-weight: 700; }
+    .world .desc { font-size: 12px; color: #475569; line-height: 1.6; }
+    .world .meta { font-size: 11px; color: #64748b; margin-top: 4px; }
+    .world .meta strong { color: #0f172a; }
+    .arrow-h {
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; color: #94a3b8; font-weight: 700;
+    }
+
+    /* ── Stack Layers ── */
+    .stack {
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .stack-row {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      align-items: center;
+      gap: 14px;
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 9px 14px;
+      font-size: 13px;
+    }
+    .stack-row .layer { font-weight: 700; color: #475569; font-size: 12px; }
+    .stack-row .tech { color: #0f172a; }
+    .stack-row .tech code {
+      background: #e2e8f0; padding: 1px 6px; border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    }
+
+    /* ── Flow ── */
+    .flow {
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .flow-row {
+      display: grid;
+      grid-template-columns: 36px 1fr 1fr 1fr;
+      gap: 12px;
+      align-items: stretch;
+    }
+    .flow-num {
+      display: flex; align-items: center; justify-content: center;
+      background: #0f172a; color: #fff;
+      border-radius: 6px;
+      font-weight: 700; font-size: 13px;
+    }
+    .flow-cell {
+      background: #f8fafc; border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 12px;
+      display: flex; flex-direction: column; gap: 3px;
+      border: 1px solid #e2e8f0;
+    }
+    .flow-cell .lbl { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.3px; }
+    .flow-cell .v { color: #0f172a; }
+    .flow-cell code {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      background: #e2e8f0; padding: 1px 5px; border-radius: 4px;
+    }
+
+    /* ── DB Schema Tree ── */
+    .tree {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 12px;
+      padding: 22px 24px;
+      line-height: 1.85;
+      overflow-x: auto;
+    }
+    .tree .key   { color: #67e8f9; }
+    .tree .type  { color: #fbbf24; }
+    .tree .ann   { color: #94a3b8; }
+    .tree .new   { color: #34d399; }
+    .tree .pri   { color: #f472b6; }
+
+    /* ── Components Tree (Builder) ── */
+    .comp {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+    .comp-row {
+      display: grid;
+      grid-template-columns: 24px 1fr;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: #f8fafc;
+      border-left: 3px solid #94a3b8;
+      align-items: baseline;
+    }
+    .comp-row.l1 { border-left-color: #2563eb; }
+    .comp-row.l2 { margin-left: 28px; border-left-color: #7c3aed; }
+    .comp-row.l3 { margin-left: 56px; border-left-color: #06b6d4; background: #ecfeff; }
+    .comp-row .icon { font-size: 14px; }
+    .comp-row .name { font-weight: 700; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #0f172a; }
+    .comp-row .role { font-size: 12px; color: #475569; }
+    .comp-row .role-tag { color: #64748b; }
+
+    /* ── Field-Types Grid ── */
+    .types-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+    }
+    .type-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .type-card .cat {
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+    .type-card .types {
+      display: flex; flex-wrap: wrap; gap: 5px;
+    }
+    .type-card .tt {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .type-card.text  { border-top: 3px solid #2563eb; }
+    .type-card.text  .tt   { background: #dbeafe; color: #1d4ed8; }
+    .type-card.choice { border-top: 3px solid #7c3aed; }
+    .type-card.choice .tt { background: #ede9fe; color: #6d28d9; }
+    .type-card.num   { border-top: 3px solid #16a34a; }
+    .type-card.num   .tt   { background: #dcfce7; color: #15803d; }
+    .type-card.info  { border-top: 3px solid #64748b; }
+    .type-card.info  .tt   { background: #e2e8f0; color: #475569; }
+    .type-card.new   { background: linear-gradient(135deg, #fffbeb 0%, #fff 100%); }
+    .type-card .new-badge {
+      font-size: 9px; font-weight: 700;
+      color: #b45309; background: #fef3c7;
+      padding: 1px 6px; border-radius: 4px;
+      margin-left: 4px;
+    }
+
+    /* ── Page-Type Flow ── */
+    .pages-flow {
+      display: grid;
+      grid-template-columns: 1fr 16px 1fr 16px 1fr 16px 1fr 16px 1fr;
+      gap: 0;
+      align-items: stretch;
+    }
+    .page-box {
+      background: #fff;
+      border-radius: 10px;
+      padding: 12px;
+      border: 2px solid;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .page-box.welcome { border-color: #6366f1; background: #eef2ff; }
+    .page-box.question { border-color: #2563eb; background: #eff6ff; }
+    .page-box.custom { border-color: #ea580c; background: #fff7ed; }
+    .page-box.submit { border-color: #db2777; background: #fdf2f8; }
+    .page-box.success { border-color: #16a34a; background: #f0fdf4; }
+    .page-box .tag {
+      font-size: 9px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .page-box.welcome .tag { color: #4f46e5; }
+    .page-box.question .tag { color: #1d4ed8; }
+    .page-box.custom .tag { color: #c2410c; }
+    .page-box.submit .tag { color: #be185d; }
+    .page-box.success .tag { color: #15803d; }
+    .page-box .lbl { font-size: 13px; font-weight: 700; }
+    .page-box .meta { font-size: 10px; color: #64748b; line-height: 1.4; }
+    .arrow-mini {
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; color: #cbd5e1; font-weight: 700;
+    }
+    .page-box.optional .lbl::after {
+      content: " (opt.)";
+      font-size: 9px;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+
+    /* ── Legend / Decisions ── */
+    .decisions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .decision {
+      background: #fff;
+      border-radius: 10px;
+      border-left: 3px solid #2563eb;
+      padding: 14px 16px;
+    }
+    .decision .pat { font-weight: 700; font-size: 13px; color: #0f172a; margin-bottom: 5px; }
+    .decision .why { font-size: 12px; color: #475569; line-height: 1.5; }
+
+    /* ── Footer ── */
+    .footer-link {
+      text-align: center;
+      margin-top: 32px;
+      padding: 16px 24px;
+      background: #fef2f2;
+      border-left: 4px solid #ef4444;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #7f1d1d;
+    }
+    .footer-link a { color: #b91c1c; font-weight: 600; }
+
+    @media (max-width: 800px) {
+      .worlds, .pages-flow { grid-template-columns: 1fr; }
+      .arrow-h, .arrow-mini { transform: rotate(90deg); padding: 8px 0; }
+      .flow-row { grid-template-columns: 36px 1fr; grid-template-rows: auto auto auto; }
+      .flow-row .flow-cell { grid-column: 2; }
+      .flow-row .flow-num { grid-row: 1 / span 3; }
+      .decisions { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- ════════════════════════════════════════════════════ HEADER -->
+    <header class="page-header">
+      <span class="pill">Stand: 2026-05-28</span>
+      <h1>LeadPlug — System-Architektur</h1>
+      <p>
+        Komplette visuelle Karte des Öko-Systems. Wo lebt was, wie fließen die Daten,
+        wie ist der Builder aufgebaut. Begleitdoku: <strong>context/architecture.md</strong> (Text-Version)
+        + <strong>context/project-overview.md</strong> (Code-Layout).
+      </p>
+    </header>
+
+    <!-- ════════════════════════════════════════════════════ 3 WORLDS -->
+    <div class="section">
+      <div class="section-head">
+        <h2>1 · System-Map — die 3 Welten</h2>
+        <span class="hint">eine Agentur, drei Bühnen</span>
+      </div>
+      <div class="worlds">
+        <div class="world world-1">
+          <span class="badge">① Tenant-Backend</span>
+          <h3>Dashboard</h3>
+          <div class="desc">
+            Agentur loggt sich ein, baut Funnels, schaut Leads an, konfiguriert Webhooks &amp; Billing.
+          </div>
+          <div class="meta">
+            <strong>Route:</strong> <span class="mono">/dashboard/*</span><br>
+            <strong>Auth:</strong> Supabase RLS pro tenant<br>
+            <strong>Sub-Pages:</strong> Overview · Funnels · Leads · Kontakte · Statistiken · Account · Billing · Embed
+          </div>
+        </div>
+
+        <div class="arrow-h">→</div>
+
+        <div class="world world-2">
+          <span class="badge">② Funnel-Builder</span>
+          <h3>Editor</h3>
+          <div class="desc">
+            3-Pane WYSIWYG-Builder. Drag-Reorder, Live-Preview, Theme-Tab, alle Element-Types.
+            Erzeugt Pages + Fields in der DB.
+          </div>
+          <div class="meta">
+            <strong>Route:</strong> <span class="mono">/dashboard/funnels/[slug]/edit</span><br>
+            <strong>Modus:</strong> Inhalt &middot; Design &middot; Logik (bald) &middot; E-Mails &middot; Einbinden<br>
+            <strong>Komponente:</strong> <span class="mono">EditorShellV2</span>
+          </div>
+        </div>
+
+        <div class="arrow-h">→</div>
+
+        <div class="world world-3">
+          <span class="badge">③ Live-Widget</span>
+          <h3>iFrame-Embed</h3>
+          <div class="desc">
+            Was Endkunden sehen. Eingebettet auf den Websites der Agentur-Endkunden.
+            Sammelt Antworten, sendet Leads.
+          </div>
+          <div class="meta">
+            <strong>Route:</strong> <span class="mono">/[slug]</span><br>
+            <strong>Auth:</strong> anonym (Service-Key am Server)<br>
+            <strong>Komponente:</strong> <span class="mono">TenantFunnelClient → Funnel</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ TECH STACK -->
+    <div class="section">
+      <div class="section-head">
+        <h2>2 · Tech-Stack</h2>
+        <span class="hint">eine Datei, viele Layer</span>
+      </div>
+      <div class="card">
+        <div class="stack">
+          <div class="stack-row"><span class="layer">Framework</span><span class="tech">Next.js 16 App Router · Server Components default · React 19</span></div>
+          <div class="stack-row"><span class="layer">Sprache</span><span class="tech">TypeScript <code>strict</code></span></div>
+          <div class="stack-row"><span class="layer">Styling</span><span class="tech">TailwindCSS v4 mit Container-Queries (<code>@container</code>) — wichtig fürs iFrame-Widget</span></div>
+          <div class="stack-row"><span class="layer">Animation</span><span class="tech">framer-motion (Slide-Transitions im Widget)</span></div>
+          <div class="stack-row"><span class="layer">DnD</span><span class="tech">@dnd-kit/core + @dnd-kit/sortable (Step-Reorder, Field-Reorder)</span></div>
+          <div class="stack-row"><span class="layer">DB / Auth</span><span class="tech">Supabase Postgres mit RLS + Auth</span></div>
+          <div class="stack-row"><span class="layer">Mail</span><span class="tech">Resend + React Email (Customer-Mail + Tenant-Notification)</span></div>
+          <div class="stack-row"><span class="layer">Billing</span><span class="tech">Stripe Subscription (aktuell Test-Mode — Live in D.1)</span></div>
+          <div class="stack-row"><span class="layer">Deployment</span><span class="tech">Vercel (auto-deploy auf <code>main</code>-push)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ DATA FLOW -->
+    <div class="section">
+      <div class="section-head">
+        <h2>3 · Datenfluss — vom Tipper bis zum Lead</h2>
+        <span class="hint">was passiert nach jedem Tastendruck</span>
+      </div>
+      <div class="card">
+        <div class="flow">
+          <div class="flow-row">
+            <div class="flow-num">1</div>
+            <div class="flow-cell">
+              <span class="lbl">User</span>
+              <span class="v">Öffnet <span class="mono">app.leadplug.de/[slug]</span></span>
+            </div>
+            <div class="flow-cell">
+              <span class="lbl">Widget</span>
+              <span class="v">Generiert <code>session_id</code> (sessionStorage), ruft <code>/api/track-view</code></span>
+            </div>
+            <div class="flow-cell">
+              <span class="lbl">DB</span>
+              <span class="v"><code>funnel_view_logs</code> Insert + Counter++</span>
+            </div>
+          </div>
+
+          <div class="flow-row">
+            <div class="flow-num">2</div>
+            <div class="flow-cell">
+              <span class="lbl">User</span>
+              <span class="v">Beantwortet Fragen schrittweise</span>
+            </div>
+            <div class="flow-cell">
+              <span class="lbl">Widget</span>
+              <span class="v">Alle 600ms debounced <code>onAnswersChange</code> → <code>/api/track-progress</code></span>
+            </div>
+            <div class="flow-cell">
+              <span class="lbl">DB</span>
+              <span class="v"><code>submissions</code> UPSERT auf <code>session_id</code> (completed_at = NULL)</span>
+            </div>
+          </div>
+
+          <div class="flow-row">
+            <div class="flow-num">3</div>
+            <div class="flow-cell">
+              <span class="lbl">User</span>
+              <span class="v">Klickt finalen Submit (oder Auto-Finish im Skip-Mode)</span>
+            </div>
+            <div class="flow-cell">
+              <span class="lbl">Server</span>
+              <span class="v"><code>/api/submit</code>: Validation · Rate-Limit · UPSERT mit <code>completed_at = NOW()</code></span>
+            </div>
+            <div class="flow-cell">
+              <span class="lbl">Side-Effects</span>
+              <span class="v">2 Mails (Customer + Tenant) · (bald) Webhook-Delivery</span>
+            </div>
+          </div>
+
+          <div class="flow-row">
+            <div class="flow-num">4</div>
+            <div class="flow-cell">
+              <span class="lbl">Widget</span>
+              <span class="v">Zeigt Success-Page</span>
+            </div>
+            <div class="flow-cell">
+              <span class="lbl">Optional</span>
+              <span class="v">Wenn <code>redirect_url</code> gesetzt: nach 1.5s <code>window.location.replace()</code></span>
+            </div>
+            <div class="flow-cell">
+              <span class="lbl">Tenant</span>
+              <span class="v">Lead erscheint in <code>/dashboard/leads</code> im &bdquo;Completed&ldquo;-Tab</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ DB SCHEMA -->
+    <div class="section">
+      <div class="section-head">
+        <h2>4 · DB-Schema — die Funnel-Hierarchie</h2>
+        <span class="hint">Multi-Tenancy + Pages + Fields + Submissions</span>
+      </div>
+      <div class="tree">
+<span class="key">auth.users</span> <span class="ann">// supabase-managed</span>
+   └─ <span class="key">tenant_members</span> <span class="ann">// junction N:M (role: owner | admin | member)</span>
+        └─ <span class="key">tenants</span> <span class="ann">// = Agentur-Account</span>
+             ├─ <span class="ann">stripe_*</span> · <span class="ann">billing_model</span> · <span class="ann">lead_price</span> · <span class="ann">company_name</span>
+             │
+             ├─ <span class="key">funnels</span> <span class="ann">// = einer pro Endkunde der Agentur</span>
+             │    ├─ <span class="ann">slug</span> (öffentlich, unveränderlich) · <span class="ann">notification_email</span>
+             │    ├─ Theme: <span class="ann">primary_color, font, border_radius, ...</span>
+             │    ├─ Texte: <span class="ann">contact_form_title, success_message, ...</span>
+             │    ├─ Flags: <span class="new">skip_submit_step</span> (Aufg. 35) · <span class="new">redirect_url</span> (Aufg. 39)
+             │    │
+             │    └─ <span class="key">pages</span> <span class="ann">// ordered, per page_type</span>
+             │         ├─ <span class="type">page_type</span> ∈ { <span class="new">welcome</span>, question, <span class="new">custom</span>, submit, success }
+             │         ├─ <span class="ann">config jsonb</span> { title, subtitle, page_key, button_label }
+             │         │
+             │         └─ <span class="key">fields</span> <span class="ann">// 1 (question) bzw. N (custom/submit) pro page</span>
+             │              ├─ <span class="type">field_type</span> ∈ { 14 Werte — siehe §5 unten }
+             │              ├─ <span class="ann">label, subtitle, placeholder, visible, required, sort_order</span>
+             │              ├─ <span class="ann">options jsonb</span> (für choice/dropdown)
+             │              └─ <span class="ann">config jsonb</span> (für slider/rating/scale/number/date)
+             │
+             ├─ <span class="key">submissions</span> <span class="pri">⚠ Pricing-Kern</span>
+             │    ├─ <span class="new">session_id uuid UNIQUE NOT NULL</span> <span class="ann">// UPSERT-Identität (Aufg. 34)</span>
+             │    ├─ <span class="new">completed_at timestamptz NULL</span> <span class="ann">// NULL = abgebrochen, NOW = finaler Submit</span>
+             │    ├─ <span class="ann">contact jsonb</span> · <span class="ann">answers jsonb</span> · <span class="ann">lead_price</span>
+             │    └─ Pricing-Logik: Lead = completed_at ≠ NULL OR (NULL UND contact.email)
+             │
+             ├─ <span class="key">funnel_view_logs</span> <span class="ann">// append-only view-counter</span>
+             ├─ <span class="key">honeypot_triggers</span> <span class="ann">// bot-filter audit</span>
+             │
+             └─ <span class="key">webhook_subscriptions</span> <span class="ann">(Schema steht seit Aufg. 29 — Code in C.5)</span>
+                  └─ <span class="key">webhook_delivery_attempts</span> <span class="ann">// retry-audit</span></div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ PAGE TYPES FLOW -->
+    <div class="section">
+      <div class="section-head">
+        <h2>5 · Page-Types — die Funnel-Sequenz</h2>
+        <span class="hint">welche Pages gibt's und in welcher Reihenfolge</span>
+      </div>
+      <div class="pages-flow">
+        <div class="page-box welcome optional">
+          <span class="tag">welcome</span>
+          <span class="lbl">Welcome-Screen</span>
+          <span class="meta">Intro-Step am Anfang. Title + Subtitle + Button. Max 1, immer Pos 0.</span>
+        </div>
+        <div class="arrow-mini">→</div>
+        <div class="page-box question">
+          <span class="tag">question</span>
+          <span class="lbl">N × Fragen</span>
+          <span class="meta">1 Field pro Page. Beliebig viele, gemischt mit custom.</span>
+        </div>
+        <div class="arrow-mini">→</div>
+        <div class="page-box custom">
+          <span class="tag">custom</span>
+          <span class="lbl">N × Karten</span>
+          <span class="meta">Multi-Field-Page mit Titel. Beliebig viele, gemischt mit question. (Aufg. 38)</span>
+        </div>
+        <div class="arrow-mini">→</div>
+        <div class="page-box submit">
+          <span class="tag">submit</span>
+          <span class="lbl">Kontakt-Form</span>
+          <span class="meta">Pflicht (außer skip_submit_step). N Contact-Fields + Submit-Button.</span>
+        </div>
+        <div class="arrow-mini">→</div>
+        <div class="page-box success">
+          <span class="tag">success</span>
+          <span class="lbl">End-Screen</span>
+          <span class="meta">Modus: Content (Texte) ODER Redirect-URL. (Aufg. 39)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ FIELD TYPES -->
+    <div class="section">
+      <div class="section-head">
+        <h2>6 · Field-Types (14) — was Tenants bauen können</h2>
+        <span class="hint">Kategorien: Text / Choice / Numeric / Info</span>
+      </div>
+      <div class="types-grid">
+        <div class="type-card text">
+          <div class="cat">Text-Eingabe</div>
+          <div class="types">
+            <span class="tt">short_text</span>
+            <span class="tt">long_text</span>
+            <span class="tt">email</span>
+            <span class="tt">tel</span>
+            <span class="tt">plz</span>
+          </div>
+        </div>
+        <div class="type-card choice">
+          <div class="cat">Auswahl</div>
+          <div class="types">
+            <span class="tt">single_choice</span>
+            <span class="tt">multi_choice</span>
+            <span class="tt">radio</span>
+            <span class="tt">dropdown</span>
+          </div>
+        </div>
+        <div class="type-card num">
+          <div class="cat">Numerisch &amp; Datum</div>
+          <div class="types">
+            <span class="tt">number</span>
+            <span class="tt">slider</span>
+            <span class="tt">date</span>
+            <span class="tt">checkbox</span>
+          </div>
+        </div>
+        <div class="type-card num new">
+          <div class="cat">Bewertung <span class="new-badge">Aufg. 39</span></div>
+          <div class="types">
+            <span class="tt">rating</span>
+            <span class="tt">scale</span>
+          </div>
+        </div>
+        <div class="type-card info new">
+          <div class="cat">Info <span class="new-badge">Aufg. 39</span></div>
+          <div class="types">
+            <span class="tt">statement</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ BUILDER COMPONENTS -->
+    <div class="section">
+      <div class="section-head">
+        <h2>7 · Builder — Komponenten-Baum</h2>
+        <span class="hint">unter <span class="mono">components/tenant-editor/v2/</span></span>
+      </div>
+      <div class="comp">
+        <div class="comp-row l1">
+          <span class="icon">⬛</span>
+          <div><span class="name">EditorShellV2</span> <span class="role-tag">·</span> <span class="role">Hauptcontainer, State-Holder, Save-Logik</span></div>
+        </div>
+        <div class="comp-row l2">
+          <span class="icon">📑</span>
+          <div><span class="name">TopTabs</span> <span class="role-tag">·</span> <span class="role">Inhalt · Design · Logik · E-Mails · Einbinden (letzte 3 disabled)</span></div>
+        </div>
+        <div class="comp-row l2">
+          <span class="icon">📋</span>
+          <div><span class="name">StepList</span> <span class="role-tag">·</span> <span class="role">linke Sidebar: Page-Liste mit Drag-Reorder + Pin-Edge-Insert</span></div>
+        </div>
+        <div class="comp-row l3">
+          <span class="icon">💊</span>
+          <div><span class="name">StepPill</span> <span class="role-tag">·</span> <span class="role">einzelne Page-Pille, ganzer Pill draggable</span></div>
+        </div>
+        <div class="comp-row l3">
+          <span class="icon">➕</span>
+          <div><span class="name">AddElementModal</span> <span class="role-tag">·</span> <span class="role">„+ Frage hinzufügen"-Modal mit 3 Karten + Einzelfelder</span></div>
+        </div>
+        <div class="comp-row l2">
+          <span class="icon">🖼️</span>
+          <div><span class="name">CenterCanvas</span> <span class="role-tag">·</span> <span class="role">mittlere Vorschau-Spalte, rendert &lt;Funnel editMode=true&gt;</span></div>
+        </div>
+        <div class="comp-row l2">
+          <span class="icon">⚙️</span>
+          <div><span class="name">PropertiesPanel</span> <span class="role-tag">·</span> <span class="role">rechte Spalte, routet auf Step-spezifischen Editor</span></div>
+        </div>
+        <div class="comp-row l3">
+          <span class="icon">❓</span>
+          <div><span class="name">QuestionProps</span> <span class="role-tag">·</span> <span class="role">für klassische 1-Field-Pages</span></div>
+        </div>
+        <div class="comp-row l3">
+          <span class="icon">🟧</span>
+          <div><span class="name">CustomPageProps</span> <span class="role-tag">·</span> <span class="role">Multi-Field-Karten (Aufg. 38)</span></div>
+        </div>
+        <div class="comp-row l3">
+          <span class="icon">▷</span>
+          <div><span class="name">WelcomeProps</span> <span class="role-tag">·</span> <span class="role">Intro-Step (Aufg. 39)</span></div>
+        </div>
+        <div class="comp-row l3">
+          <span class="icon">📨</span>
+          <div><span class="name">SubmitProps</span> <span class="role-tag">·</span> <span class="role">Kontaktformular + Skip-Toggle</span></div>
+        </div>
+        <div class="comp-row l3">
+          <span class="icon">✅</span>
+          <div><span class="name">SuccessProps</span> <span class="role-tag">·</span> <span class="role">End-Screen + Content/Redirect-Toggle</span></div>
+        </div>
+        <div class="comp-row l3">
+          <span class="icon">📥</span>
+          <div><span class="name">FieldRow, FieldProperties, OptionsEditor, AddContactFieldPicker</span> <span class="role-tag">·</span> <span class="role">Field-Editing-Bausteine</span></div>
+        </div>
+        <div class="comp-row l2">
+          <span class="icon">🎨</span>
+          <div><span class="name">ThemePanel</span> <span class="role-tag">·</span> <span class="role">Design-Tab-Inhalt (Brand-Farbe, Font, Border-Radius)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ WIDGET DUAL ROLE -->
+    <div class="section">
+      <div class="section-head">
+        <h2>8 · Widget — Doppelrolle Live + Builder</h2>
+        <span class="hint"><span class="mono">components/funnel.tsx</span> — eine Datei, zwei Kontexte</span>
+      </div>
+      <div class="card">
+        <p style="font-size:13px; color:#475569; margin-bottom:14px;">
+          Dieselbe Komponente rendert sowohl im echten Live-iFrame als auch im Builder-Center-Canvas.
+          Verhalten wird über Props geschaltet:
+        </p>
+        <table style="width:100%; font-size:12px; border-collapse:collapse;">
+          <thead>
+            <tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0;">
+              <th style="padding:8px 12px; text-align:left; font-weight:700; color:#475569; font-size:11px; text-transform:uppercase; letter-spacing:0.3px;">Prop</th>
+              <th style="padding:8px 12px; text-align:center; font-weight:700; color:#16a34a; font-size:11px; text-transform:uppercase; letter-spacing:0.3px;">Live</th>
+              <th style="padding:8px 12px; text-align:center; font-weight:700; color:#7c3aed; font-size:11px; text-transform:uppercase; letter-spacing:0.3px;">Builder editMode</th>
+              <th style="padding:8px 12px; text-align:center; font-weight:700; color:#f59e0b; font-size:11px; text-transform:uppercase; letter-spacing:0.3px;">Test-Mode</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:7px 12px;" class="mono">editMode</td><td style="text-align:center;">false</td><td style="text-align:center;">true</td><td style="text-align:center;">false</td></tr>
+            <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:7px 12px;" class="mono">onFieldClick</td><td style="text-align:center; color:#94a3b8;">undefined</td><td style="text-align:center;">✓</td><td style="text-align:center; color:#94a3b8;">undefined</td></tr>
+            <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:7px 12px;" class="mono">onTextChange</td><td style="text-align:center; color:#94a3b8;">undefined</td><td style="text-align:center;">✓</td><td style="text-align:center; color:#94a3b8;">undefined</td></tr>
+            <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:7px 12px;" class="mono">onAddCustomFieldRequest</td><td style="text-align:center; color:#94a3b8;">undefined</td><td style="text-align:center;">✓</td><td style="text-align:center; color:#94a3b8;">undefined</td></tr>
+            <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:7px 12px;" class="mono">onSubmit</td><td style="text-align:center; color:#15803d; font-weight:600;">echter Submit</td><td style="text-align:center; color:#94a3b8;">No-Op</td><td style="text-align:center; color:#94a3b8;">No-Op</td></tr>
+            <tr><td style="padding:7px 12px;" class="mono">onAnswersChange</td><td style="text-align:center;">track-progress</td><td style="text-align:center; color:#94a3b8;">undefined</td><td style="text-align:center; color:#94a3b8;">undefined</td></tr>
+          </tbody>
+        </table>
+        <div style="margin-top:16px; padding:10px 14px; background:#fef3c7; border-left:3px solid #f59e0b; border-radius:4px; font-size:11px; color:#92400e;">
+          <strong>Wichtige Regel:</strong> CLAUDE.md §11 — funnel.tsx ist Hands-off ohne Absprache.
+          Konsistenz-Risiko bei Code-Splitting durch die Doppelrolle.
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ DESIGN DECISIONS -->
+    <div class="section">
+      <div class="section-head">
+        <h2>9 · Design-Decisions — was historisch geprägt ist</h2>
+        <span class="hint">die Eigenheiten und ihre Begründung</span>
+      </div>
+      <div class="decisions">
+        <div class="decision">
+          <div class="pat">Multi-Tenancy via tenant_members + RLS</div>
+          <div class="why">Junction-Table macht Multi-User pro Tenant einfach. Postgres-Helper-Funktionen <code>current_tenant_ids()</code> sichern jede Query.</div>
+        </div>
+        <div class="decision">
+          <div class="pat">Pages-Delete-Replace beim Save</div>
+          <div class="why">CASCADE-Delete + Re-Insert ist robuster als Diff-Logic für ordered Lists. Editing-Lücke ~1-2min beim Vercel-Deploy bewusst akzeptiert.</div>
+        </div>
+        <div class="decision">
+          <div class="pat">kind-Diskriminator statt 3 Type-Arrays</div>
+          <div class="why">Welcome / Question / Custom leben in einer Liste mit kind-Flag. Sortierung bleibt 1:1 mit DB-sort_order, kein Sync-Problem.</div>
+        </div>
+        <div class="decision">
+          <div class="pat">Widget = 1 Datei, hands-off</div>
+          <div class="why">Doppelnutzung Live + Builder. Splitting würde subtile Render-Drift verursachen. Edits brauchen explizite Freigabe.</div>
+        </div>
+        <div class="decision">
+          <div class="pat">Service-Key nur in 6 dokumentierten Ausnahmen</div>
+          <div class="why">Defense-in-depth. Alle Tenant-CRUDs via User-Client + RLS. Service-Key nur für anonyme APIs (submit, track-view) + System-Operationen.</div>
+        </div>
+        <div class="decision">
+          <div class="pat">Partial-Submissions: UPSERT auf session_id</div>
+          <div class="why">Pricing-Hebel: Abbrecher mit Email zählen als Lead. UPSERT statt INSERT macht Network-Retries idempotent.</div>
+        </div>
+        <div class="decision">
+          <div class="pat">Icons komplett raus (Aufg. 34)</div>
+          <div class="why">A/B/C/D-Letter-Chips als Default. IconPicker mit Custom-SVGs war Branchen-Relikt der Pre-LeadPlug-Phase. Picture-Choice kommt on-demand.</div>
+        </div>
+        <div class="decision">
+          <div class="pat">Auto-Advance nur single_choice</div>
+          <div class="why">Multi-Choice/Rating/Statement brauchen Reflection-Zeit. Welcome + Custom haben eigene OK-Button-Semantik (Welcome: Button-Label-editable; Custom: Validation muss greifen).</div>
+        </div>
+        <div class="decision">
+          <div class="pat">Container-Queries (<code>@container</code>) statt Media-Queries</div>
+          <div class="why">iFrame-Embed-Breite ≠ Viewport-Breite. <code>@md</code> reagiert auf die Card-Breite, nicht aufs Browser-Fenster — funktioniert in Sidebars + schmalen Embeds.</div>
+        </div>
+        <div class="decision">
+          <div class="pat">funnels.slug nach Anlage unveränderlich</div>
+          <div class="why">Sonst würden iFrame-Embeds auf Tenant-Endkunden-Websites brechen. Builder-UI enforced das.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ FOOTER -->
+    <div class="footer-link">
+      Volltext-Version dieser Doku mit allen Details: <a href="architecture.md">context/architecture.md</a><br>
+      Code-Layout + DB-Vollreferenz: <a href="project-overview.md">project-overview.md</a> · <a href="supabase-schema.md">supabase-schema.md</a><br>
+      Strategie + Reihenfolge bis Launch: <a href="builder-fokus-roadmap.html">builder-fokus-roadmap.html</a>
+    </div>
+
+  </div>
+</body>
+</html>
