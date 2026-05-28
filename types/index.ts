@@ -22,6 +22,10 @@ export type QuestionType =
   | 'number'
   | 'dropdown'
   | 'checkbox'
+  // Aufgabe 39: neue Element-Types
+  | 'rating'      // 1-5 (oder N) Sterne mit Hover-Preview, Antwort als String "1"..."5"
+  | 'scale'       // 0-N Skala (NPS-Style), Antwort als String "0"..."N"
+  | 'statement'   // Info-Block ohne Input — User klickt OK/Weiter, keine Antwort gespeichert
 
 export interface Option {
   label: string
@@ -64,17 +68,45 @@ export interface CheckboxConfig {
   required?: boolean
 }
 
+// Aufgabe 39: neue Element-Configs
+export interface RatingConfig {
+  maxStars?: number  // Default 5
+  required?: boolean
+}
+
+export interface ScaleConfig {
+  min?: number          // Default 0
+  max?: number          // Default 10
+  labelLeft?: string    // z.B. "Sehr unwahrscheinlich"
+  labelRight?: string   // z.B. "Sehr wahrscheinlich"
+  required?: boolean
+}
+
+export interface StatementConfig {
+  // Statement hat keinen Input — Page hat nur Title + Subtitle, User klickt OK/Weiter ohne Antwort
+  // Konfigurierbar evtl. später: alignment, icon
+}
+
+export interface WelcomeConfig {
+  buttonLabel?: string  // z.B. "Los geht's →" — Default "Starten"
+}
+
 export interface QuestionConfig {
   id: string
   title: string
   subtitle?: string
   questionType: QuestionType
   options: Option[]
-  config: TextConfig | SliderConfig | DateConfig | NumberConfig | CheckboxConfig | Record<string, never>
+  config:
+    | TextConfig | SliderConfig | DateConfig | NumberConfig | CheckboxConfig
+    | RatingConfig | ScaleConfig | StatementConfig | WelcomeConfig
+    | Record<string, never>
   visible: boolean
-  // Aufgabe 38: Diskriminator. "question" (Default für Backward-Compat) = 1-Field-pro-Step.
-  // "custom" = Multi-Field-Karte. customFields ist dann gesetzt, questionType/options/config werden ignoriert.
-  kind?: 'question' | 'custom'
+  // Aufgabe 38 + 39: Diskriminator.
+  // "question" (Default) = klassisch 1-Field-pro-Step.
+  // "custom" = Multi-Field-Karte. customFields ist dann gesetzt.
+  // "welcome" = Optionaler Intro-Step am Anfang. config.buttonLabel = Button-Text.
+  kind?: 'question' | 'custom' | 'welcome'
   customFields?: ContactFieldConfig[]
 }
 
@@ -144,6 +176,7 @@ export interface TenantConfig {
   questions: QuestionConfig[]
   contactFields: ContactFieldConfig[]
   skipSubmitStep: boolean      // Aufgabe 35: wenn true, kein Submit-Schritt — Funnel endet nach letzter Frage direkt auf Success-Page
+  redirectUrl?: string         // Aufgabe 39: wenn gesetzt, Widget redirected nach Submit auf diese URL statt Success-Page
 }
 
 // Dynamische Kontaktdaten — Keys entsprechen den ContactFieldConfig.key-Werten.
@@ -192,10 +225,20 @@ export interface EditorQuestion {
   numberUnit: string      // optional, z.B. "kWh", "Stück"
   // checkbox (Single-Checkbox, z.B. DSGVO/Newsletter):
   checkboxLabel: string   // Text rechts neben der Box, z.B. "Ja, ich stimme zu"
-  // Aufgabe 38: Diskriminator. "question" (Default) = klassisch 1-Field-pro-Step.
-  // "custom" = Multi-Field-Karte. customFields ist dann gesetzt, alle question-spezifischen
-  // Felder (questionType, options, slider*, etc.) werden ignoriert.
-  kind?: 'question' | 'custom'
+  // Aufgabe 39 — Rating (1-N Sterne):
+  ratingMaxStars?: string  // Default "5"
+  // Aufgabe 39 — Scale (0-N Skala, NPS-Style):
+  scaleMin?: string
+  scaleMax?: string
+  scaleLabelLeft?: string
+  scaleLabelRight?: string
+  // Aufgabe 39 — Welcome-Screen:
+  welcomeButtonLabel?: string  // Default "Starten"
+  // Aufgabe 38 + 39: Diskriminator.
+  // "question" (Default) = klassisch 1-Field-pro-Step.
+  // "custom" = Multi-Field-Karte. customFields ist dann gesetzt.
+  // "welcome" = Intro-Step am Anfang mit eigenem Button-Label.
+  kind?: 'question' | 'custom' | 'welcome'
   customFields?: ContactFieldConfig[]
 }
 
@@ -230,6 +273,9 @@ export interface EditorState {
   isActive: boolean
   // Submit-Schritt
   skipSubmitStep: boolean      // Aufgabe 35: wenn true, Submit-Page wird übersprungen
+  // Aufgabe 39: End-Screen-Redirect-Modus. Leer = Content-Modus (Success-Page wird gerendert).
+  // Wert = window.location.replace nach Submit (Widget zeigt Success-Page kurz und redirected danach).
+  redirectUrl: string
   // Inhalte
   questions: EditorQuestion[]
   contactFields: ContactFieldConfig[]

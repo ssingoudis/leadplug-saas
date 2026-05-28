@@ -26,6 +26,7 @@ import {
   SUBMIT_META,
   SUCCESS_META,
   CUSTOM_META,
+  WELCOME_META,
   contactFieldTypeLabel,
   QUESTION_TYPE_OPTIONS,
 } from "./fieldMeta";
@@ -71,13 +72,21 @@ export function PropertiesPanel({
   selectedFieldRef,
   onSelectFieldRef,
 }: Props) {
-  // Aufgabe 38: Custom-Page sitzt in state.questions[] mit kind="custom"
+  // Aufgabe 38 + 39: Step-Kind aus state.questions[].kind ableiten
   const currentStep = selected.kind === "question" ? state.questions[selected.questionIndex] : null;
   const isCustomPage = currentStep?.kind === "custom";
+  const isWelcomePage = currentStep?.kind === "welcome";
 
   return (
     <aside className="flex h-full w-full flex-col overflow-y-auto border-l border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-      {selected.kind === "question" && isCustomPage ? (
+      {selected.kind === "question" && isWelcomePage ? (
+        <WelcomeProps
+          state={state}
+          index={selected.questionIndex}
+          onPatchQuestion={onPatchQuestion}
+          onDelete={() => onDeleteQuestion(selected.questionIndex)}
+        />
+      ) : selected.kind === "question" && isCustomPage ? (
         <CustomPageProps
           state={state}
           index={selected.questionIndex}
@@ -548,7 +557,70 @@ function SortableContactFieldRow({
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   Success — unverändert
+   Aufgabe 39: WelcomeProps — Optionaler Intro-Step am Anfang
+   ───────────────────────────────────────────────────────────────────────────── */
+
+function WelcomeProps({
+  state,
+  index,
+  onPatchQuestion,
+  onDelete,
+}: {
+  state: EditorState;
+  index: number;
+  onPatchQuestion: (index: number, patch: Partial<EditorQuestion>) => void;
+  onDelete: () => void;
+}) {
+  const page = state.questions[index];
+  if (!page || page.kind !== "welcome") {
+    return <div className="p-6 text-sm text-gray-500 dark:text-gray-400">Kein Welcome-Step ausgewählt.</div>;
+  }
+  return (
+    <div className="flex flex-col">
+      <Header kindLabel={WELCOME_META.label} kindIcon={WELCOME_META.icon} pillClass={WELCOME_META.pillClass} />
+
+      <Section title="Seite">
+        <Field label="Überschrift">
+          <TextInput
+            value={page.title}
+            onChange={(v) => onPatchQuestion(index, { title: v })}
+            placeholder="z. B. Willkommen!"
+          />
+        </Field>
+        <Field label="Untertitel (optional)">
+          <TextInput
+            value={page.subtitle}
+            onChange={(v) => onPatchQuestion(index, { subtitle: v })}
+            placeholder="z. B. In den nächsten 2 Minuten…"
+          />
+        </Field>
+        <Field label="Button-Text">
+          <TextInput
+            value={page.welcomeButtonLabel ?? "Los geht's →"}
+            onChange={(v) => onPatchQuestion(index, { welcomeButtonLabel: v })}
+            placeholder="z. B. Los geht's →"
+          />
+        </Field>
+      </Section>
+
+      <Section>
+        <button
+          type="button"
+          onClick={() => {
+            if (confirm("Welcome-Screen wirklich löschen?")) onDelete();
+          }}
+          className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-900/20"
+        >
+          <Trash2 size={14} />
+          Welcome-Screen löschen
+        </button>
+      </Section>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Success / End-Screen — Aufgabe 39: Modus-Toggle (Content / Redirect)
    ───────────────────────────────────────────────────────────────────────────── */
 
 function SuccessProps({
@@ -558,9 +630,33 @@ function SuccessProps({
   state: EditorState;
   onPatch: (patch: Partial<EditorState>) => void;
 }) {
+  const isRedirectMode = (state.redirectUrl ?? "").trim().length > 0;
+
   return (
     <div className="flex flex-col">
       <Header kindLabel={SUCCESS_META.label} kindIcon={SUCCESS_META.icon} pillClass={SUCCESS_META.pillClass} />
+
+      <Section title="Modus">
+        <Toggle
+          label="Nach Submit auf URL weiterleiten"
+          enabled={isRedirectMode}
+          onToggle={(next) => onPatch({ redirectUrl: next ? "https://" : "" })}
+        />
+        {isRedirectMode && (
+          <Field label="Redirect-URL">
+            <TextInput
+              value={state.redirectUrl}
+              onChange={(v) => onPatch({ redirectUrl: v })}
+              placeholder="https://deine-seite.de/danke"
+            />
+          </Field>
+        )}
+        <p className="px-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+          {isRedirectMode
+            ? "Widget zeigt die Erfolgsseite kurz an (~1.5s, damit Tracking-Pixel feuern) und leitet danach auf die URL um."
+            : "Widget zeigt die Erfolgsseite mit den Texten unten."}
+        </p>
+      </Section>
 
       <Section title="Seite">
         <Field label="Erfolgs-Überschrift">

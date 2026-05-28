@@ -28,6 +28,11 @@ const SUCCESS_PILL =
 const CUSTOM_PILL =
   "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800";
 
+const RATING_PILL =
+  "bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800";
+const STATEMENT_PILL =
+  "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700";
+
 const QUESTION_META: Record<QuestionType, FieldMeta> = {
   short_text: { label: "Text", category: "text", pillClass: TEXT_PILL, icon: "T" },
   long_text: { label: "Lang-Text", category: "text", pillClass: TEXT_PILL, icon: "¶" },
@@ -38,6 +43,10 @@ const QUESTION_META: Record<QuestionType, FieldMeta> = {
   slider: { label: "Slider", category: "numeric", pillClass: NUMERIC_PILL, icon: "≡" },
   date: { label: "Datum", category: "numeric", pillClass: NUMERIC_PILL, icon: "▦" },
   checkbox: { label: "Checkbox", category: "numeric", pillClass: NUMERIC_PILL, icon: "☑" },
+  // Aufgabe 39
+  rating: { label: "Sterne-Rating", category: "numeric", pillClass: RATING_PILL, icon: "★" },
+  scale: { label: "Skala (0-N)", category: "numeric", pillClass: RATING_PILL, icon: "⊢" },
+  statement: { label: "Info-Block", category: "text", pillClass: STATEMENT_PILL, icon: "ⓘ" },
 };
 
 export function questionMeta(type: QuestionType): FieldMeta {
@@ -72,6 +81,16 @@ export const CUSTOM_META: FieldMeta = {
   category: "custom",
   pillClass: CUSTOM_PILL,
   icon: "▥",
+};
+
+// Aufgabe 39: Welcome-Screen (optionaler Intro-Step am Anfang).
+const WELCOME_PILL =
+  "bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800";
+export const WELCOME_META: FieldMeta = {
+  label: "Welcome",
+  category: "custom",
+  pillClass: WELCOME_PILL,
+  icon: "▷",
 };
 
 /** Kurzer Anzeige-Name für einen Kontaktfeld-Typ. */

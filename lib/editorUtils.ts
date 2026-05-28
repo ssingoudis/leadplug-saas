@@ -97,6 +97,20 @@ export function buildQuestions(
   return questions
     .filter((q) => q.visible !== false)
     .map((q) => {
+      // Aufgabe 39: Welcome-Page durchreichen
+      if (q.kind === "welcome") {
+        return {
+          id: q.questionKey || q._id,
+          title: q.title,
+          subtitle: q.subtitle || undefined,
+          questionType: "single_choice" as const,
+          visible: q.visible,
+          options: [],
+          config: { buttonLabel: q.welcomeButtonLabel || "Starten" },
+          kind: "welcome" as const,
+        };
+      }
+
       // Aufgabe 38: Custom-Pages durchreichen mit ihren customFields
       if (q.kind === "custom") {
         return {
@@ -182,6 +196,24 @@ function buildQuestionConfig(q: EditorQuestion): Record<string, unknown> {
         label: q.checkboxLabel || "",
         required: q.required,
       };
+    // Aufgabe 39: Rating (1-N Sterne)
+    case "rating":
+      return {
+        maxStars: Number(q.ratingMaxStars) || 5,
+        required: q.required,
+      };
+    // Aufgabe 39: Scale (NPS-Style 0-N Buttons)
+    case "scale":
+      return {
+        min: q.scaleMin != null && q.scaleMin !== "" ? Number(q.scaleMin) : 0,
+        max: q.scaleMax != null && q.scaleMax !== "" ? Number(q.scaleMax) : 10,
+        labelLeft: q.scaleLabelLeft || "",
+        labelRight: q.scaleLabelRight || "",
+        required: q.required,
+      };
+    // Aufgabe 39: Statement (kein Input — User klickt OK, keine Antwort gespeichert)
+    case "statement":
+      return {};
     case "single_choice":
     case "multi_choice":
     case "dropdown":
@@ -227,6 +259,7 @@ export function editorStateToFunnelRow(
     max_width: state.maxWidth || null,
     is_active: state.isActive,
     skip_submit_step: state.skipSubmitStep,
+    redirect_url: state.redirectUrl?.trim() || null,
   };
 }
 
@@ -277,7 +310,7 @@ function newPageId(): string {
 export interface PageInsertRow {
   id: string;
   funnel_id: string;
-  page_type: "question" | "submit" | "success" | "custom";
+  page_type: "question" | "submit" | "success" | "custom" | "welcome";
   sort_order: number;
   config: Record<string, unknown>;
 }
@@ -306,9 +339,26 @@ export function editorStateToPagesAndFields(
   const pages: PageInsertRow[] = [];
   const fields: FieldInsertRow[] = [];
 
-  // Steps (question + custom Pages interleaved nach Array-Reihenfolge)
+  // Steps (question + custom + welcome Pages interleaved nach Array-Reihenfolge)
   state.questions.forEach((q, idx) => {
     const pageId = newPageId();
+
+    // Aufgabe 39: Welcome-Screen = Intro-Step mit eigenem Button-Label, kein Field
+    if (q.kind === "welcome") {
+      pages.push({
+        id: pageId,
+        funnel_id: funnelId,
+        page_type: "welcome",
+        sort_order: idx,
+        config: {
+          title: q.title || "",
+          subtitle: q.subtitle || "",
+          page_key: q.questionKey || "",
+          button_label: q.welcomeButtonLabel || "Starten",
+        },
+      });
+      return;
+    }
 
     // Aufgabe 38: Custom-Page = Multi-Field-Karte, kein klassischer 1-Field-Step
     if (q.kind === "custom") {
@@ -483,6 +533,7 @@ function emptyEditorQuestion(pageId: string): EditorQuestion {
 // Rückmapping field_type → QuestionType für Question-Page-Fields.
 // `email`/`tel`/`radio`/`plz` sind Submit-Page-only (= ContactField-Types) und fallen auf single_choice/short_text zurück
 // falls sie versehentlich auf einer Question-Page liegen (Type-Cleanup Aufgabe 34).
+
 const VALID_QUESTION_TYPES: ReadonlySet<string> = new Set([
   "single_choice",
   "multi_choice",
@@ -493,6 +544,10 @@ const VALID_QUESTION_TYPES: ReadonlySet<string> = new Set([
   "number",
   "dropdown",
   "checkbox",
+  // Aufgabe 39
+  "rating",
+  "scale",
+  "statement",
 ]);
 
 function fieldTypeToQuestionType(ft: string): QuestionType {
@@ -503,7 +558,7 @@ function fieldTypeToQuestionType(ft: string): QuestionType {
 export interface DbPageRow {
   id: string;
   funnel_id: string;
-  page_type: "question" | "submit" | "success" | "custom";
+  page_type: "question" | "submit" | "success" | "custom" | "welcome";
   sort_order: number;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   config?: Record<string, any> | null;
@@ -544,10 +599,10 @@ export function dbToEditorState(
   }
 
   // Pages nach Typ getrennt sammeln (sortiert nach sort_order).
-  // Aufgabe 38: question + custom werden zu einer einzigen ordered Steps-Liste — in EditorState
-  // gibt's nur state.questions, das beide Kinds (kind="question" | "custom") aufnimmt.
+  // Aufgabe 38 + 39: question + custom + welcome werden zu einer einzigen ordered Steps-Liste
+  // in state.questions, mit kind-Diskriminator pro Entry.
   const stepPages = pages
-    .filter((p) => p.page_type === "question" || p.page_type === "custom")
+    .filter((p) => p.page_type === "question" || p.page_type === "custom" || p.page_type === "welcome")
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
   const submitPage = pages.find((p) => p.page_type === "submit");
 
@@ -559,6 +614,20 @@ export function dbToEditorState(
 
   const questions: EditorQuestion[] = stepPages.map((page) => {
     const pageFields = fieldsByPage.get(page.id) ?? [];
+
+    // Aufgabe 39: Welcome-Screen rekonstruieren
+    if (page.page_type === "welcome") {
+      const pageCfg = pageConfigById.get(page.id) ?? {};
+      return {
+        ...emptyEditorQuestion(page.id),
+        kind: "welcome",
+        questionKey: typeof pageCfg.page_key === "string" ? pageCfg.page_key : "",
+        title: typeof pageCfg.title === "string" ? pageCfg.title : "",
+        subtitle: typeof pageCfg.subtitle === "string" ? pageCfg.subtitle : "",
+        welcomeButtonLabel: typeof pageCfg.button_label === "string" ? pageCfg.button_label : "Starten",
+        visible: true,
+      };
+    }
 
     // Aufgabe 38: Custom-Multi-Field-Page rekonstruieren
     if (page.page_type === "custom") {
@@ -632,6 +701,13 @@ export function dbToEditorState(
       numberUnit: questionType === "number" && typeof cfg.unit === "string" ? cfg.unit : "",
       // Checkbox
       checkboxLabel: questionType === "checkbox" && typeof cfg.label === "string" ? cfg.label : "",
+      // Aufgabe 39: Rating
+      ratingMaxStars: questionType === "rating" && cfg.maxStars != null ? String(cfg.maxStars) : "5",
+      // Aufgabe 39: Scale
+      scaleMin: questionType === "scale" && cfg.min != null ? String(cfg.min) : "0",
+      scaleMax: questionType === "scale" && cfg.max != null ? String(cfg.max) : "10",
+      scaleLabelLeft: questionType === "scale" && typeof cfg.labelLeft === "string" ? cfg.labelLeft : "",
+      scaleLabelRight: questionType === "scale" && typeof cfg.labelRight === "string" ? cfg.labelRight : "",
     };
   });
 
@@ -677,6 +753,7 @@ export function dbToEditorState(
     emailSenderLocal: funnelRow.email_sender_local ?? "",
     isActive: funnelRow.is_active ?? true,
     skipSubmitStep: funnelRow.skip_submit_step ?? false,
+    redirectUrl: funnelRow.redirect_url ?? "",
     questions,
     contactFields,
   };

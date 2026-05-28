@@ -39,6 +39,8 @@ function fieldTypeToContactType(ft: string): ContactFieldConfig['type'] {
 const VALID_QUESTION_TYPES: ReadonlySet<string> = new Set([
   'single_choice', 'multi_choice', 'short_text', 'long_text', 'slider',
   'email', 'tel', 'date', 'number', 'dropdown', 'checkbox',
+  // Aufgabe 39
+  'rating', 'scale', 'statement',
 ])
 function fieldTypeToQuestionType(ft: string): QuestionType {
   return VALID_QUESTION_TYPES.has(ft) ? (ft as QuestionType) : 'single_choice'
@@ -61,7 +63,7 @@ interface DbField {
 
 interface DbPage {
   id: string
-  page_type: 'question' | 'submit' | 'success' | 'custom'
+  page_type: 'question' | 'submit' | 'success' | 'custom' | 'welcome'
   sort_order: number
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   config?: Record<string, any> | null
@@ -78,17 +80,34 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
   const theme: Record<string, any>  = row
   const pages: DbPage[] = Array.isArray(row.pages) ? row.pages : []
 
-  // Question + Custom-Pages (sortiert nach sort_order) → questions[]
-  // Aufgabe 38: Beide Page-Typen leben im selben ordered Array.
-  // Custom-Pages haben kind="custom" + customFields. Widget branched in der Render-Logik.
+  // Question + Custom + Welcome-Pages (sortiert nach sort_order) → questions[]
+  // Aufgabe 38 + 39: Alle drei Page-Typen leben im selben ordered Array.
+  // kind-Diskriminator pro Entry. Widget branched in der Render-Logik.
   const stepPages = pages
-    .filter((p) => p.page_type === 'question' || p.page_type === 'custom')
+    .filter((p) => p.page_type === 'question' || p.page_type === 'custom' || p.page_type === 'welcome')
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
 
   const questions: QuestionConfig[] = stepPages.map((page) => {
     const pageFields = Array.isArray(page.fields)
       ? [...page.fields].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       : []
+
+    // Aufgabe 39: Welcome-Screen
+    if (page.page_type === 'welcome') {
+      const pageCfg = page.config ?? {}
+      return {
+        id: typeof pageCfg.page_key === 'string' && pageCfg.page_key ? pageCfg.page_key : page.id,
+        title: typeof pageCfg.title === 'string' ? pageCfg.title : '',
+        subtitle: typeof pageCfg.subtitle === 'string' ? pageCfg.subtitle : undefined,
+        questionType: 'single_choice',
+        visible: true,
+        options: [],
+        config: {
+          buttonLabel: typeof pageCfg.button_label === 'string' ? pageCfg.button_label : 'Starten',
+        },
+        kind: 'welcome',
+      }
+    }
 
     // Aufgabe 38: Custom-Multi-Field-Page
     if (page.page_type === 'custom') {
@@ -205,6 +224,7 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
     contactFields,
     questions,
     skipSubmitStep: row.skip_submit_step ?? false,
+    redirectUrl: row.redirect_url ?? undefined,
   }
 }
 
@@ -235,7 +255,7 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
       privacy_text, answers_overview_label, footer_text,
       footer_company_name, footer_email, footer_phone,
       email_sender_local, notification_email,
-      skip_submit_step,
+      skip_submit_step, redirect_url,
       primary_color, text_color, background_color, page_background_color,
       font, border_radius, max_width,
       tenants!funnels_tenant_id_fkey (

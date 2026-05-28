@@ -49,6 +49,79 @@ export const DEFAULT_CONTACT_FIELDS: ContactFieldConfig[] = [
 ];
 
 // Aufgabe 38: Factory für neue Custom-Multi-Field-Pages.
+// Aufgabe 39: Welcome-Screen-Factory. Optionaler Intro-Step am Anfang des Funnels.
+export function makeDefaultWelcomePage(): EditorQuestion {
+  const rand = Math.random().toString(36).slice(2, 8);
+  return {
+    _id: `q_welcome_${Date.now().toString(36)}_${rand}`,
+    dbId: undefined,
+    kind: "welcome",
+    questionKey: `welcome_${rand}`,
+    questionType: "single_choice", // unused
+    title: "Willkommen!",
+    subtitle: "In den nächsten 2 Minuten beantwortest du ein paar Fragen — dann melden wir uns mit einem Angebot.",
+    visible: true,
+    required: false,
+    placeholder: "",
+    maxLength: "",
+    sliderMin: "0",
+    sliderMax: "100",
+    sliderStep: "1",
+    sliderUnit: "",
+    sliderDefault: "50",
+    options: [],
+    dateMin: "",
+    dateMax: "",
+    dateDefault: "",
+    numberMin: "",
+    numberMax: "",
+    numberStep: "1",
+    numberDefault: "",
+    numberUnit: "",
+    checkboxLabel: "",
+    welcomeButtonLabel: "Los geht's →",
+  };
+}
+
+// Aufgabe 39: Adresse-Vorlage als Custom-Karte mit 4 vorausgewählten Feldern.
+export function makeAddressCustomPage(): EditorQuestion {
+  const rand = Math.random().toString(36).slice(2, 8);
+  return {
+    _id: `q_address_${Date.now().toString(36)}_${rand}`,
+    dbId: undefined,
+    kind: "custom",
+    questionKey: `adresse_${rand}`,
+    questionType: "single_choice",
+    title: "Wie lautet deine Adresse?",
+    subtitle: "Für ein passgenaues Angebot brauchen wir deine Anschrift.",
+    visible: true,
+    required: false,
+    placeholder: "",
+    maxLength: "",
+    sliderMin: "0",
+    sliderMax: "100",
+    sliderStep: "1",
+    sliderUnit: "",
+    sliderDefault: "50",
+    options: [],
+    dateMin: "",
+    dateMax: "",
+    dateDefault: "",
+    numberMin: "",
+    numberMax: "",
+    numberStep: "1",
+    numberDefault: "",
+    numberUnit: "",
+    checkboxLabel: "",
+    customFields: [
+      { key: "strasse",  type: "text", label: "Straße",         placeholder: "Beispielstraße",  required: true, visible: true, sort_order: 0 },
+      { key: "hausnr",   type: "text", label: "Hausnummer",     placeholder: "12a",             required: true, visible: true, sort_order: 1 },
+      { key: "plz",      type: "plz",  label: "Postleitzahl",   placeholder: "12345",           required: true, visible: true, sort_order: 2 },
+      { key: "ort",      type: "text", label: "Ort",            placeholder: "Berlin",          required: true, visible: true, sort_order: 3 },
+    ],
+  };
+}
+
 // Default-Layout: 2 Felder (Name + Email) als sinnvolle Startbasis. Tenant erweitert via Properties-Panel.
 export function makeDefaultCustomPage(): EditorQuestion {
   const rand = Math.random().toString(36).slice(2, 8);
@@ -161,6 +234,7 @@ export const DEFAULT_EDITOR_STATE: EditorState = {
   emailSenderLocal: "",
   isActive: true,
   skipSubmitStep: false,
+  redirectUrl: "",
   questions: [DEFAULT_QUESTION],
   contactFields: DEFAULT_CONTACT_FIELDS,
 };

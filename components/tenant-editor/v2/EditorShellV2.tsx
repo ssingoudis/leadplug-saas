@@ -10,8 +10,11 @@ import { CenterCanvas } from "./CenterCanvas";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { ThemePanel } from "./ThemePanel";
 import type { SelectedStep } from "./types";
-import type { Vorlage } from "./vorlagen";
-import { makeDefaultCustomPage } from "@/components/tenant-editor/defaults";
+import {
+  makeDefaultCustomPage,
+  makeAddressCustomPage,
+  makeDefaultWelcomePage,
+} from "@/components/tenant-editor/defaults";
 
 interface Props {
   initialState: EditorState;
@@ -194,17 +197,32 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
     [state.questions.length],
   );
 
-  const handleAddVorlage = useCallback(
-    (vorlage: Vorlage, atIndex?: number) => {
-      const newQuestions = vorlage.build();
-      if (newQuestions.length === 0) return;
+  // Aufgabe 39: Adresse-Quick-Card mit 4 vorbefüllten Feldern (Straße/Hausnr/PLZ/Ort)
+  const handleAddAddressCard = useCallback(
+    (atIndex?: number) => {
+      const newPage = makeAddressCustomPage();
       setState((prev) => {
         const insertAt = atIndex ?? prev.questions.length;
         const next = [...prev.questions];
-        next.splice(insertAt, 0, ...newQuestions);
+        next.splice(insertAt, 0, newPage);
         return { ...prev, questions: next };
       });
-      // selektiere die erste der neu hinzugefügten Fragen
+      const insertAt = atIndex ?? state.questions.length;
+      setSelected({ kind: "question", questionIndex: insertAt });
+    },
+    [state.questions.length],
+  );
+
+  // Aufgabe 39: Welcome-Screen am Anfang einfügen
+  const handleAddWelcome = useCallback(
+    (atIndex?: number) => {
+      const newPage = makeDefaultWelcomePage();
+      setState((prev) => {
+        const insertAt = atIndex ?? prev.questions.length;
+        const next = [...prev.questions];
+        next.splice(insertAt, 0, newPage);
+        return { ...prev, questions: next };
+      });
       const insertAt = atIndex ?? state.questions.length;
       setSelected({ kind: "question", questionIndex: insertAt });
     },
@@ -637,8 +655,9 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
               onSelect={setSelected}
               onReorder={handleReorder}
               onAddQuestion={handleAddQuestion}
-              onAddVorlage={handleAddVorlage}
               onAddCustomPage={handleAddCustomPage}
+              onAddAddressCard={handleAddAddressCard}
+              onAddWelcome={handleAddWelcome}
             />
             <CenterCanvas
               state={state}
