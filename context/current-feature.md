@@ -111,6 +111,71 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ## History
 
+- **Aufgabe 33 — Phase C.1b (Vorlagen + Field-Level-Properties + Submit-Multi-Field-UI) ✅ (2026-05-28)**
+
+  Macht den v2-Editor zum tatsächlichen Builder. Bis C.1a war's nur das Gerüst mit Page-Level-Settings; C.1b ergänzt Vorlagen für Quick-Start, type-spezifische Field-Properties für alle 11 Question-Types, und Multi-Field-Editierung der Submit-Page (Kontaktformular). Code live (Commit `e6640a8`), Production-Smoke-Test grün.
+
+  **Auslegung A bekräftigt:** Vorlagen erzeugen mehrere separate Steps im Funnel (Typeform-Stil "eine Frage pro Bildschirm"), nicht eine Multi-Field-Karte. Multi-Field-auf-Question-Page (echte FormFlow-Multi-Field-Card mit funnel.tsx-Touch) bleibt explizit Future-Feature on-demand, kein C.1b-Scope.
+
+  **Plan-Reorder vor Implementierung:** Ursprünglicher C.1b war "WYSIWYG-Click-Select + Inline-Edit"; ursprünglicher C.1c "Multi-Field + Vorlagen". Nach Iteration mit Stavros umgetauscht — Multi-Field-Foundation muss vor WYSIWYG-Polish kommen, sonst Inline-Edit halbgar. Neu: C.1b = Multi-Field + Vorlagen, C.1c = WYSIWYG-Polish.
+
+  **Vorlagen (Quick-Start-Sets):**
+  - `components/tenant-editor/v2/vorlagen.ts` neu. `Vorlage`-Interface mit `build(): EditorQuestion[]` für Fresh-IDs pro Aufruf.
+  - 3 initiale Vorlagen: **Kontakt** (Name short_text + E-Mail + Telefon, 3 Steps), **Adresse** (Straße + PLZ als short_text mit maxLength=5 + Stadt + Land als dropdown mit DE/AT/CH, 4 Steps), **Ja-Nein** (single_choice mit 2 Options, 1 Step).
+  - `AddElementModal.tsx` zweisektionig: oben "Vorlagen" als Icon-Kachel-Grid mit Beschreibung, unten "Einzelne Felder" gruppiert in Text-Eingabe / Auswahl / Numerisch & Datum.
+  - Zwei Modal-Callbacks: `onSelectType(QuestionType)` (Einzelfeld → 1 Page) + `onSelectVorlage(Vorlage)` (Vorlage → N Pages).
+  - `StepList`-Prop neu: `onAddVorlage`. `EditorShellV2.handleAddVorlage(vorlage)` ruft `vorlage.build()` und appended an `state.questions[]`, selektiert die erste neue Frage.
+
+  **Field-Level-Properties (Question + Submit gemeinsamer Pattern):**
+  - `components/tenant-editor/v2/properties/FieldRow.tsx` neu (107 LOC) — gemeinsame expandierbare Field-Zeile. Props: icon, pillClass, label, typeLabel, expandable (toggelbar), expanded, onToggle, optional dragHandleProps, optional onDelete, children (= FieldProperties wenn expanded).
+  - `components/tenant-editor/v2/properties/FieldProperties.tsx` neu (335 LOC) — discriminated Union `kind: "question" | "contact"`. Pro Field-Type passende Inputs:
+    - Text/Long/Email/Tel: Placeholder + MaxLength.
+    - Single/Multi-Choice/Dropdown: OptionsEditor (Drag-Reorder + Add + Delete + IconPicker).
+    - Slider: Min/Max/Step/Default + Einheit.
+    - Number: Min/Max/Step/Default + Einheit.
+    - Date: Min/Max/Default (ISO YYYY-MM-DD).
+    - Checkbox: CheckboxLabel.
+    - Contact-text/email/tel/plz: Label + Placeholder + Required + Visible.
+    - Contact-radio: Label + Required + Visible + SimpleStringList (string[]-Options inline).
+  - `components/tenant-editor/v2/properties/OptionsEditor.tsx` neu (156 LOC) — @dnd-kit/sortable für `EditorOption[]`-Reorder, plus IconPicker pro Option (aus `components/dashboard/IconPicker.tsx` wiederverwendet).
+  - Question-Page: FieldRow ist permanent expandiert (`expandable={false}`, `expanded={true}`) — 1 Field pro Page, keine Toggle-Logik nötig.
+  - Submit-Page: FieldRows kollabierbar, lokaler `expandedKey`-State in `SubmitProps`.
+
+  **Submit-Page Multi-Field-UI:**
+  - `contactFields[]` jetzt als FieldRow-Liste mit @dnd-kit/sortable Drag-Reorder rendert. Reorder-Handler synchronisiert `sort_order` zur neuen Array-Position.
+  - `components/tenant-editor/v2/properties/AddContactFieldPicker.tsx` neu (115 LOC) — kleines Modal mit den 5 erlaubten Submit-Types (text/email/tel/plz/radio), NICHT der vollen Question-Type-Palette (Submit hat eigenes Type-Schema).
+  - `EditorShellV2` neue Handler: `handlePatchContactField(key, patch)`, `handleAddContactField(type)`, `handleDeleteContactField(key)`, `handleReorderContactFields(next)`. Plus `defaultContactField(type, existingFields)`-Helper: generiert eindeutigen `custom_<base36>_<rand>`-Key, befüllt label/required/visible/sort_order + Default-Options bei radio.
+  - Delete pro Feld erlaubt — kein System-Field-Schutz, identisch zum v1-Verhalten in SectionKontakt.
+
+  **PropertiesPanel.tsx refactor (315 LOC → 411 + 200 ≈ 600 LOC):**
+  - 4 neue Props neben den bestehenden 5: `onPatchContactField`, `onAddContactField`, `onDeleteContactField`, `onReorderContactFields`.
+  - `QuestionProps`: Section "Seite" (Fragetyp/Titel/Untertitel/Sichtbarkeit unverändert) + neue Section "Feld dieser Seite" (1 permanent-expandierter FieldRow mit FieldProperties) + Action-Section (Löschen).
+  - `SubmitProps`: Section "Seite" (Überschrift/Untertitel/Button-Text) + Section "Felder dieser Seite" (DndContext + SortableContext + N kollabierbare FieldRows + "+ Feld hinzufügen"-Button + AddContactFieldPicker-Modal) + Hinweis-Section.
+  - `SuccessProps`: unverändert (kein Feld).
+  - Eigener `useEffect` resettet expandedKey wenn das expandierte Field gelöscht wurde.
+
+  **Verifikation:**
+  - `npx tsc --noEmit` exit 0.
+  - `npm run build` ohne Errors.
+  - Lokaler Smoke-Test im Browser auf `?v=2`: Vorlagen-Klick erzeugt erwartete Step-Counts (3/4/1), Field-Properties editierbar pro Type (Options-Reorder/Add, Slider-Range, Date-ISO, Checkbox-Label), Submit-Page Multi-Field Drag-Reorder + Add + Edit + Delete funktional, Save persistiert, Reload zeigt alles persistiert. Alter Editor ohne `?v=2` unverändert.
+
+  **Bekannte Trade-offs:**
+  - Submit-Page-Field-Types unterscheiden sich strukturell von Question-Page-Field-Types (eigenes 5er-Schema vs 11er-Schema, options als string[] vs EditorOption[]). FieldProperties.tsx hat zwei interne Sub-Komponenten ohne Code-Sharing — bewusst, da die Type-Sets nicht überlappen.
+  - Question-Page-FieldRow ist immer expandiert — wenn später Multi-Field-auf-Question-Page kommt, muss `expandable` umgeschaltet werden und das FieldRow-Pattern wird zur kollabierbaren Liste wie heute auf Submit-Page. Architektur ist forward-compatible.
+  - SimpleStringList für Contact-radio-Options hat keinen Drag-Reorder (nur Add/Edit/Delete) — bewusst kleiner Scope, kann bei Bedarf später nachgezogen werden.
+
+  **Nicht in dieser Aufgabe (eigene Sprints):**
+  - WYSIWYG Click-Select im Center-Preview + Inline-Edit → C.1c (war ursprünglich C.1b)
+  - Pin-Edge-Insert zwischen Steps → C.1c
+  - **Widget-Komplettrefactor (Typeform-Stil mit Dark-Theme/Letter-Prefixes/Slide-Animations)** → wurde von Stavros nach C.1b-Smoke-Test als nächster großer Sprint priorisiert. Ersetzt ursprüngliches C.7 (Smooth Slide-Übergänge) und erweitert es zu einem vollständigen Widget-Redesign mit funnel.tsx-Touch. Neue Aufgabe-Nummer (vermutlich 34).
+  - Design-Tab-Inhalt (Theme-Panel) → C.2
+
+  *Branch:* `feature/aufgabe-33-builder-multifield` mit `--no-ff` in main gemerged.
+
+  *Commits:*
+  - `e6640a8` feat(builder): Aufgabe 33 (Phase C.1b) — Vorlagen, Field-Level-Properties, Submit-Multi-Field-UI
+  - Merge-Commit auf main (Vercel-Auto-Deploy)
+
 - **Aufgabe 32 — Phase C.1a (Editor-Shell v2: 3-Pane Builder hinter ?v=2) ✅ (2026-05-28)**
 
   Erster der drei C.1-Sub-Sprints für den neuen Builder. Parallel-Build des Typeform-Stil 3-Pane-Shells unter `/dashboard/funnels/[slug]/edit?v=2` und `/dashboard/funnels/new?v=2`. Alter Editor unverändert ohne Searchparam. Zero-Risk-Rollback: v2/-Folder + 2 zusätzliche Client-Files + 2 Routing-Conditionals lassen sich isoliert entfernen.

@@ -147,15 +147,16 @@ Reihenfolge laut [`../CLAUDE.md`](../CLAUDE.md) §5:
 | Schritt | Was | Geschätzter Aufwand |
 |---|---|---|
 | C.1a ✅ | ~~Editor-Shell v2 — 3-Pane Layout (StepList · WYSIWYG-Preview · Properties), Top-Tabs, Drag-Reorder, Page-Level-Properties, ?v=2-Routing~~ — Aufgabe 32, 2026-05-28. | 1 Tag |
-| C.1b | **Multi-Field-pro-Page + Vorlagen:** Properties zeigt Felder-Liste mit Drag, "+ Feld hinzufügen", Field-Level-Properties pro Type, AddElementModal zweisektionig (Vorlagen oben / Einzelfelder unten). 3 initiale Vorlagen (Kontakt, Adresse, Ja/Nein). Submit-Page-Refactor: state.contactFields[] → normale fields[] auf submit-Page. | 2-3 Tage |
+| C.1b ✅ | ~~Vorlagen + Field-Level-Properties + Submit-Multi-Field-UI~~ — Aufgabe 33, 2026-05-28. AddElementModal zweisektionig mit 3 Vorlagen (Kontakt/Adresse/Ja-Nein als Mehrfach-Step-Sets), FieldProperties pro Type, OptionsEditor mit Drag, Submit-Page Multi-Field mit Add/Reorder/Edit/Delete. Auslegung A locked (Vorlage = mehrere Steps, kein Multi-Field-auf-Question-Page). | 1 Tag |
+| **WR** | **Widget-Refactor (NEW — vorgezogen, ersetzt C.7 + erweitert):** Kompletter Funnel-Widget-Neubau in Typeform-Stil mit funnel.tsx-Touch (CLAUDE.md §11 Freigabe erteilt 2026-05-28). Patterns: A/B/C/D Letter-Prefixed Options statt Icons als Default, Underline-Style Text-Inputs, große Number-Readout beim Slider, Slide-Up Spring-Animations zwischen Steps, Auto-Advance bei Single-Choice, Bottom-Right Floating-Nav, Progress-Bar oben, monospace Step-Counter. Alle 11 Field-Types neu. Per-Tenant-Theme bleibt funktional (Brand-Color/Font/Background fließen in das neue Design ein). Builder-Center-Preview reflektiert automatisch (selbe Funnel-Komponente). | 1-2 Wochen |
 | C.1c | **WYSIWYG-Polish:** Click-Select im Center (Klick = Properties springt auf Element), Inline-Edit (contenteditable für Label/Subtitle), Floating-Toolbar (Duplicate/Delete/Drag), Pin-Edge-Insert zwischen Steps. | 2-3 Tage |
 | C.1d | **Cutover:** Alten v1-Editor + Routing-Conditional + ?v=2-Flag entfernen. | 0.5 Tag |
 | C.2 | Theme-Panel im Editor (exponiert vorhandene CSS-Vars + Logo-Upload) | 2-3 Tage |
 | C.3 ✅ | ~~Mehr Feldtypen im Builder (Email, Tel, Date, Number, Dropdown, Checkbox)~~ — Aufgabe 31, 2026-05-28. URL/File-Upload/Address bewusst gestrichen, `multi_choice`-Rename mit drin. | 3-5 Tage |
 | C.4 | **Logic Jumps** (per Frage: "springe zu X wenn Antwort = Y") — neue Tabelle oder JSONB | 3-4 Tage |
 | C.5 | Webhook-Export Code (Delivery, Retry, Signatur) — nutzt B.6-Schema | 3-5 Tage |
-| C.6 | Antwortoptionen-UX-Polish + icon_url Layout-Anpassung (Bild oben vs. SVG zentriert) | 1-2 Tage |
-| C.7 | Smooth Slide-Übergänge zwischen Fragen im Widget (Typeform-Stil) via framer-motion `LazyMotion` — postMessage-Resize erst nach `onAnimationComplete`, `prefers-reduced-motion` respektieren | 2-3 Tage |
+| C.6 | Antwortoptionen-UX-Polish + icon_url Layout-Anpassung (Bild oben vs. SVG zentriert) — **wird teilweise mit WR erledigt** wenn das neue Widget Letter-Prefixes als Default einführt. | 1-2 Tage |
+| ~~C.7~~ | ~~Smooth Slide-Übergänge zwischen Fragen im Widget~~ — **absorbiert in WR** (Widget-Refactor enthält Slide-Animations als Kern-Pattern). | — |
 
 **Total Phase C realistisch: 18-28 Tage Vollzeit.**
 
