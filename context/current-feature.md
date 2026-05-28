@@ -109,6 +109,23 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
+## Aktuell: Builder-Polish-Loop (2026-05-28+)
+
+**Status:** Builder-Final-Sprint (Aufgaben 35-C.2) ist auf main gemerged (Commit `9e3f3f4`).
+**Bevor C.5/D.1/D.2/D.3 angegangen werden:** Iterations-Phase, in der Stavros visuelles & UX-Feedback zum Builder gibt und Anpassungen direkt eingearbeitet werden. Kein neuer Schema-Touch, kein neuer Sprint-Plan — kurze, gezielte Edits.
+
+## Post-Sprint-Agenda (in Reihenfolge, beginnt NACH Polish-Loop)
+
+1. **C.5 — Webhook-Sender** (~4-5 Tage) — Backend (HTTP-POST + HMAC + Retry, DB-Schema seit B.6) + Dashboard-UI „Webhook hinzufügen / testen / Logs". **Bedingung für 29€-Tier.**
+2. **D.1 — Stripe Live** (~1 Tag) — ENV `sk_live_`, Live-Price-IDs, Live-Webhook, Portal-Config.
+3. **D.2 — Conversion-Tracking** (~1-2 Tage) — Widget sendet bei Submit `postMessage`, Parent-Seite ruft `fbq()` / `gtag()`. **Performance-Marketing-Blocker.**
+4. **D.3 — 3-5 Demo-Funnels als Templates** (~2-3 Tage) — Content-Arbeit, kein Engineering.
+5. **(Optional)** C.4 — Logic Jumps (~3-4 Tage) — Fokus-Roadmap sagt „v1.1 OK".
+
+Total bis Launch: ~9-13 Tage Engineering + Stripe-Setup.
+
+---
+
 ## History
 
 - **C.2 — Theme-Panel (Brand-Farbe, Schrift, Layout) ✅ (2026-05-28)**
