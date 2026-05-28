@@ -1,6 +1,9 @@
-# LeadPlug Roadmap
+# LeadPlug Roadmap — granulare Aufgaben-Liste
 
-> Phasenplan, geplante Aufgaben und v2/Premium-Features.
+> **Rolle dieser Datei:** detaillierte Aufgabe-X.Y-Beschreibungen + Phase-B-History für die konkrete Coding-Arbeit.
+>
+> **Scope-Wahrheit ist die Fokus-Roadmap.** Strategische Frage „was bauen wir bis Launch?" beantwortet [`builder-fokus-roadmap.html`](builder-fokus-roadmap.html), nicht diese Datei. Bei Widerspruch wiegt die Fokus-Roadmap stärker — Stand hier ist evtl. nur noch History.
+>
 > Strategische Entscheidungen (Tenant-Modell, Pricing, Builder-Richtung): siehe [`../CLAUDE.md`](../CLAUDE.md).
 
 ---

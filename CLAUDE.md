@@ -115,16 +115,22 @@ Drei Tiers pro Tenant (Agentur). Preise sind Richtwerte:
 
 ## 6. Doku-Index
 
+> **Zwei Roadmaps mit getrennten Rollen:**
+> - **Fokus-Roadmap** (HTML, strategisch) = *Was bauen wir bis Launch? Was ist gestrichen?* → Definiert Scope, Reihenfolge, Strich-Liste. **Die strategische Wahrheit.** Bei Konflikt mit roadmap.md wiegt sie stärker.
+> - **roadmap.md** (granular, taktisch) = *Welche konkrete Aufgabe ist als Nächstes dran?* → Aufgabe X.Y mit Detail-Beschreibung, History pro Phase. Die Arbeitsliste für die einzelne Coding-Session.
+>
+> Im Workflow: Fokus-Roadmap sagt was, roadmap.md sagt wie & in welchem Aufgabe-Block. Nie roadmap.md über Fokus-Roadmap stellen — bei Widerspruch ist roadmap.md veraltet.
+
+- [`context/builder-fokus-roadmap.html`](context/builder-fokus-roadmap.html) — **strategische Roadmap bis Launch** (Lifestyle-Business via Direct-Sales an DACH-Marketing-Agenturen, ~4-5 Wo Engineering). Definiert Scope (was bleibt, was gestrichen ist, was on-demand kommt). **Erste Anlaufstelle für „was sollen wir bauen".**
+- [`context/roadmap.md`](context/roadmap.md) — **granulare Aufgaben-Liste** (Phasen A-E, Sub-Nummern B.1, B.2, …, C.1, C.2, …) mit Detail-Beschreibungen und Phase-B-Historie. **Erste Anlaufstelle für „welche Aufgabe konkret als Nächstes".** Inhaltlich der Fokus-Roadmap unterzuordnen.
 - [`context/project-overview.md`](context/project-overview.md) — Architektur, Code-Struktur, DB-Schema, API-Routes
 - [`context/supabase-schema.md`](context/supabase-schema.md) — vollständige technische DB-Referenz (Enums, Tables, RLS, Indices, Functions)
-- [`context/roadmap.md`](context/roadmap.md) — granulare Code-Aufgaben (Phasen A-E, Sub-Nummern B.1, B.2, …) — primäre Arbeitsquelle für Claude
-- [`context/builder-fokus-roadmap.html`](context/builder-fokus-roadmap.html) — Die Aktuelle Go-Live Version des Produktes. Diese ist klar strukturiert und definiert das Produkt bis zu Go-Live, diese Referenz ist der aktuelle Status Quo, Aufgaben die hier aufgeschrieben sind, müssen umgesetzt werden, sie ergänzt und wiegt stärker als die context\roadmap.md
 - [`context/saas-phasenplan.html`](context/saas-phasenplan.html) — visuelle High-Level Phasen-Übersicht mit Status-Badges (Phasen 1-6) — vom User selbst gepflegt
 - [`context/current-feature.md`](context/current-feature.md) — laufende Arbeit + Aufgaben-History (chronologisch)
 - [`context/history-archive.md`](context/history-archive.md) — ältere Aufgaben (archiviert)
 - [`context/design-system.md`](context/design-system.md) — UI-Komponenten Dashboard + Tenant-Portal
 - [`context/tenant-funnel-editor.html`](context/tenant-funnel-editor.html) — Editor-Struktur (EditorState, Save-Flow)
-- [`context/funnel-funktionsweise.html`](context/funnel-funktionsweise.html) — UI-Konzept des öffentlichen Widgets (vorübergehend — wird in Phase B.5 obsolet)
+- [`context/funnel-funktionsweise.html`](context/funnel-funktionsweise.html) — UI-Konzept des öffentlichen Widgets (Beschreibung des Widget-Verhaltens; Schema-Referenzen sind seit B.5 veraltet — pages+fields statt funnel_questions+contact_fields)
 - [`context/workflows.html`](context/workflows.html) — Auth-Workflows (Signup, Login, Session, Navigation)
 - [`context/resize-erklaerung.html`](context/resize-erklaerung.html) — iFrame-postMessage-Mechanik
 
