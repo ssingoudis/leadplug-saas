@@ -152,26 +152,9 @@ export function makeDefaultCustomPage(): EditorQuestion {
     numberDefault: "",
     numberUnit: "",
     checkboxLabel: "",
-    customFields: [
-      {
-        key: "name",
-        type: "text",
-        label: "Vor- und Nachname",
-        placeholder: "Max Mustermann",
-        required: true,
-        visible: true,
-        sort_order: 0,
-      },
-      {
-        key: "email",
-        type: "email",
-        label: "E-Mail-Adresse",
-        placeholder: "max@beispiel.de",
-        required: true,
-        visible: true,
-        sort_order: 1,
-      },
-    ],
+    // Aufgabe 39 Polish: Custom-Karte startet leer. Stavros — Name/Email-Defaults waren oft
+    // fehl am Platz. User fügt eigene Felder via Properties-Panel hinzu.
+    customFields: [],
   };
 }
 

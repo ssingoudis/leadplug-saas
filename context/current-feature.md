@@ -128,6 +128,59 @@ Total bis Launch: ~9-13 Tage Engineering + Stripe-Setup.
 
 ## History
 
+- **Polish-Iteration nach Aufgabe 39 (Sammel-Commit) ✅ (2026-05-28)**
+
+  Stavros-Feedback-Runde nach Aufgabe 39, in zwei Schwüngen abgearbeitet:
+
+  **Schwung 1 — Defaults + neue Types:**
+  - **Welcome-Constraints:** `handleAddWelcome` ignoriert atIndex und fügt IMMER an Position 0 ein. Bei vorhandenem Welcome wird der bestehende selektiert statt einen zweiten anzulegen (max 1 pro Funnel).
+  - **Custom-Karte Defaults:** `makeDefaultCustomPage` startet mit `customFields: []` statt vorbefüllten Name+Email-Defaults (Stavros: „sind oft fehl am Platz"). User fügt eigene Felder per Picker hinzu.
+  - **Eye-Toggle in FieldRow:** Sichtbarkeit jetzt direkt per Klick neben dem Müllkorb umschaltbar (Eye/EyeOff-Icon). Unsichtbare Felder kriegen 60% Opazität — auf einen Blick erkennbar.
+  - **Required default TRUE:** `defaultContactField` setzt `required: true` bei jedem neuen Feld. Stavros-Rationale: wer ein Feld hinzufügt will i.d.R. dass es ausgefüllt wird.
+  - **5 neue ContactField-Types:** `long_text` (Textarea), `number` (numeric input), `date` (HTML5 date picker — Inline-Kalender geplant für nächste Iteration), `checkbox` (single boolean mit `checkboxLabel`), `dropdown` (select mit options). Picker-Modal zeigt jetzt 10 Types statt 5. Widget rendert in beiden Pfaden (Custom-Page + Submit-Page-Form), Validation in `validateContactField`.
+
+  **Schwung 2 — UX-Bugs & Visual-Builder-Polish:**
+  - **Welcome +Option-Bug:** Welcome-Screens hatten fälschlich „+ Option hinzufügen" gerendert (weil questionType-Fallback „single_choice" den Choice-Block triggerte). Fix: `!isWelcomeStep`-Guard im Widget-Render.
+  - **Hidden-State im Canvas:** statt „Diese Frage ist ausgeblendet"-Placeholder rendert das Canvas die hidden-Page jetzt normal, aber mit 50% Opazität + Grau-Overlay + Eye-Off-Badge oben rechts („Ausgeblendet"). Tenant sieht den Inhalt weiter, weiß aber sofort dass sie im Live nicht erscheint. `buildQuestions` mit neuem `keepHidden`-Flag.
+  - **Custom-Karte leer im Canvas:** wenn `customFields.length === 0`, rendert das Widget jetzt einen großen dashed-Border-Button „+ Feld hinzufügen" in Brand-Tint statt leerem Bereich. Click öffnet einen Shell-Level-AddContactFieldPicker (neu in EditorShellV2). Picker im Properties-Panel bleibt unverändert — beide arbeiten unabhängig.
+  - **Drag-Handle auf ganzem Pill:** StepPill nimmt den DnD-Listener jetzt am Outer-Container statt nur am Grip-Icon-Span. Komplettes Pill ist draggable, Click vs Drag wird von der `activationConstraint: { distance: 4 }` der PointerSensor automatisch unterschieden — kurzer Klick = onClick, Bewegung > 4px = Drag.
+
+  **Files (Sammel-Liste):**
+  - `types/index.ts`: ContactFieldConfig.type erweitert + optional `checkboxLabel`
+  - `components/tenant-editor/defaults.ts`: makeDefaultCustomPage leer
+  - `components/tenant-editor/v2/EditorShellV2.tsx`: handleAddWelcome enforcement + defaultContactField labels + required=true + canvasFieldPickerOpen-State + Shell-Level AddContactFieldPicker-Render
+  - `components/tenant-editor/v2/properties/FieldRow.tsx`: Eye-Toggle-Button + Opazitäts-Indicator
+  - `components/tenant-editor/v2/properties/AddContactFieldPicker.tsx`: 5 neue Picker-Entries
+  - `components/tenant-editor/v2/properties/FieldProperties.tsx`: ContactFieldProps mit hasOptions (radio+dropdown), Checkbox-Label-Field
+  - `components/tenant-editor/v2/PropertiesPanel.tsx`: SortableContactFieldRow Icon+Pill-Map erweitert + onToggleVisible-Verkabelung
+  - `components/tenant-editor/v2/fieldMeta.ts`: contactFieldTypeLabel für neue Types
+  - `components/tenant-editor/v2/StepPill.tsx`: Drag-Listener am Outer-Container, Grip-Icon nur visuell
+  - `components/tenant-editor/v2/CenterCanvas.tsx`: Hidden-Overlay-Render + onAddCustomFieldRequest-Pass-Through
+  - `lib/editorUtils.ts`: CONTACT_TYPE_TO_FIELD_TYPE + fieldTypeToContactType + buildQuestions.keepHidden
+  - `lib/getTenantConfig.ts`: fieldTypeToContactType-Switch erweitert
+  - `lib/validateContactField.ts`: Validation für long_text/number/date/checkbox/dropdown
+  - `components/funnel.tsx`: Custom-Page-Render + Submit-Form-Render jeweils 5 neue Type-Branches, `!isWelcomeStep`-Guard, `onAddCustomFieldRequest` Prop + Empty-State-Button
+
+  **Files:**
+  - `types/index.ts`: ContactFieldConfig.type erweitert + optional `checkboxLabel`
+  - `components/tenant-editor/defaults.ts`: makeDefaultCustomPage leer
+  - `components/tenant-editor/v2/EditorShellV2.tsx`: handleAddWelcome enforcement + defaultContactField labels + required=true
+  - `components/tenant-editor/v2/properties/FieldRow.tsx`: Eye-Toggle-Button + Opazitäts-Indicator
+  - `components/tenant-editor/v2/properties/AddContactFieldPicker.tsx`: 5 neue Picker-Entries
+  - `components/tenant-editor/v2/properties/FieldProperties.tsx`: ContactFieldProps mit hasOptions (radio+dropdown), Checkbox-Label-Field
+  - `components/tenant-editor/v2/PropertiesPanel.tsx`: SortableContactFieldRow Icon+Pill-Map erweitert + onToggleVisible-Verkabelung
+  - `components/tenant-editor/v2/fieldMeta.ts`: contactFieldTypeLabel für neue Types
+  - `lib/editorUtils.ts`: CONTACT_TYPE_TO_FIELD_TYPE + fieldTypeToContactType erweitert
+  - `lib/getTenantConfig.ts`: fieldTypeToContactType-Switch erweitert
+  - `lib/validateContactField.ts`: Validation für long_text/number/date/checkbox/dropdown
+  - `components/funnel.tsx`: Custom-Page-Render + Submit-Form-Render jeweils 5 neue Type-Branches
+
+  **Wie testen:**
+  1. Custom-Karte anlegen → kommt leer, Stand Standard-Add-Button für Felder
+  2. Custom-Karte mit allen 10 Field-Types befüllen (text/long_text/email/tel/plz/number/date/checkbox/radio/dropdown)
+  3. Auge-Icon neben einem Feld klicken → Feld wird grau + ausgeblendet im Widget
+  4. Welcome-Screen 2x anlegen → 2. Klick selektiert den bestehenden (max 1 enforced)
+
 - **Aufgabe 39 — Page+Elements-Erweiterung: Welcome + Rating/Scale/Statement + End-Screen-Redirect + Builder-Cleanup ✅ (2026-05-28)**
 
   Strukturell-feature-getriebene Erweiterung im Polish-Loop. Stavros' Vision: Builder muss mehr Element-Types haben (besonders Rating/Scale für Lead-Quali-Karten), Welcome- und End-Screens sollen erstklassige Konzepte sein. Außerdem gestrichene Vorlagen-Section (Stavros: „die sind imo schrott") + Custom-Karte als primäre Action prominent.

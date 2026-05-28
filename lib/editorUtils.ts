@@ -92,10 +92,12 @@ const TEXTISH_TYPES = new Set<QuestionType>([
 
 export function buildQuestions(
   questions: EditorQuestion[],
-  opts: { keepEmpty?: boolean } = {},
+  opts: { keepEmpty?: boolean; keepHidden?: boolean } = {},
 ): QuestionConfig[] {
   return questions
-    .filter((q) => q.visible !== false)
+    // Polish: im Builder (keepHidden) bleiben hidden-Pages drin damit das Canvas sie als
+    // ausgegrautes Overlay anzeigen kann. Im Test/Live werden sie wie gewohnt rausgefiltert.
+    .filter((q) => (opts.keepHidden ? true : q.visible !== false))
     .map((q) => {
       // Aufgabe 39: Welcome-Page durchreichen
       if (q.kind === "welcome") {
@@ -283,12 +285,18 @@ export async function generateRandomSlug(admin: any): Promise<string> {
 
 // Mapping ContactFieldConfig.type → field_type-Enum-Wert.
 // "text" wird zu "short_text" weil das DB-Enum kein "text" hat (Roadmap-Konsolidierung).
+// Aufgabe 39 Polish: long_text/number/date/checkbox/dropdown 1:1 ins DB-Enum.
 const CONTACT_TYPE_TO_FIELD_TYPE: Record<ContactFieldConfig["type"], string> = {
   text: "short_text",
   email: "email",
   tel: "tel",
   plz: "plz",
   radio: "radio",
+  long_text: "long_text",
+  number: "number",
+  date: "date",
+  checkbox: "checkbox",
+  dropdown: "dropdown",
 };
 
 // Mapping QuestionType → field_type-Enum-Wert.
@@ -484,18 +492,18 @@ export function editorStateToPagesAndFields(
 // "text" zurück, damit das Widget sie zumindest als Texteingabe rendert.
 function fieldTypeToContactType(ft: string): ContactFieldConfig["type"] {
   switch (ft) {
-    case "short_text":
-      return "text";
-    case "email":
-      return "email";
-    case "tel":
-      return "tel";
-    case "plz":
-      return "plz";
-    case "radio":
-      return "radio";
-    default:
-      return "text";
+    case "short_text": return "text";
+    case "email":      return "email";
+    case "tel":        return "tel";
+    case "plz":        return "plz";
+    case "radio":      return "radio";
+    // Aufgabe 39 Polish
+    case "long_text":  return "long_text";
+    case "number":     return "number";
+    case "date":       return "date";
+    case "checkbox":   return "checkbox";
+    case "dropdown":   return "dropdown";
+    default:           return "text";
   }
 }
 

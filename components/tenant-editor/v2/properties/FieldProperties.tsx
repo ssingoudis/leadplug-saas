@@ -223,8 +223,10 @@ function ContactFieldProps({
   contactField: ContactFieldConfig;
   onPatch: (patch: Partial<ContactFieldConfig>) => void;
 }) {
-  const isRadio = f.type === "radio";
-  const isTextish = f.type === "text" || f.type === "email" || f.type === "tel" || f.type === "plz";
+  // Aufgabe 39 Polish: erweiterte ContactFieldConfig-Types
+  const hasOptions = f.type === "radio" || f.type === "dropdown";
+  const isTextish = f.type === "text" || f.type === "email" || f.type === "tel" || f.type === "plz" || f.type === "long_text" || f.type === "number";
+  const isCheckbox = f.type === "checkbox";
 
   return (
     <div className="flex flex-col gap-3">
@@ -255,11 +257,21 @@ function ContactFieldProps({
         </Field>
       )}
 
-      {isRadio && (
+      {hasOptions && (
         <Field label="Antwortoptionen">
           <SimpleStringList
             value={f.options ?? []}
             onChange={(next) => onPatch({ options: next })}
+          />
+        </Field>
+      )}
+
+      {isCheckbox && (
+        <Field label="Beschriftung neben Checkbox">
+          <TextInput
+            value={f.checkboxLabel ?? ""}
+            onChange={(v) => onPatch({ checkboxLabel: v })}
+            placeholder="z. B. Ja, ich stimme zu"
           />
         </Field>
       )}

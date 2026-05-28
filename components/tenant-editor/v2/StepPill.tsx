@@ -11,8 +11,10 @@ interface Props {
   hidden?: boolean;
   draggable?: boolean;
   onClick: () => void;
-  /** dnd-kit refs (drag handle + draggable wrapper). */
-  dragHandleProps?: React.HTMLAttributes<HTMLSpanElement> & { ref?: (node: HTMLElement | null) => void };
+  /** dnd-kit refs (drag handle + draggable wrapper). Wird auf das ganze Pill gelegt,
+      damit der Drag überall am Pill startet. Click vs Drag löst die activationConstraint
+      des Sensors (distance: 4) automatisch — kurzer Klick = onClick, Bewegung > 4px = Drag. */
+  dragHandleProps?: React.HTMLAttributes<HTMLDivElement> & { ref?: (node: HTMLElement | null) => void };
 }
 
 export function StepPill({
@@ -27,7 +29,10 @@ export function StepPill({
 }: Props) {
   return (
     <div
+      {...(draggable ? dragHandleProps : {})}
       className={`group flex items-stretch overflow-hidden rounded-xl border transition-all ${
+        draggable ? "cursor-grab active:cursor-grabbing" : ""
+      } ${
         selected
           ? "border-primary bg-primary/5 dark:border-primary dark:bg-primary/10"
           : "border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600"
@@ -35,11 +40,8 @@ export function StepPill({
     >
       {draggable && (
         <span
-          {...dragHandleProps}
-          className="flex w-5 cursor-grab items-center justify-center text-gray-300 transition-colors hover:text-gray-500 active:cursor-grabbing dark:text-gray-600 dark:hover:text-gray-400"
-          aria-label="Reihenfolge ändern"
-          role="button"
-          tabIndex={-1}
+          className="flex w-5 items-center justify-center text-gray-300 transition-colors group-hover:text-gray-500 dark:text-gray-600 dark:group-hover:text-gray-400"
+          aria-hidden="true"
         >
           <GripVertical size={14} />
         </span>

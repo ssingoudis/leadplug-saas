@@ -9,6 +9,7 @@ import { StepList } from "./StepList";
 import { CenterCanvas } from "./CenterCanvas";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { ThemePanel } from "./ThemePanel";
+import { AddContactFieldPicker } from "./properties/AddContactFieldPicker";
 import type { SelectedStep } from "./types";
 import {
   makeDefaultCustomPage,
@@ -37,6 +38,11 @@ function defaultContactField(
     tel: "Telefon",
     plz: "Postleitzahl",
     radio: "Auswahl",
+    long_text: "Lang-Text",
+    number: "Zahl",
+    date: "Datum",
+    checkbox: "Checkbox",
+    dropdown: "Dropdown",
   };
   // Eindeutigen Key generieren — robust gegen Kollisionen mit System-Keys wie name/email/phone/plz/anrede.
   const existingKeys = new Set(existing.map((f) => f.key));
@@ -52,7 +58,9 @@ function defaultContactField(
     type,
     label: labelByType[type],
     placeholder: "",
-    required: false,
+    // Aufgabe 39 Polish: alle neuen Felder default required=true. Tenant kann auf optional umstellen.
+    // Stavros-Rationale: wer ein Feld hinzufügt will i.d.R. dass es ausgefüllt wird.
+    required: true,
     visible: true,
     sort_order: maxOrder + 1,
     ...(type === "radio" ? { options: ["Option 1", "Option 2"] } : {}),
@@ -113,6 +121,10 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
 
   // C.1c WYSIWYG-Edit — welches Element im CenterCanvas ist gerade selektiert (für Highlight + Inline-Edit)
   const [selectedFieldRef, setSelectedFieldRef] = useState<string>("");
+
+  // Polish: Canvas-side Inline-"+"-Button auf leerer Custom-Karte öffnet diesen Shell-Level-Picker.
+  // Properties-Panel hat seinen eigenen Picker — beide funktionieren unabhängig.
+  const [canvasFieldPickerOpen, setCanvasFieldPickerOpen] = useState(false);
 
   // Default-Selection: erste Frage falls vorhanden, sonst submit.
   const [selected, setSelected] = useState<SelectedStep>(() => {
@@ -213,20 +225,24 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
     [state.questions.length],
   );
 
-  // Aufgabe 39: Welcome-Screen am Anfang einfügen
+  // Aufgabe 39: Welcome-Screen IMMER an Position 0 (Intro vor allem anderen).
+  // Max 1 Welcome-Screen pro Funnel — wenn schon einer da ist, wird er nicht doppelt
+  // angelegt sondern stattdessen selektiert (User landet im Properties-Panel des bestehenden).
   const handleAddWelcome = useCallback(
-    (atIndex?: number) => {
+    (_atIndex?: number) => {
+      const existingWelcomeIdx = state.questions.findIndex((q) => q.kind === "welcome");
+      if (existingWelcomeIdx >= 0) {
+        setSelected({ kind: "question", questionIndex: existingWelcomeIdx });
+        return;
+      }
       const newPage = makeDefaultWelcomePage();
       setState((prev) => {
-        const insertAt = atIndex ?? prev.questions.length;
-        const next = [...prev.questions];
-        next.splice(insertAt, 0, newPage);
-        return { ...prev, questions: next };
+        // Immer Position 0 — Welcome ist Intro vor dem Flow, sonst Logik kaputt.
+        return { ...prev, questions: [newPage, ...prev.questions] };
       });
-      const insertAt = atIndex ?? state.questions.length;
-      setSelected({ kind: "question", questionIndex: insertAt });
+      setSelected({ kind: "question", questionIndex: 0 });
     },
-    [state.questions.length],
+    [state.questions],
   );
 
   // Aufgabe 38: neue Custom-Multi-Field-Karte hinzufügen
@@ -644,6 +660,7 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
               onReorderOptions={handleReorderOptions}
               onDuplicateOption={handleDuplicateOption}
               onDeleteOption={handleDeleteOption}
+              onAddCustomFieldRequest={() => setCanvasFieldPickerOpen(true)}
             />
             <ThemePanel state={state} onPatch={handlePatch} />
           </div>
@@ -672,6 +689,7 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
               onReorderOptions={handleReorderOptions}
               onDuplicateOption={handleDuplicateOption}
               onDeleteOption={handleDeleteOption}
+              onAddCustomFieldRequest={() => setCanvasFieldPickerOpen(true)}
             />
             <PropertiesPanel
               state={state}
@@ -693,6 +711,19 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
           </div>
         )}
       </div>
+
+      {/* Polish: Shell-Level-Picker für Canvas-Inline-+-Button auf leerer Custom-Karte.
+          PropertiesPanel hat seinen eigenen Picker — beide arbeiten unabhängig. */}
+      <AddContactFieldPicker
+        open={canvasFieldPickerOpen}
+        onClose={() => setCanvasFieldPickerOpen(false)}
+        onSelect={(type) => {
+          if (selected.kind === "question") {
+            handleAddCustomField(selected.questionIndex, type);
+          }
+          setCanvasFieldPickerOpen(false);
+        }}
+      />
     </>
   );
 }

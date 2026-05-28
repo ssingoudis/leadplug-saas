@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronRight, GripVertical, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, GripVertical, Trash2, Eye, EyeOff } from "lucide-react";
 import type { ReactNode } from "react";
 
 interface Props {
@@ -23,6 +23,9 @@ interface Props {
   };
   /** Wenn gesetzt: Mülltonne wird gerendert. */
   onDelete?: () => void;
+  /** Aufgabe 39 Polish: Sichtbarkeit-Toggle (Auge) als Inline-Action. */
+  visible?: boolean;
+  onToggleVisible?: () => void;
   /** Inhalt im expandierten Zustand (FieldProperties). */
   children?: ReactNode;
 }
@@ -37,6 +40,8 @@ export function FieldRow({
   onToggle,
   dragHandleProps,
   onDelete,
+  visible = true,
+  onToggleVisible,
   children,
 }: Props) {
   return (
@@ -45,7 +50,7 @@ export function FieldRow({
         expanded
           ? "border-primary bg-primary/5 dark:border-primary dark:bg-primary/10"
           : "border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600"
-      }`}
+      } ${!visible ? "opacity-60" : ""}`}
     >
       <div className="flex items-center gap-1.5 px-1.5 py-1.5">
         {dragHandleProps && (
@@ -83,6 +88,25 @@ export function FieldRow({
             </span>
           )}
         </button>
+
+        {onToggleVisible && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleVisible();
+            }}
+            title={visible ? "Feld ausblenden" : "Feld einblenden"}
+            aria-label={visible ? "Feld ausblenden" : "Feld einblenden"}
+            className={
+              visible
+                ? "shrink-0 p-1.5 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200"
+                : "shrink-0 p-1.5 text-primary transition-colors hover:opacity-80"
+            }
+          >
+            {visible ? <Eye size={13} /> : <EyeOff size={13} />}
+          </button>
+        )}
 
         {onDelete && (
           <button

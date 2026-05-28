@@ -22,6 +22,8 @@ interface Props {
   onReorderOptions: (fromIdx: number, toIdx: number) => void;
   onDuplicateOption: (idx: number) => void;
   onDeleteOption: (idx: number) => void;
+  // Polish: leere Custom-Karte zeigt Inline-"+"-Button → bubble nach EditorShellV2
+  onAddCustomFieldRequest?: () => void;
 }
 
 export function CenterCanvas({
@@ -37,12 +39,14 @@ export function CenterCanvas({
   onReorderOptions,
   onDuplicateOption,
   onDeleteOption,
+  onAddCustomFieldRequest,
 }: Props) {
   const [isMobile, setIsMobile] = useState(false);
 
   // Builder zeigt auch leere/unfertige Optionen (im Live-Widget werden sie weiter gefiltert).
   // Damit der User direkt nach "Option hinzufügen" die neue Zeile im Canvas sieht und einklicken kann.
-  const questions = buildQuestions(state.questions, { keepEmpty: !isTestMode });
+  // Builder zeigt auch hidden + leere Optionen. Test/Live filtert normal.
+  const questions = buildQuestions(state.questions, { keepEmpty: !isTestMode, keepHidden: !isTestMode });
   const theme = buildTheme(state);
   const funnel = buildFunnelConfig(state);
 
@@ -55,21 +59,28 @@ export function CenterCanvas({
   const visibleCount = questions.length;
   let initialStep = 0;
   let initialSubmitted = false;
-  let placeholder: "hidden_question" | "no_questions" | "submit_skipped" | null = null;
+  let placeholder: "no_questions" | "submit_skipped" | null = null;
+  // Polish: hidden-Page wird nicht mehr als Placeholder gerendert. Stattdessen rendert das
+  // Widget die Karte normal und CenterCanvas wraps mit Opacity + Eye-Off-Badge-Overlay.
+  let isCurrentStepHidden = false;
 
   if (selected.kind === "question") {
     const sourceQ = state.questions[selected.questionIndex];
     if (!sourceQ) {
       placeholder = "no_questions";
-    } else if (sourceQ.visible === false) {
-      placeholder = "hidden_question";
     } else {
-      // visible-Index zum gewählten sidebar-Index finden
-      let vIdx = -1;
-      for (let i = 0; i <= selected.questionIndex && i < state.questions.length; i++) {
-        if (state.questions[i].visible !== false) vIdx++;
-      }
-      initialStep = Math.max(0, vIdx);
+      isCurrentStepHidden = sourceQ.visible === false;
+      // Im Builder enthält questions auch die hidden Pages (keepHidden), also bleibt der
+      // sidebar-Index 1:1 der visible-Index im Funnel.
+      initialStep = isTestMode
+        ? (() => {
+            let vIdx = -1;
+            for (let i = 0; i <= selected.questionIndex && i < state.questions.length; i++) {
+              if (state.questions[i].visible !== false) vIdx++;
+            }
+            return Math.max(0, vIdx);
+          })()
+        : selected.questionIndex;
     }
   } else if (selected.kind === "submit") {
     if (state.skipSubmitStep && !isTestMode) {
@@ -146,54 +157,56 @@ export function CenterCanvas({
           className="mx-auto w-full transition-[max-width] duration-300"
           style={{ maxWidth: isMobile ? "375px" : state.maxWidth || "720px" }}
         >
-          {placeholder === "hidden_question" ? (
-            <HiddenPlaceholder />
-          ) : placeholder === "no_questions" ? (
+          {placeholder === "no_questions" ? (
             <NoQuestionsPlaceholder />
           ) : placeholder === "submit_skipped" ? (
             <SubmitSkippedPlaceholder />
           ) : (
-            <Funnel
-              // Remount bei Step-/Selection-Wechsel im Edit-Modus, einmal pro Test-Session im Test-Modus.
-              key={
-                isTestMode
-                  ? "test-session"
-                  : `${selected.kind}-${selected.kind === "question" ? selected.questionIndex : 0}`
-              }
-              theme={theme}
-              funnel={funnel}
-              questions={questions}
-              contactFields={state.contactFields}
-              companyName={resolvedCompanyName}
-              publicEmail={resolvedEmail}
-              publicPhone={resolvedPhone}
-              initialStep={initialStep}
-              initialSubmitted={initialSubmitted}
-              previewHighlight={isTestMode ? "" : selectedFieldRef}
-              onFieldClick={isTestMode ? undefined : (field) => onSelectField(field)}
-              editMode={!isTestMode}
-              onTextChange={onTextChange}
-              onAddOption={isTestMode ? undefined : onAddOption}
-              onReorderOptions={isTestMode ? undefined : onReorderOptions}
-              onDuplicateOption={isTestMode ? undefined : onDuplicateOption}
-              onDeleteOption={isTestMode ? undefined : onDeleteOption}
-              onSubmit={() => {}}
-            />
+            <div className="relative">
+              {/* Polish: Hidden-Page wird normal gerendert, aber ausgegraut + Eye-Off-Badge oben rechts.
+                  Tenant sieht weiter den Inhalt der Frage, weiß aber dass sie im Live invisible ist. */}
+              {isCurrentStepHidden && (
+                <>
+                  <div className="pointer-events-none absolute inset-0 z-10 rounded-2xl bg-gray-200/40 dark:bg-black/40" />
+                  <div className="absolute right-3 top-3 z-20 inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-white/95 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600 shadow-sm dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-300">
+                    <EyeOff size={12} />
+                    Ausgeblendet
+                  </div>
+                </>
+              )}
+              <div className={isCurrentStepHidden ? "opacity-50" : ""}>
+                <Funnel
+                  // Remount bei Step-/Selection-Wechsel im Edit-Modus, einmal pro Test-Session im Test-Modus.
+                  key={
+                    isTestMode
+                      ? "test-session"
+                      : `${selected.kind}-${selected.kind === "question" ? selected.questionIndex : 0}`
+                  }
+                  theme={theme}
+                  funnel={funnel}
+                  questions={questions}
+                  contactFields={state.contactFields}
+                  companyName={resolvedCompanyName}
+                  publicEmail={resolvedEmail}
+                  publicPhone={resolvedPhone}
+                  initialStep={initialStep}
+                  initialSubmitted={initialSubmitted}
+                  previewHighlight={isTestMode ? "" : selectedFieldRef}
+                  onFieldClick={isTestMode ? undefined : (field) => onSelectField(field)}
+                  editMode={!isTestMode}
+                  onTextChange={onTextChange}
+                  onAddOption={isTestMode ? undefined : onAddOption}
+                  onReorderOptions={isTestMode ? undefined : onReorderOptions}
+                  onDuplicateOption={isTestMode ? undefined : onDuplicateOption}
+                  onDeleteOption={isTestMode ? undefined : onDeleteOption}
+                  onAddCustomFieldRequest={isTestMode ? undefined : onAddCustomFieldRequest}
+                  onSubmit={() => {}}
+                />
+              </div>
+            </div>
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function HiddenPlaceholder() {
-  return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 bg-white px-6 py-16 text-center dark:border-gray-700 dark:bg-gray-900">
-      <EyeOff size={20} className="text-gray-400 dark:text-gray-500" />
-      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Diese Frage ist ausgeblendet</p>
-      <p className="text-xs text-gray-500 dark:text-gray-400">
-        Aktiviere rechts die Sichtbarkeit, damit Endkunden sie sehen.
-      </p>
     </div>
   );
 }

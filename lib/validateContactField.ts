@@ -31,6 +31,25 @@ export function validateContactField(field: ContactFieldConfig, value: string): 
         : ""
     }
 
+    // Aufgabe 39 Polish
+    case "long_text":
+      return !value.trim() ? `Bitte geben Sie ${field.label} ein.` : ""
+
+    case "number":
+      return !value.trim() || isNaN(Number(value))
+        ? `Bitte geben Sie eine gültige Zahl ein.`
+        : ""
+
+    case "date":
+      return !value.trim() ? `Bitte wählen Sie ein Datum.` : ""
+
+    case "checkbox":
+      // required heißt: muss aktiviert sein
+      return value !== "true" ? `Bitte aktivieren Sie ${field.label}.` : ""
+
+    case "dropdown":
+      return !value ? `Bitte wählen Sie ${field.label} aus.` : ""
+
     default:
       return ""
   }

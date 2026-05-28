@@ -110,16 +110,19 @@ export interface QuestionConfig {
   customFields?: ContactFieldConfig[]
 }
 
-// Konfiguration eines einzelnen Kontaktformular-Felds (kommt aus den Fields der submit-Page).
+// Konfiguration eines einzelnen Kontaktformular-Felds (kommt aus den Fields der submit-Page
+// und ab Aufgabe 38 auch Custom-Multi-Field-Pages).
+// Aufgabe 39 Polish: erweitert um long_text/number/date/checkbox/dropdown.
 export interface ContactFieldConfig {
   key:          string                           // Eindeutiger Bezeichner, z.B. "name", "email", "plz"
-  type:         'radio' | 'text' | 'email' | 'tel' | 'plz'
+  type:         'radio' | 'text' | 'email' | 'tel' | 'plz' | 'long_text' | 'number' | 'date' | 'checkbox' | 'dropdown'
   label:        string
-  placeholder?: string                           // Nur für text/email/tel
+  placeholder?: string                           // Nur für textish (text/email/tel/plz/long_text/number)
   required:     boolean
   visible:      boolean
   sort_order:   number
-  options?:     string[]                         // Nur für type "radio", z.B. ["Herr", "Frau"]
+  options?:     string[]                         // Für type "radio" oder "dropdown", z.B. ["Herr", "Frau"]
+  checkboxLabel?: string                         // Nur für type "checkbox" — Text rechts neben der Box
 }
 
 export interface FunnelConfig {

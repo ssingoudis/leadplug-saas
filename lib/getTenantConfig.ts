@@ -29,6 +29,12 @@ function fieldTypeToContactType(ft: string): ContactFieldConfig['type'] {
     case 'tel':        return 'tel'
     case 'plz':        return 'plz'
     case 'radio':      return 'radio'
+    // Aufgabe 39 Polish
+    case 'long_text':  return 'long_text'
+    case 'number':     return 'number'
+    case 'date':       return 'date'
+    case 'checkbox':   return 'checkbox'
+    case 'dropdown':   return 'dropdown'
     default:           return 'text' // defensive fallback
   }
 }

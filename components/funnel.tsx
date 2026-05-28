@@ -227,6 +227,8 @@ interface FunnelProps {
   skipSubmitStep?: boolean;
   // Aufgabe 39: End-Screen-Redirect-Modus. Wenn gesetzt, Widget redirected nach Submit auf diese URL.
   redirectUrl?: string;
+  // Polish: Custom-Karte leer → Builder rendert inline "+ Feld hinzufügen"-Button im Canvas, bubble up
+  onAddCustomFieldRequest?: () => void;
 }
 
 export function Funnel({
@@ -253,6 +255,7 @@ export function Funnel({
   onSubmit,
   skipSubmitStep = false,
   redirectUrl,
+  onAddCustomFieldRequest,
 }: FunnelProps) {
 
   // Editor-Preview-Highlight (Standard): outline AUSSERHALB des Elements (offset +3px).
@@ -879,7 +882,24 @@ export function Funnel({
                 {/* Aufgabe 38: Custom-Multi-Field-Page — rendert N Felder als vertikale Stack,
                     Werte werden in answers gespeichert (keyed by field.key). Submit-Page bleibt
                     der finale Step. */}
-                {isCustomStep && (
+                {isCustomStep && editMode && visibleCustomFields.length === 0 && onAddCustomFieldRequest && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onAddCustomFieldRequest(); }}
+                    className="mb-2 inline-flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed py-8 text-sm font-medium transition-colors"
+                    style={{
+                      borderColor: theme.tintColorHover,
+                      color: theme.primaryColor,
+                      backgroundColor: theme.tintColor,
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.tintColorHover; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = theme.tintColor; }}
+                  >
+                    <Plus size={16} strokeWidth={2.5} />
+                    Feld hinzufügen
+                  </button>
+                )}
+                {isCustomStep && visibleCustomFields.length > 0 && (
                   <div className="space-y-4 mb-2">
                     {visibleCustomFields.map((field) => {
                       const fieldValue = answers[field.key] ?? "";
@@ -920,7 +940,140 @@ export function Funnel({
                         );
                       }
 
-                      // --- Text / Email / Tel / PLZ ---
+                      // Aufgabe 39 Polish: Long-Text (Textarea)
+                      if (field.type === "long_text") {
+                        return (
+                          <div key={field.key}>
+                            <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
+                              {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
+                            </label>
+                            <textarea
+                              placeholder={field.placeholder ?? ""}
+                              value={fieldValue}
+                              rows={3}
+                              onChange={(e) =>
+                                setAnswers((prev) => ({ ...prev, [field.key]: e.target.value }))
+                              }
+                              className="w-full bg-transparent border-b text-base @md:text-lg py-2 outline-none transition-colors resize-none font-light"
+                              style={{ borderColor: theme.underlineColor, color: theme.textColor }}
+                              onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
+                              onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
+                            />
+                          </div>
+                        );
+                      }
+
+                      // Aufgabe 39 Polish: Number
+                      if (field.type === "number") {
+                        return (
+                          <div key={field.key}>
+                            <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
+                              {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
+                            </label>
+                            <input
+                              type="number"
+                              placeholder={field.placeholder ?? ""}
+                              value={fieldValue}
+                              onChange={(e) =>
+                                setAnswers((prev) => ({ ...prev, [field.key]: e.target.value }))
+                              }
+                              className="w-full bg-transparent border-b text-base @md:text-lg py-2 outline-none transition-colors font-light"
+                              style={{ borderColor: theme.underlineColor, color: theme.textColor }}
+                              onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
+                              onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
+                            />
+                          </div>
+                        );
+                      }
+
+                      // Aufgabe 39 Polish: Date
+                      if (field.type === "date") {
+                        return (
+                          <div key={field.key}>
+                            <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
+                              {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
+                            </label>
+                            <input
+                              type="date"
+                              value={fieldValue}
+                              onChange={(e) =>
+                                setAnswers((prev) => ({ ...prev, [field.key]: e.target.value }))
+                              }
+                              className="w-full bg-transparent border-b text-base @md:text-lg py-2 outline-none transition-colors font-light"
+                              style={{ borderColor: theme.underlineColor, color: theme.textColor }}
+                              onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
+                              onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
+                            />
+                          </div>
+                        );
+                      }
+
+                      // Aufgabe 39 Polish: Checkbox
+                      if (field.type === "checkbox") {
+                        const isChecked = fieldValue === "true";
+                        return (
+                          <label
+                            key={field.key}
+                            className="flex items-center gap-3 cursor-pointer px-3 py-3 border transition-colors"
+                            style={{
+                              borderColor: isChecked ? theme.primaryColor : theme.borderColor,
+                              backgroundColor: isChecked
+                                ? `color-mix(in srgb, ${theme.primaryColor} 12%, transparent)`
+                                : theme.inputBgColor,
+                              borderRadius: theme.borderRadius,
+                            }}
+                          >
+                            <span
+                              className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors"
+                              style={{
+                                borderColor: isChecked ? theme.primaryColor : theme.borderColor,
+                                backgroundColor: isChecked ? theme.primaryColor : theme.backgroundColor,
+                              }}
+                            >
+                              {isChecked && <Check size={12} strokeWidth={3} color="#ffffff" />}
+                            </span>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) =>
+                                setAnswers((prev) => ({ ...prev, [field.key]: e.target.checked ? "true" : "false" }))
+                              }
+                              className="sr-only"
+                            />
+                            <span className="text-sm @md:text-base leading-snug font-light" style={{ color: theme.textColor }}>
+                              {field.checkboxLabel || field.label}
+                            </span>
+                          </label>
+                        );
+                      }
+
+                      // Aufgabe 39 Polish: Dropdown
+                      if (field.type === "dropdown" && field.options) {
+                        return (
+                          <div key={field.key}>
+                            <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
+                              {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
+                            </label>
+                            <select
+                              value={fieldValue}
+                              onChange={(e) =>
+                                setAnswers((prev) => ({ ...prev, [field.key]: e.target.value }))
+                              }
+                              className="w-full bg-transparent border-b text-base @md:text-lg py-2 outline-none transition-colors font-light"
+                              style={{ borderColor: theme.underlineColor, color: theme.textColor }}
+                              onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
+                              onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
+                            >
+                              <option value="">Bitte wählen…</option>
+                              {field.options.map((opt) => (
+                                <option key={opt} value={opt}>{opt}</option>
+                              ))}
+                            </select>
+                          </div>
+                        );
+                      }
+
+                      // --- Text / Email / Tel / PLZ (Default-Fallback) ---
                       return (
                         <div key={field.key}>
                           <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
@@ -947,8 +1100,10 @@ export function Funnel({
                   </div>
                 )}
 
-                {/* single_choice / multi_choice — Typeform-Stil: Letter-Chip LINKS + Label RECHTS, vertikal gestapelt */}
-                {!isCustomStep && (currentQuestion.questionType === "single_choice" ||
+                {/* single_choice / multi_choice — Typeform-Stil: Letter-Chip LINKS + Label RECHTS, vertikal gestapelt
+                    Welcome + Custom haben kein eigenes Choice-Input — der Block würde sonst fälschlich
+                    den "+ Option hinzufügen" Builder-Slot rendern (Welcome hat fallback questionType="single_choice"). */}
+                {!isCustomStep && !isWelcomeStep && (currentQuestion.questionType === "single_choice" ||
                   currentQuestion.questionType === "multi_choice") && (() => {
                   const isMultiple = currentQuestion.questionType === "multi_choice";
                   const selectedValues = answers[currentQuestion.id]?.split(",").filter(Boolean) ?? [];
@@ -1461,7 +1616,132 @@ export function Funnel({
                       );
                     }
 
-                    // --- Text / Email / Tel / PLZ ---
+                    // Aufgabe 39 Polish — Long-Text
+                    if (field.type === "long_text") {
+                      return (
+                        <div key={field.key} data-edit-field={`contact_field_${field.key}`} style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}>
+                          <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
+                            {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
+                          </label>
+                          <textarea
+                            placeholder={field.placeholder ?? ""}
+                            value={contactData[field.key] ?? ""}
+                            rows={3}
+                            onChange={(e) => handleContactChange(field.key, e.target.value)}
+                            className="w-full bg-transparent border-b text-base @md:text-lg py-2 outline-none transition-colors resize-none font-light"
+                            style={{ borderColor: errors[field.key] ? "#ef4444" : theme.underlineColor, color: theme.textColor }}
+                            onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
+                          />
+                          {errors[field.key] && <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors[field.key]}</p>}
+                        </div>
+                      );
+                    }
+
+                    // Aufgabe 39 Polish — Number
+                    if (field.type === "number") {
+                      return (
+                        <div key={field.key} data-edit-field={`contact_field_${field.key}`} style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}>
+                          <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
+                            {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
+                          </label>
+                          <input
+                            type="number"
+                            placeholder={field.placeholder ?? ""}
+                            value={contactData[field.key] ?? ""}
+                            onChange={(e) => handleContactChange(field.key, e.target.value)}
+                            className="w-full bg-transparent border-b text-base @md:text-lg py-2 outline-none transition-colors font-light"
+                            style={{ borderColor: errors[field.key] ? "#ef4444" : theme.underlineColor, color: theme.textColor }}
+                            onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
+                          />
+                          {errors[field.key] && <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors[field.key]}</p>}
+                        </div>
+                      );
+                    }
+
+                    // Aufgabe 39 Polish — Date
+                    if (field.type === "date") {
+                      return (
+                        <div key={field.key} data-edit-field={`contact_field_${field.key}`} style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}>
+                          <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
+                            {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
+                          </label>
+                          <input
+                            type="date"
+                            value={contactData[field.key] ?? ""}
+                            onChange={(e) => handleContactChange(field.key, e.target.value)}
+                            className="w-full bg-transparent border-b text-base @md:text-lg py-2 outline-none transition-colors font-light"
+                            style={{ borderColor: errors[field.key] ? "#ef4444" : theme.underlineColor, color: theme.textColor }}
+                            onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
+                          />
+                          {errors[field.key] && <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors[field.key]}</p>}
+                        </div>
+                      );
+                    }
+
+                    // Aufgabe 39 Polish — Checkbox
+                    if (field.type === "checkbox") {
+                      const isChecked = contactData[field.key] === "true";
+                      return (
+                        <div key={field.key} data-edit-field={`contact_field_${field.key}`} style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}>
+                          <label
+                            className="flex items-center gap-3 cursor-pointer px-3 py-3 border transition-colors"
+                            style={{
+                              borderColor: isChecked ? theme.primaryColor : theme.borderColor,
+                              backgroundColor: isChecked ? `color-mix(in srgb, ${theme.primaryColor} 12%, transparent)` : theme.inputBgColor,
+                              borderRadius: theme.borderRadius,
+                            }}
+                          >
+                            <span
+                              className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors"
+                              style={{
+                                borderColor: isChecked ? theme.primaryColor : theme.borderColor,
+                                backgroundColor: isChecked ? theme.primaryColor : theme.backgroundColor,
+                              }}
+                            >
+                              {isChecked && <Check size={12} strokeWidth={3} color="#ffffff" />}
+                            </span>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => handleContactChange(field.key, e.target.checked ? "true" : "false")}
+                              className="sr-only"
+                            />
+                            <span className="text-sm @md:text-base leading-snug font-light" style={{ color: theme.textColor }}>
+                              {field.checkboxLabel || field.label}
+                            </span>
+                          </label>
+                          {errors[field.key] && <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors[field.key]}</p>}
+                        </div>
+                      );
+                    }
+
+                    // Aufgabe 39 Polish — Dropdown
+                    if (field.type === "dropdown" && field.options) {
+                      return (
+                        <div key={field.key} data-edit-field={`contact_field_${field.key}`} style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}>
+                          <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
+                            {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
+                          </label>
+                          <select
+                            value={contactData[field.key] ?? ""}
+                            onChange={(e) => handleContactChange(field.key, e.target.value)}
+                            className="w-full bg-transparent border-b text-base @md:text-lg py-2 outline-none transition-colors font-light"
+                            style={{ borderColor: errors[field.key] ? "#ef4444" : theme.underlineColor, color: theme.textColor }}
+                            onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
+                          >
+                            <option value="">Bitte wählen…</option>
+                            {field.options.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}
+                          </select>
+                          {errors[field.key] && <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors[field.key]}</p>}
+                        </div>
+                      );
+                    }
+
+                    // --- Text / Email / Tel / PLZ (Default-Fallback) ---
                     return (
                       <div
                         key={field.key}

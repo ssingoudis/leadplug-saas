@@ -523,20 +523,29 @@ function SortableContactFieldRow({
   };
 
   const typeLabel = contactFieldTypeLabel(field.type);
-  const icon =
-    field.type === "radio"
-      ? "◉"
-      : field.type === "email"
-        ? "@"
-        : field.type === "tel"
-          ? "☎"
-          : field.type === "plz"
-            ? "⌗"
-            : "T";
-  const pillClass =
-    field.type === "radio"
-      ? "bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800"
-      : "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800";
+  // Aufgabe 39 Polish: erweitert um long_text/number/date/checkbox/dropdown
+  const iconByType: Record<ContactFieldConfig["type"], string> = {
+    text: "T",
+    long_text: "¶",
+    email: "@",
+    tel: "☎",
+    plz: "⌗",
+    radio: "◉",
+    dropdown: "▽",
+    number: "#",
+    date: "▦",
+    checkbox: "☑",
+  };
+  const icon = iconByType[field.type] ?? "T";
+  const TEXT_PILL = "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800";
+  const CHOICE_PILL = "bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800";
+  const NUMERIC_PILL = "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800";
+  const pillByType: Record<ContactFieldConfig["type"], string> = {
+    text: TEXT_PILL, long_text: TEXT_PILL, email: TEXT_PILL, tel: TEXT_PILL, plz: TEXT_PILL,
+    radio: CHOICE_PILL, dropdown: CHOICE_PILL,
+    number: NUMERIC_PILL, date: NUMERIC_PILL, checkbox: NUMERIC_PILL,
+  };
+  const pillClass = pillByType[field.type] ?? TEXT_PILL;
 
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
@@ -549,6 +558,8 @@ function SortableContactFieldRow({
         onToggle={onToggle}
         dragHandleProps={{ ref: setActivatorNodeRef, ...listeners }}
         onDelete={onDelete}
+        visible={field.visible}
+        onToggleVisible={() => onPatch({ visible: !field.visible })}
       >
         <FieldProperties kind="contact" contactField={field} onPatch={onPatch} />
       </FieldRow>
