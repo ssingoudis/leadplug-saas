@@ -148,19 +148,18 @@ Reihenfolge laut [`../CLAUDE.md`](../CLAUDE.md) §5:
 |---|---|---|
 | C.1a ✅ | ~~Editor-Shell v2 — 3-Pane Layout (StepList · WYSIWYG-Preview · Properties), Top-Tabs, Drag-Reorder, Page-Level-Properties, ?v=2-Routing~~ — Aufgabe 32, 2026-05-28. | 1 Tag |
 | C.1b ✅ | ~~Vorlagen + Field-Level-Properties + Submit-Multi-Field-UI~~ — Aufgabe 33, 2026-05-28. AddElementModal zweisektionig mit 3 Vorlagen (Kontakt/Adresse/Ja-Nein als Mehrfach-Step-Sets), FieldProperties pro Type, OptionsEditor mit Drag, Submit-Page Multi-Field mit Add/Reorder/Edit/Delete. Auslegung A locked (Vorlage = mehrere Steps, kein Multi-Field-auf-Question-Page). | 1 Tag |
-| **WR** | **Widget-Refactor (NEW — vorgezogen, ersetzt C.7 + erweitert):** Kompletter Funnel-Widget-Neubau in Typeform-Stil mit funnel.tsx-Touch (CLAUDE.md §11 Freigabe erteilt 2026-05-28). Patterns: A/B/C/D Letter-Prefixed Options statt Icons als Default, Underline-Style Text-Inputs, große Number-Readout beim Slider, Slide-Up Spring-Animations zwischen Steps, Auto-Advance bei Single-Choice, Bottom-Right Floating-Nav, Progress-Bar oben, monospace Step-Counter. Alle 11 Field-Types neu. Per-Tenant-Theme bleibt funktional (Brand-Color/Font/Background fließen in das neue Design ein). Builder-Center-Preview reflektiert automatisch (selbe Funnel-Komponente). | 1-2 Wochen |
-| C.1c | **WYSIWYG-Polish:** Click-Select im Center (Klick = Properties springt auf Element), Inline-Edit (contenteditable für Label/Subtitle), Floating-Toolbar (Duplicate/Delete/Drag), Pin-Edge-Insert zwischen Steps. | 2-3 Tage |
+| C.1c | **WYSIWYG-Edit im CenterCanvas + Typeform-Style-Adaption (NÄCHSTES):** Click-Select im Center (Klick auf Element → Properties springt synchron), Inline-Edit via contenteditable für Title/Subtitle/Options, Floating-Toolbar bei Selektion (Duplicate/Delete/Drag), A/B/C/D Letter-Prefixes als Default in Choice-Options (Icon-Override bleibt verfügbar), "Add choice" direkt im Canvas. Touch von funnel.tsx beschränkt auf Letter-Prefix-Render + Inline-Edit-Hooks. Style-Direction: Typeform light/clean. | 2-3 Tage |
 | C.1d | **Cutover:** Alten v1-Editor + Routing-Conditional + ?v=2-Flag entfernen. | 0.5 Tag |
 | C.2 | Theme-Panel im Editor (exponiert vorhandene CSS-Vars + Logo-Upload) | 2-3 Tage |
 | C.3 ✅ | ~~Mehr Feldtypen im Builder (Email, Tel, Date, Number, Dropdown, Checkbox)~~ — Aufgabe 31, 2026-05-28. URL/File-Upload/Address bewusst gestrichen, `multi_choice`-Rename mit drin. | 3-5 Tage |
 | C.4 | **Logic Jumps** (per Frage: "springe zu X wenn Antwort = Y") — neue Tabelle oder JSONB | 3-4 Tage |
 | C.5 | Webhook-Export Code (Delivery, Retry, Signatur) — nutzt B.6-Schema | 3-5 Tage |
-| C.6 | Antwortoptionen-UX-Polish + icon_url Layout-Anpassung (Bild oben vs. SVG zentriert) — **wird teilweise mit WR erledigt** wenn das neue Widget Letter-Prefixes als Default einführt. | 1-2 Tage |
-| ~~C.7~~ | ~~Smooth Slide-Übergänge zwischen Fragen im Widget~~ — **absorbiert in WR** (Widget-Refactor enthält Slide-Animations als Kern-Pattern). | — |
+| C.6 | Antwortoptionen-UX-Polish + icon_url Layout-Anpassung — **wird teilweise mit C.1c erledigt** (A/B/C/D-Prefixes als Default). Rest: Bild-oben-vs-SVG-zentriert-Layout-Anpassung wenn IconPicker-Override aktiv. | 1-2 Tage |
+| C.7 | **Smooth Slide-Übergänge zwischen Fragen im Widget** (Typeform-Stil) via framer-motion. Stavros am 2026-05-28: Stil-Richtung steht (Typeform), Animationen aber „noch nicht final" — bleibt eigener Sprint, kommt nach Bedarf. | 2-3 Tage |
 
 **Total Phase C realistisch: 18-28 Tage Vollzeit.**
 
-> **C.1-Sub-Sprint-Notiz:** C.1 wurde nach Iteration mit Stavros am 2026-05-28 in vier Sub-Sprints zerlegt (C.1a–d). Ursprünglich war C.1 als ein 4-6-Tage-Block geplant — der ist aber zu groß für einen sauberen Merge-Punkt und der Builder ist gleichzeitig das wichtigste Verkaufsargument, also lohnt sich der zusätzliche Engineering-Aufwand pro Sub-Sprint. Reihenfolge C.1b ⇨ C.1c steht fest (Multi-Field-Foundation vor WYSIWYG-Polish, weil Inline-Edit ohne Multi-Field-Listen halbgar wäre).
+> **C.1-Sub-Sprint-Notiz:** C.1 wurde nach Iteration mit Stavros am 2026-05-28 in vier Sub-Sprints zerlegt (C.1a–d). Ursprünglich war C.1 als ein 4-6-Tage-Block geplant — der ist aber zu groß für einen sauberen Merge-Punkt und der Builder ist gleichzeitig das wichtigste Verkaufsargument, also lohnt sich der zusätzliche Engineering-Aufwand pro Sub-Sprint. Reihenfolge C.1b ⇨ C.1c steht fest (Multi-Field-Foundation vor WYSIWYG-Polish, weil Inline-Edit ohne Multi-Field-Listen halbgar wäre). C.1c zieht Typeform-Patterns (A/B/C/D-Prefixes, Inline-Edit) direkt in das CenterCanvas-Render rein — kein separater großer Widget-Refactor nötig, weil das CenterCanvas und das Live-Widget dieselbe Funnel-Komponente nutzen.
 
 ---
 

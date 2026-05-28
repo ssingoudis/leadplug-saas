@@ -165,10 +165,12 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
   - SimpleStringList für Contact-radio-Options hat keinen Drag-Reorder (nur Add/Edit/Delete) — bewusst kleiner Scope, kann bei Bedarf später nachgezogen werden.
 
   **Nicht in dieser Aufgabe (eigene Sprints):**
-  - WYSIWYG Click-Select im Center-Preview + Inline-Edit → C.1c (war ursprünglich C.1b)
-  - Pin-Edge-Insert zwischen Steps → C.1c
-  - **Widget-Komplettrefactor (Typeform-Stil mit Dark-Theme/Letter-Prefixes/Slide-Animations)** → wurde von Stavros nach C.1b-Smoke-Test als nächster großer Sprint priorisiert. Ersetzt ursprüngliches C.7 (Smooth Slide-Übergänge) und erweitert es zu einem vollständigen Widget-Redesign mit funnel.tsx-Touch. Neue Aufgabe-Nummer (vermutlich 34).
+  - WYSIWYG Click-Select im Center-Preview + Inline-Edit + A/B/C/D-Letter-Prefixes + Floating-Toolbar → **C.1c (nächste Aufgabe)**. Typeform-Style-Adaption wird hier reingezogen (kein separater Widget-Refactor-Sprint).
+  - Pin-Edge-Insert zwischen Steps → C.1c (optional, evtl. später)
+  - Slide-Animationen zwischen Steps → C.7, von Stavros am 2026-05-28 als „noch nicht final" markiert, bleibt eigener Sprint on-demand
   - Design-Tab-Inhalt (Theme-Panel) → C.2
+
+  **Korrektur am Roadmap-Eintrag dieser Aufgabe (2026-05-28):** Nach dem ersten Smoke-Test bekam Claude den Eindruck, Stavros wolle einen 1-2-Wochen Widget-Komplettrefactor. Roadmap + Memory wurden in dieser Richtung angepasst. Stavros korrigierte direkt danach: Style-Richtung (Typeform light/clean, A/B/C/D-Prefixes) ist klar, aber Animationen sind nicht final und kein Komplettrefactor gewollt. Roadmap zurück auf C.1c als nächsten Schritt, Typeform-Patterns werden in C.1c direkt im CenterCanvas-Render adaptiert.
 
   *Branch:* `feature/aufgabe-33-builder-multifield` mit `--no-ff` in main gemerged.
 
