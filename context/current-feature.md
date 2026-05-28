@@ -111,6 +111,16 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ## History
 
+- **Aufgabe 37 — Floating-Nav-Bug im Live-Widget gefixt ✅ (2026-05-28)**
+
+  Dritter Sprint-Schritt. Der Bottom-Right Floating-Nav (ChevronUp/Down für zurück/weiter) hat im Live-iFrame nicht wie erwartet gerendert — visuell überlappt sie auf schmalen Embeds den Content-Bereich. Im Builder war's nicht sichtbar, weil die Canvas dort immer ≥ 720px breit ist.
+
+  **Root cause:** Content-Div hatte `p-4 @md:p-8 @md:pb-20` — der 80px-Bottom-Padding wurde erst ab `@md` (~448px Card-Breite via Container-Query) angewendet. Live-Embeds in Sidebars / Mobile sind oft schmaler → kein pb-20, Floating-Nav (absolute bottom-4) klebt auf dem Content.
+
+  **Fix in `components/funnel.tsx`:**
+  - Content-Div: `p-4 pb-20 @md:p-8` — `pb-20` greift jetzt immer
+  - Floating-Nav-Wrapper: `z-10` hinzu (defensive Stacking-Garantie gegen die framer-motion AnimatePresence-Slide-Layer), unnötiger `@container` raus
+
 - **Aufgabe 36 — Lead-Inbox 3 Tabs (Completed / Abgebrochen-mit-Email / Abgebrochen-ohne-Email) ✅ (2026-05-28)**
 
   Zweite Aufgabe im Builder-Final-Sprint. Macht die Partial-Submissions-Architektur von Aufgabe 34 im UI sichtbar — vorher liefen abgebrochene Sessions still in der DB ohne sinnvollen Tenant-Zugriff.

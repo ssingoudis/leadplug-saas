@@ -730,7 +730,10 @@ export function Funnel({
             style={{ width: `${progress}%`, backgroundColor: theme.primaryColor }}
           />
         </div>
-        <div className="p-4 @md:p-8 @md:pb-20 overflow-hidden">
+        {/* Aufgabe 37: pb-20 immer (nicht erst @md), sonst überlappt die Floating-Nav den Content auf
+            schmalen Live-iFrames. Container-Query @md greift erst bei ~448px Card-Breite — viele
+            Live-Embeds sind schmaler. */}
+        <div className="p-4 pb-20 @md:p-8 overflow-hidden">
           <AnimatePresence mode="wait" custom={slideDirection} initial={false}>
             <motion.div
               key={`${isContactStep ? "contact" : "q"}-${currentStep}`}
@@ -1385,7 +1388,7 @@ export function Funnel({
             In editMode versteckt damit's nicht mit der Edit-Selektion kollidiert. */}
         {!editMode && (
           <div
-            className="absolute bottom-4 right-4 flex items-center overflow-hidden border shadow-lg @container"
+            className="absolute bottom-4 right-4 z-10 flex items-center overflow-hidden border shadow-lg"
             style={{
               backgroundColor: theme.backgroundColor,
               borderColor: theme.borderColor,
