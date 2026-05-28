@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { ArrowLeft, ArrowRight, ChevronUp, ChevronDown, Check, GripVertical, Plus, Trash2, Copy } from "lucide-react";
+import { ChevronLeft, Check, GripVertical, Plus, Trash2, Copy } from "lucide-react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import {
   DndContext,
@@ -308,6 +308,14 @@ export function Funnel({
     textColorMuted:    mix(backgroundColor, textColor, 0.55),
     backgroundColor,
     borderColor:       mix(backgroundColor, textColor, 0.12),
+    // Underline für Text-Inputs (resting state): 35% Brand-Mix mit BG.
+    // Aktiv (focus) bleibt voller primaryColor. Gibt subtile Markenpräsenz ohne
+    // den cleanen Typeform-Look mit klobigem Border zu zerstören.
+    underlineColor:    mix(backgroundColor, primaryColor, 0.35),
+    // Tint-Variante des Brand-Colors für „weiche" Hintergründe: Choice-Option-Cards
+    // im Resting-State, Back-Button, etc. Hover ist eine Stufe stärker.
+    tintColor:         mix(backgroundColor, primaryColor, 0.06),
+    tintColorHover:    mix(backgroundColor, primaryColor, 0.12),
     inputBgColor:      mix(backgroundColor, textColor, 0.03),
     borderRadius,
     maxWidth,
@@ -730,10 +738,9 @@ export function Funnel({
             style={{ width: `${progress}%`, backgroundColor: theme.primaryColor }}
           />
         </div>
-        {/* Aufgabe 37: pb-20 immer (nicht erst @md), sonst überlappt die Floating-Nav den Content auf
-            schmalen Live-iFrames. Container-Query @md greift erst bei ~448px Card-Breite — viele
-            Live-Embeds sind schmaler. */}
-        <div className="p-4 pb-20 @md:p-8 overflow-hidden">
+        {/* Floating-Nav existiert nicht mehr (siehe BackButton-Bar am Content-Ende),
+            also gleichmäßiges Padding ohne übergroßen Bottom-Buffer. */}
+        <div className="p-4 @md:p-8 overflow-hidden">
           <AnimatePresence mode="wait" custom={slideDirection} initial={false}>
             <motion.div
               key={`${isContactStep ? "contact" : "q"}-${currentStep}`}
@@ -750,12 +757,30 @@ export function Funnel({
             -------------------------------------------------------------- */}
             {!isContactStep ? (
               <div>
-                {/* Step-Counter "1 →" (Typeform-Pattern, monospace in Brand-Color) */}
+                {/* Solo-Zurück + Step-Counter als optisches Paar — selbe Design-Language wie der Bottom-Back-Button,
+                    nur Icon-only Quadrat (kein Text), neben dem Step-Counter-Chip. Visuelle Konsistenz statt Text-Link. */}
                 <div className="mb-3 flex items-center gap-2 font-mono text-xs" style={{ color: theme.primaryColor }}>
+                  {!editMode && !showWeiterButton && currentStep > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleBack}
+                      aria-label="Zurück"
+                      title="Zurück"
+                      className="inline-flex h-5 w-5 items-center justify-center transition-colors"
+                      style={{
+                        backgroundColor: theme.tintColor,
+                        color: theme.primaryColor,
+                        borderRadius: theme.borderRadius,
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.tintColorHover; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = theme.tintColor; }}
+                    >
+                      <ChevronLeft size={11} strokeWidth={2.5} />
+                    </button>
+                  )}
                   <span className="inline-flex h-5 min-w-5 items-center justify-center rounded px-1.5 text-[11px] font-semibold" style={{ backgroundColor: theme.primaryColor, color: "#ffffff" }}>
                     {currentStep + 1}
                   </span>
-                  <span aria-hidden="true">→</span>
                 </div>
 
                 <div className="mb-6 @lg:mb-8">
@@ -766,26 +791,32 @@ export function Funnel({
                     initial={currentQuestion.title || (onFieldClick && !editMode ? "Ihre Frage?" : "")}
                     placeholder="Frage-Titel eingeben…"
                     onCommit={onTextChange}
-                    className="text-2xl @md:text-3xl @lg:text-[2rem] font-light leading-snug text-left text-balance"
+                    className="font-light leading-snug text-left text-balance"
                     style={{
+                      // Fluid Typography: skaliert smooth zwischen 24px (schmale Cards) und 36px (breite Cards).
+                      // cqw = % der Container-Width (Card hat @container) — kein abrupter Breakpoint-Sprung.
+                      fontSize: "clamp(1.5rem, 5.5cqw, 2.25rem)",
                       color: currentQuestion.title ? theme.textColor : theme.textColorMuted,
                       fontStyle: currentQuestion.title ? "normal" : "italic",
                       ...editCursor,
                       ...hl("question_title"),
                     }}
                   />
-                  {(currentQuestion.subtitle || previewHighlight === "question_subtitle" || editMode) && (
+                  {/* Subtitle wird nur gerendert wenn Content existiert oder gerade editiert wird.
+                      Empty-Editor-Slot mit "Untertitel (optional)" entfernt — Right-Panel-Input ist die
+                      Edit-Quelle, doppelte Affordance schafft nur Rauschen im Canvas. */}
+                  {(currentQuestion.subtitle || previewHighlight === "question_subtitle") && (
                     <EditableText
                       as="p"
                       editMode={editMode}
                       fieldRef="question_subtitle"
-                      initial={currentQuestion.subtitle || (!editMode ? "Untertitel (optional)" : "")}
+                      initial={currentQuestion.subtitle ?? ""}
                       placeholder="Untertitel (optional)"
                       onCommit={onTextChange}
-                      className="mt-2 text-sm @md:text-base font-light leading-relaxed text-left"
+                      className="mt-2 font-light leading-relaxed text-left"
                       style={{
-                        color: currentQuestion.subtitle ? theme.textColorMuted : theme.textColorMuted,
-                        fontStyle: currentQuestion.subtitle ? "normal" : "italic",
+                        fontSize: "clamp(0.875rem, 2.5cqw, 1.125rem)",
+                        color: theme.textColorMuted,
                         ...editCursor,
                         ...hl("question_subtitle"),
                       }}
@@ -806,9 +837,9 @@ export function Funnel({
                         aria-hidden="true"
                         className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded font-mono text-[11px] font-bold border"
                         style={{
-                          borderColor: isSelected ? theme.primaryColor : theme.borderColor,
+                          borderColor: isSelected ? theme.primaryColor : theme.underlineColor,
                           backgroundColor: isSelected ? theme.primaryColor : theme.backgroundColor,
-                          color: isSelected ? "#ffffff" : theme.textColorMuted,
+                          color: isSelected ? "#ffffff" : theme.primaryColor,
                         }}
                       >
                         {letter}
@@ -852,15 +883,25 @@ export function Funnel({
                     );
                   };
 
+                  // Brand-getintet im Resting-State (cohärentes Design-Language mit Back-Button + Tint-Sektionen),
+                  // hover one Stufe stärker für sanftes Feedback ohne grellen Sprung.
                   const optionWrapperStyle = (idx: number, isSelected: boolean): React.CSSProperties => ({
                     borderRadius:    theme.borderRadius,
-                    borderColor:     isSelected ? theme.primaryColor : theme.borderColor,
+                    borderColor:     isSelected ? theme.primaryColor : theme.tintColor,
                     backgroundColor: isSelected
-                      ? `color-mix(in srgb, ${theme.primaryColor} 12%, transparent)`
-                      : theme.inputBgColor,
+                      ? `color-mix(in srgb, ${theme.primaryColor} 14%, transparent)`
+                      : theme.tintColor,
                     ...hl(`option_${idx}`),
                   });
                   const optionWrapperClass = "group/option relative flex items-center w-full text-left gap-3 px-3 py-2.5 cursor-pointer outline-none border transition-colors";
+                  const handleOptionHover = (e: React.MouseEvent<HTMLElement>, isSelected: boolean) => {
+                    if (isSelected || editMode) return;
+                    e.currentTarget.style.backgroundColor = theme.tintColorHover;
+                  };
+                  const handleOptionLeave = (e: React.MouseEvent<HTMLElement>, isSelected: boolean) => {
+                    if (isSelected || editMode) return;
+                    e.currentTarget.style.backgroundColor = theme.tintColor;
+                  };
 
                   return (
                     <div className="mb-3 flex flex-col gap-2.5">
@@ -901,6 +942,8 @@ export function Funnel({
                                   ? handleToggleMultiple(currentQuestion.id, option.value)
                                   : handleSelect(currentQuestion.id, option.value)
                               }
+                              onMouseEnter={(e) => handleOptionHover(e, isSelected)}
+                              onMouseLeave={(e) => handleOptionLeave(e, isSelected)}
                               className={optionWrapperClass}
                               style={optionWrapperStyle(idx, isSelected)}
                             >
@@ -988,12 +1031,12 @@ export function Funnel({
                       data-edit-field="text_input"
                       className="w-full bg-transparent border-b text-lg @md:text-xl py-2 outline-none transition-colors resize-none font-light"
                       style={{
-                        borderColor:     theme.borderColor,
+                        borderColor:     theme.underlineColor,
                         color:           theme.textColor,
                         ...hl("text_input", "text_placeholder", "text_required"),
                       }}
                       onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
-                      onBlur={(e) => { e.currentTarget.style.borderColor = theme.borderColor; }}
+                      onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
                     />
                   </div>
                 )}
@@ -1018,12 +1061,12 @@ export function Funnel({
                       data-edit-field="text_input"
                       className="w-full bg-transparent border-b text-xl @md:text-2xl py-3 outline-none transition-colors font-light"
                       style={{
-                        borderColor:     theme.borderColor,
+                        borderColor:     theme.underlineColor,
                         color:           theme.textColor,
                         ...hl("text_input", "text_placeholder", "text_required"),
                       }}
                       onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
-                      onBlur={(e) => { e.currentTarget.style.borderColor = theme.borderColor; }}
+                      onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
                     />
                   </div>
                 )}
@@ -1045,12 +1088,12 @@ export function Funnel({
                         data-edit-field="text_input"
                         className="w-full bg-transparent border-b text-lg @md:text-xl py-3 outline-none transition-colors font-light"
                         style={{
-                          borderColor:     theme.borderColor,
+                          borderColor:     theme.underlineColor,
                           color:           theme.textColor,
                           ...hl("text_input"),
                         }}
                         onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
-                        onBlur={(e) => { e.currentTarget.style.borderColor = theme.borderColor; }}
+                        onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
                       />
                     </div>
                   );
@@ -1061,7 +1104,7 @@ export function Funnel({
                   const numCfg = currentQuestion.config as NumberConfig;
                   const value = answers[currentQuestion.id] ?? (numCfg.default != null ? String(numCfg.default) : "");
                   return (
-                    <div className="mb-3 flex items-baseline gap-2 border-b transition-colors" style={{ borderColor: theme.borderColor }}>
+                    <div className="mb-3 flex items-baseline gap-2 border-b transition-colors" style={{ borderColor: theme.underlineColor }}>
                       <input
                         type="number"
                         value={value}
@@ -1104,12 +1147,12 @@ export function Funnel({
                       data-edit-field="text_input"
                       className="w-full bg-transparent border-b text-lg @md:text-xl py-3 outline-none transition-colors font-light"
                       style={{
-                        borderColor:     theme.borderColor,
+                        borderColor:     theme.underlineColor,
                         color:           theme.textColor,
                         ...hl("text_input"),
                       }}
                       onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
-                      onBlur={(e) => { e.currentTarget.style.borderColor = theme.borderColor; }}
+                      onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
                     >
                       <option value="">Bitte wählen…</option>
                       {currentQuestion.options.map((option) => (
@@ -1172,12 +1215,11 @@ export function Funnel({
                   Contact form (last step) — dynamisch aus contactFields, Typeform-Style
               -------------------------------------------------------------- */
               <form onSubmit={handleFormSubmit}>
-                {/* Step-Counter für den letzten Schritt */}
+                {/* Step-Counter für den letzten Schritt (ohne Pfeil) */}
                 <div className="mb-3 flex items-center gap-2 font-mono text-xs" style={{ color: theme.primaryColor }}>
                   <span className="inline-flex h-5 min-w-5 items-center justify-center rounded px-1.5 text-[11px] font-semibold" style={{ backgroundColor: theme.primaryColor, color: "#ffffff" }}>
                     {visibleQuestions.length + 1}
                   </span>
-                  <span aria-hidden="true">→</span>
                 </div>
                 <EditableText
                   as="h1"
@@ -1271,7 +1313,7 @@ export function Funnel({
                           onChange={(e) => handleContactChange(field.key, e.target.value)}
                           className="w-full bg-transparent border-b text-base @md:text-lg py-2 outline-none transition-colors font-light"
                           style={{
-                            borderColor:     errors[field.key] ? "#ef4444" : theme.borderColor,
+                            borderColor:     errors[field.key] ? "#ef4444" : theme.underlineColor,
                             color:           theme.textColor,
                           }}
                           onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
@@ -1279,9 +1321,9 @@ export function Funnel({
                             if (hasTriedSubmit) {
                               const err = validateContactField(field, e.currentTarget.value);
                               setErrors((prev) => ({ ...prev, [field.key]: err }));
-                              e.currentTarget.style.borderColor = err ? "#ef4444" : theme.borderColor;
+                              e.currentTarget.style.borderColor = err ? "#ef4444" : theme.underlineColor;
                             } else {
-                              e.currentTarget.style.borderColor = theme.borderColor;
+                              e.currentTarget.style.borderColor = theme.underlineColor;
                             }
                           }}
                         />
@@ -1322,119 +1364,109 @@ export function Funnel({
                   . Widerruf jederzeit möglich.
                 </p>
 
-                {/* Submit button — Typeform-Stil "OK ✓" / kompakt + Check-Icon. In editMode type='button' damit Klick nicht submittet. */}
-                <button
-                  type={editMode ? "button" : "submit"}
-                  data-edit-field="submit_button"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors"
-                  style={{
-                    backgroundColor: theme.primaryColor,
-                    borderRadius:    theme.borderRadius,
-                    cursor:          isValid ? "pointer" : "not-allowed",
-                    opacity:         isValid ? 1 : 0.65,
-                    ...hl("submit_button"),
-                  }}
-                  onMouseEnter={(e) => {
-                    if (isValid) e.currentTarget.style.backgroundColor = theme.primaryColorHover;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = theme.primaryColor;
-                  }}
-                >
-                  <EditableText
-                    as="span"
-                    editMode={editMode}
-                    fieldRef="submit_button"
-                    initial={funnel.submitButtonLabel}
-                    placeholder="Button-Text…"
-                    onCommit={onTextChange}
-                    className="text-sm @md:text-base"
-                  />
-                  <Check size={14} strokeWidth={2.5} />
-                </button>
+                {/* Bottom-Action-Bar: Back + Submit als Einheit (Typeform-Pattern). */}
+                <div className="flex items-center gap-2">
+                  {currentStep > 0 && (
+                    <BackButton onClick={handleBack} theme={theme} editMode={editMode} />
+                  )}
+                  <button
+                    type={editMode ? "button" : "submit"}
+                    data-edit-field="submit_button"
+                    className="inline-flex items-center px-5 py-2 text-sm font-medium text-white shadow-sm transition-colors"
+                    style={{
+                      backgroundColor: theme.primaryColor,
+                      borderRadius:    theme.borderRadius,
+                      cursor:          isValid ? "pointer" : "not-allowed",
+                      opacity:         isValid ? 1 : 0.65,
+                      ...hl("submit_button"),
+                    }}
+                    onMouseEnter={(e) => {
+                      if (isValid) e.currentTarget.style.backgroundColor = theme.primaryColorHover;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = theme.primaryColor;
+                    }}
+                  >
+                    <EditableText
+                      as="span"
+                      editMode={editMode}
+                      fieldRef="submit_button"
+                      initial={funnel.submitButtonLabel}
+                      placeholder="Button-Text…"
+                      onCommit={onTextChange}
+                      className="text-sm @md:text-base"
+                    />
+                  </button>
+                </div>
               </form>
             )}
 
-            {/* Inline "OK ✓"-Button für Question-Steps die nicht auto-advancen (Typeform-Pattern).
-                Single-Choice springt nach 250ms selbst weiter. Multi-Choice/Text/Slider/Date/Number/Checkbox/Dropdown brauchen Explicit-Advance. */}
+            {/* Bottom-Action-Bar: NUR wenn OK gezeigt wird (Pairing-Pattern).
+                Single-Choice (auto-advance) zeigt unten keinen Solo-Back-Button mehr —
+                der wirkte "verloren". Stattdessen rendert oben ein Text-Link „← Zurück".
+                So bleibt Navigation universal, ohne orphan-Buttons. */}
             {!isContactStep && showWeiterButton && (
-              <div className="mt-6 flex items-center gap-4">
+              <div className="mt-6 flex items-center gap-2">
+                {currentStep > 0 && (
+                  <BackButton onClick={handleBack} theme={theme} editMode={editMode} />
+                )}
                 <button
                   type="button"
                   onClick={handleNext}
                   disabled={isWeiterDisabled || editMode}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex items-center px-5 py-2 text-sm font-medium text-white shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                   style={{ backgroundColor: theme.primaryColor, borderRadius: theme.borderRadius }}
                   onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.backgroundColor = theme.primaryColorHover; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = theme.primaryColor; }}
                 >
                   {skipSubmitStep && isLastQuestion ? "Absenden" : "OK"}
-                  <Check size={14} strokeWidth={2.5} />
                 </button>
-                {(currentQuestion.questionType === "short_text" ||
-                  currentQuestion.questionType === "long_text" ||
-                  currentQuestion.questionType === "number") && (
-                  <span className="hidden text-xs @md:inline font-light" style={{ color: theme.textColorMuted }}>
-                    Drücke <kbd className="font-mono font-semibold">Enter ↵</kbd>
-                  </span>
-                )}
               </div>
             )}
             </motion.div>
           </AnimatePresence>
         </div>
 
-        {/* Bottom-Right Floating-Nav (ChevronUp = zurück, ChevronDown = weiter) — Typeform-Pattern.
-            In editMode versteckt damit's nicht mit der Edit-Selektion kollidiert. */}
-        {!editMode && (
-          <div
-            className="absolute bottom-4 right-4 z-10 flex items-center overflow-hidden border shadow-lg"
-            style={{
-              backgroundColor: theme.backgroundColor,
-              borderColor: theme.borderColor,
-              borderRadius: theme.borderRadius,
-            }}
-          >
-            <button
-              type="button"
-              onClick={handleBack}
-              disabled={currentStep === 0}
-              suppressHydrationWarning
-              aria-label="Vorherige Frage"
-              title="Vorherige Frage"
-              className="p-2.5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              style={{ color: theme.textColor }}
-              onMouseEnter={(e) => {
-                if (!e.currentTarget.disabled) {
-                  e.currentTarget.style.backgroundColor = `color-mix(in srgb, ${theme.primaryColor} 10%, transparent)`;
-                }
-              }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-            >
-              <ChevronUp size={16} />
-            </button>
-            <span className="block w-px h-5" style={{ backgroundColor: theme.borderColor }} />
-            <button
-              type="button"
-              onClick={handleNext}
-              disabled={isContactStep || isWeiterDisabled}
-              aria-label="Nächste Frage"
-              title="Nächste Frage"
-              className="p-2.5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              style={{ color: theme.textColor }}
-              onMouseEnter={(e) => {
-                if (!e.currentTarget.disabled) {
-                  e.currentTarget.style.backgroundColor = `color-mix(in srgb, ${theme.primaryColor} 10%, transparent)`;
-                }
-              }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-            >
-              <ChevronDown size={16} />
-            </button>
-          </div>
-        )}
       </div>
     </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   BackButton — quadratischer Tinted-Brand-Button, links neben dem OK-Button.
+   Ersetzt die alte Bottom-Right-Floating-Nav: einheitliche Action-Bar am Ende
+   des Content statt zwei separater Layer (löst auch Aufgabe-37-Overlap dauerhaft).
+   ────────────────────────────────────────────────────────────────────────────── */
+
+function BackButton({
+  onClick,
+  theme,
+  editMode,
+}: {
+  onClick: () => void;
+  theme: { primaryColor: string; tintColor: string; tintColorHover: string; borderRadius: string };
+  editMode: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={editMode}
+      aria-label="Zurück zur vorherigen Frage"
+      title="Zurück"
+      className="inline-flex h-9 w-9 items-center justify-center transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+      style={{
+        backgroundColor: theme.tintColor,
+        color: theme.primaryColor,
+        borderRadius: theme.borderRadius,
+      }}
+      onMouseEnter={(e) => {
+        if (!e.currentTarget.disabled) e.currentTarget.style.backgroundColor = theme.tintColorHover;
+      }}
+      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = theme.tintColor; }}
+    >
+      <ChevronLeft size={16} strokeWidth={2.5} />
+    </button>
   );
 }
 
