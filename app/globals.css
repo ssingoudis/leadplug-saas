@@ -154,6 +154,17 @@
   animation: funnel-step-in 180ms ease forwards;
 }
 
+/* C.1c Builder-Edit-Mode: leerer contenteditable zeigt Placeholder via ::before-Pseudo */
+.funnel-editable[contenteditable]:focus {
+  outline: none;
+}
+.funnel-editable[contenteditable]:empty::before {
+  content: attr(data-placeholder);
+  color: color-mix(in srgb, var(--funnel-text, currentColor) 40%, transparent);
+  font-style: italic;
+  pointer-events: none;
+}
+
 /* Funnel Slider – grauer Track, farbiger Thumb */
 .funnel-slider {
   -webkit-appearance: none;

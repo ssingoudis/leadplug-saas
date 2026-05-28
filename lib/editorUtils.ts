@@ -88,31 +88,43 @@ const OPTION_BASED_TYPES = new Set<QuestionType>([
 const TEXTISH_TYPES = new Set<QuestionType>([
   "short_text",
   "long_text",
-  "email",
-  "tel",
 ]);
 
-export function buildQuestions(questions: EditorQuestion[]): QuestionConfig[] {
+export function buildQuestions(
+  questions: EditorQuestion[],
+  opts: { keepEmpty?: boolean } = {},
+): QuestionConfig[] {
   return questions
     .filter((q) => q.visible !== false)
-    .map((q) => ({
-      id: q.questionKey || q._id,
-      title: q.title,
-      subtitle: q.subtitle || undefined,
-      questionType: q.questionType,
-      visible: q.visible,
-      options: OPTION_BASED_TYPES.has(q.questionType)
-        ? q.options
-            .filter((o) => o.label.trim())
-            .map((o) => ({
-              label: o.label,
-              value: o.value || toKey(o.label),
-              iconKey: o.iconKey || "",
-              iconUrl: o.iconUrl || undefined,
-            }))
-        : [],
-      config: buildQuestionConfig(q),
-    }));
+    .map((q) => {
+      let opts$1: typeof q.options;
+      if (OPTION_BASED_TYPES.has(q.questionType)) {
+        opts$1 = opts.keepEmpty ? q.options : q.options.filter((o) => o.label.trim());
+      } else {
+        opts$1 = [];
+      }
+      // Eindeutige Values garantieren (sonst React-Key-Collision bei Duplikaten / leeren Options).
+      const seen = new Map<string, number>();
+      const mapped = opts$1.map((o, idx) => {
+        const base = o.value || toKey(o.label) || `opt_${idx}`;
+        const count = seen.get(base) ?? 0;
+        seen.set(base, count + 1);
+        const value = count === 0 ? base : `${base}_${count + 1}`;
+        return {
+          label: o.label,
+          value,
+        };
+      });
+      return {
+        id: q.questionKey || q._id,
+        title: q.title,
+        subtitle: q.subtitle || undefined,
+        questionType: q.questionType,
+        visible: q.visible,
+        options: mapped,
+        config: buildQuestionConfig(q),
+      };
+    });
 }
 
 // Pro Type die richtige config-jsonb für QuestionConfig + DB bauen.
@@ -128,8 +140,6 @@ function buildQuestionConfig(q: EditorQuestion): Record<string, unknown> {
       };
     case "short_text":
     case "long_text":
-    case "email":
-    case "tel":
       return {
         ...(q.placeholder ? { placeholder: q.placeholder } : {}),
         ...(q.maxLength ? { maxLength: Number(q.maxLength) } : {}),
@@ -316,8 +326,6 @@ export function editorStateToPagesAndFields(
             .map((o, oidx) => ({
               label: o.label,
               value: o.value || toKey(o.label),
-              icon_key: o.iconKey || "",
-              icon_url: o.iconUrl || null,
               sort_order: oidx,
             }))
         : [],
@@ -419,16 +427,14 @@ function emptyEditorQuestion(pageId: string): EditorQuestion {
 }
 
 // Rückmapping field_type → QuestionType für Question-Page-Fields.
-// Seit Aufgabe 31 sind alle QuestionType-Werte 1:1 valide field_type-Werte.
-// `radio` + `plz` sind Submit-Page-only und fallen auf single_choice zurück.
+// `email`/`tel`/`radio`/`plz` sind Submit-Page-only (= ContactField-Types) und fallen auf single_choice/short_text zurück
+// falls sie versehentlich auf einer Question-Page liegen (Type-Cleanup Aufgabe 34).
 const VALID_QUESTION_TYPES: ReadonlySet<string> = new Set([
   "single_choice",
   "multi_choice",
   "short_text",
   "long_text",
   "slider",
-  "email",
-  "tel",
   "date",
   "number",
   "dropdown",
@@ -521,8 +527,6 @@ export function dbToEditorState(
         _id: uid(),
         label: typeof o.label === "string" ? o.label : "",
         value: typeof o.value === "string" ? o.value : "",
-        iconKey: typeof o.icon_key === "string" ? o.icon_key : "",
-        iconUrl: typeof o.icon_url === "string" ? o.icon_url : "",
       })),
       // Date
       dateMin: questionType === "date" && typeof cfg.min === "string" ? cfg.min : "",

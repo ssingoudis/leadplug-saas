@@ -43,6 +43,9 @@ interface Props {
   onAddContactField: (type: ContactFieldConfig["type"]) => void;
   onDeleteContactField: (key: string) => void;
   onReorderContactFields: (next: ContactFieldConfig[]) => void;
+  // C.1c WYSIWYG-Edit: bidirektionaler Sync mit CenterCanvas-Selektion
+  selectedFieldRef: string;
+  onSelectFieldRef: (ref: string) => void;
 }
 
 export function PropertiesPanel({
@@ -55,6 +58,8 @@ export function PropertiesPanel({
   onAddContactField,
   onDeleteContactField,
   onReorderContactFields,
+  selectedFieldRef,
+  onSelectFieldRef,
 }: Props) {
   return (
     <aside className="flex h-full w-full flex-col overflow-y-auto border-l border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
@@ -73,6 +78,8 @@ export function PropertiesPanel({
           onAddContactField={onAddContactField}
           onDeleteContactField={onDeleteContactField}
           onReorderContactFields={onReorderContactFields}
+          selectedFieldRef={selectedFieldRef}
+          onSelectFieldRef={onSelectFieldRef}
         />
       ) : (
         <SuccessProps state={state} onPatch={onPatch} />
@@ -182,6 +189,8 @@ function SubmitProps({
   onAddContactField,
   onDeleteContactField,
   onReorderContactFields,
+  selectedFieldRef,
+  onSelectFieldRef,
 }: {
   state: EditorState;
   onPatch: (patch: Partial<EditorState>) => void;
@@ -189,17 +198,22 @@ function SubmitProps({
   onAddContactField: (type: ContactFieldConfig["type"]) => void;
   onDeleteContactField: (key: string) => void;
   onReorderContactFields: (next: ContactFieldConfig[]) => void;
+  selectedFieldRef: string;
+  onSelectFieldRef: (ref: string) => void;
 }) {
-  // Welcher Kontakt-Feld-Key ist momentan expandiert? Lokaler UI-State, kein EditorState-Touch.
-  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  // Welcher Kontakt-Feld-Key ist momentan expandiert? Abgeleitet aus selectedFieldRef.
+  // Sync mit CenterCanvas: Klick auf "contact_field_<key>" im Center → expand passende Row.
+  const expandedKey = selectedFieldRef.startsWith("contact_field_")
+    ? selectedFieldRef.slice("contact_field_".length)
+    : null;
   const [showAddPicker, setShowAddPicker] = useState(false);
 
-  // Reset wenn ein expandiertes Field gelöscht wurde
+  // Wenn das expandierte Field gelöscht wurde, Selektion clearen.
   useEffect(() => {
     if (expandedKey && !state.contactFields.some((f) => f.key === expandedKey)) {
-      setExpandedKey(null);
+      onSelectFieldRef("");
     }
-  }, [expandedKey, state.contactFields]);
+  }, [expandedKey, state.contactFields, onSelectFieldRef]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -255,7 +269,9 @@ function SubmitProps({
                   key={f.key}
                   field={f}
                   expanded={expandedKey === f.key}
-                  onToggle={() => setExpandedKey((prev) => (prev === f.key ? null : f.key))}
+                  onToggle={() =>
+                    onSelectFieldRef(expandedKey === f.key ? "" : `contact_field_${f.key}`)
+                  }
                   onPatch={(patch) => onPatchContactField(f.key, patch)}
                   onDelete={() => onDeleteContactField(f.key)}
                 />

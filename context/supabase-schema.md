@@ -57,7 +57,13 @@ Verwendung: `pages.page_type`. Eingeführt mit Migration `aufgabe_30a_pages_fiel
               | 'dropdown' | 'checkbox' | 'slider'
               | 'radio' | 'plz'
 ```
-Verwendung: `fields.field_type`. Eingeführt mit Migration `aufgabe_30a_pages_fields_add`. `radio` + `plz` sind eigene Werte (statt single_choice/short_text-Aliase), weil das Widget sie spezifisch rendert (radio = kleine Buttons, plz = 5-stellige Numerik-Validierung). `number`, `date`, `dropdown`, `checkbox` sind im Enum reserviert für Phase C.3 — aktuell nicht von Bestandsdaten genutzt.
+Verwendung: `fields.field_type`. Eingeführt mit Migration `aufgabe_30a_pages_fields_add`.
+
+**Question-Pages dürfen** seit Aufgabe 34 (2026-05-28) nur noch diese 9 Types verwenden: `single_choice`, `multi_choice`, `short_text`, `long_text`, `slider`, `date`, `number`, `dropdown`, `checkbox`. `email` + `tel` wurden aus dem `QuestionType`-TypeScript-Union entfernt (waren nur kosmetische Text-Inputs mit anderem Browser-Keyboard, Validation passiert erst beim finalen Submit).
+
+**Submit-Pages dürfen** weiter `text`, `email`, `tel`, `plz`, `radio` für Kontaktfelder nutzen (echte Lead-Daten-Mapping-Bedeutung). `radio` + `plz` sind eigene Werte (statt single_choice/short_text-Aliase), weil das Widget sie spezifisch rendert (radio = kleine Buttons, plz = 5-stellige Numerik-Validierung).
+
+Das DB-Enum bleibt vollständig bestehen — nur App-Code-seitig sind die Question-Type-Pfade auf 9 reduziert.
 
 ### `tenant_member_role`
 ```
@@ -409,17 +415,16 @@ Felder pro Page. Eingeführt mit Migration `aufgabe_30a_pages_fields_add` (Phase
   )
   ```
 
-**`options` jsonb-Schema:**
-- Choice-Types (`single_choice`, `multi_choice`): Object-Array
+**`options` jsonb-Schema (seit Aufgabe 34):**
+- Choice-Types (`single_choice`, `multi_choice`, `dropdown`): Object-Array
   ```typescript
   {
     label: string,
     value: string,
-    icon_key?: string,
-    icon_url?: string | null,
     sort_order?: number,
   }[]
   ```
+  **Aufgabe 34 (2026-05-28)** strippt `icon_key` + `icon_url` aus allen Option-Objekten (45 Fields, 175 Einträge). Choice-Options rendern jetzt A/B/C/D Letter-Chips als Default. Migration `aufgabe_34_strip_icon_keys_from_field_options` ist forward-only.
 - Radio-Type (z.B. Anrede): String-Array
   ```typescript
   string[]  // z.B. ["Herr", "Frau"]
@@ -433,13 +438,15 @@ Felder pro Page. Eingeführt mit Migration `aufgabe_30a_pages_fields_add` (Phase
 
 ### 3.6 `submissions`
 
-Eine Zeile pro abgeschickte Funnel-Submission. Das ist die CRM-Quelle. Aktuell 26 Zeilen.
+Eine Zeile pro User-Session (Partial-Submissions seit Aufgabe 34). Das ist die CRM-Quelle.
 
 **Columns:**
 
 | Spalte | Typ | Nullable | Default | Comment |
 |---|---|---|---|---|
 | `id` | uuid | NO | `gen_random_uuid()` | |
+| `session_id` | uuid | **NO** | — | **Aufgabe 34.** UNIQUE — UPSERT-Identität für Partial-Submissions. Client-generiert via `crypto.randomUUID()` in sessionStorage. |
+| `completed_at` | timestamptz | YES | NULL | **Aufgabe 34.** NULL = Session läuft / abgebrochen, gesetzt = finaler Submit erfolgt (`/api/submit`). |
 | `tenant_id` | uuid | YES | — | FK → `tenants.id` ON DELETE SET NULL — RLS-Filter |
 | `funnel_slug` | text | YES | — | **Snapshot** für Display (kein FK — bleibt auch wenn Funnel gelöscht) |
 | `tenant_slug` | text | YES | — | **Snapshot** historisch; neue Inserts via App-Code lassen das Feld leer (`tenants.slug` existiert nicht mehr) |
@@ -451,7 +458,7 @@ Eine Zeile pro abgeschickte Funnel-Submission. Das ist die CRM-Quelle. Aktuell 2
 | `ip_address` | text | YES | — | |
 | `customer_email_sent` | bool | YES | `false` | |
 | `tenant_email_sent` | bool | YES | `false` | |
-| `status` | text | NO | `'offen'` | CRM-Status (siehe Check) |
+| `status` | text | NO | `'offen'` | CRM-Status (siehe Check) — orthogonal zu `completed_at` |
 | `created_at` | timestamptz | YES | `now()` | |
 
 **Foreign Keys:**
@@ -463,8 +470,14 @@ Eine Zeile pro abgeschickte Funnel-Submission. Das ist die CRM-Quelle. Aktuell 2
   status IN ('offen', 'kontaktiert', 'abgeschlossen')
   ```
 
+**Unique Constraints:**
+- `submissions_session_id_unique` — UNIQUE(session_id) (Aufgabe 34, für UPSERT)
+
 **Indices:**
 - `submissions_pkey` — UNIQUE btree(id)
+- `submissions_session_id_unique` — UNIQUE btree(session_id)
+- `submissions_completed_at_idx` — btree(tenant_id, completed_at NULLS FIRST) (Aufgabe 34, für Lead-Inbox-Tabs)
+- `submissions_abandoned_with_email_idx` — **partial** btree(tenant_id, created_at DESC) WHERE completed_at IS NULL AND contact->>'email' IS NOT NULL AND contact->>'email' <> '' (Aufgabe 34, „Abgebrochen-mit-Email"-Tab)
 - `idx_submissions_tenant_id` — btree(tenant_id, created_at) — Haupt-Filter für Lead-Listen
 - `idx_submissions_funnel` — btree(funnel_slug, created_at) — für Funnel-spezifische Lookups + DELETE-Pfad
 - `idx_submissions_tenant` — btree(tenant_slug, created_at) — Legacy (nicht mehr aktiv genutzt, kann später entfallen)
@@ -476,7 +489,7 @@ Eine Zeile pro abgeschickte Funnel-Submission. Das ist die CRM-Quelle. Aktuell 2
   ```sql
   tenant_id IN (SELECT public.current_tenant_ids())
   ```
-- **Kein INSERT-Policy** → INSERT durch `/api/submit` (anonym, Service-Key)
+- **Kein INSERT-Policy** → INSERT/UPSERT durch `/api/submit` + `/api/track-progress` (anonym, Service-Key)
 
 ---
 

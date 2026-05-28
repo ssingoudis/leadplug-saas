@@ -289,11 +289,13 @@ UNIQUE `(tenant_id, auth_user_id)` — kein User doppelt im selben Tenant. Owner
 
 > **Architektur-Hinweis:** Aktuell ist **eine Frage = ein Schritt** im Funnel. Schema-Refactor zu **Page → 1:N Fields** ist als kommende Aufgabe geplant (siehe CLAUDE.md §5).
 
-### `submissions` (26 Zeilen, das wichtigste CRM-Feld!)
+### `submissions` (das wichtigste CRM-Feld!)
 
 | Spalte | Typ | Hinweise |
 |---|---|---|
 | `id` | uuid, PK | |
+| `session_id` | uuid, NOT NULL UNIQUE | **Neu seit Aufgabe 34.** Client-generierte UUID per `sessionStorage`. UPSERT-Identität für Partial-Submissions. |
+| `completed_at` | timestamptz, nullable | **Neu seit Aufgabe 34.** NULL = User in Bearbeitung / abgebrochen, gesetzt = finaler Submit (`/api/submit`). Filter-Pivot für Lead-Inbox „Completed vs Abandoned". |
 | `tenant_id` | uuid, nullable, FK → `tenants.id` ON DELETE SET NULL | RLS-Filter; bei Tenant-Löschung wird NULL (Submission bleibt für Audit erhalten) |
 | `funnel_slug` | text, nullable | **Snapshot** für Display + Funnel-URL-Lookup (kein FK — bleibt auch wenn Funnel gelöscht) |
 | `tenant_slug` | text, nullable | **Snapshot** historisch; neue Inserts setzen das Feld nicht mehr (`tenants.slug` existiert seit Aufgabe 26 nicht mehr) |
@@ -303,10 +305,16 @@ UNIQUE `(tenant_id, auth_user_id)` — kein User doppelt im selben Tenant. Owner
 | `source_url` | text, nullable | URL der einbettenden Seite |
 | `user_agent`, `ip_address` | text, nullable | |
 | `customer_email_sent`, `tenant_email_sent` | bool | Nach Email-Versand gesetzt |
-| `status` | text, check (`offen`/`kontaktiert`/`abgeschlossen`) | **CRM-Status-Workflow** |
+| `status` | text, check (`offen`/`kontaktiert`/`abgeschlossen`) | **CRM-Status-Workflow** (orthogonal zu `completed_at` — `status` ist „was der Agent damit gemacht hat") |
 | `created_at` | timestamptz | |
 
+**Indices (Aufgabe 34):**
+- `submissions_completed_at_idx` auf `(tenant_id, completed_at NULLS FIRST)` — Lead-Inbox-Filter „Completed vs Abandoned"
+- `submissions_abandoned_with_email_idx` partial auf `(tenant_id, created_at DESC) WHERE completed_at IS NULL AND contact->>'email' nicht leer` — schneller Filter für „Abgebrochen mit Email" Tab
+
 > **In Aufgabe 27 gedroppt:** `contact_anrede`, `contact_name`, `contact_email`, `contact_phone` — alle ersetzt durch das `contact`-jsonb.
+>
+> **In Aufgabe 34 ergänzt:** `session_id` + `completed_at` für Partial-Submissions-Architektur.
 
 ### `funnel_view_logs` (277 Zeilen, View-Tracking)
 
@@ -380,6 +388,10 @@ Append-only Log jedes Webhook-Versandsversuchs.
 20260528150000 — aufgabe_28a_tenants_cleanup_phase1             ← Phase B.4 (Backfills + Constraints)
 20260528160000 — aufgabe_28b_tenants_drop_endcustomer_columns   ← Phase B.4 (DROP)
 20260528170000 — aufgabe_29_webhook_schema                      ← Phase B.6 (additive)
+20260528180000 — aufgabe_30a_pages_fields_add                   ← Phase B.5 (additive + Daten-Migration)
+20260528190000 — aufgabe_30b_drop_funnel_questions_and_contact_fields ← Phase B.5 (DROP)
+20260528200000 — aufgabe_34_strip_icon_keys_from_field_options  ← Aufgabe 34 (Icons-Cleanup, forward-only)
+20260528210000 — aufgabe_34_partial_submissions_schema          ← Aufgabe 34 (session_id + completed_at)
 ```
 
 ---
@@ -388,9 +400,9 @@ Append-only Log jedes Webhook-Versandsversuchs.
 
 | Route | Methode | Zweck |
 |---|---|---|
-| `/api/submit` | POST | Funnel-Submission (Honeypot, Rate-Limit, Validierung, Log, Mails) |
+| `/api/submit` | POST | **Finaler Submit** — UPSERT mit `completed_at=NOW()` + Mails (Aufgabe 34) |
+| `/api/track-progress` | POST | **Partial-Submission** — UPSERT mit `completed_at=NULL` (Aufgabe 34, debounced vom Widget) |
 | `/api/track-view` | POST | Funnel-View-Tracking inkrementieren |
-| `/api/admin/create-funnel` | POST | Admin: neuen Funnel anlegen |
 | `/api/tenant/funnels` | GET / POST | Tenant: Funnel-Liste / neuen anlegen |
 | `/api/tenant/funnels/[slug]` | GET / PUT / DELETE | Tenant: einzelner Funnel |
 | `/api/tenant/slug-check` | POST | Slug-Verfügbarkeit prüfen |
@@ -401,24 +413,55 @@ Append-only Log jedes Webhook-Versandsversuchs.
 
 ---
 
-## 6. Submission-Flow (`/api/submit`)
+## 6. Submission-Flow (Partial + Final seit Aufgabe 34)
 
-`runtime = 'nodejs'`. Reihenfolge ist **kritisch**:
+**Strategie-Shift weg vom Submit-Only-Save hin zu fortlaufender Persistenz** (Aufgabe 34, 2026-05-28).
 
-1. **JSON-Parse** — bei Fehler 400
-2. **IP extrahieren** aus `x-forwarded-for` oder `x-real-ip`
-3. **Honeypot-Check** — wenn `honeypot`-Feld gefüllt: `logHoneypot()` + sofort `{success:true}` (Bots dürfen keinen 400 sehen, sonst lernen sie das Muster)
-4. **Rate-Limiting** — max. **3 Submissions pro IP in 10 Minuten** (via `isRateLimited(ip)`). Bei Überschreitung: `{success:true}` ohne DB-Eintrag
-5. **Struktur-Check** — `tenant`, `answers`, `contact` müssen existieren — bei Fehler 400
-6. **Tenant-Config laden** — `getTenantConfig(funnelSlug)` — bei null 404
-7. **Dynamische Feldvalidierung** — alle sichtbaren + required Felder aus `contactFields` werden validiert via `validateContactField()`. Bei Fehler 400 mit Feldnamen
-8. **`lead_price` server-side ableiten** — `tenantConfig.billingModel === 'per_lead' ? tenantConfig.leadPrice : 0`. **Client-Werte werden niemals vertraut**
-9. **`logSubmission()` in Supabase** — gibt `submissionId` zurück
-10. **`sendAllEmails()` in try/catch** — Fehler loggen, **nicht werfen**. Endkunde bekommt immer `{success:true}`
-11. **`updateEmailStatus()`** — `customer_email_sent` / `tenant_email_sent` Booleans in DB schreiben
-12. Response: `{success:true}`
+### Session-Identität
 
-**Wichtig:** Schritte 9 → 10 → 11 in dieser Reihenfolge. Billing (Schritt 9) darf nie durch E-Mail-Fehler (Schritt 10) verloren gehen.
+Das Widget generiert beim Mount eine UUID via `crypto.randomUUID()`, speichert sie in `sessionStorage` unter `lp_session_<funnel-slug>` (Tab-scope). Diese `session_id` ist die UPSERT-Identität für `submissions.session_id` (UNIQUE-Constraint).
+
+### `/api/track-progress` (Partial-Save, debounced)
+
+Wird vom Widget bei jeder Antwort-Änderung gefeuert (Funnel.tsx hat 600ms-debounce-useEffect auf `[answers, contactData]`). Reihenfolge:
+
+1. **JSON-Parse + IP**
+2. **Honeypot-Check** — Bot-Filter, kein DB-Schreiben
+3. **Struktur-Check** — `sessionId` muss UUID-Regex matchen, `tenant`/`answers`/`contact` Pflicht
+4. **Tenant-Config laden** — bei null 404
+5. **`lead_price` server-side** ableiten (`per_lead`-Tenants only)
+6. **`upsertSubmissionProgress({completed: false})`** — UPSERT auf `session_id`, `completed_at` bleibt NULL
+7. Response: `{success:true}` — auch bei DB-Fehler
+
+**Bewusst weggelassen** (gegenüber `/api/submit`):
+- Kein Rate-Limit (würde tippenden User mit 30 Keystrokes blockieren)
+- Keine Validation der Pflichtfelder (Final-Validation passiert beim Submit)
+
+### `/api/submit` (Final-Submit + Mails)
+
+Wird vom Widget beim expliziten Submit-Button-Klick gefeuert. Reihenfolge ist **kritisch**:
+
+1. **JSON-Parse + IP**
+2. **Honeypot-Check** — wenn `honeypot`-Feld gefüllt: `logHoneypot()` + sofort `{success:true}`
+3. **Rate-Limiting** — max. 3 Submissions pro IP in 10 Minuten
+4. **Struktur-Check** — `tenant`/`answers`/`contact` Pflicht. `sessionId` optional (Legacy-Client-Kompat — fällt sonst auf neue UUID zurück)
+5. **Tenant-Config laden** — bei null 404
+6. **Dynamische Feldvalidierung** — alle sichtbaren + required `contactFields` via `validateContactField()`. Bei Fehler 400
+7. **`lead_price` server-side ableiten**
+8. **`upsertSubmissionProgress({completed: true})`** — UPSERT mit `completed_at = NOW()`. Wenn Partial-Row schon existiert (sessionId match), wird sie completed; wenn nicht, neue Row.
+9. **`sendAllEmails()` in try/catch** — Fehler loggen, **nicht werfen**. Endkunde bekommt immer `{success:true}`
+10. **`updateEmailStatus()`** — `customer_email_sent` / `tenant_email_sent` Booleans
+11. Response: `{success:true}`
+
+**Wichtig:** Schritte 8 → 9 → 10 in dieser Reihenfolge. Billing (Schritt 8) darf nie durch E-Mail-Fehler (Schritt 9) verloren gehen.
+
+### Lead-Zähl-Logik (für Pricing)
+
+Pricing-Modell zählt zwei Lead-Klassen als „echter Lead":
+- **Completed** — `completed_at IS NOT NULL`
+- **Abandoned-mit-Email** — `completed_at IS NULL AND contact->>'email' IS NOT NULL AND <> ''`
+
+Nicht gezählt: **Abandoned-ohne-Email** (reine Tracking-Sessions ohne nutzbare Kontaktdaten).
 
 ---
 

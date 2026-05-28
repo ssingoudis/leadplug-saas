@@ -13,6 +13,15 @@ interface Props {
   companyName: string;
   isTestMode: boolean;
   onToggleTestMode: () => void;
+  // C.1c WYSIWYG-Edit
+  selectedFieldRef: string;
+  onSelectField: (fieldRef: string) => void;
+  onTextChange: (fieldRef: string, newText: string) => void;
+  // C.1c Canvas-Aktionen für Choice-Options
+  onAddOption: () => void;
+  onReorderOptions: (fromIdx: number, toIdx: number) => void;
+  onDuplicateOption: (idx: number) => void;
+  onDeleteOption: (idx: number) => void;
 }
 
 export function CenterCanvas({
@@ -21,10 +30,19 @@ export function CenterCanvas({
   companyName,
   isTestMode,
   onToggleTestMode,
+  selectedFieldRef,
+  onSelectField,
+  onTextChange,
+  onAddOption,
+  onReorderOptions,
+  onDuplicateOption,
+  onDeleteOption,
 }: Props) {
   const [isMobile, setIsMobile] = useState(false);
 
-  const questions = buildQuestions(state.questions);
+  // Builder zeigt auch leere/unfertige Optionen (im Live-Widget werden sie weiter gefiltert).
+  // Damit der User direkt nach "Option hinzufügen" die neue Zeile im Canvas sieht und einklicken kann.
+  const questions = buildQuestions(state.questions, { keepEmpty: !isTestMode });
   const theme = buildTheme(state);
   const funnel = buildFunnelConfig(state);
 
@@ -112,8 +130,16 @@ export function CenterCanvas({
         </div>
       </div>
 
-      {/* Canvas */}
-      <div className="flex-1 overflow-y-auto p-6 lg:p-10">
+      {/* Canvas — Click-into-empty (Background außerhalb des Widget-Containers) deselected */}
+      <div
+        className="flex-1 overflow-y-auto p-6 lg:p-10"
+        onClick={(e) => {
+          // Nur deselect wenn auf den Outer-Container geklickt wurde (kein bubble-Target im Widget)
+          if (e.target === e.currentTarget) {
+            onSelectField("");
+          }
+        }}
+      >
         <div
           className="mx-auto w-full transition-[max-width] duration-300"
           style={{ maxWidth: isMobile ? "375px" : state.maxWidth || "720px" }}
@@ -139,7 +165,14 @@ export function CenterCanvas({
               publicPhone={resolvedPhone}
               initialStep={initialStep}
               initialSubmitted={initialSubmitted}
-              previewHighlight=""
+              previewHighlight={isTestMode ? "" : selectedFieldRef}
+              onFieldClick={isTestMode ? undefined : (field) => onSelectField(field)}
+              editMode={!isTestMode}
+              onTextChange={onTextChange}
+              onAddOption={isTestMode ? undefined : onAddOption}
+              onReorderOptions={isTestMode ? undefined : onReorderOptions}
+              onDuplicateOption={isTestMode ? undefined : onDuplicateOption}
+              onDeleteOption={isTestMode ? undefined : onDeleteOption}
               onSubmit={() => {}}
             />
           )}

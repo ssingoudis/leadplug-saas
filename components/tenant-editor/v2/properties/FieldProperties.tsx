@@ -35,7 +35,7 @@ function QuestionFieldProps({
   onPatch: (patch: Partial<EditorQuestion>) => void;
 }) {
   const type = question.questionType;
-  const isText = type === "short_text" || type === "long_text" || type === "email" || type === "tel";
+  const isText = type === "short_text" || type === "long_text";
   const isOptionBased = type === "single_choice" || type === "multi_choice" || type === "dropdown";
   const isSlider = type === "slider";
   const isNumber = type === "number";

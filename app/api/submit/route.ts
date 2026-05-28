@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getTenantConfig } from '@/lib/getTenantConfig'
-import { logSubmission, isRateLimited, updateEmailStatus, logHoneypot } from '@/lib/tracking'
+import { upsertSubmissionProgress, isRateLimited, updateEmailStatus, logHoneypot } from '@/lib/tracking'
 import { sendAllEmails } from '@/lib/sendEmails'
 import { validateContactField } from '@/lib/validateContactField'
 
@@ -12,12 +12,16 @@ function getIp(req: Request): string | null {
 
 export const runtime = 'nodejs'
 
+// UUID-v4-Form-Check (sessionId vom Widget — falls fehlt, generieren wir eine).
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 // Grundcheck: body hat die erwartete Struktur (kein Typ-Prüfung der Felder — das macht
 // die dynamische Feldvalidierung nach dem Laden der tenantConfig).
 function isValidShape(value: unknown): value is {
   tenant: string
   answers: Record<string, string>
   contact: Record<string, string>
+  sessionId?: string
   honeypot?: string
   sourceUrl?: string
   userAgent?: string
@@ -63,6 +67,12 @@ export async function POST(req: Request) {
   const { tenant, answers, contact } = body
   const sourceUrl = typeof body.sourceUrl === 'string' ? body.sourceUrl : ''
   const userAgent = typeof body.userAgent === 'string' ? body.userAgent : ''
+  // sessionId vom Widget — falls keine kommt (legacy clients), generieren wir eine,
+  // damit die UPSERT-Spalte session_id NOT NULL erfüllt ist.
+  const sessionId =
+    typeof body.sessionId === 'string' && UUID_RE.test(body.sessionId)
+      ? body.sessionId
+      : crypto.randomUUID()
 
   // 4. Tenant-Config laden
   const tenantConfig = await getTenantConfig(tenant)
@@ -83,16 +93,18 @@ export async function POST(req: Request) {
   const leadPrice =
     tenantConfig.billingModel === 'per_lead' ? tenantConfig.leadPrice : 0
 
-  // 7. Submission loggen
-  const submissionId = await logSubmission({
+  // 7. Submission als COMPLETED loggen (UPSERT — falls schon partielle Session existiert, wird sie ergänzt + completed_at gesetzt)
+  const submissionId = await upsertSubmissionProgress({
+    sessionId,
     funnelSlug: tenant,
-    tenantId: tenantConfig.id,
+    tenantId:   tenantConfig.id,
     contact,
     answers,
     leadPrice,
     sourceUrl,
     userAgent,
-    ipAddress: ip ?? undefined,
+    ipAddress:  ip ?? undefined,
+    completed:  true,
   })
 
   // 8. E-Mails senden (Fehler loggen, nicht werfen – Endkunde bekommt immer success:true)

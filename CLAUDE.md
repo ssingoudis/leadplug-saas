@@ -93,15 +93,24 @@ Drei Tiers pro Tenant (Agentur). Preise sind Richtwerte:
 
 **Festgelegt:** Funnel-Builder bleibt **linear / Typeform-Stil**. **KEIN Node-Canvas, KEIN React Flow**. Bei "lass uns Canvas einbauen"-Impulsen: an diese Entscheidung erinnern und nach konkretem Kunden-Bedarf fragen.
 
+**Stand seit Aufgabe 34 (2026-05-28):** Builder v2 (`?v=2`) ist das aktive System. Hat 3-Pane Layout (StepList · WYSIWYG-Canvas · Properties), Vorlagen (Kontakt/Adresse/Ja-Nein), Field-Level-Properties, Click-Select + Inline-Edit im Canvas, Drag-Reorder von Optionen, "+ Option / Duplicate / Delete" Inline-Aktionen, Pin-Edge-Insert zwischen Steps. Widget ist **Typeform-Stil-redesigned**: A/B/C/D Letter-Chips, Underline-Inputs, font-light Titel, framer-motion Slide-Animationen, 1px Progress-Bar oben, Bottom-Right Floating-Nav. v1-Editor ist Legacy, wird in C.1d entfernt.
+
+**Strategische Entscheidungen aus Aufgabe 34:**
+- **Icons sind komplett raus** aus Code + DB (siehe §10). A/B/C/D ist Default. Picture-Choice kommt erst on-demand wenn Kunde fragt.
+- **Email + Telefon als Question-Types raus** (waren nur kosmetische Text-Inputs). Bleiben als ContactField-Types auf Submit-Page.
+- **Partial-Submissions live**: jede User-Session bekommt DB-Row mit `session_id` UPSERT + `completed_at` Flag. Abbrecher mit Email werden zu Leads. Pricing-Modell zählt Completed + Abandoned-mit-Email als Lead.
+- **DSGVO ignoriert für jetzt** — Rechtsgrundlage Art. 6 (1) (b) Vertragsanbahnung greift.
+
 **Geplante Verbesserungen (in Reihenfolge):**
 
-1. Schema-Refactor: Page → 1:N Fields (eine Page hat mehrere Felder + Submit)
-2. Pages + Layers Tab im Editor (Hierarchie-Sicht)
-3. Theme-Panel exponiert vorhandene CSS-Vars (Brand-Color, Font, Radius, Logo)
-4. Mehr Feldtypen (Email, Telefon, Date, Number, Dropdown, Checkbox)
-5. **Logic Jumps** (per Frage: "springe zu X wenn Antwort = Y") — Branching ohne Canvas
-6. Webhook-Export hardening (Retry, Signatur, Dead-Letter)
-7. Antwortoptionen-UX-Polish
+1. Aufgabe 35 (~1.5 Std): Submit-Button als Default-off + optionale Vorlage „Bestätigungs-Schritt"
+2. Aufgabe 36 (~2-3 Std): Lead-Inbox 3 Tabs (Completed / Abgebrochen-mit-Email / Abgebrochen-ohne-Email)
+3. Aufgabe 37 (~1 Std): Bottom-Right Floating-Nav-Bug in Live-Widget fixen
+4. C.1d Cutover: alten v1-Editor + ?v=2-Flag entfernen
+5. C.2 Theme-Panel + Logo-Upload
+6. C.4 Logic Jumps
+7. C.5 Webhook-Export hardening
+8. (C.6 + C.7 sind in Aufgabe 34 absorbiert)
 
 **Nicht geplant für MVP** (kommt potenziell in v2 / Pro-Roadmap):
 
@@ -180,16 +189,20 @@ Beispiele: `feature/aufgabe-25-schema-refactor`, `feature/aufgabe-26-pages-field
 
 ## 10. Code-Regeln (technisch konkret)
 
-- **Kein Hardcode** — alle Tenant-/Funnel-spezifischen Werte (Texte, Farben, Fragen) aus Supabase (`tenants`, `funnels`, `funnel_questions`).
+- **Kein Hardcode** — alle Tenant-/Funnel-spezifischen Werte (Texte, Farben, Fragen) aus Supabase (`tenants`, `funnels`, `pages`, `fields`).
 - **Primärquelle ist Supabase.** `getTenantConfig()` lädt ausschließlich aus der DB — kein JSON-Fallback.
 - **Supabase Service Key nur server-side**, niemals mit `NEXT_PUBLIC_`-Prefix.
-- **Billing-Reihenfolge in `/api/submit`:** erst `logSubmission()` (Supabase), dann E-Mails. Billing darf nie durch E-Mail-Fehler verloren gehen.
+- **Partial-Submissions seit Aufgabe 34 (2026-05-28):** `/api/track-progress` macht UPSERT auf `submissions.session_id` (debounced vom Widget), `/api/submit` macht denselben UPSERT mit `completed_at = NOW()` + Mails. **NIE wieder Insert in `submissions` ohne `session_id`** — die Spalte ist UNIQUE + NOT NULL. `logSubmission` in `lib/tracking.ts` ist deprecated, neue Code-Pfade nutzen `upsertSubmissionProgress`.
+- **Reihenfolge in `/api/submit`:** erst `upsertSubmissionProgress(completed=true)` (Supabase, setzt completed_at), dann E-Mails. Billing darf nie durch E-Mail-Fehler verloren gehen.
 - **Nur 2 E-Mails pro Submission:** Danke-Mail an den Anfragenden (kein PDF, keine Preisschätzung) + Lead-Benachrichtigung an den Tenant.
 - **Kein PDF, keine Preisschätzung** — `generatePDF.ts` und `priceCalculator.ts` sind deprecated.
 - **Fehler in Tracking / E-Mail:** loggen, **nicht werfen**. Endkunde bekommt immer `{success:true}`.
-- **Bot-Schutz:** Honeypot-Feld im Formular (server-side prüfen). Bei ausgelöstem Honeypot: 200 zurückgeben, aber nicht in DB speichern.
+- **Bot-Schutz:** Honeypot-Feld im Formular (server-side prüfen). Bei ausgelöstem Honeypot: 200 zurückgeben, aber nicht in DB speichern. Gilt sowohl für `/api/submit` als auch `/api/track-progress`.
 - **postMessage Höhe:** Widget sendet nach jedem Render `window.parent.postMessage({type:'funnel-resize', height: X}, '*')`.
 - **`lead_price` server-side** aus `tenants.lead_price` lesen — nicht vom Client vertrauen.
+- **Icons sind raus (Aufgabe 34):** `EditorOption` + `Option` haben kein `iconKey`/`iconUrl` mehr. Choice-Options rendern A/B/C/D Letter-Chip. `components/icons.tsx`, `components/icons/`, `components/dashboard/IconPicker.tsx` sind gelöscht. DB: `fields.options` jsonb hat keine `icon_key`/`icon_url`-Felder mehr.
+- **`QuestionType` hat 9 Werte (Aufgabe 34):** `single_choice`, `multi_choice`, `short_text`, `long_text`, `slider`, `date`, `number`, `dropdown`, `checkbox`. `email` + `tel` wurden als Question-Types entfernt (waren nur kosmetische Text-Inputs). Bleiben als ContactField-Types (`text`/`email`/`tel`/`plz`/`radio`) auf Submit-Page mit echter Lead-Daten-Bedeutung.
+- **DSGVO-Strategie:** bewusst nicht engineered (Stavros-Entscheidung 2026-05-28). Rechtsgrundlage Art. 6 (1) (b) „Vertragsanbahnung" greift bei Lead-Funnels. Tenants verantworten ihre Datenschutzerklärung. Kein Consent-Click am Anfang. Anpassung erst wenn zahlende Tenants nachfragen.
 - **Umgebungsvariablen:** `.env.local` (Vorlage `.env.example`).
 
 ---
@@ -215,7 +228,7 @@ Enthält: Design-Token (Light + Dark Mode), Komponenten-API, Dark-Mode-Implement
 ### Zwei getrennte Design-Welten
 
 - **`components/ui/`** → Dashboard & Tenant-Portal (das obige System)
-- **`components/funnel.tsx`** → Widget-UI (Farben aus DB, komplett eigenständig). **Nur in Absprache anfassen** — keine spontanen KI-Edits an dieser Datei. Erweiterungen oder Refactors (neue Feldtypen, Design-Updates, etc.) brauchen explizite Freigabe und einen klaren Grund. Default-Haltung: hands off, frag nach.
+- **`components/funnel.tsx`** → Widget-UI (Farben aus DB, komplett eigenständig). **Nur in Absprache anfassen** — keine spontanen KI-Edits an dieser Datei. Erweiterungen oder Refactors (neue Feldtypen, Design-Updates, etc.) brauchen explizite Freigabe und einen klaren Grund. Default-Haltung: hands off, frag nach. **Stand seit Aufgabe 34 (2026-05-28):** Datei ist signifikant gewachsen (~1500 LOC) durch Typeform-Redesign, framer-motion-Slide, EditableText-Helper für WYSIWYG-Edit, SortableEditOption für Canvas-Drag, Partial-Submissions-Hook. Auslagerung in `components/funnel/*` ist Option für eine kommende Pause-Aufgabe wenn die Datei unhandhabbar wird.
 
 ---
 
@@ -280,7 +293,13 @@ Klare Trennung — keine Override-Hierarchien zwischen Tabellen:
 
 ### 13.5 Schema-Refactor-Status
 
-**Phase B abgeschlossen (Mai 2026).** Alle Schema-Refactor-Tasks vor MVP-Launch erledigt: B.1 (`tenant_members`) ✅, B.2 (UUID-FKs) ✅, B.3 (submissions.contact\_\*-Cleanup) ✅, B.4 (tenants als reine Account-Tabelle) ✅, B.5 (pages + fields, Kontaktfelder als reguläre Field-Types) ✅, B.6 (Webhook-Schema) ✅, B.7 (updated_at-Trigger-Konsistenz, mit B.5 erledigt) ✅. Details: siehe [`context/roadmap.md`](context/roadmap.md). Nächste DB-Arbeit kommt aus Phase C/D nur nach Bedarf (neue Feldtypen in C.3, Logic-Jumps in C.4).
+**Phase B abgeschlossen (Mai 2026).** Alle Schema-Refactor-Tasks vor MVP-Launch erledigt: B.1 (`tenant_members`) ✅, B.2 (UUID-FKs) ✅, B.3 (submissions.contact\_\*-Cleanup) ✅, B.4 (tenants als reine Account-Tabelle) ✅, B.5 (pages + fields, Kontaktfelder als reguläre Field-Types) ✅, B.6 (Webhook-Schema) ✅, B.7 (updated_at-Trigger-Konsistenz, mit B.5 erledigt) ✅. Details: siehe [`context/roadmap.md`](context/roadmap.md).
+
+**Aufgabe 34 Schema-Erweiterungen (2026-05-28):**
+- `aufgabe_34_strip_icon_keys_from_field_options`: UPDATE auf `fields.options` jsonb — `icon_key` + `icon_url` aus allen Option-Objekten gestrippt (45 Fields betroffen, 175 Option-Einträge). Forward-only, kein DOWN-Pfad (Brand-Decision).
+- `aufgabe_34_partial_submissions_schema`: `submissions.session_id uuid NOT NULL UNIQUE` + `submissions.completed_at timestamptz NULL` + 2 Indices. Backfill: 26 bestehende Rows als completed markiert. UPSERT-Identität für Partial-Submissions.
+
+**Nächste DB-Arbeit:** Aufgabe 35 (`funnels.skip_submit_step boolean DEFAULT false`).
 
 ---
 
