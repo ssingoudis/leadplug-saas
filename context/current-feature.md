@@ -111,6 +111,158 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ## History
 
+- **Aufgabe 34 — C.1c WYSIWYG-Edit + Widget-Typeform-Redesign + Icons-Cleanup + Type-Cleanup + Partial-Submissions-Infra ✅ (2026-05-28)**
+
+  Größte Aufgabe seit Phase B. Drei parallele Strategie-Stränge in einem Sprint. Zwei Checkpoint-Commits (`60ab73d`, `d5373fd`). +1310 / −1360 LOC netto, 44 Files. 2 DB-Migrationen direkt auf Production appliziert.
+
+  **Strategischer Hintergrund (Stavros-Entscheidungen während des Sprints):**
+  1. **Icons radikal raus aus Code + DB** — Begründung: A/B/C/D Letter-Chips als Default decken 90% der Use-Cases, IconPicker mit Lucide-Icons + Custom-Solar-Icons war Branchen-Relikt, Tenants brauchen das nicht. Bestehende Icon-Daten werden aus DB gestrippt (kein Rückkanal — Brand-Decision).
+  2. **Email + Tel als Question-Types raus** — waren nur Text-Inputs mit anderem Browser-Keyboard, Validation findet erst beim Submit statt. Bleiben als ContactField-Types auf Submit-Page (`text` / `email` / `tel` / `plz` / `radio`).
+  3. **Partial Submissions als Pricing-Hebel** — Submit-Only-Save war Handwerker-Funnel-Relikt aus der Pre-Typeform-Zeit. Neue Architektur: jede User-Session bekommt eine DB-Row mit `session_id` UPSERT-Identität + `completed_at` Flag. Abbrecher mit Email werden zu nutzbaren Leads, statt verloren zu gehen. Tenant-Pricing zählt "Completed + Abandoned-mit-Email" als Lead.
+  4. **DSGVO bewusst ignoriert** — kein Engineering, kein Consent-Click. Rechtsgrundlage Art. 6 (1) (b) "Vertragsanbahnung" greift bei Lead-Funnels per default. Tenants verantworten ihre Datenschutzerklärung. Anpassung wenn zahlende Tenants nachfragen.
+
+  ### Checkpoint 1 — `60ab73d` C.1c WYSIWYG-Edit + Widget-Typeform-Redesign + Canvas-Interactions
+
+  **C.1c WYSIWYG-Edit (Builder-side):**
+  - Click-Select im CenterCanvas → blauer Outline + PropertiesPanel synct
+  - **CSS-Bug-Fix**: `var(--color-primary)` → `var(--funnel-primary)` in `hl()`/`hlEdge()` (Highlight-Outline war seit Anfang unsichtbar)
+  - Inline-Edit via `contentEditable` für 8 Stellen (question_title/subtitle, option-labels, contact_form_title/subtitle, submit_button, success_message, response_message). EditableText-Helper: uncontrolled, suppressContentEditableWarning, blur-commit, Esc-revert via skipNextCommit-Ref, Enter=commit (Tag), Plain-Text-Paste via `execCommand("insertText")`.
+  - `cursor: text` (I-Beam) in editMode-Branch — override Parent-`cursor: pointer`
+  - `parseFieldRef`-Router in `EditorShellV2.handleTextChange` mapped Field-Identifier → State-Patches via diskriminerte Branches
+  - Bidirektionaler Sync: PropertiesPanel-FieldRow-Klick auf Submit-Page setzt `selectedFieldRef = "contact_field_<key>"` → blauer Outline auf entsprechendem Center-Element
+  - `editMode`-Short-Circuit in `handleSelect/handleNext/handleBack/handleToggleMultiple` (kein Step-Advance bei Edit-Klick)
+  - Option-Wrapper switcht `<button>` → `<div role="button" tabIndex={-1}>` in editMode (Button schluckt contentEditable-Klicks)
+  - Submit-Button-`type` switcht `"submit"` → `"button"` in editMode (kein Form-Submit bei Test-Klick)
+  - `handlePreviewClick` (in onClickCapture auf Funnel-Root): in editMode KEIN `stopPropagation`/`preventDefault` (sonst feuern Canvas-Buttons wie Duplicate/Delete nicht). Live-Mode behält beide.
+  - Esc-Listener in EditorShellV2 deselected
+  - Click-into-empty (Canvas-Background) deselected via `e.target === e.currentTarget`-Check
+
+  **Widget-Redesign Typeform-Stil (Live + Builder-Preview, dieselbe Funnel-Komponente):**
+  - Step-Counter oben links: monospace `1 →` Bubble in Brand-Color
+  - Title `font-light text-2xl/3xl` links-ausgerichtet (statt `font-bold text-center`)
+  - Subtitle gefadet, leichter, links
+  - Choice-Options HORIZONTAL: A/B/C/D Letter-Chip LINKS + Label RECHTS (statt vertikal Icon-on-Top Bubble). Pro Option: kompakter `border rounded` mit `color-mix` Brand-Color-Background bei Selected.
+  - Multi-Choice: Check-Icon-Indicator zusätzlich, Letter rechts gefadet (Tastatur-Hinweis-Pattern)
+  - Letter-Fallback in funnel.tsx (vorerst — wurde in Checkpoint 2 komplett entfernt): bei leerem iconKey/iconUrl A/B/C/D im Bubble statt HelpCircle-?-Fallback
+  - Text-Inputs (`short_text`, `long_text`, `date`, `number`, `dropdown`) Underline-only, kein Box-Border, `font-light text-xl/2xl`
+  - Number-Input mit Unit-Suffix rechts (inline-baseline-aligned)
+  - Checkbox Custom-Style mit Check-Icon
+  - Slider: text-4xl/5xl font-mono font-bold Number-Readout in Brand-Color über dem Range, Min/Max-Labels mono
+  - **1px Progress-Bar oben am Card-Rand** (mit `color-mix(in srgb, ...)` als Track-BG) — animiert mit Step-Progress, ersetzt die alte 8px-dicke Progress-Bar in der Mitte
+  - Inline "OK ✓"-Button unter jedem non-single-choice Step (Typeform-Pattern)
+  - **Enter im Text-Input committed** direkt → `handleNext()`
+  - Single-Choice Auto-Advance 325 → 250ms, `setSlideDirection(1)` für Slide-Richtung
+  - Submit-Button kompakter "OK ✓"-Style mit Check-Icon (statt full-width mit Chevron-Arrow)
+  - **Bottom-Right Floating-Nav**: kleine Pille mit ChevronUp (zurück) + ChevronDown (weiter), nur in `!editMode` sichtbar. Bekannt: rendert in Live nicht wie erwartet, Layout-Issue offen (eigener Mini-Fix-Sprint).
+  - **framer-motion `AnimatePresence` + `motion.div`** mit Spring-Slide zwischen Steps: variants y ±80, opacity-Fade, transition `spring stiffness 300 damping 30`. Slide-Richtung per `slideDirection` State (1=forward, -1=backward) in handlers gesetzt.
+  - Per-Tenant-Theme bleibt vollfunktional (Brand-Color, Background, Font, Radius via CSS-Custom-Properties `--funnel-primary` etc.)
+  - Card-Wrapper bekommt `position: relative` für absolute Bottom-Nav-Positioning
+  - Live-iFrame-Compat: `editMode` default false → alle editMode-conditional Logiken sind tot in Production, kein Verhalten-Drift.
+
+  **Polish:**
+  - Right PropertiesPanel 320 → 420 px (matched links, mehr Edit-Komfort)
+  - **Pin-Edge-Insert** in StepList: zwischen je zwei Step-Pills (und oberhalb der ersten Frage) hover-revealed Edge-Zone mit `+`-Button → öffnet `AddElementModal` mit Insert-Position. `handleAddQuestion/handleAddVorlage` haben jetzt optionales `atIndex`-Argument.
+
+  **Canvas-Interactions (Choice-Options im Editor):**
+  - DndContext + SortableContext um Choice-Options in editMode → Drag-Reorder per `@dnd-kit/sortable` (auf Hover sichtbare GripVertical-Handle links)
+  - Duplicate + Delete-Buttons rechts pro Option (auf Hover sichtbar). Delete schützt vor letzter Option.
+  - "+ Option hinzufügen"-Link direkt unter Optionen in editMode
+  - 4 neue Handler in `EditorShellV2`: `handleAddOption`, `handleReorderOptions`, `handleDuplicateOption`, `handleDeleteOption` — alle über `selected.questionIndex`
+  - `buildQuestions` in `lib/editorUtils.ts`: neue Option `{ keepEmpty?: boolean }`. CenterCanvas ruft mit `keepEmpty: true` (außer in TestMode) → leere Optionen erscheinen sofort im Canvas mit Placeholder-Rendering. Live-Widget unverändert (`keepEmpty` default false).
+  - Wert-Eindeutigkeit in `buildQuestions`: bei Duplicate kollidierende Values werden mit `_2`, `_3` etc. suffixed → keine React-Key-Collision
+
+  **Neue Dependency:**
+  - `framer-motion ^12.40.0` (~50kb gzipped, MIT, für Slide-Animations zwischen Steps)
+
+  ### Checkpoint 2 — `d5373fd` Icons-Cleanup + Type-Cleanup + Partial-Submissions-Infra
+
+  **Icons komplett raus (Code + DB):**
+  - **DB-Migration `aufgabe_34_strip_icon_keys_from_field_options`**: UPDATE auf `fields.options` jsonb mit `jsonb_agg(o - 'icon_key' - 'icon_url' ORDER BY sort_order)` für Rows wo `EXISTS(... WHERE o ? 'icon_key' OR o ? 'icon_url')`. Vor Migration: 45 Fields, 175 Option-Einträge mit Icon-Daten. Nach Migration: 0. DO-Block-Assertion am Ende der Migration verifiziert.
+  - `types/index.ts`: `EditorOption` + `Option` ohne `iconKey`/`iconUrl`
+  - `funnel.tsx`: `renderIcon`-Import + Aufruf komplett entfernt, Choice-Render zeigt immer A/B/C/D Letter-Chip
+  - `lib/editorUtils.ts`, `lib/getTenantConfig.ts`: `icon_key`/`icon_url` aus jsonb-Mapping raus
+  - Vorlagen + defaults: stop setting iconKey/iconUrl
+  - v1 `SectionFragen`: `IconPicker`-Import + Usage raus, `handleOptionIconChange` gelöscht
+  - **Files komplett gelöscht (22 Files, −1060 LOC):** `components/icons.tsx` (renderIcon), `components/dashboard/IconPicker.tsx` (302 LOC IconPicker), `components/icons/` (16 Solar-Custom-Icons + _base + index + Lucide-Anleitung), `app/icons/page.tsx` (Lucide-Browser-Dev-Tool)
+
+  **Type-Cleanup (Code-only, KEINE DB-Migration nötig):**
+  - DB-Check vor Cleanup: alle 12 email- + 12 tel-Fields liegen auf submit-Pages (= ContactFields), NULL auf Question-Pages. Daher keine Daten zu migrieren.
+  - `types/index.ts QuestionType`: 11 → 9 Types entfernt (`email`, `tel`)
+  - `lib/editorUtils.ts`: `VALID_QUESTION_TYPES`, `TEXTISH_TYPES`, `buildQuestionConfig`-Switch bereinigt
+  - `components/tenant-editor/v2/fieldMeta.ts QUESTION_META`: email + tel entfernt
+  - `components/tenant-editor/v2/vorlagen.ts` Kontakt-Vorlage: email/tel-questionType → `short_text` (Auto-Placeholder bleibt)
+  - `components/tenant-editor/SectionFragen.tsx` QUESTION_TYPE_LABELS + isText
+  - `components/funnel.tsx` render-Branches: short_text-Branch deckt jetzt nur noch short_text (email/tel-Sub-Branches entfernt)
+  - `components/tenant-editor/PreviewPanel.tsx` `buildMockAnswers`: email/tel-Mock-Antworten raus
+  - `components/tenant-editor/v2/properties/FieldProperties.tsx` `isText`-Check entschlackt
+  - **ContactField-Types unverändert** (`text`/`email`/`tel`/`plz`/`radio`) für Submit-Page — die haben echte Bedeutung im Lead-Daten-Mapping
+
+  **Partial-Submissions Infrastruktur:**
+
+  **DB-Migration `aufgabe_34_partial_submissions_schema`:**
+  - `submissions.session_id uuid NOT NULL UNIQUE` (UPSERT-Identität)
+  - `submissions.completed_at timestamptz NULL` (NULL = abgebrochen / in Bearbeitung, gesetzt = finaler Submit)
+  - Backfill: 26 bestehende Rows haben `session_id = id`, `completed_at = COALESCE(created_at, NOW())` (alle als completed markiert)
+  - Indices: `(tenant_id, completed_at NULLS FIRST)` + partial `(tenant_id, created_at DESC) WHERE completed_at IS NULL AND contact->>'email' nicht leer` für Lead-Inbox-Tabs
+
+  **`lib/tracking.ts`:**
+  - Neue `upsertSubmissionProgress({sessionId, ..., completed?})`: UPSERT auf session_id via `.upsert(row, { onConflict: 'session_id' })`. Setzt optional `completed_at = NOW().toISOString()`. Idempotent bei Reload/Race.
+  - Bestehender `logSubmission` bleibt für Backwards-Compat (Insert-Only, nicht mehr von `/api/submit` aufgerufen — könnte später entfernt werden)
+
+  **Neuer Endpoint `/api/track-progress/route.ts`:**
+  - Akzeptiert `{sessionId, tenant, answers, contact, honeypot, sourceUrl, userAgent}`
+  - sessionId-Validierung gegen UUID-v4-Regex `/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i`
+  - Honeypot-Bot-Filter (kein DB-Schreiben bei Treffer)
+  - **Bewusst KEIN Rate-Limit** (würde tippenden User mit 30 Keystrokes blocken — Rate-Limit gibt's nur in `/api/submit`)
+  - **Bewusst KEINE Validation** (Final-Validation passiert in `/api/submit`)
+  - UPSERT mit `completed: false` → `completed_at` bleibt NULL
+  - Fehler werden geschluckt, Endkunde bekommt immer `success: true`
+
+  **`/api/submit/route.ts` angepasst:**
+  - Nutzt jetzt `upsertSubmissionProgress` statt `logSubmission`
+  - Akzeptiert optionalen `sessionId`-Field, fällt auf neue `crypto.randomUUID()` zurück wenn fehlt (Legacy-Client-Kompat)
+  - Setzt `completed: true` → `completed_at = NOW()`
+  - Restlicher Flow unverändert (Validation, `lead_price` server-side aus tenantConfig, Mails via `sendAllEmails`, Email-Status-Update)
+
+  **`components/TenantFunnelClient.tsx`:**
+  - `getOrCreateSessionId(slug)`: nutzt `sessionStorage` mit Key `lp_session_<slug>` (Tab-scope, neue Tab = neue Session). Fallback auf flüchtige UUID bei Private-Mode/Storage-Gesperrt.
+  - Neuer `handleAnswersChange`-Callback fires nach Funnel-Debounce auf `/api/track-progress`
+  - `lastSentRef`-Deduplizierung: skippt identische Payloads via JSON-Stringify-Vergleich
+  - `handleSubmit` sendet jetzt zusätzlich `sessionId` an `/api/submit`
+  - Fehler beim track-progress werden geschluckt (finaler Submit ist Garant)
+
+  **`components/funnel.tsx` neue Prop + Effect:**
+  - Neuer Prop `onAnswersChange?: (data: { answers, contact }) => void`
+  - useEffect mit 600ms-Debounce auf `[answers, contactData]` feuert Callback (außer in `editMode` / `isSubmitted`)
+  - Editor-Mode bekommt `onAnswersChange` nicht → kein Tracking im Builder
+
+  ### Verifikation
+
+  - `npx tsc --noEmit` durchgehend exit 0 nach jedem Block
+  - `npm run build` ohne Errors am Ende beider Checkpoints
+  - DB-Migrations: Read-Only-Verify-Queries nach Apply: 0 verbleibende icon_key/icon_url Einträge, 26/26 Rows mit session_id + completed_at
+  - SSR-Probes: v2-Builder-Route 307 (Login-Redirect = Compile sauber), Live-Widget 200
+  - Visuelle Tests durch Stavros: Drag-Reorder + Duplicate + Delete im Canvas funktionieren nach Propagation-Fix (Capture-Phase stopPropagation eat'te Button-Clicks — wurde in editMode entfernt)
+
+  ### Bekannte offene Punkte für Folge-Aufgaben
+
+  1. **Aufgabe 35 (klein, ~1.5 Std):** Submit-Button als Default off / Auto-Finish nach letzter Frage. Neue Spalte `funnels.skip_submit_step boolean DEFAULT false`. Editor v2 PropertiesPanel-Toggle. Widget honoriert Flag → kein isContactStep-Render. Optional Vorlage „Bestätigungs-Schritt".
+  2. **Aufgabe 36 (mittel, ~2-3 Std):** Lead-Inbox 3 Tabs (Completed / Abgebrochen-mit-Email / Abgebrochen-ohne-Email). Schema-Indices stehen bereits. UI-Arbeit am Dashboard.
+  3. **Aufgabe 37 (klein, ~1 Std):** Bottom-Right Floating-Nav-Bug in Live-Widget — rendert nicht wie erwartet trotz `!editMode`. Vermutlich Layout-/Position-Issue im iFrame-Context.
+
+  ### Bewusst NICHT angefasst in diesem Sprint
+
+  - **Multi-Field-auf-Question-Page** (Auslegung B) — bleibt explizit Future-Feature. Vorlage „Kontakt" erzeugt weiter mehrere separate Steps.
+  - **DSGVO-Engineering** (Consent-Click am Anfang, Cookie-Banner, etc.) — bewusst auf Phase-D-Launch verschoben oder erst wenn zahlende Tenants fragen.
+  - **Lokale Migration-Files für die 2 DB-Migrationen** — werden mit dem Doku-Commit ergänzt.
+
+  *Branch:* `feature/aufgabe-34-wysiwyg-edit` (noch nicht in main gemerged zum Commit-Zeitpunkt der zwei Checkpoints).
+
+  *Checkpoints:*
+  - `60ab73d` feat(builder+widget): Aufgabe 34 Checkpoint 1 — C.1c WYSIWYG-Edit + Widget-Typeform-Redesign + Canvas-Interactions
+  - `d5373fd` feat(builder+widget+api): Aufgabe 34 Checkpoint 2 — Icons-Cleanup + Type-Cleanup + Partial-Submissions-Infra
+  - (+ kommender Doku-Commit + Merge-Commit)
+
 - **Aufgabe 33 — Phase C.1b (Vorlagen + Field-Level-Properties + Submit-Multi-Field-UI) ✅ (2026-05-28)**
 
   Macht den v2-Editor zum tatsächlichen Builder. Bis C.1a war's nur das Gerüst mit Page-Level-Settings; C.1b ergänzt Vorlagen für Quick-Start, type-spezifische Field-Properties für alle 11 Question-Types, und Multi-Field-Editierung der Submit-Page (Kontaktformular). Code live (Commit `e6640a8`), Production-Smoke-Test grün.

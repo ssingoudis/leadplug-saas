@@ -146,20 +146,23 @@ Reihenfolge laut [`../CLAUDE.md`](../CLAUDE.md) §5:
 
 | Schritt | Was | Geschätzter Aufwand |
 |---|---|---|
-| C.1a ✅ | ~~Editor-Shell v2 — 3-Pane Layout (StepList · WYSIWYG-Preview · Properties), Top-Tabs, Drag-Reorder, Page-Level-Properties, ?v=2-Routing~~ — Aufgabe 32, 2026-05-28. | 1 Tag |
-| C.1b ✅ | ~~Vorlagen + Field-Level-Properties + Submit-Multi-Field-UI~~ — Aufgabe 33, 2026-05-28. AddElementModal zweisektionig mit 3 Vorlagen (Kontakt/Adresse/Ja-Nein als Mehrfach-Step-Sets), FieldProperties pro Type, OptionsEditor mit Drag, Submit-Page Multi-Field mit Add/Reorder/Edit/Delete. Auslegung A locked (Vorlage = mehrere Steps, kein Multi-Field-auf-Question-Page). | 1 Tag |
-| C.1c | **WYSIWYG-Edit im CenterCanvas + Typeform-Style-Adaption (NÄCHSTES):** Click-Select im Center (Klick auf Element → Properties springt synchron), Inline-Edit via contenteditable für Title/Subtitle/Options, Floating-Toolbar bei Selektion (Duplicate/Delete/Drag), A/B/C/D Letter-Prefixes als Default in Choice-Options (Icon-Override bleibt verfügbar), "Add choice" direkt im Canvas. Touch von funnel.tsx beschränkt auf Letter-Prefix-Render + Inline-Edit-Hooks. Style-Direction: Typeform light/clean. | 2-3 Tage |
+| C.1a ✅ | ~~Editor-Shell v2 — 3-Pane Layout~~ — Aufgabe 32, 2026-05-28. | 1 Tag |
+| C.1b ✅ | ~~Vorlagen + Field-Level-Properties + Submit-Multi-Field-UI~~ — Aufgabe 33, 2026-05-28. | 1 Tag |
+| C.1c ✅ | ~~WYSIWYG-Edit + Widget-Typeform-Redesign + Canvas-Interactions + Icons-Cleanup + Type-Cleanup + Partial-Submissions-Infra~~ — Aufgabe 34, 2026-05-28. Massiver Sprint, ging weit über ursprünglichen C.1c-Scope hinaus. C.6 + C.7 sind damit größtenteils erledigt. | 2 Tage |
 | C.1d | **Cutover:** Alten v1-Editor + Routing-Conditional + ?v=2-Flag entfernen. | 0.5 Tag |
+| **35** | **Submit-Button als Default-off + optionale Vorlage „Bestätigungs-Schritt".** Neue Spalte `funnels.skip_submit_step boolean DEFAULT false`. Editor v2 PropertiesPanel-Toggle auf Submit-Page. Widget honoriert Flag → Auto-Finish nach letzter Frage (ruft `/api/submit` mit `completed=true` aus dem letzten Step-Advance auf). Bestehende Funnels bleiben auf `false` (Backwards-Compat). | 1.5 Std |
+| **36** | **Lead-Inbox 3 Tabs:** Completed / Abgebrochen-mit-Email / Abgebrochen-ohne-Email. Schema-Indices stehen seit Aufgabe 34. UI-Arbeit am `/dashboard/leads` mit Filter-Tabs + Badge-Counts. | 2-3 Std |
+| **37** | **Bottom-Right Floating-Nav-Bug** in Live-Widget — rendert nicht wie erwartet trotz `!editMode`. Vermutlich Layout/Position-Issue im iFrame-Context. Debugging + Fix. | 1 Std |
 | C.2 | Theme-Panel im Editor (exponiert vorhandene CSS-Vars + Logo-Upload) | 2-3 Tage |
-| C.3 ✅ | ~~Mehr Feldtypen im Builder (Email, Tel, Date, Number, Dropdown, Checkbox)~~ — Aufgabe 31, 2026-05-28. URL/File-Upload/Address bewusst gestrichen, `multi_choice`-Rename mit drin. | 3-5 Tage |
+| C.3 ✅ | ~~Mehr Feldtypen im Builder~~ — Aufgabe 31, 2026-05-28. Plus E-Mail + Telefon in Aufgabe 34 wieder rausgenommen (waren nur kosmetisch). | 3-5 Tage |
 | C.4 | **Logic Jumps** (per Frage: "springe zu X wenn Antwort = Y") — neue Tabelle oder JSONB | 3-4 Tage |
 | C.5 | Webhook-Export Code (Delivery, Retry, Signatur) — nutzt B.6-Schema | 3-5 Tage |
-| C.6 | Antwortoptionen-UX-Polish + icon_url Layout-Anpassung — **wird teilweise mit C.1c erledigt** (A/B/C/D-Prefixes als Default). Rest: Bild-oben-vs-SVG-zentriert-Layout-Anpassung wenn IconPicker-Override aktiv. | 1-2 Tage |
-| C.7 | **Smooth Slide-Übergänge zwischen Fragen im Widget** (Typeform-Stil) via framer-motion. Stavros am 2026-05-28: Stil-Richtung steht (Typeform), Animationen aber „noch nicht final" — bleibt eigener Sprint, kommt nach Bedarf. | 2-3 Tage |
+| ~~C.6~~ | ~~Antwortoptionen-UX-Polish + icon_url Layout-Anpassung~~ — **vollständig durch Aufgabe 34 erledigt** (Icons komplett raus, A/B/C/D ist Default, IconPicker gelöscht). | — |
+| ~~C.7~~ | ~~Smooth Slide-Übergänge zwischen Fragen im Widget~~ — **durch Aufgabe 34 erledigt** (framer-motion AnimatePresence + Spring-Slide live). | — |
 
-**Total Phase C realistisch: 18-28 Tage Vollzeit.**
+**Total Phase C neu (nach Aufgabe 34): ~5-8 Tage verbleibend.**
 
-> **C.1-Sub-Sprint-Notiz:** C.1 wurde nach Iteration mit Stavros am 2026-05-28 in vier Sub-Sprints zerlegt (C.1a–d). Ursprünglich war C.1 als ein 4-6-Tage-Block geplant — der ist aber zu groß für einen sauberen Merge-Punkt und der Builder ist gleichzeitig das wichtigste Verkaufsargument, also lohnt sich der zusätzliche Engineering-Aufwand pro Sub-Sprint. Reihenfolge C.1b ⇨ C.1c steht fest (Multi-Field-Foundation vor WYSIWYG-Polish, weil Inline-Edit ohne Multi-Field-Listen halbgar wäre). C.1c zieht Typeform-Patterns (A/B/C/D-Prefixes, Inline-Edit) direkt in das CenterCanvas-Render rein — kein separater großer Widget-Refactor nötig, weil das CenterCanvas und das Live-Widget dieselbe Funnel-Komponente nutzen.
+> **Aufgabe-34-Reset:** C.1c wurde am 2026-05-28 nicht „klein" wie ursprünglich geplant, sondern als grundlegender Architektur-Reset durchgezogen. Drei Stränge in einem Sprint: WYSIWYG-Edit + Widget-Typeform-Redesign + Strategie-Shifts (Icons raus, Email/Tel raus, Partial-Submissions). C.1d Cutover bleibt eigener Sprint nach den 3 Folge-Aufgaben (35-37). C.6 + C.7 fallen weg — sind in C.1c absorbiert.
 
 ---
 
