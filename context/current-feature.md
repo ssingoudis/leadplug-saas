@@ -111,6 +111,52 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ## History
 
+- **Aufgabe 30 — Phase B.5 (pages + fields Schema-Foundation) ✅ (2026-05-28)**
+
+  Beide Migrationen auf Production appliziert (30a additive + Daten-Migration in einer Transaktion, 30b DROP), Code-Refactor live auf Vercel (Commit `048d56b`), Production-Smoke-Test grün (`https://app.leadplug.de/demo-solar` rendert sauber via neuen pages→fields-Join), supabase-schema.md regeneriert, Roadmap auf ✅. **Phase B damit abgeschlossen** — B.7 (updated_at-Trigger-Konsistenz) wurde mit B.5 erledigt (pages + fields bekamen den Trigger direkt in 30a).
+
+  **Migrationen (in Reihenfolge appliziert):**
+  - `20260528180000_aufgabe_30a_pages_fields_add.sql` — Phase 1 additive. Neue Enums `page_type` + `field_type`, neue Tabellen `pages` + `fields` mit 8 RLS-Policies, 5 Indices, 2 updated_at-Trigger. Daten-Migration in einer Transaktion: 58 funnel_questions → 58 question-Pages mit je 1 Field, 52 contact_fields-Einträge aus 12 funnels.contact_fields-jsonb → 12 submit-Pages mit insgesamt 52 Fields, 12 leere success-Pages. **Total: 82 pages, 110 fields.** DO-Block-Assertions verifizieren Counts vor COMMIT.
+  - **Vercel-Deploy** dazwischen (Commit `048d56b` auf main, Merge des Branches `feature/aufgabe-30-pages-fields`).
+  - `20260528190000_aufgabe_30b_drop_funnel_questions_and_contact_fields.sql` — Phase 2. DROP der 4 funnel_questions-Policies, DROP TABLE funnel_questions, DROP TYPE question_type, ALTER TABLE funnels DROP COLUMN contact_fields.
+
+  **Architektur-Entscheidungen:**
+  - **EditorState bleibt strukturell unverändert** (`questions[]` + `contactFields[]`) — Mapping-Layer in `lib/editorUtils.ts` übersetzt zwischen EditorState und pages/fields. Editor-Sektionen (SectionFragen, SectionKontakt), HealthCheckPanel, EmailMockups, FunnelEditorShell und Widget (`components/funnel.tsx`) bleiben byte-identisch. Phase C.1 baut den Pages/Layers-UI-Tab darauf auf.
+  - **field_type-Mapping** beim Daten-Migration: `multiple_choice → multi_choice` (Roadmap-Schreibweise), `text → short_text` (Konsolidierung), alle anderen 1:1. `radio` + `plz` bleiben als eigene Enum-Werte erhalten — sonst würde Widget-Rendering brechen (radio = kleine Buttons, plz = 5-stellige Numerik-Validierung). Konsolidierung evtl. in Phase C.3.
+  - **Page-Struktur pro Funnel:** N × question-Pages (sort_order 0..N-1, je 1 Field) → 1 × submit-Page (sort_order N, alle ContactFields als Fields) → 1 × success-Page (sort_order N+1, leer). External rendert das Widget identisch zu vorher.
+  - **Funnel-spezifische Texte** (contact_form_title, success_message, response_message, answers_overview_label, footer_*, etc.) **bleiben auf funnels-Tabelle** — pages.config jsonb ist in B.5 leer, Future-Use für Per-Page-Overrides.
+  - **Two-Phase-Migration analog B.2/B.4** — additive Phase erlaubt sauberen Rollback via DOWN-Migration (alte Daten unverändert), DROP-Phase nach grünem Vercel-Deploy. Editing-Lücke während Deploy (~1-2 min) gewollt, Single-User-Risiko akzeptabel.
+  - **B.7 mit B.5 erledigt:** kein eigener Sprint mehr, pages + fields haben `updated_at`-Trigger bei der Anlage in 30a bekommen.
+
+  **App-Code-Refactor (9 Files):**
+  - `lib/editorUtils.ts`: neuer Helper `editorStateToPagesAndFields(state, funnelId)` mit `crypto.randomUUID()` für vorab-allozierte Page-IDs. `dbToEditorState` neue Signatur `(funnelRow, pages, fields)`. `editorStateToFunnelRow` ohne `contact_fields`-Property. `editorQuestionsToDbRows` ersetzt durch neues Helper-Pattern.
+  - `lib/getTenantConfig.ts`: Supabase-Select join auf `pages!pages_funnel_id_fkey(fields!fields_page_id_fkey(...))` nested. Mapper baut weiterhin `TenantConfig.questions[]` + `TenantConfig.contactFields[]` aus question-Pages + submit-Page für stabile Widget-API. Rückmapping `field_type → ContactFieldConfig.type` (short_text→text, etc.) hält Widget unangetastet.
+  - `app/api/tenant/funnels/route.ts` POST: INSERT funnel → INSERT pages → INSERT fields (3-stufig).
+  - `app/api/tenant/funnels/[slug]/route.ts` GET + PUT + DELETE: GET lädt pages+fields, PUT macht `DELETE pages WHERE funnel_id` (CASCADE räumt Fields) + INSERT neu. DELETE-Kommentar zu CASCADE-Reichweite aktualisiert.
+  - `app/dashboard/funnels/[slug]/edit/page.tsx`: lädt pages+fields statt funnel_questions.
+  - `app/dashboard/page.tsx` + `app/dashboard/leads/page.tsx`: Lead-Resolver-Metadaten aus question-Pages + deren Fields statt funnel_questions. TenantSubmission-Shape unverändert.
+  - `app/api/admin/create-funnel/route.ts`: **gelöscht** (toter Code seit /admin-Cleanup in Aufgabe 26, schrieb noch direkt in funnel_questions).
+  - `types/index.ts` + `app/api/submit/route.ts`: nur Kommentar-Updates auf neuen pages+fields-Kontext.
+
+  **Verifikation:**
+  - DB Phase 30a (vor App-Deploy): 82 pages (58 question + 12 submit + 12 success), 110 fields (58 question + 52 contact). field_type-Verteilung: 42 single_choice, 15 short_text, 12 radio, 12 tel, 12 email, 8 slider, 4 plz, 3 multi_choice, 2 long_text — Summe 110 ✅. Stichproben für demo-solar (8 Fragen, 4 ContactFields) zeigten 1:1-Match mit alten Daten und korrektes type-Mapping. DO-Block-Assertions in der Migration sind durchgelaufen (kein RAISE EXCEPTION).
+  - TypeScript: `tsc --noEmit` exit 0.
+  - Production-Smoke-Test nach Vercel-Deploy: `https://app.leadplug.de/demo-solar` rendert mit erster Frage "Worauf soll die Anlage installiert werden?" + 4 Optionen, Header korrekt, keine Errors. Beweist dass getTenantConfig → pages → fields-Join funktioniert.
+  - DB Phase 30b: funnel_questions-Tabelle weg, funnels.contact_fields-Spalte weg, question_type-Enum weg, pages/fields unverändert (82/110).
+  - Letzter Smoke-Test nach Phase 2 (cache-busted curl): HTTP 200, ~22KB HTML — App referenziert die gedroppte Tabelle nirgends mehr.
+
+  **Bekannte Trade-offs (für Folge-Sessions):**
+  - `pages.config` jsonb ist in B.5 leer — Per-Page-Theme-Overrides oder per-Page-Texte sind Future-Work (Phase C/E).
+  - `radio` + `plz` field_types bleiben separate Enum-Werte. Konsolidierung auf single_choice + short_text mit Widget-Renderer-Hinweis erst dann sinnvoll, wenn das Widget neue Field-Types braucht (Phase C.3).
+  - Editing-Lücke während Vercel-Deploy (~1-2 min zwischen Phase-1-Migration und neuem Code live) — keine Sync-Trigger, weil Single-User. Bei zukünftigem Multi-User-Workflow wäre BEFORE-INSERT-Trigger pro Tabelle ein Pattern (analog B.2).
+
+  *Branch:* `feature/aufgabe-30-pages-fields` mit `--no-ff` in main gemerged.
+
+  *Commits:*
+  - `20f114f` feat(db): Aufgabe 30 (Phase B.5) — pages + fields Schema-Foundation
+  - `048d56b` Merge auf main (Vercel-Auto-Deploy getriggert)
+  - + finaler Doku-Commit nach Phase-2-Migration (Schema regeneriert, Roadmap auf ✅)
+
 - **Aufgabe 29 — Phase B.6 (Webhook-Schema, nur DDL) ✅ (2026-05-27)**
 
   Migration auf Production appliziert. Schema-Foundation für späteren Webhook-Tier-Launch (Phase C.5). **Kein App-Code-Touch** — Editor/Dashboard/Submit-Flow byte-identisch. Tabellen sind initial leer (additive Migration, kein Backfill nötig).

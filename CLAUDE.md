@@ -9,11 +9,13 @@
 LeadPlug ist ein **SaaS-Funnel-Builder mit integriertem CRM** — vergleichbar mit Typeform / FormFlow, aber mit nachgelagertem Lead-Posteingang und Sales-Stack. Verkauft an **Agenturen und Marketer**, die Funnels für ihre eigenen Endkunden (z.B. Solar-Betriebe, Anwälte, Coaches, aber auch jede andere denkbare branche, es gibt keine begrenzung der branchen) bauen.
 
 **Was LeadPlug NICHT ist:**
+
 - Kein Funnel-Tool, das End-Betriebe direkt selbst bedienen
 - Kein AI-Funnel-Generator (kein Race-to-the-Bottom im austauschbaren AI-Hype)
 - Kein Website-Builder. Branding läuft über **funnel-weite Theme-Variablen** (Brand-Color, Font, Border-Radius, Background, Logo) — nicht über Per-Element-Styling-Editoren wie bei FormFlow/Webflow
 
 **Architektur-Kern:**
+
 - Einbettbares iFrame-Widget pro Funnel (`https://app.leadplug.de/[slug]`) als Standard-Einbindung
 - Script- / Web-Component-Embed als **geplantes Pro-Plan-Feature (v2, post-MVP)** — nahtlose Integration ohne iFrame-Sandbox
 - Multi-Tenant Editor + Dashboard für Agenturen
@@ -22,15 +24,15 @@ LeadPlug ist ein **SaaS-Funnel-Builder mit integriertem CRM** — vergleichbar m
 
 **Tech-Stack:**
 
-| Layer | Technologie |
-|---|---|
-| Framework | Next.js 16 (App Router) |
-| Sprache | TypeScript (strict) |
-| Styling | TailwindCSS |
-| DB / Auth | Supabase (Postgres, RLS, Auth) |
-| Billing | Stripe (Subscription) |
-| E-Mail | Resend + React Email |
-| Deployment | Vercel |
+| Layer      | Technologie                    |
+| ---------- | ------------------------------ |
+| Framework  | Next.js 16 (App Router)        |
+| Sprache    | TypeScript (strict)            |
+| Styling    | TailwindCSS                    |
+| DB / Auth  | Supabase (Postgres, RLS, Auth) |
+| Billing    | Stripe (Subscription)          |
+| E-Mail     | Resend + React Email           |
+| Deployment | Vercel                         |
 
 ---
 
@@ -43,6 +45,7 @@ Tenant (= Agentur, zahlender Account)
 ```
 
 **Regeln:**
+
 - **Tenant = Workspace.** Kein separater Workspace-Layer.
 - **Multi-User-Backend wird vorbereitet** (Junction-Table `tenant_members` mit Rollen `owner | admin | member`); UI für Invites kommt nach MVP.
 - **Endkunden der Agenturen haben keinen Login** im MVP. Whitelabel-Endkunden-Portal ist v2-Feature für Pro-Plan.
@@ -53,11 +56,11 @@ Tenant (= Agentur, zahlender Account)
 
 Drei Tiers pro Tenant (Agentur). Preise sind Richtwerte:
 
-| Plan | Preis | Beinhaltet |
-|---|---|---|
-| **Webhook** | ~29€/Monat | Unlimited Funnels, Leads → externes CRM, 1 User |
-| **Standard** | ~99€/Monat | Webhook + integrierter Lead-Posteingang + ~3 User |
-| **Pro** | ~249€/Monat | Standard + Twilio (Telefonie/Audio/Auto-Summary) + Kanban + unlimited User |
+| Plan         | Preis       | Beinhaltet                                                                 |
+| ------------ | ----------- | -------------------------------------------------------------------------- |
+| **Webhook**  | ~29€/Monat  | Unlimited Funnels, Leads → externes CRM, 1 User                            |
+| **Standard** | ~99€/Monat  | Webhook + integrierter Lead-Posteingang + ~3 User                          |
+| **Pro**      | ~249€/Monat | Standard + Twilio (Telefonie/Audio/Auto-Summary) + Kanban + unlimited User |
 
 **Hintergrund:** Agenturen sitzen oft auf etablierten CRMs (HubSpot/Pipedrive) und wechseln nie — Webhook-Tier eliminiert Migrations-Friction als günstiger Einstieg. Voll-CRM ist Upsell für neue Use-Cases.
 
@@ -68,6 +71,7 @@ Drei Tiers pro Tenant (Agentur). Preise sind Richtwerte:
 **Pre-Launch — bevorzugter Einstieg:** Strategische Partnerschaft mit **einem Domain-Marktführer** (z.B. etablierte Solar-Agentur, Anwalts-Funnel-Agentur, Versicherungs-Marketer — egal welche Branche, Hauptsache hat eigene Kunden + Werbebudget).
 
 **Was die Partnerschaft uns bringt:**
+
 - Echte Kunden des Partners testen und validieren das Produkt mit echten Daten
 - Werbebudget des Partners liefert uns Conversion-Daten ohne eigene Marketing-Kosten
 - Glaubwürdigkeit-Boost über etablierten Kanal
@@ -77,6 +81,7 @@ Drei Tiers pro Tenant (Agentur). Preise sind Richtwerte:
 **Direkte Akquise** ist nicht ausgeschlossen — wenn sich zahlende Kunden auf anderem Weg ergeben, ist das willkommen. Aber sie ist nicht der primäre Pre-Launch-Fokus.
 
 **MVP = "fertig"** wenn folgendes gilt:
+
 - Du kannst mit gutem Gewissen einer etablierten Agentur ein 15-Min-Demo geben
 - Größtenteils funktional, nicht perfekt
 - Reliability > Feature-Breite
@@ -89,6 +94,7 @@ Drei Tiers pro Tenant (Agentur). Preise sind Richtwerte:
 **Festgelegt:** Funnel-Builder bleibt **linear / Typeform-Stil**. **KEIN Node-Canvas, KEIN React Flow**. Bei "lass uns Canvas einbauen"-Impulsen: an diese Entscheidung erinnern und nach konkretem Kunden-Bedarf fragen.
 
 **Geplante Verbesserungen (in Reihenfolge):**
+
 1. Schema-Refactor: Page → 1:N Fields (eine Page hat mehrere Felder + Submit)
 2. Pages + Layers Tab im Editor (Hierarchie-Sicht)
 3. Theme-Panel exponiert vorhandene CSS-Vars (Brand-Color, Font, Radius, Logo)
@@ -98,6 +104,7 @@ Drei Tiers pro Tenant (Agentur). Preise sind Richtwerte:
 7. Antwortoptionen-UX-Polish
 
 **Nicht geplant für MVP** (kommt potenziell in v2 / Pro-Roadmap):
+
 - Per-Element-CSS-Editor
 - Script- / Web-Component-Embed (nahtlose Integration ohne iFrame)
 - File-Upload, Signature, Calculator/Scoring-Felder
@@ -111,6 +118,7 @@ Drei Tiers pro Tenant (Agentur). Preise sind Richtwerte:
 - [`context/project-overview.md`](context/project-overview.md) — Architektur, Code-Struktur, DB-Schema, API-Routes
 - [`context/supabase-schema.md`](context/supabase-schema.md) — vollständige technische DB-Referenz (Enums, Tables, RLS, Indices, Functions)
 - [`context/roadmap.md`](context/roadmap.md) — granulare Code-Aufgaben (Phasen A-E, Sub-Nummern B.1, B.2, …) — primäre Arbeitsquelle für Claude
+- [`context/builder-fokus-roadmap.html`](context/builder-fokus-roadmap.html) — Die Aktuelle Go-Live Version des Produktes. Diese ist klar strukturiert und definiert das Produkt bis zu Go-Live, diese Referenz ist der aktuelle Status Quo, Aufgaben die hier aufgeschrieben sind, müssen umgesetzt werden, sie ergänzt und wiegt stärker als die context\roadmap.md
 - [`context/saas-phasenplan.html`](context/saas-phasenplan.html) — visuelle High-Level Phasen-Übersicht mit Status-Badges (Phasen 1-6) — vom User selbst gepflegt
 - [`context/current-feature.md`](context/current-feature.md) — laufende Arbeit + Aufgaben-History (chronologisch)
 - [`context/history-archive.md`](context/history-archive.md) — ältere Aufgaben (archiviert)
@@ -125,9 +133,11 @@ Drei Tiers pro Tenant (Agentur). Preise sind Richtwerte:
 ## 7. Git-Workflow
 
 Vor jeder Code-Aufgabe einen eigenen Branch erstellen:
+
 ```
 git checkout -b feature/aufgabe-[nummer]-[kurzname]
 ```
+
 Beispiele: `feature/aufgabe-25-schema-refactor`, `feature/aufgabe-26-pages-fields`
 
 **Merges immer mit `--no-ff`** in `main` — erzeugt expliziten Merge-Commit, ermöglicht sauberen Rollback via `git revert -m 1 <merge-commit>`.
@@ -152,13 +162,13 @@ Beispiele: `feature/aufgabe-25-schema-refactor`, `feature/aufgabe-26-pages-field
 
 ## 9. Code-Qualitäts-Prinzipien
 
-| Prinzip | Was es konkret heißt |
-|---|---|
-| **Sicherheit** | Alle User-Inputs am API-Boundary validieren. `lead_price`, Auth, Tenant-Zugehörigkeit nie aus Client lesen. Supabase Service Key nur server-side, nie mit `NEXT_PUBLIC_`-Prefix. |
-| **Robustheit** | Kein `any` / `as` ohne Begründung. Fehler in Tracking/E-Mail loggen, **nicht werfen**. Defensive Defaults bei externen APIs. |
-| **Skalierbarkeit** | Kein Hardcode — alles Tenant-/Funnel-spezifische kommt aus Supabase. Dynamisch, nicht hartcodiert. |
-| **Performance** | DB-Indexe für alle gefilterten Spalten. Keine N+1 Queries. Server Components default, Client Components nur wo nötig. |
-| **Best Practice** | Immer aktuelle Patterns nutzen (Next 16 App Router, RSC, Server Actions wo passend). Bei Unsicherheit: `mcp__next-devtools__nextjs_docs` konsultieren. |
+| Prinzip            | Was es konkret heißt                                                                                                                                                             |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Sicherheit**     | Alle User-Inputs am API-Boundary validieren. `lead_price`, Auth, Tenant-Zugehörigkeit nie aus Client lesen. Supabase Service Key nur server-side, nie mit `NEXT_PUBLIC_`-Prefix. |
+| **Robustheit**     | Kein `any` / `as` ohne Begründung. Fehler in Tracking/E-Mail loggen, **nicht werfen**. Defensive Defaults bei externen APIs.                                                     |
+| **Skalierbarkeit** | Kein Hardcode — alles Tenant-/Funnel-spezifische kommt aus Supabase. Dynamisch, nicht hartcodiert.                                                                               |
+| **Performance**    | DB-Indexe für alle gefilterten Spalten. Keine N+1 Queries. Server Components default, Client Components nur wo nötig.                                                            |
+| **Best Practice**  | Immer aktuelle Patterns nutzen (Next 16 App Router, RSC, Server Actions wo passend). Bei Unsicherheit: `mcp__next-devtools__nextjs_docs` konsultieren.                           |
 
 ---
 
@@ -186,15 +196,15 @@ Enthält: Design-Token (Light + Dark Mode), Komponenten-API, Dark-Mode-Implement
 
 ### Kurzübersicht Komponenten
 
-| Komponente | Verwendung |
-|---|---|
-| `<Card title="…">` | Jede Inhalts-Box im Dashboard |
-| `<Badge variant="green\|red\|amber\|purple\|gray">` | Status-Anzeigen |
-| `<Button variant="primary\|secondary\|ghost">` | Alle klickbaren Aktionen |
-| `<Input value onChange placeholder>` | Texteingaben, Suche |
-| `<Select value onChange options>` | Dropdowns |
-| `<StatTile value label>` | Kennzahlen-Kacheln |
-| `<ThemeToggle>` | Dark-Mode-Schalter (nur 1× pro Header) |
+| Komponente                                          | Verwendung                             |
+| --------------------------------------------------- | -------------------------------------- |
+| `<Card title="…">`                                  | Jede Inhalts-Box im Dashboard          |
+| `<Badge variant="green\|red\|amber\|purple\|gray">` | Status-Anzeigen                        |
+| `<Button variant="primary\|secondary\|ghost">`      | Alle klickbaren Aktionen               |
+| `<Input value onChange placeholder>`                | Texteingaben, Suche                    |
+| `<Select value onChange options>`                   | Dropdowns                              |
+| `<StatTile value label>`                            | Kennzahlen-Kacheln                     |
+| `<ThemeToggle>`                                     | Dark-Mode-Schalter (nur 1× pro Header) |
 
 ### Zwei getrennte Design-Welten
 
@@ -230,6 +240,7 @@ Einzige Funnel-Komponente: `components/funnel.tsx` (generisch, nicht branchen-sp
 - Tenant-isolierte CRUD-Operationen (Funnel anlegen/editieren, Lead-Status updaten, Account-Settings) laufen über **User-Client** (`lib/supabase/server.ts` / `client.ts`) und sind durch RLS abgesichert.
 
 **Service-Key-Client (`lib/supabase/admin.ts`, RLS-Bypass) wird AUSSCHLIESSLICH verwendet für:**
+
 - `/api/submit` — anonymer Endbenutzer, keine Auth
 - `/api/track-view` — anonymer Funnel-View
 - `/api/stripe/webhook` — System-Event von Stripe, kein User-Kontext
@@ -251,19 +262,19 @@ Einzige Funnel-Komponente: `components/funnel.tsx` (generisch, nicht branchen-sp
 
 Klare Trennung — keine Override-Hierarchien zwischen Tabellen:
 
-| Tabelle | Verantwortlich für |
-|---|---|
-| `tenants` | **Nur Agentur-Account-Daten:** Stripe-Felder, billing_model, billing_price, lead_price, is_active. Optional Anzeigename der Agentur |
-| `tenant_members` | N:M-Junction Tenant ↔ User mit `role` (`owner` / `admin` / `member`). **Minimal — keine Profile-Felder** (kein display_name, kein phone). YAGNI |
-| `funnels` | **Alle endkunden-spezifischen Daten:** Footer (company_name, email, phone), notification_email, Theme (Farben, Font, Radius), Texte, Slug |
-| `funnel_questions` (später `pages` + `fields`) | Funnel-Inhalt |
-| `submissions` | Lead-Daten (Snapshot-Pattern — keine FK auf Funnel/Tenant, damit auch nach Löschen erhalten) |
+| Tabelle                                        | Verantwortlich für                                                                                                                              |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tenants`                                      | **Nur Agentur-Account-Daten:** Stripe-Felder, billing_model, billing_price, lead_price, is_active. Optional Anzeigename der Agentur             |
+| `tenant_members`                               | N:M-Junction Tenant ↔ User mit `role` (`owner` / `admin` / `member`). **Minimal — keine Profile-Felder** (kein display_name, kein phone). YAGNI |
+| `funnels`                                      | **Alle endkunden-spezifischen Daten:** Footer (company_name, email, phone), notification_email, Theme (Farben, Font, Radius), Texte, Slug       |
+| `pages` + `fields`                             | Funnel-Inhalt. Pro Funnel: N × question-Pages mit je 1 Field + 1 × submit-Page (alle Kontaktfelder als Fields) + 1 × success-Page (leer)        |
+| `submissions`                                  | Lead-Daten (Snapshot-Pattern — keine FK auf Funnel/Tenant, damit auch nach Löschen erhalten)                                                    |
 
 **`user_profiles`** (eigene Tabelle 1:1 mit `auth.users`) wird angelegt, **falls je echte Profile-Daten** (Phone für Twilio-Pro, Avatar, etc.) gebraucht werden. Aktuell nicht nötig.
 
-### 13.5 Bevorstehende Schema-Änderungen
+### 13.5 Schema-Refactor-Status
 
-Vor MVP-Launch steht ein größerer Schema-Refactor an. Status: B.1 (`tenant_members`) ✅, B.2 (UUID-FKs) ✅, B.3 (submissions.contact_*-Cleanup) ✅, B.4 (tenants als reine Account-Tabelle) ✅, B.6 (Webhook-Schema) ✅ — alle Mai 2026. **Offen:** B.5 (pages + fields — der dickste Block, eigene Planungs-Session nötig), B.7 (updated_at-Trigger-Konsistenz). Details + Reihenfolge: siehe [`context/roadmap.md`](context/roadmap.md).
+**Phase B abgeschlossen (Mai 2026).** Alle Schema-Refactor-Tasks vor MVP-Launch erledigt: B.1 (`tenant_members`) ✅, B.2 (UUID-FKs) ✅, B.3 (submissions.contact\_\*-Cleanup) ✅, B.4 (tenants als reine Account-Tabelle) ✅, B.5 (pages + fields, Kontaktfelder als reguläre Field-Types) ✅, B.6 (Webhook-Schema) ✅, B.7 (updated_at-Trigger-Konsistenz, mit B.5 erledigt) ✅. Details: siehe [`context/roadmap.md`](context/roadmap.md). Nächste DB-Arbeit kommt aus Phase C/D nur nach Bedarf (neue Feldtypen in C.3, Logic-Jumps in C.4).
 
 ---
 

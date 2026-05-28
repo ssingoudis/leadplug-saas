@@ -10,7 +10,7 @@
 | Phase | Fokus | Status |
 |---|---|---|
 | **A** | Doku-Reset (CLAUDE.md, project-overview, schema, HTML-Files) | ✅ abgeschlossen (Mai 2026) |
-| **B** | Schema-Refactor & Architektur-Foundation | 🟡 in Arbeit — B.1 ✅, B.2 ✅, B.3 ✅, B.4 ✅, B.6 ✅ (alle Mai 2026), B.5 + B.7 offen |
+| **B** | Schema-Refactor & Architektur-Foundation | ✅ abgeschlossen — B.1 ✅, B.2 ✅, B.3 ✅, B.4 ✅, B.5 ✅, B.6 ✅, B.7 ✅ (mit B.5 erledigt) — Mai 2026 |
 | **C** | Builder-MVP-Sprint (Logic Jumps, Feldtypen, Polish) | ⚪ nach Phase B |
 | **D** | MVP-Launch + Partner-Pitches | ⚪ Ziel |
 | **E** | Pro-Plan-Features (Twilio, Web-Component-Embed, Kanban, …) | ⚪ Post-MVP |
@@ -85,18 +85,22 @@ Strategischer Hintergrund: Wir sind heute auf einem Schema, das für das alte Te
 - Stripe-Checkout nutzt `user.email` statt `tenant.notification_email` für Customer-Anlage.
 - Zwei-Phasen-Migration (zero-downtime): Phase 1 backfillt + setzt funnels.notification_email NOT NULL + dropt tenants.{notification_email,public_email} NOT NULL. Vercel-Deploy dazwischen. Phase 2 dropt die 4 Spalten.
 
-### B.5 — `pages` + `fields` (Page → 1:N Refactor)
+### B.5 — `pages` + `fields` (Page → 1:N Refactor) ✅ (Aufgabe 30, 2026-05-28)
 
-**~3-4 Tage.**
+**Status:** abgeschlossen am 2026-05-28 als Aufgabe 30. Beide Migrationen appliziert (30a additive + Daten-Migration, 30b DROP), Code-Refactor live auf Vercel (Commit 048d56b), Production-Smoke-Test grün, supabase-schema.md regeneriert.
 
-- Neue Tabellen:
-  - `pages(id, funnel_id, sort_order, page_type, created_at, updated_at)` mit `page_type`-Enum (z.B. `question`, `success`, `submit`)
-  - `fields(id, page_id, sort_order, field_key, field_type, label, required, visible, config, options, created_at, updated_at)` mit `field_type`-Enum
-- **`field_type`** wird breit gefasst: `single_choice`, `multi_choice`, `short_text`, `long_text`, `email`, `tel`, `number`, `date`, `dropdown`, `checkbox`, `slider`
-- **Kontaktfelder werden zu regulären Field-Types** (`email`, `tel`, `text`) — kein separates `contact_fields` jsonb mehr.
-- Daten-Migration der bestehenden 58 Fragen + `contact_fields` jsonb der 12 Funnels.
-- App-Code: Editor + Widget-Renderer auf neue Struktur umstellen.
-- **Builder-UI-Regel:** Funnel muss mindestens 1 Field mit `field_type='email'` enthalten — sonst kein "Veröffentlichen".
+**Tatsächliche Umsetzung:**
+- Neue Enums: `page_type` (`question | submit | success`), `field_type` (`single_choice | multi_choice | short_text | long_text | email | tel | number | date | dropdown | checkbox | slider | radio | plz`). `radio` + `plz` als eigene Werte für Widget-Kompatibilität (radio = kleine Buttons, plz = 5-stellige Numerik-Validierung).
+- Neue Tabellen `pages(id, funnel_id, page_type, sort_order, config, created_at, updated_at)` + `fields(id, page_id, field_key, field_type, label, subtitle, placeholder, visible, required, sort_order, options, config, created_at, updated_at)` mit `UNIQUE(page_id, field_key)`, FK-Cascades, 8 RLS-Policies, 2 updated_at-Trigger.
+- **Daten-Migration in einer Transaktion:** 58 funnel_questions → 58 question-Pages mit je 1 Field (`field_key = question_key`, `field_type` = mapping mit `multiple_choice → multi_choice`); 52 contact_fields-Einträge aus den 12 funnels.contact_fields-jsonb → 12 submit-Pages mit insgesamt 52 Fields (`text → short_text`, `radio → radio`, `email/tel/plz` 1:1); 12 leere success-Pages. **Total: 82 pages, 110 fields.** DO-Block-Assertions verifizieren Counts vor COMMIT.
+- **App-Code-Refactor** unter Wahrung der externen API: EditorState bleibt strukturell (`questions[]` + `contactFields[]`), neuer Mapping-Layer in `lib/editorUtils.ts` (`editorStateToPagesAndFields`, neue `dbToEditorState`-Signatur) übersetzt zwischen EditorState und pages/fields. `lib/getTenantConfig.ts` macht jetzt Service-Key-Read über `pages.fields`-Join statt `funnel_questions + contact_fields`. POST/PUT-API-Routen schreiben jetzt 3-stufig (funnel → pages → fields). DELETE pages WHERE funnel_id räumt Fields per CASCADE.
+- **Widget unverändert:** `components/funnel.tsx` byte-identisch zu vor B.5 (CLAUDE.md §11, hands-off).
+- **Tote Admin-Route entfernt:** `app/api/admin/create-funnel/route.ts` (schrieb noch direkt in `funnel_questions`) — letzte Reste aus dem in Aufgabe 26 entfernten /admin/* UI.
+- **Zwei-Phasen-Migration (analog B.2/B.4):** Phase 30a additive (alte Tabelle bleibt), App-Code-Deploy via Vercel, dann Phase 30b DROP (funnel_questions + funnels.contact_fields + question_type-Enum). Editing-Lücke während des Vercel-Deploys (~1-2 min) gewollt, Single-User-Risiko akzeptabel.
+
+### B.7 — `updated_at` Trigger Konsistenz ✅ (mit B.5 erledigt)
+
+In Phase 30a wurden `updated_at`-Trigger direkt für pages + fields mitangelegt — kein eigener B.7-Sprint mehr nötig. `funnel_view_logs`, `submissions`, `webhook_delivery_attempts`, `honeypot_triggers` bleiben weiterhin ohne (alle append-only).
 
 ### B.6 — Webhook-Schema (nur Struktur, kein Code) ✅ (Aufgabe 29, 2026-05-27)
 
@@ -109,13 +113,6 @@ Strategischer Hintergrund: Wir sind heute auf einem Schema, das für das alte Te
 - **7 Indices:** `tenant_id`, partial `is_active=true`, `(subscription_id, created_at DESC)`, partial `submission_id IS NOT NULL`, partial Retry-Queue (`status IN (pending,retrying)`).
 - Schema additive — keine bestehenden Daten, kein Backfill nötig. Einzelner Migration-Schritt (kein zwei-Phasen-Pattern).
 - App-Code: **kein Touch.** Editor/Dashboard/Submit-Flow unverändert.
-
-### B.7 — `updated_at` Trigger Konsistenz
-
-**~0.5 Tag.**
-
-- Trigger `update_updated_at()` auf alle relevanten Tabellen anwenden: `funnel_questions` (bzw. neue `pages`/`fields`), `submissions`, `tenant_members`, `webhook_subscriptions`.
-- `funnel_view_logs` und `honeypot_triggers` bleiben ohne (Append-only, keine Updates erwartet).
 
 ### Phase-B-Workflow (verbindlich — aktuell gelebt)
 
