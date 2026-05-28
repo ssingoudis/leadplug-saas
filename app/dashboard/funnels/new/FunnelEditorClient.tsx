@@ -1,6 +1,6 @@
 "use client";
 
-import { FunnelEditorShell } from "@/components/tenant-editor/FunnelEditorShell";
+import { EditorShellV2 } from "@/components/tenant-editor/v2/EditorShellV2";
 import type { EditorState } from "@/types";
 
 interface Props {
@@ -8,6 +8,6 @@ interface Props {
   companyName: string;
 }
 
-export default function FunnelEditorClient(props: Props) {
-  return <FunnelEditorShell mode="create" {...props} />;
+export default function FunnelEditorClientV2(props: Props) {
+  return <EditorShellV2 mode="create" {...props} />;
 }

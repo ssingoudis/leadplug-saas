@@ -111,6 +111,23 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ## History
 
+- **C.1d — v1-Editor Cutover ✅ (2026-05-28)**
+
+  Vierter Sprint-Schritt. Alter v1-Editor (Single-Pane mit Accordion) komplett entfernt. v2 (3-Pane WYSIWYG) ist seit Aufgabe 32 stabil, der `?v=2`-Flag war nur Übergangs-Schutz.
+
+  **Was raus ist:**
+  - 12 v1-Komponenten in `components/tenant-editor/` (FunnelEditorShell, EditorSidebar, PreviewPanel, EmailPreviewMockup, LeadEmailPreviewMockup, HealthCheckPanel, SectionAccordion, SectionFragen, SectionKontakt, SectionTexte, SectionDesign, SlugInput) — ~120 KB / ~3000 LOC
+  - 2 v1-Client-Wrapper (`FunnelEditorClient.tsx` in `[slug]/edit` und `new/`)
+  - `?v=2`-Routing-Conditional in beiden page.tsx-Files
+  - `searchParams: Promise<{ v?: string }>` Props weg
+
+  **Was bleibt:**
+  - `components/tenant-editor/defaults.ts` (DEFAULT_EDITOR_STATE, DEFAULT_QUESTION, DEFAULT_CONTACT_FIELDS — werden von v2 + lib/editorUtils genutzt)
+  - `components/tenant-editor/DeleteFunnelButton.tsx` (nicht editor-spezifisch, in FunnelCard verwendet)
+  - `components/tenant-editor/v2/*` (alles)
+
+  **Rename:** `FunnelEditorClientV2.tsx` → `FunnelEditorClient.tsx` in beiden Routen, damit das v2-Suffix konsistent verschwindet.
+
 - **Aufgabe 37 — Floating-Nav-Bug im Live-Widget gefixt ✅ (2026-05-28)**
 
   Dritter Sprint-Schritt. Der Bottom-Right Floating-Nav (ChevronUp/Down für zurück/weiter) hat im Live-iFrame nicht wie erwartet gerendert — visuell überlappt sie auf schmalen Embeds den Content-Bereich. Im Builder war's nicht sichtbar, weil die Canvas dort immer ≥ 720px breit ist.
