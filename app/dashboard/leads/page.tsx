@@ -15,7 +15,7 @@ async function getLeadsData(): Promise<{ submissions: TenantSubmission[]; funnel
   ] = await Promise.all([
     supabase
       .from('submissions')
-      .select('id, created_at, contact, answers, customer_email_sent, tenant_email_sent, funnel_slug')
+      .select('id, created_at, completed_at, contact, answers, customer_email_sent, tenant_email_sent, funnel_slug')
       .order('created_at', { ascending: false }),
     // Frage-Metadaten: pages mit page_type='question' + ihre Fields (genau 1 pro Page)
     supabase
@@ -69,11 +69,24 @@ async function getLeadsData(): Promise<{ submissions: TenantSubmission[]; funnel
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const enriched: TenantSubmission[] = ((submissions ?? []) as any[]).map((s) => {
     const c = (s.contact ?? {}) as Record<string, string>
+    const completedAt = (s.completed_at as string | null) ?? null
+    const email = (c.email as string | undefined)?.trim() || null
+    // Aufgabe 36: Bucket-Klassifikation
+    // completed: finaler Submit-Klick (completed_at gesetzt)
+    // abandoned_with_email: Session offen, aber Email vorhanden → wertvoller Abbrecher-Lead
+    // abandoned_without_email: Session offen, keine Email → reine Tracking-Spur, kein Lead
+    const bucket: TenantSubmission['bucket'] = completedAt
+      ? 'completed'
+      : email
+        ? 'abandoned_with_email'
+        : 'abandoned_without_email'
     return {
       id: s.id as string,
       created_at: s.created_at as string,
+      completed_at: completedAt,
+      bucket,
       contact_name: (c.name as string | undefined) ?? null,
-      contact_email: (c.email as string | undefined) ?? null,
+      contact_email: email,
       contact_phone: (c.telefon as string | undefined) ?? null,
       contact_anrede: (c.anrede as string | undefined) ?? null,
       contact: s.contact as Record<string, string> | null,

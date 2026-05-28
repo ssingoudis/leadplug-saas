@@ -21,14 +21,18 @@ async function getData() {
       .from('funnels')
       .select('id, slug, funnel_name, total_views')
       .eq('is_active', true),
+    // Dashboard-Übersicht zeigt nur abgeschlossene Leads (= das was als "echter Lead" zählt).
+    // Abgebrochene Sessions landen in der Lead-Inbox unter eigenen Tabs.
     supabase
       .from('submissions')
-      .select('id, created_at, contact, answers, customer_email_sent, tenant_email_sent, funnel_slug')
+      .select('id, created_at, completed_at, contact, answers, customer_email_sent, tenant_email_sent, funnel_slug')
+      .not('completed_at', 'is', null)
       .order('created_at', { ascending: false })
       .limit(50),
     supabase
       .from('submissions')
       .select('created_at')
+      .not('completed_at', 'is', null)
       .gte('created_at', since14.toISOString()),
     // Frage-Metadaten: pages mit page_type='question' + ihre Fields (genau 1 pro Page)
     supabase
@@ -80,9 +84,12 @@ async function getData() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const enrichedSubmissions: TenantSubmission[] = ((submissions ?? []) as any[]).map((s) => {
     const c = (s.contact ?? {}) as Record<string, string>
+    // Diese Query filtert bereits auf completed_at IS NOT NULL → bucket ist immer "completed".
     return {
       id: s.id as string,
       created_at: s.created_at as string,
+      completed_at: (s.completed_at as string | null) ?? null,
+      bucket: 'completed' as const,
       contact_name: (c.name as string | undefined) ?? null,
       contact_email: (c.email as string | undefined) ?? null,
       contact_phone: (c.telefon as string | undefined) ?? null,

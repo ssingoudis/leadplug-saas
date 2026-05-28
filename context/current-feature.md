@@ -111,6 +111,36 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ## History
 
+- **Aufgabe 36 — Lead-Inbox 3 Tabs (Completed / Abgebrochen-mit-Email / Abgebrochen-ohne-Email) ✅ (2026-05-28)**
+
+  Zweite Aufgabe im Builder-Final-Sprint. Macht die Partial-Submissions-Architektur von Aufgabe 34 im UI sichtbar — vorher liefen abgebrochene Sessions still in der DB ohne sinnvollen Tenant-Zugriff.
+
+  **Was geht jetzt:** `/dashboard/leads` zeigt 3 Tabs mit Badge-Counts pro Bucket. Default-Tab ist „Abgeschlossen". Tenant kann zu „Abgebrochen — mit E-Mail" wechseln und gezielt nachfassen (= wertvollster Lead-Pool laut Pricing-Logik) oder zu „Abgebrochen — ohne E-Mail" um Tracking-Spuren zu sehen.
+
+  **Bucket-Klassifikation** (Server-Side in `app/dashboard/leads/page.tsx`):
+  - `completed`: `completed_at IS NOT NULL` (finaler Submit-Klick wurde ausgelöst)
+  - `abandoned_with_email`: `completed_at IS NULL` UND `contact.email` befüllt
+  - `abandoned_without_email`: `completed_at IS NULL` UND keine Email
+
+  **Konsequente Konsistenz:** weitere Server-Queries gefiltert auf `completed_at IS NOT NULL`, damit Abbrecher nirgendwo als „echte Leads" erscheinen:
+  - `app/dashboard/page.tsx`: Recent-Leads-Liste + 14-Tage-Chart
+  - `app/dashboard/statistiken/page.tsx`: Monatliche Conversion-Counter
+  - `app/dashboard/kontakte/page.tsx`: CRM-Kontakte-Liste
+  - `app/dashboard/funnels/page.tsx`: Lead-Count pro Funnel
+
+  **Files:**
+  - `app/dashboard/TenantLeadsTable.tsx`: `bucket` + `completed_at` im Type, Tab-State, Bucket-Filter im `filtered`-Memo, Tab-UI mit aktiven/inaktiven Pills + Badge-Counts, Header-Titel reflektiert den aktiven Tab
+  - `app/dashboard/leads/page.tsx`: Query ergänzt um `completed_at`, Bucket-Computation pro Row
+  - `app/dashboard/page.tsx`: `.not('completed_at','is',null)` auf beiden Submissions-Queries, bucket=`'completed'` in der Mapping
+  - `app/dashboard/statistiken/page.tsx`: gleicher Filter auf Monthly-Conversion
+  - `app/dashboard/kontakte/page.tsx`: gleicher Filter auf CRM-Liste
+  - `app/dashboard/funnels/page.tsx`: gleicher Filter auf Lead-Count-pro-Funnel
+
+  **Wie testen:**
+  1. Funnel mit Skip-Mode ohne Submit-Page bauen + Email-Question dabei → halb durchklicken + Tab schließen → in Lead-Inbox-Tab „Abgebrochen — mit E-Mail" auftauchen
+  2. Funnel mit Submit-Page → komplett durchklicken → Tab „Abgeschlossen" hat den Lead
+  3. Funnel anfangen, ohne Email-Eingabe abbrechen → Tab „Abgebrochen — ohne E-Mail"
+
 - **Aufgabe 35 — Submit-Schritt optional + Skip-Mode mit Auto-Finish ✅ (2026-05-28)**
 
   Erste von 5 Aufgaben im Builder-Final-Sprint (Branch `feature/builder-final-sprint`). Reihenfolge: 35 → 36 → 37 → C.1d → C.2, alles in einem Branch, ein Merge am Ende.

@@ -14,6 +14,8 @@ type QuestionMeta = {
 export type TenantSubmission = {
   id: string
   created_at: string
+  completed_at: string | null
+  bucket: 'completed' | 'abandoned_with_email' | 'abandoned_without_email'
   contact_name: string | null
   contact_email: string | null
   contact_phone: string | null
@@ -25,6 +27,12 @@ export type TenantSubmission = {
   funnel_slug: string
   funnel_name: string
   questions: QuestionMeta[]
+}
+
+const BUCKET_LABEL: Record<TenantSubmission['bucket'], string> = {
+  completed: 'Abgeschlossen',
+  abandoned_with_email: 'Abgebrochen — mit E-Mail',
+  abandoned_without_email: 'Abgebrochen — ohne E-Mail',
 }
 
 export type FunnelOption = {
@@ -110,6 +118,15 @@ export default function TenantLeadsTable({
   const [dateFrom, setDateFrom]     = useState('')
   const [dateTo, setDateTo]         = useState('')
   const [sortBy, setSortBy]         = useState('date_desc')
+  // Aufgabe 36: Tab-State. Default Completed (= das was Tenants primär interessiert).
+  const [bucketTab, setBucketTab] = useState<TenantSubmission['bucket']>('completed')
+
+  // Pro-Tab-Counts vor Filter — gehört in die Tab-Pills als Badge.
+  const counts = useMemo(() => ({
+    completed: submissions.filter((s) => s.bucket === 'completed').length,
+    abandoned_with_email: submissions.filter((s) => s.bucket === 'abandoned_with_email').length,
+    abandoned_without_email: submissions.filter((s) => s.bucket === 'abandoned_without_email').length,
+  }), [submissions])
 
   const funnelOptions = [
     { value: 'alle', label: 'Alle Funnels' },
@@ -119,6 +136,7 @@ export default function TenantLeadsTable({
   const filtered = useMemo(() => {
     const q = query.toLowerCase()
     const rows = submissions.filter((s) => {
+      if (s.bucket !== bucketTab) return false
       if (q && !(s.contact_name ?? '').toLowerCase().includes(q) &&
                !(s.contact_email ?? '').toLowerCase().includes(q) &&
                !(s.contact_phone ?? '').toLowerCase().includes(q)) return false
@@ -144,16 +162,46 @@ export default function TenantLeadsTable({
         default:          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       }
     })
-  }, [submissions, query, funnelFilter, dateFrom, dateTo, sortBy])
+  }, [submissions, query, funnelFilter, dateFrom, dateTo, sortBy, bucketTab])
 
   const hasActiveFilters = query || funnelFilter !== 'alle' || dateFrom || dateTo
 
   return (
     <div>
+      {/* Aufgabe 36: Bucket-Tabs */}
+      <div className="mb-4 flex flex-wrap items-center gap-1 border-b border-gray-200 dark:border-gray-700">
+        {(['completed', 'abandoned_with_email', 'abandoned_without_email'] as const).map((b) => {
+          const active = bucketTab === b
+          return (
+            <button
+              key={b}
+              type="button"
+              onClick={() => setBucketTab(b)}
+              className={
+                active
+                  ? "relative -mb-px inline-flex items-center gap-2 border-b-2 border-primary px-3 py-2 text-sm font-semibold text-primary"
+                  : "relative -mb-px inline-flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+              }
+            >
+              {BUCKET_LABEL[b]}
+              <span
+                className={
+                  active
+                    ? "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-white"
+                    : "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-gray-200 px-1.5 text-[10px] font-bold text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                }
+              >
+                {counts[b]}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
       {/* Zeile 1: Titel + Suche + Funnel */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
         <h2 className="text-base font-bold text-gray-900 dark:text-white shrink-0 mb-2 sm:mb-0">
-          Leads ({submissions.length})
+          {BUCKET_LABEL[bucketTab]} ({counts[bucketTab]})
         </h2>
         <div className="flex flex-col sm:flex-row gap-2 flex-1 sm:justify-end">
           <div className="relative min-w-0 sm:w-72">

@@ -24,9 +24,12 @@ async function getData() {
       .from('funnels')
       .select('total_views')
       .eq('is_active', true),
+    // Statistik-Zähler basiert auf abgeschlossenen Leads (= echte Conversions).
+    // Abgebrochene Sessions würden Conversion-Rate künstlich erhöhen.
     supabase
       .from('submissions')
       .select('created_at')
+      .not('completed_at', 'is', null)
       .gte('created_at', since12.toISOString())
       .order('created_at', { ascending: true }),
     supabase
