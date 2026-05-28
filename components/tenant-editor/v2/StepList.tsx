@@ -25,6 +25,7 @@ import { questionMeta, SUBMIT_META, SUCCESS_META } from "./fieldMeta";
 import type { SelectedStep } from "./types";
 import { isSameStep } from "./types";
 import { AddElementModal } from "./AddElementModal";
+import type { Vorlage } from "./vorlagen";
 
 interface Props {
   state: EditorState;
@@ -32,9 +33,17 @@ interface Props {
   onSelect: (step: SelectedStep) => void;
   onReorder: (nextQuestions: EditorQuestion[]) => void;
   onAddQuestion: (type: QuestionType) => void;
+  onAddVorlage: (vorlage: Vorlage) => void;
 }
 
-export function StepList({ state, selected, onSelect, onReorder, onAddQuestion }: Props) {
+export function StepList({
+  state,
+  selected,
+  onSelect,
+  onReorder,
+  onAddQuestion,
+  onAddVorlage,
+}: Props) {
   const [showAddModal, setShowAddModal] = useState(false);
 
   const sensors = useSensors(
@@ -90,7 +99,8 @@ export function StepList({ state, selected, onSelect, onReorder, onAddQuestion }
       <AddElementModal
         open={showAddModal}
         onClose={() => setShowAddModal(false)}
-        onSelect={(type) => onAddQuestion(type)}
+        onSelectType={(type) => onAddQuestion(type)}
+        onSelectVorlage={(vorlage) => onAddVorlage(vorlage)}
       />
 
       <div className="mt-2 flex flex-col gap-1.5 border-t border-gray-200 px-3 py-4 dark:border-gray-800">

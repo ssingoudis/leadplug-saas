@@ -1,7 +1,25 @@
 "use client";
 
-import { Trash2, Eye, EyeOff, ChevronDown } from "lucide-react";
-import type { EditorState, QuestionType } from "@/types";
+import { useEffect, useState } from "react";
+import { Trash2, ChevronDown, Plus } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import type { EditorState, EditorQuestion, ContactFieldConfig, QuestionType } from "@/types";
 import type { SelectedStep } from "./types";
 import {
   questionMeta,
@@ -10,13 +28,21 @@ import {
   contactFieldTypeLabel,
   QUESTION_TYPE_OPTIONS,
 } from "./fieldMeta";
+import { FieldRow } from "./properties/FieldRow";
+import { FieldProperties } from "./properties/FieldProperties";
+import { AddContactFieldPicker } from "./properties/AddContactFieldPicker";
 
 interface Props {
   state: EditorState;
   selected: SelectedStep;
   onPatch: (patch: Partial<EditorState>) => void;
-  onPatchQuestion: (index: number, patch: Partial<EditorState["questions"][number]>) => void;
+  onPatchQuestion: (index: number, patch: Partial<EditorQuestion>) => void;
   onDeleteQuestion: (index: number) => void;
+  // Submit-Page contact field operations
+  onPatchContactField: (key: string, patch: Partial<ContactFieldConfig>) => void;
+  onAddContactField: (type: ContactFieldConfig["type"]) => void;
+  onDeleteContactField: (key: string) => void;
+  onReorderContactFields: (next: ContactFieldConfig[]) => void;
 }
 
 export function PropertiesPanel({
@@ -25,6 +51,10 @@ export function PropertiesPanel({
   onPatch,
   onPatchQuestion,
   onDeleteQuestion,
+  onPatchContactField,
+  onAddContactField,
+  onDeleteContactField,
+  onReorderContactFields,
 }: Props) {
   return (
     <aside className="flex h-full w-full flex-col overflow-y-auto border-l border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
@@ -36,7 +66,14 @@ export function PropertiesPanel({
           onDelete={() => onDeleteQuestion(selected.questionIndex)}
         />
       ) : selected.kind === "submit" ? (
-        <SubmitProps state={state} onPatch={onPatch} />
+        <SubmitProps
+          state={state}
+          onPatch={onPatch}
+          onPatchContactField={onPatchContactField}
+          onAddContactField={onAddContactField}
+          onDeleteContactField={onDeleteContactField}
+          onReorderContactFields={onReorderContactFields}
+        />
       ) : (
         <SuccessProps state={state} onPatch={onPatch} />
       )}
@@ -45,34 +82,26 @@ export function PropertiesPanel({
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   Question — Page-Level Properties
+   Question — Page-Level + immer-expandiertes Field
    ───────────────────────────────────────────────────────────────────────────── */
 
 interface QuestionPropsArgs {
   state: EditorState;
   index: number;
-  onPatchQuestion: (index: number, patch: Partial<EditorState["questions"][number]>) => void;
+  onPatchQuestion: (index: number, patch: Partial<EditorQuestion>) => void;
   onDelete: () => void;
 }
 
 function QuestionProps({ state, index, onPatchQuestion, onDelete }: QuestionPropsArgs) {
   const q = state.questions[index];
   if (!q) {
-    return (
-      <div className="p-6 text-sm text-gray-500 dark:text-gray-400">
-        Keine Frage ausgewählt.
-      </div>
-    );
+    return <div className="p-6 text-sm text-gray-500 dark:text-gray-400">Keine Frage ausgewählt.</div>;
   }
   const meta = questionMeta(q.questionType);
 
   return (
     <div className="flex flex-col">
-      <Header
-        kindLabel={meta.label}
-        kindIcon={meta.icon}
-        pillClass={meta.pillClass}
-      />
+      <Header kindLabel={meta.label} kindIcon={meta.icon} pillClass={meta.pillClass} />
 
       <Section title="Seite">
         <Field label="Fragetyp">
@@ -102,18 +131,33 @@ function QuestionProps({ state, index, onPatchQuestion, onDelete }: QuestionProp
         />
       </Section>
 
-      <Section title="Felder dieser Seite">
-        <FieldListRow label="Frage" type={meta.label} icon={meta.icon} />
-        <p className="mt-2 px-1 text-xs text-gray-400 dark:text-gray-500">
-          Feld-Einstellungen folgen im nächsten Schritt.
-        </p>
+      <Section title="Feld dieser Seite">
+        <FieldRow
+          icon={meta.icon}
+          pillClass={meta.pillClass}
+          label="Frage"
+          typeLabel={meta.label}
+          expandable={false}
+          expanded={true}
+          onToggle={() => {}}
+        >
+          <FieldProperties
+            kind="question"
+            question={q}
+            onPatch={(patch) => onPatchQuestion(index, patch)}
+          />
+        </FieldRow>
       </Section>
 
       <Section>
         <button
           type="button"
           onClick={() => {
-            if (confirm("Diese Frage wirklich löschen? Diese Aktion kann nur durch Verwerfen ungespeicherter Änderungen rückgängig gemacht werden.")) {
+            if (
+              confirm(
+                "Diese Frage wirklich löschen? Diese Aktion kann nur durch Verwerfen ungespeicherter Änderungen rückgängig gemacht werden.",
+              )
+            ) {
               onDelete();
             }
           }}
@@ -128,23 +172,52 @@ function QuestionProps({ state, index, onPatchQuestion, onDelete }: QuestionProp
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   Submit (Kontaktformular) — Page-Level Properties
+   Submit (Kontaktformular) — Page-Level + Multi-Field-Liste
    ───────────────────────────────────────────────────────────────────────────── */
 
 function SubmitProps({
   state,
   onPatch,
+  onPatchContactField,
+  onAddContactField,
+  onDeleteContactField,
+  onReorderContactFields,
 }: {
   state: EditorState;
   onPatch: (patch: Partial<EditorState>) => void;
+  onPatchContactField: (key: string, patch: Partial<ContactFieldConfig>) => void;
+  onAddContactField: (type: ContactFieldConfig["type"]) => void;
+  onDeleteContactField: (key: string) => void;
+  onReorderContactFields: (next: ContactFieldConfig[]) => void;
 }) {
+  // Welcher Kontakt-Feld-Key ist momentan expandiert? Lokaler UI-State, kein EditorState-Touch.
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [showAddPicker, setShowAddPicker] = useState(false);
+
+  // Reset wenn ein expandiertes Field gelöscht wurde
+  useEffect(() => {
+    if (expandedKey && !state.contactFields.some((f) => f.key === expandedKey)) {
+      setExpandedKey(null);
+    }
+  }, [expandedKey, state.contactFields]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  function handleDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIdx = state.contactFields.findIndex((f) => f.key === active.id);
+    const newIdx = state.contactFields.findIndex((f) => f.key === over.id);
+    if (oldIdx < 0 || newIdx < 0) return;
+    onReorderContactFields(arrayMove(state.contactFields, oldIdx, newIdx));
+  }
+
   return (
     <div className="flex flex-col">
-      <Header
-        kindLabel={SUBMIT_META.label}
-        kindIcon={SUBMIT_META.icon}
-        pillClass={SUBMIT_META.pillClass}
-      />
+      <Header kindLabel={SUBMIT_META.label} kindIcon={SUBMIT_META.icon} pillClass={SUBMIT_META.pillClass} />
 
       <Section title="Seite">
         <Field label="Überschrift">
@@ -171,18 +244,40 @@ function SubmitProps({
       </Section>
 
       <Section title="Felder dieser Seite">
-        {state.contactFields.map((f) => (
-          <FieldListRow
-            key={f.key}
-            label={f.label || f.key}
-            type={contactFieldTypeLabel(f.type)}
-            icon={f.type === "radio" ? "◉" : f.type === "email" ? "@" : f.type === "tel" ? "☎" : f.type === "plz" ? "⌗" : "T"}
-            muted={!f.visible}
-          />
-        ))}
-        <p className="mt-2 px-1 text-xs text-gray-400 dark:text-gray-500">
-          Kontaktfeld-Einstellungen folgen im nächsten Schritt.
-        </p>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext
+            items={state.contactFields.map((f) => f.key)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="flex flex-col gap-1.5">
+              {state.contactFields.map((f) => (
+                <SortableContactFieldRow
+                  key={f.key}
+                  field={f}
+                  expanded={expandedKey === f.key}
+                  onToggle={() => setExpandedKey((prev) => (prev === f.key ? null : f.key))}
+                  onPatch={(patch) => onPatchContactField(f.key, patch)}
+                  onDelete={() => onDeleteContactField(f.key)}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+
+        <button
+          type="button"
+          onClick={() => setShowAddPicker(true)}
+          className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:border-primary hover:text-primary dark:border-gray-700 dark:text-gray-400"
+        >
+          <Plus size={14} />
+          Feld hinzufügen
+        </button>
+
+        <AddContactFieldPicker
+          open={showAddPicker}
+          onClose={() => setShowAddPicker(false)}
+          onSelect={(type) => onAddContactField(type)}
+        />
       </Section>
 
       <Section>
@@ -194,8 +289,65 @@ function SubmitProps({
   );
 }
 
+function SortableContactFieldRow({
+  field,
+  expanded,
+  onToggle,
+  onPatch,
+  onDelete,
+}: {
+  field: ContactFieldConfig;
+  expanded: boolean;
+  onToggle: () => void;
+  onPatch: (patch: Partial<ContactFieldConfig>) => void;
+  onDelete: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+    useSortable({ id: field.key });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : undefined,
+    opacity: isDragging ? 0.85 : undefined,
+  };
+
+  const typeLabel = contactFieldTypeLabel(field.type);
+  const icon =
+    field.type === "radio"
+      ? "◉"
+      : field.type === "email"
+        ? "@"
+        : field.type === "tel"
+          ? "☎"
+          : field.type === "plz"
+            ? "⌗"
+            : "T";
+  const pillClass =
+    field.type === "radio"
+      ? "bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800"
+      : "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800";
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      <FieldRow
+        icon={icon}
+        pillClass={pillClass}
+        label={field.label || field.key}
+        typeLabel={typeLabel}
+        expanded={expanded}
+        onToggle={onToggle}
+        dragHandleProps={{ ref: setActivatorNodeRef, ...listeners }}
+        onDelete={onDelete}
+      >
+        <FieldProperties kind="contact" contactField={field} onPatch={onPatch} />
+      </FieldRow>
+    </div>
+  );
+}
+
 /* ─────────────────────────────────────────────────────────────────────────────
-   Success — Page-Level Properties
+   Success — unverändert
    ───────────────────────────────────────────────────────────────────────────── */
 
 function SuccessProps({
@@ -207,11 +359,7 @@ function SuccessProps({
 }) {
   return (
     <div className="flex flex-col">
-      <Header
-        kindLabel={SUCCESS_META.label}
-        kindIcon={SUCCESS_META.icon}
-        pillClass={SUCCESS_META.pillClass}
-      />
+      <Header kindLabel={SUCCESS_META.label} kindIcon={SUCCESS_META.icon} pillClass={SUCCESS_META.pillClass} />
 
       <Section title="Seite">
         <Field label="Erfolgs-Überschrift">
@@ -247,7 +395,7 @@ function SuccessProps({
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   Building blocks
+   Shared building blocks
    ───────────────────────────────────────────────────────────────────────────── */
 
 function Header({
@@ -318,6 +466,41 @@ function TextInput({
   );
 }
 
+function Toggle({
+  label,
+  enabled,
+  onToggle,
+}: {
+  label: string;
+  enabled: boolean;
+  onToggle: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 dark:border-gray-700">
+      <span className="text-sm text-gray-700 dark:text-gray-300">{label}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={enabled}
+        onClick={() => onToggle(!enabled)}
+        className={
+          enabled
+            ? "relative inline-flex h-5 w-9 items-center rounded-full bg-primary transition-colors"
+            : "relative inline-flex h-5 w-9 items-center rounded-full bg-gray-300 transition-colors dark:bg-gray-600"
+        }
+      >
+        <span
+          className={
+            enabled
+              ? "inline-block h-4 w-4 translate-x-4 transform rounded-full bg-white shadow transition"
+              : "inline-block h-4 w-4 translate-x-0.5 transform rounded-full bg-white shadow transition"
+          }
+        />
+      </button>
+    </div>
+  );
+}
+
 function TypeSelect({
   value,
   onChange,
@@ -342,70 +525,6 @@ function TypeSelect({
         size={14}
         className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
       />
-    </div>
-  );
-}
-
-function Toggle({
-  label,
-  enabled,
-  onToggle,
-}: {
-  label: string;
-  enabled: boolean;
-  onToggle: (v: boolean) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 dark:border-gray-700">
-      <span className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-        {enabled ? <Eye size={14} /> : <EyeOff size={14} />}
-        {label}
-      </span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={enabled}
-        onClick={() => onToggle(!enabled)}
-        className={
-          enabled
-            ? "relative inline-flex h-5 w-9 items-center rounded-full bg-primary transition-colors"
-            : "relative inline-flex h-5 w-9 items-center rounded-full bg-gray-300 transition-colors dark:bg-gray-600"
-        }
-      >
-        <span
-          className={
-            enabled
-              ? "inline-block h-4 w-4 translate-x-4 transform rounded-full bg-white shadow transition"
-              : "inline-block h-4 w-4 translate-x-0.5 transform rounded-full bg-white shadow transition"
-          }
-        />
-      </button>
-    </div>
-  );
-}
-
-function FieldListRow({
-  label,
-  type,
-  icon,
-  muted = false,
-}: {
-  label: string;
-  type: string;
-  icon: string;
-  muted?: boolean;
-}) {
-  return (
-    <div
-      className={`flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-800/60 ${muted ? "opacity-50" : ""}`}
-    >
-      <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-white text-xs font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-        {icon}
-      </span>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-sm font-medium text-gray-700 dark:text-gray-200">{label}</span>
-        <span className="truncate text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">{type}</span>
-      </div>
     </div>
   );
 }
