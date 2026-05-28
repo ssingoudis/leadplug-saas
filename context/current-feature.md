@@ -111,6 +111,30 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ## History
 
+- **C.2 — Theme-Panel (Brand-Farbe, Schrift, Layout) ✅ (2026-05-28)**
+
+  Fünfter und finaler Sprint-Schritt. Macht die Theme-Felder, die seit Phase B in der DB stehen und vom Widget gerendert werden, im Builder editierbar — vorher musste man Brand-Color, Font, Border-Radius manuell in der DB ändern.
+
+  **Stavros-Entscheidung im Scope:** Logo-Upload bewusst rausgenommen („das ist unnötig auch wenn manche Firmen das wollen"). C.2 ist damit reine Theme-Felder ohne Storage-Bucket-Setup.
+
+  **Was geht jetzt:** Klick auf den „Design"-Tab in der Top-Bar (war vorher disabled) → StepList verschwindet (Theme ist funnel-weit), Properties-Panel wird zum ThemePanel mit Color-Pickern, Font-Dropdown, Border-Radius-Slider mit 8 Stufen, Max-Width-Presets. CenterCanvas zeigt das Widget live mit den Änderungen.
+
+  **UI-Sections im Panel:**
+  - **Markenfarbe:** Brand · Text · Hintergrund Card · Seiten-Hintergrund (mit Klar/Transparent-Toggle für letzteres)
+  - **Schrift:** Dropdown (System / Inter / Poppins / Roboto)
+  - **Layout:** Ecken-Rundung-Slider (0/2/4/8/12/16/24/32 px) + Max-Width-Presets (480/600/720/900/100%)
+
+  **Files:**
+  - `components/tenant-editor/v2/ThemePanel.tsx` neu (~220 LOC): ColorField mit `<input type="color">` + Hex-Text-Input + optionalem Transparent-Toggle, Select-Wrapper mit inline-SVG-Chevron, Range-Slider auf Radius-Index, Section/Field/Header-Building-Blocks
+  - `components/tenant-editor/v2/TopTabs.tsx`: „Design"-Tab `disabled: false` (war als geplant aber tot eingebaut)
+  - `components/tenant-editor/v2/EditorShellV2.tsx`: Body rendert konditional — bei `activeTab === "design"` 2-Spalten-Layout (Canvas + ThemePanel), sonst 3-Pane wie gehabt
+
+  **Wie testen:**
+  1. Editor öffnen, „Design"-Tab klicken → StepList weg, ThemePanel rechts
+  2. Brand-Farbe ändern → CenterCanvas zeigt sofort den neuen Akzent
+  3. Border-Radius-Slider bewegen → Card-Ecken rundlicher/eckiger live
+  4. Speichern → Reload → Werte persistieren
+
 - **C.1d — v1-Editor Cutover ✅ (2026-05-28)**
 
   Vierter Sprint-Schritt. Alter v1-Editor (Single-Pane mit Accordion) komplett entfernt. v2 (3-Pane WYSIWYG) ist seit Aufgabe 32 stabil, der `?v=2`-Flag war nur Übergangs-Schutz.
