@@ -18,21 +18,18 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { IconPicker } from "@/components/dashboard/IconPicker";
 import type { EditorOption } from "@/types";
 
 interface Props {
   value: EditorOption[];
   onChange: (next: EditorOption[]) => void;
-  /** Wenn true, wird neben jedem Eintrag der IconPicker gerendert (für choice mit Bildoptionen). */
-  withIcons?: boolean;
 }
 
 function makeId(): string {
   return `opt_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function OptionsEditor({ value, onChange, withIcons = true }: Props) {
+export function OptionsEditor({ value, onChange }: Props) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -75,7 +72,6 @@ export function OptionsEditor({ value, onChange, withIcons = true }: Props) {
                 onPatch={(patch) => patchOption(opt._id, patch)}
                 onRemove={() => removeOption(opt._id)}
                 canRemove={value.length > 1}
-                withIcons={withIcons}
               />
             ))}
           </div>
@@ -100,14 +96,12 @@ function SortableOptionRow({
   onPatch,
   onRemove,
   canRemove,
-  withIcons,
 }: {
   option: EditorOption;
   index: number;
   onPatch: (patch: Partial<EditorOption>) => void;
   onRemove: () => void;
   canRemove: boolean;
-  withIcons: boolean;
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: option._id });
@@ -130,9 +124,14 @@ function SortableOptionRow({
         <GripVertical size={14} />
       </span>
 
-      {withIcons && (
-        <IconPicker value={option.iconKey} onChange={(key) => onPatch({ iconKey: key })} />
-      )}
+      {/* A/B/C/D-Letter-Index als visuelle Position-Anzeige (matched den Letter den Endkunden im Widget sehen). */}
+      <span
+        aria-hidden="true"
+        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-gray-100 font-mono text-[11px] font-semibold text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+        title={`Option ${String.fromCharCode(65 + index)}`}
+      >
+        {String.fromCharCode(65 + index)}
+      </span>
 
       <input
         type="text"

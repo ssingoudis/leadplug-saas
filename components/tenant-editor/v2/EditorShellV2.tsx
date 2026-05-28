@@ -106,6 +106,9 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
   );
   const [pendingName, setPendingName] = useState<string>("");
 
+  // C.1c WYSIWYG-Edit — welches Element im CenterCanvas ist gerade selektiert (für Highlight + Inline-Edit)
+  const [selectedFieldRef, setSelectedFieldRef] = useState<string>("");
+
   // Default-Selection: erste Frage falls vorhanden, sonst submit.
   const [selected, setSelected] = useState<SelectedStep>(() => {
     if (initialState.questions.length > 0) {
@@ -118,6 +121,22 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
     () => JSON.stringify(state) !== JSON.stringify(initialState),
     [state, initialState],
   );
+
+  // C.1c — Selection im Center-Canvas resetten wenn die Page wechselt (Step-Klick in der Sidebar).
+  useEffect(() => {
+    setSelectedFieldRef("");
+  }, [selected]);
+
+  // C.1c — Esc-Key deselected den aktuellen Field-Ref.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setSelectedFieldRef("");
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // Exit-Guard registrieren (identische Signatur zu v1, konsumiert von TabNav/DashboardHeader/UserMenu).
   useEffect(() => {
@@ -158,24 +177,34 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
   }, []);
 
   const handleAddQuestion = useCallback(
-    (type: QuestionType) => {
+    (type: QuestionType, atIndex?: number) => {
+      const newQ = defaultQuestion(type);
       setState((prev) => {
-        const newQ = defaultQuestion(type);
-        return { ...prev, questions: [...prev.questions, newQ] };
+        const insertAt = atIndex ?? prev.questions.length;
+        const next = [...prev.questions];
+        next.splice(insertAt, 0, newQ);
+        return { ...prev, questions: next };
       });
-      // selektiere die neue Frage
-      setSelected({ kind: "question", questionIndex: state.questions.length });
+      // selektiere die neue Frage an ihrer Insert-Position
+      const insertAt = atIndex ?? state.questions.length;
+      setSelected({ kind: "question", questionIndex: insertAt });
     },
     [state.questions.length],
   );
 
   const handleAddVorlage = useCallback(
-    (vorlage: Vorlage) => {
+    (vorlage: Vorlage, atIndex?: number) => {
       const newQuestions = vorlage.build();
       if (newQuestions.length === 0) return;
-      setState((prev) => ({ ...prev, questions: [...prev.questions, ...newQuestions] }));
-      // selektiere die erste neu hinzugefügte Frage (deren Position = current length VOR insert)
-      setSelected({ kind: "question", questionIndex: state.questions.length });
+      setState((prev) => {
+        const insertAt = atIndex ?? prev.questions.length;
+        const next = [...prev.questions];
+        next.splice(insertAt, 0, ...newQuestions);
+        return { ...prev, questions: next };
+      });
+      // selektiere die erste der neu hinzugefügten Fragen
+      const insertAt = atIndex ?? state.questions.length;
+      setSelected({ kind: "question", questionIndex: insertAt });
     },
     [state.questions.length],
   );
@@ -231,6 +260,150 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
       contactFields: nextFields.map((f, idx) => ({ ...f, sort_order: idx })),
     }));
   }, []);
+
+  /* ─── C.1c Canvas-Option-Aktionen (Add/Reorder/Duplicate/Delete) ─── */
+
+  const handleAddOption = useCallback(() => {
+    if (selected.kind !== "question") return;
+    const qIdx = selected.questionIndex;
+    setState((prev) => {
+      const next = [...prev.questions];
+      const q = next[qIdx];
+      if (!q) return prev;
+      const newOption = {
+        _id: `opt_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+        label: "",
+        value: "",
+        iconKey: "",
+        iconUrl: "",
+      };
+      next[qIdx] = { ...q, options: [...q.options, newOption] };
+      return { ...prev, questions: next };
+    });
+  }, [selected]);
+
+  const handleReorderOptions = useCallback(
+    (fromIdx: number, toIdx: number) => {
+      if (selected.kind !== "question") return;
+      const qIdx = selected.questionIndex;
+      setState((prev) => {
+        const next = [...prev.questions];
+        const q = next[qIdx];
+        if (!q) return prev;
+        const newOptions = [...q.options];
+        const [moved] = newOptions.splice(fromIdx, 1);
+        if (!moved) return prev;
+        newOptions.splice(toIdx, 0, moved);
+        next[qIdx] = { ...q, options: newOptions };
+        return { ...prev, questions: next };
+      });
+    },
+    [selected],
+  );
+
+  const handleDuplicateOption = useCallback(
+    (idx: number) => {
+      if (selected.kind !== "question") return;
+      const qIdx = selected.questionIndex;
+      setState((prev) => {
+        const next = [...prev.questions];
+        const q = next[qIdx];
+        if (!q || !q.options[idx]) return prev;
+        const src = q.options[idx];
+        const duplicate = {
+          ...src,
+          _id: `opt_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+          value: "", // wird beim Save neu aus Label generiert
+        };
+        const newOptions = [...q.options];
+        newOptions.splice(idx + 1, 0, duplicate);
+        next[qIdx] = { ...q, options: newOptions };
+        return { ...prev, questions: next };
+      });
+    },
+    [selected],
+  );
+
+  const handleDeleteOption = useCallback(
+    (idx: number) => {
+      if (selected.kind !== "question") return;
+      const qIdx = selected.questionIndex;
+      setState((prev) => {
+        const next = [...prev.questions];
+        const q = next[qIdx];
+        if (!q || q.options.length <= 1) return prev; // mindestens 1 Option erforderlich
+        const newOptions = q.options.filter((_, i) => i !== idx);
+        next[qIdx] = { ...q, options: newOptions };
+        return { ...prev, questions: next };
+      });
+    },
+    [selected],
+  );
+
+  /* ─── C.1c WYSIWYG-Edit — Text-Change-Router ─── */
+
+  // Mappt Field-Refs aus funnel.tsx (z.B. "question_title", "option_2", "contact_form_title")
+  // auf EditorState-Updates. qIdx kommt vom EditorShell-State (selected.questionIndex), nicht vom
+  // Funnel-Callback — das ist die Sidebar-Array-Index-Wahrheit.
+  const handleTextChange = useCallback(
+    (fieldRef: string, newText: string) => {
+      const qIdx = selected.kind === "question" ? selected.questionIndex : -1;
+
+      // Option-Label: option_<idx>
+      if (fieldRef.startsWith("option_") && qIdx >= 0) {
+        const optIdx = parseInt(fieldRef.slice("option_".length), 10);
+        if (!Number.isFinite(optIdx)) return;
+        setState((prev) => {
+          const next = [...prev.questions];
+          const q = next[qIdx];
+          if (!q) return prev;
+          const nextOptions = q.options.map((o, i) => (i === optIdx ? { ...o, label: newText } : o));
+          next[qIdx] = { ...q, options: nextOptions };
+          return { ...prev, questions: next };
+        });
+        return;
+      }
+
+      // Question-Page Felder
+      if (qIdx >= 0) {
+        if (fieldRef === "question_title") {
+          handlePatchQuestion(qIdx, { title: newText });
+          return;
+        }
+        if (fieldRef === "question_subtitle") {
+          handlePatchQuestion(qIdx, { subtitle: newText });
+          return;
+        }
+      }
+
+      // Submit-Page Felder
+      if (fieldRef === "contact_form_title") {
+        handlePatch({ funnelTitle: newText });
+        return;
+      }
+      if (fieldRef === "contact_form_subtitle") {
+        handlePatch({ contactFormSubtitle: newText });
+        return;
+      }
+      if (fieldRef === "submit_button") {
+        handlePatch({ submitButtonLabel: newText });
+        return;
+      }
+
+      // Success-Page Felder
+      if (fieldRef === "success_message") {
+        handlePatch({ successMessage: newText });
+        return;
+      }
+      if (fieldRef === "response_message") {
+        handlePatch({ responseMessage: newText });
+        return;
+      }
+
+      // Unbekannter Field-Ref — keine State-Änderung. Selection-Highlight läuft trotzdem.
+    },
+    [selected, handlePatch, handlePatchQuestion],
+  );
 
   function withV2Flag(href: string): string {
     if (href.includes("v=2")) return href;
@@ -357,7 +530,7 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
         <TopTabs active={activeTab} onChange={setActiveTab} />
 
         {/* 3-Pane Body */}
-        <div className="grid min-h-0 flex-1 grid-cols-[420px_minmax(0,1fr)_320px]">
+        <div className="grid min-h-0 flex-1 grid-cols-[420px_minmax(0,1fr)_420px]">
           <StepList
             state={state}
             selected={selected}
@@ -372,6 +545,13 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
             companyName={companyName}
             isTestMode={isTestMode}
             onToggleTestMode={() => setIsTestMode((t) => !t)}
+            selectedFieldRef={selectedFieldRef}
+            onSelectField={setSelectedFieldRef}
+            onTextChange={handleTextChange}
+            onAddOption={handleAddOption}
+            onReorderOptions={handleReorderOptions}
+            onDuplicateOption={handleDuplicateOption}
+            onDeleteOption={handleDeleteOption}
           />
           <PropertiesPanel
             state={state}
@@ -383,6 +563,8 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
             onAddContactField={handleAddContactField}
             onDeleteContactField={handleDeleteContactField}
             onReorderContactFields={handleReorderContactFields}
+            selectedFieldRef={selectedFieldRef}
+            onSelectFieldRef={setSelectedFieldRef}
           />
         </div>
       </div>

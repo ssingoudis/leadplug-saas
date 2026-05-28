@@ -92,27 +92,43 @@ const TEXTISH_TYPES = new Set<QuestionType>([
   "tel",
 ]);
 
-export function buildQuestions(questions: EditorQuestion[]): QuestionConfig[] {
+export function buildQuestions(
+  questions: EditorQuestion[],
+  opts: { keepEmpty?: boolean } = {},
+): QuestionConfig[] {
   return questions
     .filter((q) => q.visible !== false)
-    .map((q) => ({
-      id: q.questionKey || q._id,
-      title: q.title,
-      subtitle: q.subtitle || undefined,
-      questionType: q.questionType,
-      visible: q.visible,
-      options: OPTION_BASED_TYPES.has(q.questionType)
-        ? q.options
-            .filter((o) => o.label.trim())
-            .map((o) => ({
-              label: o.label,
-              value: o.value || toKey(o.label),
-              iconKey: o.iconKey || "",
-              iconUrl: o.iconUrl || undefined,
-            }))
-        : [],
-      config: buildQuestionConfig(q),
-    }));
+    .map((q) => {
+      let opts$1: typeof q.options;
+      if (OPTION_BASED_TYPES.has(q.questionType)) {
+        opts$1 = opts.keepEmpty ? q.options : q.options.filter((o) => o.label.trim());
+      } else {
+        opts$1 = [];
+      }
+      // Eindeutige Values garantieren (sonst React-Key-Collision bei Duplikaten / leeren Options).
+      const seen = new Map<string, number>();
+      const mapped = opts$1.map((o, idx) => {
+        const base = o.value || toKey(o.label) || `opt_${idx}`;
+        const count = seen.get(base) ?? 0;
+        seen.set(base, count + 1);
+        const value = count === 0 ? base : `${base}_${count + 1}`;
+        return {
+          label: o.label,
+          value,
+          iconKey: o.iconKey || "",
+          iconUrl: o.iconUrl || undefined,
+        };
+      });
+      return {
+        id: q.questionKey || q._id,
+        title: q.title,
+        subtitle: q.subtitle || undefined,
+        questionType: q.questionType,
+        visible: q.visible,
+        options: mapped,
+        config: buildQuestionConfig(q),
+      };
+    });
 }
 
 // Pro Type die richtige config-jsonb für QuestionConfig + DB bauen.

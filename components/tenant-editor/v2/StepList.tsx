@@ -32,8 +32,8 @@ interface Props {
   selected: SelectedStep;
   onSelect: (step: SelectedStep) => void;
   onReorder: (nextQuestions: EditorQuestion[]) => void;
-  onAddQuestion: (type: QuestionType) => void;
-  onAddVorlage: (vorlage: Vorlage) => void;
+  onAddQuestion: (type: QuestionType, atIndex?: number) => void;
+  onAddVorlage: (vorlage: Vorlage, atIndex?: number) => void;
 }
 
 export function StepList({
@@ -44,7 +44,9 @@ export function StepList({
   onAddQuestion,
   onAddVorlage,
 }: Props) {
-  const [showAddModal, setShowAddModal] = useState(false);
+  // null = Modal zu, number = Modal offen und neue Frage wird an dieser Position eingefügt.
+  // questions.length = an's Ende anfügen (= aktuelles Default-Verhalten).
+  const [insertIndex, setInsertIndex] = useState<number | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -69,17 +71,26 @@ export function StepList({
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={questionIds} strategy={verticalListSortingStrategy}>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col">
+              {/* Edge oberhalb der ersten Frage — Einfügen an Position 0 */}
+              {state.questions.length > 0 && (
+                <InsertEdge onClick={() => setInsertIndex(0)} />
+              )}
               {state.questions.map((q, idx) => {
                 const step: SelectedStep = { kind: "question", questionIndex: idx };
                 return (
-                  <SortableQuestionItem
-                    key={q._id}
-                    question={q}
-                    number={idx + 1}
-                    selected={isSameStep(selected, step)}
-                    onClick={() => onSelect(step)}
-                  />
+                  <div key={q._id} className="flex flex-col">
+                    <SortableQuestionItem
+                      question={q}
+                      number={idx + 1}
+                      selected={isSameStep(selected, step)}
+                      onClick={() => onSelect(step)}
+                    />
+                    {/* Edge nach jeder Frage (außer der letzten — da übernimmt der Add-Button unten) */}
+                    {idx < state.questions.length - 1 && (
+                      <InsertEdge onClick={() => setInsertIndex(idx + 1)} />
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -88,7 +99,7 @@ export function StepList({
 
         <button
           type="button"
-          onClick={() => setShowAddModal(true)}
+          onClick={() => setInsertIndex(state.questions.length)}
           className="mt-2 inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:border-primary hover:text-primary dark:border-gray-700 dark:text-gray-400"
         >
           <Plus size={14} />
@@ -97,10 +108,14 @@ export function StepList({
       </div>
 
       <AddElementModal
-        open={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onSelectType={(type) => onAddQuestion(type)}
-        onSelectVorlage={(vorlage) => onAddVorlage(vorlage)}
+        open={insertIndex !== null}
+        onClose={() => setInsertIndex(null)}
+        onSelectType={(type) => {
+          if (insertIndex !== null) onAddQuestion(type, insertIndex);
+        }}
+        onSelectVorlage={(vorlage) => {
+          if (insertIndex !== null) onAddVorlage(vorlage, insertIndex);
+        }}
       />
 
       <div className="mt-2 flex flex-col gap-1.5 border-t border-gray-200 px-3 py-4 dark:border-gray-800">
@@ -130,6 +145,32 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
     <h2 className="mb-1 px-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
       {children}
     </h2>
+  );
+}
+
+/**
+ * Hover-Zone zwischen zwei Step-Pills. Default unsichtbar (12px Höhe als Spacer);
+ * bei Hover poppen Linie + Plus-Button auf. Klick öffnet das AddElementModal mit Insert-Position.
+ */
+function InsertEdge({ onClick }: { onClick: () => void }) {
+  return (
+    <div className="group relative h-3 flex items-center">
+      <div className="absolute inset-0 flex items-center opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+        <div className="flex w-full items-center gap-1.5 px-1">
+          <span className="h-px flex-1 bg-primary/40" />
+          <button
+            type="button"
+            onClick={onClick}
+            className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white shadow transition-transform hover:scale-110"
+            aria-label="Frage an dieser Position einfügen"
+            title="Frage hier einfügen"
+          >
+            <Plus size={11} strokeWidth={2.5} />
+          </button>
+          <span className="h-px flex-1 bg-primary/40" />
+        </div>
+      </div>
+    </div>
   );
 }
 

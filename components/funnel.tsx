@@ -1,7 +1,23 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronUp, ChevronDown, Check, GripVertical, Plus, Trash2, Copy } from "lucide-react";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 import { renderIcon } from "@/components/icons";
 import { resolveAnswer } from "@/lib/resolveAnswer";
@@ -162,6 +178,17 @@ function resolveFooterText(
 }
 
 // =============================================================================
+// SLIDE-ANIMATION-VARIANTS (Typeform-Stil) — Spring-Slide auf Y-Achse
+// =============================================================================
+
+const STEP_SLIDE_VARIANTS: Variants = {
+  enter: (direction: number) => ({ y: direction > 0 ? 80 : -80, opacity: 0 }),
+  center: { y: 0, opacity: 1 },
+  exit: (direction: number) => ({ y: direction > 0 ? -80 : 80, opacity: 0 }),
+};
+const STEP_SLIDE_TRANSITION = { type: "spring" as const, stiffness: 300, damping: 30 };
+
+// =============================================================================
 // COMPONENT
 // =============================================================================
 
@@ -179,6 +206,15 @@ interface FunnelProps {
   initialAnswers?: Record<string, string>; // Editor-only: Platzhalter-Antworten für Erfolgsseiten-Preview
   onFieldClick?: (field: string, questionVisibleIndex?: number) => void; // Editor-only: Klick im Preview → Sidebar-Feld fokussieren
   onStepChange?: (mode: "question" | "contact" | "success", index: number) => void; // Editor-only: Test-Modus reflektiert den aktuellen Schritt in der Step-Navigation
+  // C.1c WYSIWYG-Edit: Wenn editMode=true werden inline-editierbare Texte zu contentEditable,
+  // und alle Step-Advance-Handler werden short-circuited (kein Weiterspringen bei Klick auf Option).
+  editMode?: boolean;
+  onTextChange?: (fieldRef: string, newText: string) => void; // Editor-only: Inline-Edit committed → State-Update durchreichen
+  // Editor-only Canvas-Aktionen für Choice-Options (single_choice / multi_choice). Alle beziehen sich auf die aktuell sichtbare Frage.
+  onAddOption?: () => void;
+  onReorderOptions?: (fromIdx: number, toIdx: number) => void;
+  onDuplicateOption?: (idx: number) => void;
+  onDeleteOption?: (idx: number) => void;
   onSubmit?: (data: {
     answers: Record<string, string>;
     contact: Record<string, string>;
@@ -200,6 +236,12 @@ export function Funnel({
   initialAnswers,
   onFieldClick,
   onStepChange,
+  editMode = false,
+  onTextChange,
+  onAddOption,
+  onReorderOptions,
+  onDuplicateOption,
+  onDeleteOption,
   onSubmit,
 }: FunnelProps) {
 
@@ -208,7 +250,7 @@ export function Funnel({
   // selbst die Primärfarbe verwendet (Option-Buttons).
   const hl = (...keys: string[]): React.CSSProperties =>
     previewHighlight && keys.includes(previewHighlight)
-      ? { outline: "2px solid var(--color-primary)", outlineOffset: "3px" }
+      ? { outline: "2px solid var(--funnel-primary)", outlineOffset: "3px" }
       : {};
 
   // Edge-Variante: outline INSIDE (offset -2px) für Elemente die direkt an der Card-Kante sitzen
@@ -216,18 +258,22 @@ export function Funnel({
   // der äußere Page-BG-Wrapper).
   const hlEdge = (...keys: string[]): React.CSSProperties =>
     previewHighlight && keys.includes(previewHighlight)
-      ? { outline: "2px solid var(--color-primary)", outlineOffset: "-2px" }
+      ? { outline: "2px solid var(--funnel-primary)", outlineOffset: "-2px" }
       : {};
 
   // Editor-only: Klick auf ein data-edit-field-Element → Callback zum Editor.
-  // preventDefault + stopPropagation verhindert, dass z.B. Optionen-Buttons den Funnel weiterschalten
-  // oder das Submit-Formular abgesendet wird.
+  // In editMode KEIN stopPropagation/preventDefault — sonst feuern die Canvas-Buttons (Duplicate/Delete/Add-Option)
+  // ihre eigenen onClick-Handler nicht. Step-Advance ist via editMode-Short-Circuit in handleSelect/handleNext
+  // sowieso disabled, Submit-Button ist type="button" in editMode.
+  // Im Live-/Test-Modus: stopPropagation + preventDefault verhindern unbeabsichtigte Option-Klicks/Form-Submit.
   const handlePreviewClick = (e: React.MouseEvent) => {
     if (!onFieldClick) return;
     const target = (e.target as HTMLElement).closest("[data-edit-field]") as HTMLElement | null;
     if (!target) return;
-    e.preventDefault();
-    e.stopPropagation();
+    if (!editMode) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     onFieldClick(target.dataset.editField!, currentStep);
   };
 
@@ -278,6 +324,8 @@ export function Funnel({
   const visibleQuestions = questions.filter((q) => q.visible);
 
   const [currentStep, setCurrentStep] = useState(initialStep ?? 0);
+  // C.1c — Slide-Animations-Richtung (1 = forward/slide-up, -1 = backward/slide-down). In editMode unbenutzt.
+  const [slideDirection, setSlideDirection] = useState<1 | -1>(1);
 
   const [answers, setAnswers] = useState<Record<string, string>>(initialAnswers ?? {});
 
@@ -342,33 +390,60 @@ export function Funnel({
   // Handlers
   // ---------------------------------------------------------------------------
 
-  // Single-choice: sets answer, then advances after 325ms so the selected color
-  // is briefly visible before the step transition fires.
+  // C.1c Canvas-Options: Sensors für Drag-Reorder der Choice-Optionen (nur in editMode aktiv).
+  const optionSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
+
+  const handleOptionDragEnd = useCallback((e: DragEndEvent) => {
+    if (!onReorderOptions) return;
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const fromIdx = (currentQuestion?.options ?? []).findIndex((o) => o.value === active.id);
+    const toIdx   = (currentQuestion?.options ?? []).findIndex((o) => o.value === over.id);
+    if (fromIdx < 0 || toIdx < 0) return;
+    onReorderOptions(fromIdx, toIdx);
+  // currentQuestion ändert sich pro Step — wir wollen den jeweils aktuellen Wert
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onReorderOptions, currentQuestion]);
+
+  // Single-choice: sets answer, then advances after 250ms so the selected color
+  // is briefly visible before the step transition fires (Typeform-Pattern).
+  // C.1c: editMode short-circuit — Builder-Klick auf Option soll selektieren/editieren, nicht advancen.
   const handleSelect = useCallback(
     (questionId: string, value: string) => {
+      if (editMode) return;
       setAnswers((prev) => ({ ...prev, [questionId]: value }));
       setTimeout(() => {
         if (currentStep < visibleQuestions.length) {
+          setSlideDirection(1);
           setCurrentStep((prev) => prev + 1);
         }
-      }, 325);
+      }, 250);
     },
-    [currentStep, visibleQuestions.length],
+    [currentStep, visibleQuestions.length, editMode],
   );
 
   // Goes back one step. The zurück button is disabled at step 0.
   const handleBack = () => {
-    if (currentStep > 0) setCurrentStep((prev) => prev - 1);
+    if (editMode) return;
+    if (currentStep > 0) {
+      setSlideDirection(-1);
+      setCurrentStep((prev) => prev - 1);
+    }
   };
 
   // Advances to the next step. Used by the Weiter button on non-choice question types.
   const handleNext = useCallback(() => {
+    if (editMode) return;
+    setSlideDirection(1);
     setCurrentStep((prev) => prev + 1);
-  }, []);
+  }, [editMode]);
 
   // Multiple-choice: toggles `value` in/out of the comma-separated answer string for `questionId`.
   const handleToggleMultiple = useCallback(
     (questionId: string, value: string) => {
+      if (editMode) return;
       setAnswers((prev) => {
         const current = prev[questionId]?.split(",").filter(Boolean) ?? [];
         const updated = current.includes(value)
@@ -377,7 +452,7 @@ export function Funnel({
         return { ...prev, [questionId]: updated.join(",") };
       });
     },
-    [],
+    [editMode],
   );
 
   // Setzt den Wert eines Kontaktfelds und löscht seinen Fehler.
@@ -509,20 +584,26 @@ export function Funnel({
               </svg>
             </div>
 
-            <h2
+            <EditableText
+              as="h2"
+              editMode={editMode}
+              fieldRef="success_message"
+              initial={funnel.successMessage}
+              placeholder="Erfolgs-Überschrift eingeben…"
+              onCommit={onTextChange}
               className="text-2xl font-bold mb-2 leading-snug"
-              data-edit-field="success_message"
               style={{ color: theme.textColor, ...editCursor, ...hl("success_message") }}
-            >
-              {funnel.successMessage}
-            </h2>
-            <p
+            />
+            <EditableText
+              as="p"
+              editMode={editMode}
+              fieldRef="response_message"
+              initial={funnel.responseMessage}
+              placeholder="Antwort-Text eingeben…"
+              onCommit={onTextChange}
               className="text-sm mb-6"
-              data-edit-field="response_message"
               style={{ color: theme.textColorMuted, ...editCursor, ...hl("response_message") }}
-            >
-              {funnel.responseMessage}
-            </p>
+            />
 
             {/* Summary of answers */}
             <div
@@ -586,7 +667,7 @@ export function Funnel({
     >
       <div
         lang="de"
-        className="@container mx-auto w-full"
+        className="@container mx-auto w-full relative"
         style={{
           ...cssVars,
           maxWidth:        theme.maxWidth,
@@ -598,130 +679,223 @@ export function Funnel({
           ...hlEdge("primary_color", "text_color", "background_color", "font", "border_radius", "max_width"),
         }}
       >
-        <div className="p-4 @md:p-8">
-          <div key={currentStep} className="funnel-step-enter">
+        {/* Progress-Bar 1px oben — Typeform-Pattern */}
+        <div className="h-[2px] w-full" style={{ backgroundColor: `color-mix(in srgb, ${theme.textColor} 8%, transparent)` }}>
+          <div
+            className="h-full transition-[width] duration-300"
+            style={{ width: `${progress}%`, backgroundColor: theme.primaryColor }}
+          />
+        </div>
+        <div className="p-4 @md:p-8 @md:pb-20 overflow-hidden">
+          <AnimatePresence mode="wait" custom={slideDirection} initial={false}>
+            <motion.div
+              key={`${isContactStep ? "contact" : "q"}-${currentStep}`}
+              custom={slideDirection}
+              variants={STEP_SLIDE_VARIANTS}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={STEP_SLIDE_TRANSITION}
+            >
 
             {/* --------------------------------------------------------------
                 Question step
             -------------------------------------------------------------- */}
             {!isContactStep ? (
               <div>
+                {/* Step-Counter "1 →" (Typeform-Pattern, monospace in Brand-Color) */}
+                <div className="mb-3 flex items-center gap-2 font-mono text-xs" style={{ color: theme.primaryColor }}>
+                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded px-1.5 text-[11px] font-semibold" style={{ backgroundColor: theme.primaryColor, color: "#ffffff" }}>
+                    {currentStep + 1}
+                  </span>
+                  <span aria-hidden="true">→</span>
+                </div>
+
                 <div className="mb-6 @lg:mb-8">
-                  <h1
-                    className="text-lg @md:text-xl @lg:text-2xl font-bold leading-tight text-center text-balance"
-                    data-edit-field="question_title"
+                  <EditableText
+                    as="h1"
+                    editMode={editMode}
+                    fieldRef="question_title"
+                    initial={currentQuestion.title || (onFieldClick && !editMode ? "Ihre Frage?" : "")}
+                    placeholder="Frage-Titel eingeben…"
+                    onCommit={onTextChange}
+                    className="text-2xl @md:text-3xl @lg:text-[2rem] font-light leading-snug text-left text-balance"
                     style={{
-                      color: currentQuestion.title ? theme.textColor : "#9ca3af",
+                      color: currentQuestion.title ? theme.textColor : theme.textColorMuted,
                       fontStyle: currentQuestion.title ? "normal" : "italic",
                       ...editCursor,
                       ...hl("question_title"),
                     }}
-                  >
-                    {currentQuestion.title || (onFieldClick ? "Ihre Frage?" : "")}
-                  </h1>
-                  {(currentQuestion.subtitle || previewHighlight === "question_subtitle") && (
-                    <p
-                      className="mt-2 text-sm @md:text-base leading-relaxed text-center"
-                      data-edit-field="question_subtitle"
+                  />
+                  {(currentQuestion.subtitle || previewHighlight === "question_subtitle" || editMode) && (
+                    <EditableText
+                      as="p"
+                      editMode={editMode}
+                      fieldRef="question_subtitle"
+                      initial={currentQuestion.subtitle || (!editMode ? "Untertitel (optional)" : "")}
+                      placeholder="Untertitel (optional)"
+                      onCommit={onTextChange}
+                      className="mt-2 text-sm @md:text-base font-light leading-relaxed text-left"
                       style={{
-                        color: currentQuestion.subtitle ? theme.textColorMuted : "#9ca3af",
+                        color: currentQuestion.subtitle ? theme.textColorMuted : theme.textColorMuted,
                         fontStyle: currentQuestion.subtitle ? "normal" : "italic",
                         ...editCursor,
                         ...hl("question_subtitle"),
                       }}
-                    >
-                      {currentQuestion.subtitle || "Untertitel (optional)"}
-                    </p>
+                    />
                   )}
                 </div>
 
-                {/* single_choice / multi_choice */}
+                {/* single_choice / multi_choice — Typeform-Stil: Letter-Chip LINKS + Label RECHTS, vertikal gestapelt */}
                 {(currentQuestion.questionType === "single_choice" ||
-                  currentQuestion.questionType === "multi_choice") && (
-                  <div className="flex items-center justify-center mb-3">
-                    <div className={cn("grid gap-3 w-full", gridClasses)}>
-                      {currentQuestion.options.map((option, idx) => {
-                        const isMultiple     = currentQuestion.questionType === "multi_choice";
-                        const selectedValues = answers[currentQuestion.id]?.split(",").filter(Boolean) ?? [];
-                        const isSelected     = isMultiple
-                          ? selectedValues.includes(option.value)
-                          : answers[currentQuestion.id] === option.value;
-                        const colSpan = getOptionColSpanClasses(optionCount, idx);
+                  currentQuestion.questionType === "multi_choice") && (() => {
+                  const isMultiple = currentQuestion.questionType === "multi_choice";
+                  const selectedValues = answers[currentQuestion.id]?.split(",").filter(Boolean) ?? [];
 
-                        return (
-                          <button
-                            key={option.value}
-                            data-edit-field={`option_${idx}`}
-                            onClick={() =>
-                              isMultiple
-                                ? handleToggleMultiple(currentQuestion.id, option.value)
-                                : handleSelect(currentQuestion.id, option.value)
-                            }
-                            className={cn(
-                              "relative flex flex-col items-center justify-center min-h-24 p-4 cursor-pointer outline-none",
-                              "transition-all duration-300 active:scale-90 active:duration-200 sm:hover:scale-105",
-                              colSpan,
-                            )}
-                            style={{
-                              borderRadius:    theme.borderRadius,
-                              backgroundColor: theme.primaryColor,
-                              border:          "2px solid transparent",
-                              boxShadow:       "0 2px 8px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08)",
-                              ...hl(`option_${idx}`),
-                            }}
+                  const renderOptionContent = (option: typeof currentQuestion.options[0], idx: number, isSelected: boolean) => {
+                    const letter = String.fromCharCode(65 + idx);
+                    const indicator = !option.iconKey && !option.iconUrl ? (
+                      <span
+                        aria-hidden="true"
+                        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded font-mono text-[11px] font-bold border"
+                        style={{
+                          borderColor: isSelected ? theme.primaryColor : theme.borderColor,
+                          backgroundColor: isSelected ? theme.primaryColor : theme.backgroundColor,
+                          color: isSelected ? "#ffffff" : theme.textColorMuted,
+                        }}
+                      >
+                        {letter}
+                      </span>
+                    ) : (
+                      <span className="shrink-0 inline-flex items-center justify-center" style={{ width: 24, height: 24 }}>
+                        {renderIcon(option.iconKey, option.iconUrl, isSelected ? theme.primaryColor : theme.textColorMuted, 22)}
+                      </span>
+                    );
+                    const multiCheckbox = isMultiple ? (
+                      <span
+                        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors"
+                        style={{
+                          borderColor: isSelected ? theme.primaryColor : theme.borderColor,
+                          backgroundColor: isSelected ? theme.primaryColor : theme.backgroundColor,
+                        }}
+                      >
+                        {isSelected && <Check size={12} strokeWidth={3} color="#ffffff" />}
+                      </span>
+                    ) : null;
+                    return (
+                      <>
+                        {multiCheckbox}
+                        {indicator}
+                        <EditableText
+                          as="span"
+                          editMode={editMode}
+                          fieldRef={`option_${idx}`}
+                          initial={option.label}
+                          placeholder="Option-Text"
+                          onCommit={onTextChange}
+                          className="flex-1 text-sm @md:text-base font-light leading-snug"
+                          style={{ color: theme.textColor }}
+                        />
+                        {isMultiple && (
+                          <span
+                            aria-hidden="true"
+                            className="shrink-0 font-mono text-[10px] uppercase opacity-40"
+                            style={{ color: theme.textColorMuted }}
                           >
-                            {/* Checkmark — nur bei multi_choice + selected */}
-                            {isMultiple && isSelected && (
-                              <div
-                                className="absolute top-2 right-2 z-30 w-6 h-6 rounded-full flex items-center justify-center"
-                                style={{ backgroundColor: "#ffffff" }}
-                              >
-                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                                  <path
-                                    d="M2 6l3 3 5-5"
-                                    stroke={theme.primaryColor}
-                                    strokeWidth="2.5"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  />
-                                </svg>
-                              </div>
-                            )}
+                            {letter}
+                          </span>
+                        )}
+                      </>
+                    );
+                  };
 
-                            <div className="mb-3 shrink-0 relative z-20">
-                              {renderIcon(
-                                option.iconKey,
-                                option.iconUrl,
-                                "#ffffff",
-                                44,
-                              )}
-                            </div>
-                            <span
-                              className="text-xs font-medium text-center leading-tight px-1 relative z-20"
-                              style={{ color: "#ffffff" }}
+                  const optionWrapperStyle = (idx: number, isSelected: boolean): React.CSSProperties => ({
+                    borderRadius:    theme.borderRadius,
+                    borderColor:     isSelected ? theme.primaryColor : theme.borderColor,
+                    backgroundColor: isSelected
+                      ? `color-mix(in srgb, ${theme.primaryColor} 12%, transparent)`
+                      : theme.inputBgColor,
+                    ...hl(`option_${idx}`),
+                  });
+                  const optionWrapperClass = "group/option relative flex items-center w-full text-left gap-3 px-3 py-2.5 cursor-pointer outline-none border transition-colors";
+
+                  return (
+                    <div className="mb-3 flex flex-col gap-2.5">
+                      {editMode ? (
+                        <DndContext sensors={optionSensors} collisionDetection={closestCenter} onDragEnd={handleOptionDragEnd}>
+                          <SortableContext items={currentQuestion.options.map((o) => o.value)} strategy={verticalListSortingStrategy}>
+                            {currentQuestion.options.map((option, idx) => {
+                              const isSelected = isMultiple
+                                ? selectedValues.includes(option.value)
+                                : answers[currentQuestion.id] === option.value;
+                              return (
+                                <SortableEditOption
+                                  key={option.value}
+                                  id={option.value}
+                                  idx={idx}
+                                  wrapperClassName={optionWrapperClass}
+                                  wrapperStyle={optionWrapperStyle(idx, isSelected)}
+                                  onDuplicate={onDuplicateOption}
+                                  onDelete={onDeleteOption}
+                                >
+                                  {renderOptionContent(option, idx, isSelected)}
+                                </SortableEditOption>
+                              );
+                            })}
+                          </SortableContext>
+                        </DndContext>
+                      ) : (
+                        currentQuestion.options.map((option, idx) => {
+                          const isSelected = isMultiple
+                            ? selectedValues.includes(option.value)
+                            : answers[currentQuestion.id] === option.value;
+                          return (
+                            <button
+                              key={option.value}
+                              data-edit-field={`option_${idx}`}
+                              onClick={() =>
+                                isMultiple
+                                  ? handleToggleMultiple(currentQuestion.id, option.value)
+                                  : handleSelect(currentQuestion.id, option.value)
+                              }
+                              className={optionWrapperClass}
+                              style={optionWrapperStyle(idx, isSelected)}
                             >
-                              {option.label}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                              {renderOptionContent(option, idx, isSelected)}
+                            </button>
+                          );
+                        })
+                      )}
 
-                {/* slider */}
+                      {/* Add-Option-Link nur in editMode — kompakt unter den Optionen */}
+                      {editMode && onAddOption && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); onAddOption(); }}
+                          className="inline-flex items-center gap-1.5 self-start rounded-lg px-2 py-1 text-xs font-medium transition-colors hover:bg-black/5"
+                          style={{ color: theme.primaryColor }}
+                        >
+                          <Plus size={12} strokeWidth={2.5} />
+                          Option hinzufügen
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* slider — Typeform-Stil: großes Number-Readout in Brand-Color über dem Range */}
                 {currentQuestion.questionType === "slider" && sliderConfig && (
                   <div className="mb-6">
                     <p
-                      className="text-center text-3xl font-bold mb-6"
+                      className="text-4xl @md:text-5xl font-bold font-mono mb-4 leading-none"
                       data-edit-field="slider_default"
                       style={{ color: theme.primaryColor, ...editCursor, ...hl("slider_default", "slider_unit") }}
                     >
-                      {sliderVal.toLocaleString("de-DE")} {sliderConfig.unit}
+                      {sliderVal.toLocaleString("de-DE")}{" "}
+                      <span className="text-2xl @md:text-3xl font-light opacity-80">{sliderConfig.unit}</span>
                     </p>
 
-                    {/* Wrapper-Div damit die Highlight-Outline den ganzen Slider-Bereich umfasst
-                        (das range-Input selbst ist nur 4px hoch → Outline kaum sichtbar). */}
+                    {/* Wrapper-Div damit die Highlight-Outline den ganzen Slider-Bereich umfasst */}
                     <div
                       data-edit-field="slider_step"
                       className="py-3"
@@ -740,7 +914,7 @@ export function Funnel({
                       />
                     </div>
 
-                    <div className="flex justify-between text-xs mt-1" style={{ color: theme.textColorMuted }}>
+                    <div className="flex justify-between text-xs mt-1 font-mono" style={{ color: theme.textColorMuted }}>
                       <span data-edit-field="slider_min" style={{ ...editCursor, ...hl("slider_min") }}>
                         {sliderConfig.min.toLocaleString("de-DE")} {sliderConfig.unit}
                       </span>
@@ -751,7 +925,7 @@ export function Funnel({
                   </div>
                 )}
 
-                {/* long_text */}
+                {/* long_text — Underline-only Style (Typeform) */}
                 {currentQuestion.questionType === "long_text" && (
                   <div className="mb-3">
                     <textarea
@@ -759,31 +933,29 @@ export function Funnel({
                       onChange={(e) =>
                         setAnswers((prev) => ({ ...prev, [currentQuestion.id]: e.target.value }))
                       }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey && !isWeiterDisabled) {
+                          e.preventDefault();
+                          handleNext();
+                        }
+                      }}
                       placeholder={`${(currentQuestion.config as TextConfig).placeholder ?? ""}${(currentQuestion.config as TextConfig).required === false ? " (optional)" : ""}`}
                       maxLength={(currentQuestion.config as TextConfig).maxLength}
-                      rows={4}
+                      rows={3}
                       data-edit-field="text_input"
-                      className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base resize-none"
+                      className="w-full bg-transparent border-b text-lg @md:text-xl py-2 outline-none transition-colors resize-none font-light"
                       style={{
                         borderColor:     theme.borderColor,
-                        backgroundColor: theme.inputBgColor,
                         color:           theme.textColor,
-                        borderRadius:    theme.borderRadius,
                         ...hl("text_input", "text_placeholder", "text_required"),
                       }}
-                      onFocus={(e) => {
-                        e.currentTarget.style.borderColor     = theme.primaryColor;
-                        e.currentTarget.style.backgroundColor = theme.backgroundColor;
-                      }}
-                      onBlur={(e) => {
-                        e.currentTarget.style.borderColor     = theme.borderColor;
-                        e.currentTarget.style.backgroundColor = theme.inputBgColor;
-                      }}
+                      onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
+                      onBlur={(e) => { e.currentTarget.style.borderColor = theme.borderColor; }}
                     />
                   </div>
                 )}
 
-                {/* short_text / email / tel — alle Variants von `<input type=…>` mit placeholder + required */}
+                {/* short_text / email / tel — Underline-only Style */}
                 {(currentQuestion.questionType === "short_text" ||
                   currentQuestion.questionType === "email" ||
                   currentQuestion.questionType === "tel") && (
@@ -798,30 +970,28 @@ export function Funnel({
                       onChange={(e) =>
                         setAnswers((prev) => ({ ...prev, [currentQuestion.id]: e.target.value }))
                       }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !isWeiterDisabled) {
+                          e.preventDefault();
+                          handleNext();
+                        }
+                      }}
                       placeholder={`${(currentQuestion.config as TextConfig).placeholder ?? ""}${(currentQuestion.config as TextConfig).required === false ? " (optional)" : ""}`}
                       maxLength={(currentQuestion.config as TextConfig).maxLength}
                       data-edit-field="text_input"
-                      className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
+                      className="w-full bg-transparent border-b text-xl @md:text-2xl py-3 outline-none transition-colors font-light"
                       style={{
                         borderColor:     theme.borderColor,
-                        backgroundColor: theme.inputBgColor,
                         color:           theme.textColor,
-                        borderRadius:    theme.borderRadius,
                         ...hl("text_input", "text_placeholder", "text_required"),
                       }}
-                      onFocus={(e) => {
-                        e.currentTarget.style.borderColor     = theme.primaryColor;
-                        e.currentTarget.style.backgroundColor = theme.backgroundColor;
-                      }}
-                      onBlur={(e) => {
-                        e.currentTarget.style.borderColor     = theme.borderColor;
-                        e.currentTarget.style.backgroundColor = theme.inputBgColor;
-                      }}
+                      onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
+                      onBlur={(e) => { e.currentTarget.style.borderColor = theme.borderColor; }}
                     />
                   </div>
                 )}
 
-                {/* date — HTML5 native (kein Custom-Picker, minimal-funktional) */}
+                {/* date — HTML5 native, Underline-only */}
                 {currentQuestion.questionType === "date" && (() => {
                   const dateCfg = currentQuestion.config as DateConfig;
                   const value = answers[currentQuestion.id] ?? dateCfg.default ?? "";
@@ -836,33 +1006,25 @@ export function Funnel({
                           setAnswers((prev) => ({ ...prev, [currentQuestion.id]: e.target.value }))
                         }
                         data-edit-field="text_input"
-                        className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
+                        className="w-full bg-transparent border-b text-lg @md:text-xl py-3 outline-none transition-colors font-light"
                         style={{
                           borderColor:     theme.borderColor,
-                          backgroundColor: theme.inputBgColor,
                           color:           theme.textColor,
-                          borderRadius:    theme.borderRadius,
                           ...hl("text_input"),
                         }}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor     = theme.primaryColor;
-                          e.currentTarget.style.backgroundColor = theme.backgroundColor;
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor     = theme.borderColor;
-                          e.currentTarget.style.backgroundColor = theme.inputBgColor;
-                        }}
+                        onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
+                        onBlur={(e) => { e.currentTarget.style.borderColor = theme.borderColor; }}
                       />
                     </div>
                   );
                 })()}
 
-                {/* number — HTML5 native input type=number + optional Unit-Suffix */}
+                {/* number — HTML5 native input, Underline-only + Unit-Suffix rechts */}
                 {currentQuestion.questionType === "number" && (() => {
                   const numCfg = currentQuestion.config as NumberConfig;
                   const value = answers[currentQuestion.id] ?? (numCfg.default != null ? String(numCfg.default) : "");
                   return (
-                    <div className="mb-3 flex items-center gap-2">
+                    <div className="mb-3 flex items-baseline gap-2 border-b transition-colors" style={{ borderColor: theme.borderColor }}>
                       <input
                         type="number"
                         value={value}
@@ -872,26 +1034,21 @@ export function Funnel({
                         onChange={(e) =>
                           setAnswers((prev) => ({ ...prev, [currentQuestion.id]: e.target.value }))
                         }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !isWeiterDisabled) {
+                            e.preventDefault();
+                            handleNext();
+                          }
+                        }}
                         data-edit-field="text_input"
-                        className="flex-1 px-4 py-3 border rounded-lg transition-colors outline-none text-base"
+                        className="flex-1 bg-transparent text-xl @md:text-2xl py-3 outline-none font-light"
                         style={{
-                          borderColor:     theme.borderColor,
-                          backgroundColor: theme.inputBgColor,
-                          color:           theme.textColor,
-                          borderRadius:    theme.borderRadius,
+                          color: theme.textColor,
                           ...hl("text_input"),
-                        }}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor     = theme.primaryColor;
-                          e.currentTarget.style.backgroundColor = theme.backgroundColor;
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor     = theme.borderColor;
-                          e.currentTarget.style.backgroundColor = theme.inputBgColor;
                         }}
                       />
                       {numCfg.unit && (
-                        <span className="text-base font-medium shrink-0" style={{ color: theme.textColorMuted }}>
+                        <span className="text-lg font-light shrink-0" style={{ color: theme.textColorMuted }}>
                           {numCfg.unit}
                         </span>
                       )}
@@ -899,7 +1056,7 @@ export function Funnel({
                   );
                 })()}
 
-                {/* dropdown — `<select>` mit options aus DB (gleiches Schema wie choice) */}
+                {/* dropdown — Underline-only Select */}
                 {currentQuestion.questionType === "dropdown" && (
                   <div className="mb-3">
                     <select
@@ -908,14 +1065,14 @@ export function Funnel({
                         setAnswers((prev) => ({ ...prev, [currentQuestion.id]: e.target.value }))
                       }
                       data-edit-field="text_input"
-                      className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
+                      className="w-full bg-transparent border-b text-lg @md:text-xl py-3 outline-none transition-colors font-light"
                       style={{
                         borderColor:     theme.borderColor,
-                        backgroundColor: theme.inputBgColor,
                         color:           theme.textColor,
-                        borderRadius:    theme.borderRadius,
                         ...hl("text_input"),
                       }}
+                      onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
+                      onBlur={(e) => { e.currentTarget.style.borderColor = theme.borderColor; }}
                     >
                       <option value="">Bitte wählen…</option>
                       {currentQuestion.options.map((option) => (
@@ -927,21 +1084,32 @@ export function Funnel({
                   </div>
                 )}
 
-                {/* checkbox — Single-Boolean (z.B. DSGVO/Newsletter) */}
+                {/* checkbox — Single-Boolean (z.B. DSGVO/Newsletter), Typeform-Light-Style */}
                 {currentQuestion.questionType === "checkbox" && (() => {
                   const cbCfg = currentQuestion.config as CheckboxConfig;
                   const isChecked = answers[currentQuestion.id] === "true";
                   return (
                     <label
-                      className="mb-3 flex items-start gap-3 cursor-pointer p-4 rounded-lg border"
+                      className="mb-3 flex items-center gap-3 cursor-pointer px-3 py-3 border transition-colors"
                       data-edit-field="text_input"
                       style={{
                         borderColor: isChecked ? theme.primaryColor : theme.borderColor,
-                        backgroundColor: theme.inputBgColor,
+                        backgroundColor: isChecked
+                          ? `color-mix(in srgb, ${theme.primaryColor} 12%, transparent)`
+                          : theme.inputBgColor,
                         borderRadius: theme.borderRadius,
                         ...hl("text_input"),
                       }}
                     >
+                      <span
+                        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors"
+                        style={{
+                          borderColor: isChecked ? theme.primaryColor : theme.borderColor,
+                          backgroundColor: isChecked ? theme.primaryColor : theme.backgroundColor,
+                        }}
+                      >
+                        {isChecked && <Check size={12} strokeWidth={3} color="#ffffff" />}
+                      </span>
                       <input
                         type="checkbox"
                         checked={isChecked}
@@ -951,10 +1119,9 @@ export function Funnel({
                             [currentQuestion.id]: e.target.checked ? "true" : "false",
                           }))
                         }
-                        className="mt-0.5 shrink-0"
-                        style={{ accentColor: theme.primaryColor }}
+                        className="sr-only"
                       />
-                      <span className="text-sm leading-snug" style={{ color: theme.textColor }}>
+                      <span className="text-sm @md:text-base leading-snug font-light" style={{ color: theme.textColor }}>
                         {cbCfg.label || "Ich stimme zu"}
                       </span>
                     </label>
@@ -965,23 +1132,36 @@ export function Funnel({
             ) : (
 
               /* --------------------------------------------------------------
-                  Contact form (last step) — dynamisch aus contactFields
+                  Contact form (last step) — dynamisch aus contactFields, Typeform-Style
               -------------------------------------------------------------- */
               <form onSubmit={handleFormSubmit}>
-                <h1
-                  className="text-lg @md:text-xl @lg:text-2xl font-bold mb-2 leading-tight"
-                  data-edit-field="contact_form_title"
+                {/* Step-Counter für den letzten Schritt */}
+                <div className="mb-3 flex items-center gap-2 font-mono text-xs" style={{ color: theme.primaryColor }}>
+                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded px-1.5 text-[11px] font-semibold" style={{ backgroundColor: theme.primaryColor, color: "#ffffff" }}>
+                    {visibleQuestions.length + 1}
+                  </span>
+                  <span aria-hidden="true">→</span>
+                </div>
+                <EditableText
+                  as="h1"
+                  editMode={editMode}
+                  fieldRef="contact_form_title"
+                  initial={funnel.title}
+                  placeholder="Überschrift Kontaktformular…"
+                  onCommit={onTextChange}
+                  className="text-2xl @md:text-3xl @lg:text-[2rem] font-light mb-2 leading-snug text-left"
                   style={{ color: theme.textColor, ...editCursor, ...hl("contact_form_title") }}
-                >
-                  {funnel.title}
-                </h1>
-                <p
-                  className="font-semibold mb-4"
-                  data-edit-field="contact_form_subtitle"
-                  style={{ color: theme.primaryColor, ...editCursor, ...hl("contact_form_subtitle") }}
-                >
-                  {funnel.contactFormSubtitle}
-                </p>
+                />
+                <EditableText
+                  as="p"
+                  editMode={editMode}
+                  fieldRef="contact_form_subtitle"
+                  initial={funnel.contactFormSubtitle}
+                  placeholder="Untertitel Kontaktformular…"
+                  onCommit={onTextChange}
+                  className="text-sm @md:text-base font-light mb-6 leading-relaxed text-left"
+                  style={{ color: theme.textColorMuted, ...editCursor, ...hl("contact_form_subtitle") }}
+                />
 
                 {/* Honeypot — invisible to humans, filled by bots → rejected server-side */}
                 <input
@@ -1037,29 +1217,27 @@ export function Funnel({
                       );
                     }
 
-                    // --- Text / Email / Tel ---
+                    // --- Text / Email / Tel / PLZ ---
                     return (
                       <div
                         key={field.key}
                         data-edit-field={`contact_field_${field.key}`}
                         style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}
                       >
+                        <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
+                          {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
+                        </label>
                         <input
                           type={field.type === "plz" ? "text" : field.type}
-                          placeholder={`${field.placeholder ?? field.label}${!field.required ? " (optional)" : ""}`}
+                          placeholder={field.placeholder ?? ""}
                           value={contactData[field.key] ?? ""}
                           onChange={(e) => handleContactChange(field.key, e.target.value)}
-                          className="w-full px-4 py-3 border rounded-lg transition-colors outline-none text-base"
+                          className="w-full bg-transparent border-b text-base @md:text-lg py-2 outline-none transition-colors font-light"
                           style={{
                             borderColor:     errors[field.key] ? "#ef4444" : theme.borderColor,
-                            backgroundColor: theme.inputBgColor,
                             color:           theme.textColor,
-                            borderRadius:    theme.borderRadius,
                           }}
-                          onFocus={(e) => {
-                            e.currentTarget.style.borderColor     = theme.primaryColor;
-                            e.currentTarget.style.backgroundColor = theme.backgroundColor;
-                          }}
+                          onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
                           onBlur={(e) => {
                             if (hasTriedSubmit) {
                               const err = validateContactField(field, e.currentTarget.value);
@@ -1068,7 +1246,6 @@ export function Funnel({
                             } else {
                               e.currentTarget.style.borderColor = theme.borderColor;
                             }
-                            e.currentTarget.style.backgroundColor = theme.inputBgColor;
                           }}
                         />
                         {errors[field.key] && (
@@ -1108,11 +1285,11 @@ export function Funnel({
                   . Widerruf jederzeit möglich.
                 </p>
 
-                {/* Submit button */}
+                {/* Submit button — Typeform-Stil "OK ✓" / kompakt + Check-Icon. In editMode type='button' damit Klick nicht submittet. */}
                 <button
-                  type="submit"
+                  type={editMode ? "button" : "submit"}
                   data-edit-field="submit_button"
-                  className="flex items-center justify-center gap-2 w-full text-white px-5 py-3 rounded-lg font-semibold transition-colors"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors"
                   style={{
                     backgroundColor: theme.primaryColor,
                     borderRadius:    theme.borderRadius,
@@ -1127,59 +1304,286 @@ export function Funnel({
                     e.currentTarget.style.backgroundColor = theme.primaryColor;
                   }}
                 >
-                  <span className="text-sm sm:text-base">{funnel.submitButtonLabel}</span>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                  <EditableText
+                    as="span"
+                    editMode={editMode}
+                    fieldRef="submit_button"
+                    initial={funnel.submitButtonLabel}
+                    placeholder="Button-Text…"
+                    onCommit={onTextChange}
+                    className="text-sm @md:text-base"
+                  />
+                  <Check size={14} strokeWidth={2.5} />
                 </button>
               </form>
             )}
-          </div>
 
-          {/* Progress bar + navigation */}
-          <div className="mt-6 pt-4 border-t" style={{ borderColor: theme.borderColor }}>
-
-            <div className="h-2 rounded-full mb-5 overflow-hidden" style={{ backgroundColor: mix(theme.backgroundColor, theme.textColor, 0.08) }}>
-              <div
-                className="h-full rounded-full transition-all duration-300"
-                style={{ width: `${progress}%`, backgroundColor: theme.primaryColor }}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-
-              {/* Zurück */}
-              <button
-                onClick={handleBack}
-                disabled={currentStep === 0}
-                suppressHydrationWarning
-                className="flex items-center gap-2 text-sm transition-colors disabled:opacity-30 cursor-pointer disabled:cursor-default"
-                style={{ color: theme.textColorMuted }}
-                onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.color = theme.textColor; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = theme.textColorMuted; }}
-              >
-                <ArrowLeft size={16} strokeWidth={1.5} />
-                zurück
-              </button>
-
-              {/* Weiter — only shown for non-choice question types */}
-              {showWeiterButton && (
+            {/* Inline "OK ✓"-Button für Question-Steps die nicht auto-advancen (Typeform-Pattern).
+                Single-Choice springt nach 250ms selbst weiter. Multi-Choice/Text/Slider/Date/Number/Checkbox/Dropdown brauchen Explicit-Advance. */}
+            {!isContactStep && showWeiterButton && (
+              <div className="mt-6 flex items-center gap-4">
                 <button
+                  type="button"
                   onClick={handleNext}
-                  disabled={isWeiterDisabled}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                  disabled={isWeiterDisabled || editMode}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                   style={{ backgroundColor: theme.primaryColor, borderRadius: theme.borderRadius }}
                   onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.backgroundColor = theme.primaryColorHover; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = theme.primaryColor; }}
                 >
-                  Weiter
-                  <ArrowRight size={16} strokeWidth={1.5} />
+                  OK
+                  <Check size={14} strokeWidth={2.5} />
                 </button>
-              )}
-            </div>
-          </div>
+                {(currentQuestion.questionType === "short_text" ||
+                  currentQuestion.questionType === "long_text" ||
+                  currentQuestion.questionType === "email" ||
+                  currentQuestion.questionType === "tel" ||
+                  currentQuestion.questionType === "number") && (
+                  <span className="hidden text-xs @md:inline font-light" style={{ color: theme.textColorMuted }}>
+                    Drücke <kbd className="font-mono font-semibold">Enter ↵</kbd>
+                  </span>
+                )}
+              </div>
+            )}
+            </motion.div>
+          </AnimatePresence>
         </div>
+
+        {/* Bottom-Right Floating-Nav (ChevronUp = zurück, ChevronDown = weiter) — Typeform-Pattern.
+            In editMode versteckt damit's nicht mit der Edit-Selektion kollidiert. */}
+        {!editMode && (
+          <div
+            className="absolute bottom-4 right-4 flex items-center overflow-hidden border shadow-lg @container"
+            style={{
+              backgroundColor: theme.backgroundColor,
+              borderColor: theme.borderColor,
+              borderRadius: theme.borderRadius,
+            }}
+          >
+            <button
+              type="button"
+              onClick={handleBack}
+              disabled={currentStep === 0}
+              suppressHydrationWarning
+              aria-label="Vorherige Frage"
+              title="Vorherige Frage"
+              className="p-2.5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              style={{ color: theme.textColor }}
+              onMouseEnter={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.backgroundColor = `color-mix(in srgb, ${theme.primaryColor} 10%, transparent)`;
+                }
+              }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+            >
+              <ChevronUp size={16} />
+            </button>
+            <span className="block w-px h-5" style={{ backgroundColor: theme.borderColor }} />
+            <button
+              type="button"
+              onClick={handleNext}
+              disabled={isContactStep || isWeiterDisabled}
+              aria-label="Nächste Frage"
+              title="Nächste Frage"
+              className="p-2.5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              style={{ color: theme.textColor }}
+              onMouseEnter={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.backgroundColor = `color-mix(in srgb, ${theme.primaryColor} 10%, transparent)`;
+                }
+              }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+            >
+              <ChevronDown size={16} />
+            </button>
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   C.1c WYSIWYG-Edit: EditableText
+   Schaltet zwischen reiner Anzeige (editMode=false, Live + read-only Preview)
+   und contentEditable (editMode=true, Builder-Canvas) um. Uncontrolled —
+   commit nur auf blur/Enter, Esc revertet via Remount-Key.
+   ────────────────────────────────────────────────────────────────────────────── */
+
+type EditableTextTag = "h1" | "h2" | "p" | "span" | "div";
+
+interface EditableTextProps {
+  as?: EditableTextTag;
+  editMode: boolean;
+  fieldRef: string;
+  initial: string;
+  placeholder: string;
+  onCommit?: (fieldRef: string, newText: string) => void;
+  multiline?: boolean;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+function EditableText({
+  as = "span",
+  editMode,
+  fieldRef,
+  initial,
+  placeholder,
+  onCommit,
+  multiline = false,
+  className,
+  style,
+}: EditableTextProps) {
+  const skipNextCommit = useRef(false);
+
+  if (!editMode) {
+    // Read-only Branch: identisch zum existierenden Render (Tag + data-edit-field + style + initial).
+    // Empty-State zeigt den Placeholder gefadet/italic (Style wird vom Caller via style-prop reingegeben).
+    const Tag = as;
+    return (
+      <Tag data-edit-field={fieldRef} className={className} style={style}>
+        {initial}
+      </Tag>
+    );
+  }
+
+  // Edit-Branch: contentEditable mit Placeholder-via-CSS-Pseudo.
+  // key={fieldRef + "_" + initial} → externe State-Änderungen remounten das Element sauber
+  // (z.B. wenn der User in der OptionsEditor-Liste rechts den Text ändert, soll der contenteditable nachziehen).
+  const Tag = as;
+  return (
+    <Tag
+      key={`${fieldRef}_${initial}`}
+      data-edit-field={fieldRef}
+      data-placeholder={placeholder}
+      contentEditable
+      suppressContentEditableWarning
+      className={cn("funnel-editable", className)}
+      // Text-Cursor (I-Beam) statt Pointer — Signal "hier kannst du tippen". Nach dem Spread damit es Parent-Pointer übersteuert.
+      style={{ ...style, cursor: "text" }}
+      onBlur={(e: React.FocusEvent<HTMLElement>) => {
+        if (skipNextCommit.current) {
+          skipNextCommit.current = false;
+          return;
+        }
+        const text = e.currentTarget.innerText.replace(/ /g, " ").trim();
+        if (text !== initial) {
+          onCommit?.(fieldRef, text);
+        }
+      }}
+      onKeyDown={(e: React.KeyboardEvent<HTMLElement>) => {
+        if (e.key === "Enter" && !multiline) {
+          e.preventDefault();
+          e.currentTarget.blur();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          skipNextCommit.current = true;
+          // Revert: setze innerText zurück auf initial, dann blur
+          (e.currentTarget as HTMLElement).innerText = initial;
+          e.currentTarget.blur();
+        }
+      }}
+      onPaste={(e: React.ClipboardEvent<HTMLElement>) => {
+        // Plain-Text-Paste-Sanitization gegen Rich-HTML aus Word/Browser
+        e.preventDefault();
+        const text = e.clipboardData.getData("text/plain");
+        if (typeof document !== "undefined" && document.execCommand) {
+          document.execCommand("insertText", false, text);
+        }
+      }}
+    >
+      {initial}
+    </Tag>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   C.1c Canvas-Edit: SortableEditOption
+   Wrapper um eine Choice-Option im editMode — fügt Drag-Handle (links, hover-visible)
+   und Duplicate/Delete-Buttons (rechts, hover-visible) hinzu, plus useSortable für
+   @dnd-kit-Drag-Reorder. data-edit-field bleibt am Wrapper für Click-Select.
+   ────────────────────────────────────────────────────────────────────────────── */
+
+interface SortableEditOptionProps {
+  id: string;
+  idx: number;
+  wrapperClassName: string;
+  wrapperStyle: React.CSSProperties;
+  onDuplicate?: (idx: number) => void;
+  onDelete?: (idx: number) => void;
+  children: React.ReactNode;
+}
+
+function SortableEditOption({
+  id,
+  idx,
+  wrapperClassName,
+  wrapperStyle,
+  onDuplicate,
+  onDelete,
+  children,
+}: SortableEditOptionProps) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+    useSortable({ id });
+
+  const sortableStyle: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : undefined,
+    opacity: isDragging ? 0.85 : undefined,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      role="button"
+      tabIndex={-1}
+      data-edit-field={`option_${idx}`}
+      className={wrapperClassName}
+      style={{ ...wrapperStyle, ...sortableStyle }}
+    >
+      {/* Drag-Handle — auf Hover sichtbar, links vor dem Indicator */}
+      <span
+        ref={setActivatorNodeRef}
+        {...listeners}
+        aria-label="Reihenfolge ändern"
+        title="Reihenfolge ändern"
+        className="-ml-1 flex h-6 w-4 shrink-0 cursor-grab items-center justify-center opacity-0 transition-opacity group-hover/option:opacity-60 active:cursor-grabbing"
+        style={{ color: "currentColor" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <GripVertical size={14} />
+      </span>
+
+      {children}
+
+      {/* Aktions-Buttons rechts — auf Hover sichtbar */}
+      <span className="ml-auto flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/option:opacity-100">
+        {onDuplicate && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onDuplicate(idx); }}
+            aria-label="Option duplizieren"
+            title="Duplizieren"
+            className="inline-flex h-6 w-6 items-center justify-center rounded transition-colors hover:bg-black/10"
+          >
+            <Copy size={12} />
+          </button>
+        )}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onDelete(idx); }}
+            aria-label="Option löschen"
+            title="Löschen"
+            className="inline-flex h-6 w-6 items-center justify-center rounded text-red-500 transition-colors hover:bg-red-500/10"
+          >
+            <Trash2 size={12} />
+          </button>
+        )}
+      </span>
     </div>
   );
 }
