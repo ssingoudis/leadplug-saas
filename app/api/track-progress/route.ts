@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getTenantConfig } from '@/lib/getTenantConfig'
-import { upsertSubmissionProgress, logHoneypot } from '@/lib/tracking'
+import { upsertSubmissionProgress, logHoneypot, deriveContactFromAnswers } from '@/lib/tracking'
 
 function getIp(req: Request): string | null {
   const forwarded = req.headers.get('x-forwarded-for')
@@ -78,11 +78,19 @@ export async function POST(req: Request) {
   const leadPrice =
     tenantConfig.billingModel === 'per_lead' ? tenantConfig.leadPrice : 0
 
+  // Aufgabe 35: im Skip-Mode (kein Submit-Schritt) bleibt contact aus dem Widget leer.
+  // Damit Pricing-Logik (contact->>'email') auch für Abbrecher trifft, synthetisieren
+  // wir contact aus den answers per Pattern-Match.
+  const skipMode = tenantConfig.skipSubmitStep ?? false
+  const effectiveContact = skipMode
+    ? { ...deriveContactFromAnswers(answers), ...contact }
+    : contact
+
   await upsertSubmissionProgress({
     sessionId,
     funnelSlug: tenant,
     tenantId:   tenantConfig.id,
-    contact,
+    contact:    effectiveContact,
     answers,
     leadPrice,
     sourceUrl,

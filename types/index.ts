@@ -139,6 +139,7 @@ export interface TenantConfig {
 
   questions: QuestionConfig[]
   contactFields: ContactFieldConfig[]
+  skipSubmitStep: boolean      // Aufgabe 35: wenn true, kein Submit-Schritt — Funnel endet nach letzter Frage direkt auf Success-Page
 }
 
 // Dynamische Kontaktdaten — Keys entsprechen den ContactFieldConfig.key-Werten.
@@ -218,6 +219,8 @@ export interface EditorState {
   emailSenderLocal: string    // Lokalteil der Absender-Adresse, z.B. "anfragen"
   // Status
   isActive: boolean
+  // Submit-Schritt
+  skipSubmitStep: boolean      // Aufgabe 35: wenn true, Submit-Page wird übersprungen
   // Inhalte
   questions: EditorQuestion[]
   contactFields: ContactFieldConfig[]

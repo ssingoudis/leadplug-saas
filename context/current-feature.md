@@ -111,6 +111,37 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ## History
 
+- **Aufgabe 35 — Submit-Schritt optional + Skip-Mode mit Auto-Finish ✅ (2026-05-28)**
+
+  Erste von 5 Aufgaben im Builder-Final-Sprint (Branch `feature/builder-final-sprint`). Reihenfolge: 35 → 36 → 37 → C.1d → C.2, alles in einem Branch, ein Merge am Ende.
+
+  **Was geht jetzt:** Tenant kann auf der Submit-Page-Properties einen Toggle „Submit-Schritt aktiviert" ausschalten. Resultat: Widget endet nach der letzten Frage direkt auf der Erfolgsseite, der OK-Button der letzten Frage wird zu „Absenden" und feuert `/api/submit`. Bestehende Funnels bleiben auf Default `false` (= Submit-Page bleibt sichtbar), kein Verhalten-Drift.
+
+  **Pricing-Backstop für Skip-Mode:** Da im Skip-Mode kein Kontaktformular existiert, baut der Tenant Email/Telefon als reguläre Question-Pages ein. Damit die Partial-Submission-Pricing-Logik (`contact->>'email'`) weiter trifft, synthetisiert der Server `contact` per Pattern-Match aus answers (Email-Regex + Telefon-Regex + name-Key-Heuristik). Sowohl `/api/track-progress` als auch `/api/submit` nutzen diesen Backstop nur im Skip-Mode (nicht-Skip bleibt unverändert).
+
+  **Schema:**
+  - Migration `aufgabe_35_funnels_skip_submit_step`: `ALTER TABLE funnels ADD COLUMN skip_submit_step boolean NOT NULL DEFAULT false`. Additiv, reversibel via DOWN.
+  - Lokal: `supabase/migrations/20260528220000_aufgabe_35_funnels_skip_submit_step.sql` + DOWN.
+
+  **Files:**
+  - `types/index.ts`: `EditorState.skipSubmitStep` + `TenantConfig.skipSubmitStep`
+  - `components/tenant-editor/defaults.ts`: Default `false`
+  - `lib/editorUtils.ts`: Mapping in `editorStateToFunnelRow` + `dbToEditorState`
+  - `lib/getTenantConfig.ts`: Spalte in SELECT + Mapping
+  - `lib/tracking.ts`: neue Helper `deriveContactFromAnswers(answers)` mit Email/Phone/Name-Pattern-Match
+  - `components/tenant-editor/v2/PropertiesPanel.tsx`: Toggle „Submit-Schritt aktiviert" auf Submit-Page-Properties, disabled-Style für TextInput wenn Submit deaktiviert
+  - `components/tenant-editor/v2/StepList.tsx`: Submit-StepPill wird `hidden` + Titel „(übersprungen)" wenn skip aktiv
+  - `components/tenant-editor/v2/CenterCanvas.tsx`: neuer Placeholder `SubmitSkippedPlaceholder` wenn skip + Submit-Step im Editor ausgewählt
+  - `components/funnel.tsx`: neuer Prop `skipSubmitStep`, `totalSteps`/`isContactStep` respektieren Flag, `autoFinish`-Helper, `handleSelect` + `handleNext` feuern Auto-Finish auf letzter Frage, OK-Button-Label wechselt zu „Absenden"
+  - `components/TenantFunnelClient.tsx`: `skipSubmitStep` durch zu `<Funnel>`
+  - `app/api/submit/route.ts`: skipMode → keine Contact-Field-Validation + effectiveContact via `deriveContactFromAnswers` für Submission-Row + sendAllEmails
+  - `app/api/track-progress/route.ts`: gleicher Backstop für Partial-Submissions
+
+  **Wie testen:**
+  1. Editor: Funnel öffnen, „Kontaktformular" in der Sidebar wählen → Toggle „Submit-Schritt aktiviert" ausschalten → Canvas zeigt Placeholder, StepPill ist ausgegraut mit „(übersprungen)"
+  2. Save, dann „Funnel testen" → durchklicken bis letzte Frage → OK-Button heißt jetzt „Absenden" → Klick zeigt Success-Page
+  3. Live: Funnel ohne Submit-Schritt mit Email-Question-Page einbauen, Submit auslösen, in `submissions` prüfen: `contact->>'email'` ist befüllt aus answers
+
 - **Aufgabe 34 — C.1c WYSIWYG-Edit + Widget-Typeform-Redesign + Icons-Cleanup + Type-Cleanup + Partial-Submissions-Infra ✅ (2026-05-28)**
 
   Größte Aufgabe seit Phase B. Drei parallele Strategie-Stränge in einem Sprint. Zwei Checkpoint-Commits (`60ab73d`, `d5373fd`). +1310 / −1360 LOC netto, 44 Files. 2 DB-Migrationen direkt auf Production appliziert.

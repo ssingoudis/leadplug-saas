@@ -55,7 +55,7 @@ export function CenterCanvas({
   const visibleCount = questions.length;
   let initialStep = 0;
   let initialSubmitted = false;
-  let placeholder: "hidden_question" | "no_questions" | null = null;
+  let placeholder: "hidden_question" | "no_questions" | "submit_skipped" | null = null;
 
   if (selected.kind === "question") {
     const sourceQ = state.questions[selected.questionIndex];
@@ -72,7 +72,9 @@ export function CenterCanvas({
       initialStep = Math.max(0, vIdx);
     }
   } else if (selected.kind === "submit") {
-    if (visibleCount === 0 && state.questions.length === 0) {
+    if (state.skipSubmitStep && !isTestMode) {
+      placeholder = "submit_skipped";
+    } else if (visibleCount === 0 && state.questions.length === 0) {
       // ohne Fragen springt das Widget intern direkt zu Kontakt — Step 0 ist OK
       initialStep = 0;
     } else {
@@ -148,6 +150,8 @@ export function CenterCanvas({
             <HiddenPlaceholder />
           ) : placeholder === "no_questions" ? (
             <NoQuestionsPlaceholder />
+          ) : placeholder === "submit_skipped" ? (
+            <SubmitSkippedPlaceholder />
           ) : (
             <Funnel
               // Remount bei Step-/Selection-Wechsel im Edit-Modus, einmal pro Test-Session im Test-Modus.
@@ -199,6 +203,19 @@ function NoQuestionsPlaceholder() {
     <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 bg-white px-6 py-16 text-center dark:border-gray-700 dark:bg-gray-900">
       <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Noch keine Frage konfiguriert</p>
       <p className="text-xs text-gray-500 dark:text-gray-400">Füge links eine Frage hinzu, um die Vorschau zu sehen.</p>
+    </div>
+  );
+}
+
+function SubmitSkippedPlaceholder() {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 bg-white px-6 py-16 text-center dark:border-gray-700 dark:bg-gray-900">
+      <EyeOff size={20} className="text-gray-400 dark:text-gray-500" />
+      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Submit-Schritt ist deaktiviert</p>
+      <p className="max-w-md text-xs text-gray-500 dark:text-gray-400">
+        Der Funnel endet nach der letzten Frage und springt direkt zur Erfolgsseite.
+        Aktiviere rechts den Toggle, um das Kontaktformular wiederherzustellen.
+      </p>
     </div>
   );
 }

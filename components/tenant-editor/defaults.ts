@@ -105,6 +105,7 @@ export const DEFAULT_EDITOR_STATE: EditorState = {
   notificationEmail: "",
   emailSenderLocal: "",
   isActive: true,
+  skipSubmitStep: false,
   questions: [DEFAULT_QUESTION],
   contactFields: DEFAULT_CONTACT_FIELDS,
 };

@@ -123,9 +123,14 @@ export function StepList({
 
         <StepPill
           number={state.questions.length + 1}
-          title={state.funnelTitle || "Kontaktformular"}
+          title={
+            state.skipSubmitStep
+              ? `${state.funnelTitle || "Kontaktformular"} (übersprungen)`
+              : state.funnelTitle || "Kontaktformular"
+          }
           meta={SUBMIT_META}
           selected={selected.kind === "submit"}
+          hidden={state.skipSubmitStep}
           onClick={() => onSelect({ kind: "submit" })}
         />
         <StepPill
