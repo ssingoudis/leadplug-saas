@@ -111,6 +111,82 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ## History
 
+- **Aufgabe 32 — Phase C.1a (Editor-Shell v2: 3-Pane Builder hinter ?v=2) ✅ (2026-05-28)**
+
+  Erster der drei C.1-Sub-Sprints für den neuen Builder. Parallel-Build des Typeform-Stil 3-Pane-Shells unter `/dashboard/funnels/[slug]/edit?v=2` und `/dashboard/funnels/new?v=2`. Alter Editor unverändert ohne Searchparam. Zero-Risk-Rollback: v2/-Folder + 2 zusätzliche Client-Files + 2 Routing-Conditionals lassen sich isoliert entfernen.
+
+  **Strategischer Hintergrund:**
+  - CLAUDE.md §5 "kein Visual Builder" wurde mit Stavros explizit überstimmt — Builder ist *das* Verkaufsargument im Demo-Gespräch und muss ≥ 70% Typeform-Niveau erreichen (laut Fokus-Roadmap).
+  - "Kein 2D-Canvas" bleibt — Funnel bleibt linear. WYSIWYG-Edit ist im Center-Pane, nicht in einem freien React-Flow-Canvas.
+  - C.1 wurde in 3 mergbare Sub-Sprints zerlegt: C.1a (Shell + Reorder + Page-Level-Properties), C.1b (Multi-Field-pro-Page + Vorlagen + Field-Level-Properties), C.1c (WYSIWYG-Click-Select + Inline-Edit). Reihenfolge nach Iteration mit Stavros umgestellt — Multi-Field war ursprünglich C.1c, ist jetzt C.1b.
+
+  **Layout (alle drei Panes auf einer Höhe, escaping des Dashboard-`max-w-7xl`-Wrappers via `fixed inset-x-0 bottom-0; top: 64px`):**
+  - Links (420px): StepList mit allen Pages des Funnels — farbcodierte Pillen pro Field-Type (Text=blau, Choice=violett, Dropdown=lila, Numeric=mint, Submit=pink, Success=grün). Drag-Reorder via `@dnd-kit/sortable`. "+ Frage hinzufügen" öffnet das AddElementModal.
+  - Mitte (flex-1): CenterCanvas rendert das bestehende `<Funnel>`-Widget (read-only in C.1a) mit Theme/Funnel/Questions-Adapter aus `lib/editorUtils.ts`. Desktop/Mobile-Toggle + "Funnel testen"-Toggle analog v1.
+  - Rechts (320px): PropertiesPanel mit Page-Level-Settings — Fragetyp-Dropdown (alle 11 Types), Titel, Untertitel, Sichtbarkeit-Toggle, Löschen für Question-Pages. Submit-Page: Überschrift + Untertitel + Button-Text + statische Kontaktfeld-Liste. Success-Page: Erfolgs-Texte. Field-Level-Properties (Optionen, Min/Max, Placeholder etc.) sind explizit in C.1b.
+
+  **Top-Tabs als Stubs:** `Inhalt` aktiv, `Design`/`Logik`/`E-Mails`/`Einbinden` disabled mit Tooltip "Bald verfügbar". Tab-Slot ist jetzt da, kein Re-Layout in späteren Phasen nötig.
+
+  **AddElementModal:** Modal-Overlay mit Grid aller 11 Fragetypen, gruppiert in "Text-Eingabe" (short_text, long_text, email, tel) / "Auswahl" (single_choice, multi_choice, dropdown) / "Numerisch & Datum" (number, slider, date, checkbox). Klick → `defaultQuestion(type)` erzeugt eine question-Page mit type-spezifischen Defaults (Options nur wenn type single/multi/dropdown). In C.1b kommt darüber die "Vorlagen"-Sektion (Kontakt, Adresse, Ja/Nein als pre-built Multi-Field-Pages).
+
+  **State-Mgmt mirror v1 (kritisch wegen Dirty-State-Vertrag):**
+  - `JSON.stringify(state) !== JSON.stringify(initialState)` — exakt gleicher Vergleich wie v1, keine Sub-Object-Rekonstruktion (Key-Order-Drift würde Dirty-State false-positiv triggern).
+  - `window.__editorGuard` mit identischer Signatur `(href: string) => void` — konsumiert von `TabNav.tsx:17`, `DashboardHeader.tsx:27`, `UserMenu.tsx:15`. Exit-Modal triggert bei dirty-state-Nav.
+  - Save-Flow identisch: POST `/api/tenant/funnels` (create) oder PUT `/api/tenant/funnels/[slug]` (edit) mit `{ state }` body. `?v=2` wird bei Redirect nach Save erhalten (`withV2Flag()`).
+  - NamePrompt-Modal und Exit-Modal analog v1 reimplementiert (kein Code-Sharing weil parallel-Build).
+
+  **Neue Files (alle unter `components/tenant-editor/v2/`):**
+  - `EditorShellV2.tsx` (444 LOC) — Top-Level, State-Mgmt, Save, Exit-Guard, Modals
+  - `TopTabs.tsx` (71) — Tab-Leiste mit Stubs
+  - `StepList.tsx` (164) — DndContext + SortableContext + Fragen + Abschluss-Sektion
+  - `StepPill.tsx` (80) — einzelner Listen-Eintrag (sortable + non-sortable)
+  - `CenterCanvas.tsx` (171) — Funnel-Wrapper, Desktop/Mobile/Test-Toggle, Placeholder für Hidden/Empty
+  - `PropertiesPanel.tsx` (411) — Page-Level-UI, alle drei Page-Types
+  - `AddElementModal.tsx` (109) — Fragetyp-Grid mit Kategorien
+  - `fieldMeta.ts` (83) — Farben/Icons/Labels pro Field-Type (single source)
+  - `types.ts` (16) — SelectedStep diskriminerter Union
+
+  **Neue Files (Routing-Bridges):**
+  - `app/dashboard/funnels/[slug]/edit/FunnelEditorClientV2.tsx` — Server→Client-Bridge für Edit
+  - `app/dashboard/funnels/new/FunnelEditorClientV2.tsx` — Server→Client-Bridge für Create
+
+  **Modifizierte Files:**
+  - `app/dashboard/funnels/[slug]/edit/page.tsx` — `searchParams: Promise<{ v?: string }>` Prop, `useV2`-Branch
+  - `app/dashboard/funnels/new/page.tsx` — analog
+  - `package.json` — neue Deps `@dnd-kit/core ^6.3.1` + `@dnd-kit/sortable ^10.0.0` (~30kb gzipped, MIT, React-Community-Standard, vom User explizit freigegeben)
+
+  **NICHT angefasst (per Plan):**
+  - `components/funnel.tsx` — Widget unverändert (CLAUDE.md §11 hands-off)
+  - Alle v1-Editor-Files (FunnelEditorShell, EditorSidebar, SectionFragen, PreviewPanel etc.) — bleiben funktional bis nach C.1c
+  - `lib/editorUtils.ts` — 1:1 wiederverwendet, kein Edit
+  - `types/index.ts` — EditorState-Shape identisch zu v1
+  - API-Routes — kein Schema/Endpoint-Touch
+  - Kein DB-Migration
+
+  **Iterations-History innerhalb der Aufgabe:**
+  1. Erste Version mit 280px-Sidebar — Step-Titel wurden abgeschnitten.
+  2. Fix: 280 → 420px (Stavros wollte ursprünglich 420, ich war zu schüchtern mit 320 dazwischen).
+  3. Fragetyp-Switch ursprünglich nicht im Properties-Panel — als Lücke identifiziert und nachgezogen.
+  4. AddElementModal ursprünglich nur ein generischer Button — durch FormFlow-inspirierten Fragetyp-Grid ersetzt.
+  5. C.1b/C.1c-Scope-Umordnung am Ende der Aufgabe — Multi-Field + Vorlagen-Konzept wurde von Stavros als fundamentaler erkannt als WYSIWYG-Click-Select. Click-Select rückte nach C.1c, Multi-Field + Vorlagen werden C.1b.
+
+  **Verifikation:**
+  - `npx tsc --noEmit` exit 0.
+  - `npm run build` ohne Errors.
+  - SSR-Probe der v2-Route (`curl /dashboard/funnels/some-slug/edit?v=2`) → 307 Login-Redirect (= kein Import/Compile-Crash).
+  - Visueller Smoke-Test im Browser durch Stavros — Layout-Verhältnisse passen nach 420px-Fix, Drag-Reorder funktioniert, PropertiesPanel-Edit + Save-Persist funktioniert.
+
+  **Bekannte Lücken / Folge-Sprints:**
+  - **C.1b (nächste Aufgabe, Multi-Field + Vorlagen):** Properties zeigt Felder einer Page als editierbare Liste mit "+ Feld hinzufügen". Field-Level-Properties pro Type. AddElementModal wird zweisektionig (Vorlagen + Einzelne Felder). 3 initiale Vorlagen: Kontakt (Name+Email+Telefon), Adresse (Straße+PLZ+Stadt+Land), Ja/Nein. **Submit-Page-Refactor:** state.contactFields[] wird zu normalen fields[] auf der submit-Page, gleiches Multi-Field-System wie Question-Pages. Mapping zu submissions.contact bleibt key-basiert.
+  - **C.1c (danach, WYSIWYG-Polish):** Click-Select im Center, Inline-Edit, Floating-Toolbar, Pin-Edge-Insert.
+  - **Danach Löschen des v1-Editors** wenn v2 vollständig (FunnelEditorShell + EditorSidebar + alle Sections + PreviewPanel + ?v=2-Routing-Code).
+
+  *Branch:* `feature/aufgabe-32-builder-shell-v2` mit `--no-ff` in main gemerged.
+
+  *Commits:*
+  - `a3a9457` feat(builder): Aufgabe 32 (Phase C.1a) — neuer 3-Pane Editor-Shell hinter ?v=2
+  - Merge-Commit auf main (Vercel-Auto-Deploy)
+
 - **Aufgabe 31 — Phase C.3 (6 neue Question-Field-Types + multi_choice rename) ✅ (2026-05-28)**
 
   Erste Phase-C-Aufgabe. Builder kann jetzt 11 Field-Types statt 5: alte 5 (single_choice, multi_choice, short_text, long_text, slider) + 6 neue (email, tel, date, number, dropdown, checkbox). Submit-Page (Kontaktformular) unverändert — neue Types sind ausschließlich auf Question-Pages. Code live (Commit `3db419a`), Production-Smoke-Test grün.

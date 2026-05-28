@@ -146,7 +146,10 @@ Reihenfolge laut [`../CLAUDE.md`](../CLAUDE.md) §5:
 
 | Schritt | Was | Geschätzter Aufwand |
 |---|---|---|
-| C.1 | Pages + Layers Tabs im Editor (Hierarchie-Sicht) | 4-6 Tage |
+| C.1a ✅ | ~~Editor-Shell v2 — 3-Pane Layout (StepList · WYSIWYG-Preview · Properties), Top-Tabs, Drag-Reorder, Page-Level-Properties, ?v=2-Routing~~ — Aufgabe 32, 2026-05-28. | 1 Tag |
+| C.1b | **Multi-Field-pro-Page + Vorlagen:** Properties zeigt Felder-Liste mit Drag, "+ Feld hinzufügen", Field-Level-Properties pro Type, AddElementModal zweisektionig (Vorlagen oben / Einzelfelder unten). 3 initiale Vorlagen (Kontakt, Adresse, Ja/Nein). Submit-Page-Refactor: state.contactFields[] → normale fields[] auf submit-Page. | 2-3 Tage |
+| C.1c | **WYSIWYG-Polish:** Click-Select im Center (Klick = Properties springt auf Element), Inline-Edit (contenteditable für Label/Subtitle), Floating-Toolbar (Duplicate/Delete/Drag), Pin-Edge-Insert zwischen Steps. | 2-3 Tage |
+| C.1d | **Cutover:** Alten v1-Editor + Routing-Conditional + ?v=2-Flag entfernen. | 0.5 Tag |
 | C.2 | Theme-Panel im Editor (exponiert vorhandene CSS-Vars + Logo-Upload) | 2-3 Tage |
 | C.3 ✅ | ~~Mehr Feldtypen im Builder (Email, Tel, Date, Number, Dropdown, Checkbox)~~ — Aufgabe 31, 2026-05-28. URL/File-Upload/Address bewusst gestrichen, `multi_choice`-Rename mit drin. | 3-5 Tage |
 | C.4 | **Logic Jumps** (per Frage: "springe zu X wenn Antwort = Y") — neue Tabelle oder JSONB | 3-4 Tage |
@@ -155,6 +158,8 @@ Reihenfolge laut [`../CLAUDE.md`](../CLAUDE.md) §5:
 | C.7 | Smooth Slide-Übergänge zwischen Fragen im Widget (Typeform-Stil) via framer-motion `LazyMotion` — postMessage-Resize erst nach `onAnimationComplete`, `prefers-reduced-motion` respektieren | 2-3 Tage |
 
 **Total Phase C realistisch: 18-28 Tage Vollzeit.**
+
+> **C.1-Sub-Sprint-Notiz:** C.1 wurde nach Iteration mit Stavros am 2026-05-28 in vier Sub-Sprints zerlegt (C.1a–d). Ursprünglich war C.1 als ein 4-6-Tage-Block geplant — der ist aber zu groß für einen sauberen Merge-Punkt und der Builder ist gleichzeitig das wichtigste Verkaufsargument, also lohnt sich der zusätzliche Engineering-Aufwand pro Sub-Sprint. Reihenfolge C.1b ⇨ C.1c steht fest (Multi-Field-Foundation vor WYSIWYG-Polish, weil Inline-Edit ohne Multi-Field-Listen halbgar wäre).
 
 ---
 
