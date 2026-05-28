@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, TriangleAlert } from "lucide-react";
-import type { EditorState, EditorQuestion, QuestionType } from "@/types";
+import type { EditorState, EditorQuestion, ContactFieldConfig, QuestionType } from "@/types";
 import { TopTabs, type TopTabKey } from "./TopTabs";
 import { StepList } from "./StepList";
 import { CenterCanvas } from "./CenterCanvas";
 import { PropertiesPanel } from "./PropertiesPanel";
 import type { SelectedStep } from "./types";
+import type { Vorlage } from "./vorlagen";
 
 interface Props {
   initialState: EditorState;
@@ -19,6 +20,38 @@ interface Props {
 
 function makeId(): string {
   return `q_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function defaultContactField(
+  type: ContactFieldConfig["type"],
+  existing: ContactFieldConfig[],
+): ContactFieldConfig {
+  const labelByType: Record<ContactFieldConfig["type"], string> = {
+    text: "Text",
+    email: "E-Mail",
+    tel: "Telefon",
+    plz: "Postleitzahl",
+    radio: "Auswahl",
+  };
+  // Eindeutigen Key generieren — robust gegen Kollisionen mit System-Keys wie name/email/phone/plz/anrede.
+  const existingKeys = new Set(existing.map((f) => f.key));
+  let key: string;
+  do {
+    key = `custom_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+  } while (existingKeys.has(key));
+
+  const maxOrder = existing.reduce((m, f) => Math.max(m, f.sort_order), -1);
+
+  return {
+    key,
+    type,
+    label: labelByType[type],
+    placeholder: "",
+    required: false,
+    visible: true,
+    sort_order: maxOrder + 1,
+    ...(type === "radio" ? { options: ["Option 1", "Option 2"] } : {}),
+  };
 }
 
 function defaultQuestion(type: QuestionType): EditorQuestion {
@@ -136,6 +169,17 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
     [state.questions.length],
   );
 
+  const handleAddVorlage = useCallback(
+    (vorlage: Vorlage) => {
+      const newQuestions = vorlage.build();
+      if (newQuestions.length === 0) return;
+      setState((prev) => ({ ...prev, questions: [...prev.questions, ...newQuestions] }));
+      // selektiere die erste neu hinzugefügte Frage (deren Position = current length VOR insert)
+      setSelected({ kind: "question", questionIndex: state.questions.length });
+    },
+    [state.questions.length],
+  );
+
   const handleDeleteQuestion = useCallback(
     (index: number) => {
       setState((prev) => {
@@ -153,6 +197,40 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
     },
     [state.questions.length],
   );
+
+  /* ─── Contact-Field-Handler (Submit-Page Multi-Field) ─── */
+
+  const handlePatchContactField = useCallback(
+    (key: string, patch: Partial<ContactFieldConfig>) => {
+      setState((prev) => ({
+        ...prev,
+        contactFields: prev.contactFields.map((f) => (f.key === key ? { ...f, ...patch } : f)),
+      }));
+    },
+    [],
+  );
+
+  const handleAddContactField = useCallback((type: ContactFieldConfig["type"]) => {
+    setState((prev) => {
+      const newField = defaultContactField(type, prev.contactFields);
+      return { ...prev, contactFields: [...prev.contactFields, newField] };
+    });
+  }, []);
+
+  const handleDeleteContactField = useCallback((key: string) => {
+    setState((prev) => ({
+      ...prev,
+      contactFields: prev.contactFields.filter((f) => f.key !== key),
+    }));
+  }, []);
+
+  const handleReorderContactFields = useCallback((nextFields: ContactFieldConfig[]) => {
+    // sort_order synchron zur neuen Array-Reihenfolge
+    setState((prev) => ({
+      ...prev,
+      contactFields: nextFields.map((f, idx) => ({ ...f, sort_order: idx })),
+    }));
+  }, []);
 
   function withV2Flag(href: string): string {
     if (href.includes("v=2")) return href;
@@ -286,6 +364,7 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
             onSelect={setSelected}
             onReorder={handleReorder}
             onAddQuestion={handleAddQuestion}
+            onAddVorlage={handleAddVorlage}
           />
           <CenterCanvas
             state={state}
@@ -300,6 +379,10 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
             onPatch={handlePatch}
             onPatchQuestion={handlePatchQuestion}
             onDeleteQuestion={handleDeleteQuestion}
+            onPatchContactField={handlePatchContactField}
+            onAddContactField={handleAddContactField}
+            onDeleteContactField={handleDeleteContactField}
+            onReorderContactFields={handleReorderContactFields}
           />
         </div>
       </div>
