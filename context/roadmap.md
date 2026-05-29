@@ -14,7 +14,7 @@
 |---|---|---|
 | **A** | Doku-Reset (CLAUDE.md, project-overview, schema, HTML-Files) | ✅ abgeschlossen (Mai 2026) |
 | **B** | Schema-Refactor & Architektur-Foundation | ✅ abgeschlossen — B.1 ✅, B.2 ✅, B.3 ✅, B.4 ✅, B.5 ✅, B.6 ✅, B.7 ✅ (mit B.5 erledigt) — Mai 2026 |
-| **C** | Builder-MVP-Sprint — laufend (C.1a-c + C.3 ✅, aktuell Builder-Final-Sprint 35→C.2, danach C.5 + C.4) | 🟡 laufend |
+| **C** | Builder-MVP-Sprint — fortgeschritten (C.1a-c + C.3 + Final-Sprint 35→C.2 + Aufgabe 38/39 + Polish + Aufgabe 40 Webhook-Actions ✅, offen: C.4 Logic Jumps + E-Mails-Tab dynamisch) | 🟡 laufend |
 | **D** | Launch-Vorbereitung (Stripe Live, Conversion-Tracking, Demo-Templates) | ⚪ ~1 Wo nach Phase C |
 | **E** | Post-Launch on demand — nur bauen wenn 5+ zahlende Kunden fragen | ⚪ open-ended |
 
@@ -165,12 +165,13 @@ Ursprünglich war ein einziger großer Supabase-Branch für die ganze Phase B ge
 | **C.1d** | **Cutover:** Alten v1-Editor + Routing-Conditional + ?v=2-Flag entfernen. ~1500 LOC tote Komponenten weg. | 0.5 Tag |
 | **C.2** | **Theme-Panel im Editor + Logo-Upload.** UI für Brand-Color, Font, Border-Radius (exponiert vorhandene CSS-Vars). Logo-Upload via Supabase-Storage → Funnel-Header-Rendering. | 2-3 Tage |
 
-### Danach (nach Sprint-Review, nicht jetzt beginnen)
+### Danach
 
 | Schritt | Was | Aufwand |
 |---|---|---|
-| C.5 | **Webhook-Sender** (Backend + Subscription-CRUD-UI) — HTTP-POST + HMAC-Signatur + Retry-Logik, nutzt B.6-Schema. **Bedingung für 29€-Webhook-Tier.** | 4-5 Tage |
-| C.4 | **Logic Jumps** („wenn Antwort = X springe zu Page Y"). Fokus-Roadmap sagt „kann v1.1" — Launch geht auch ohne. | 3-4 Tage |
+| **Aufgabe 40** ✅ | **Webhook-Actions (Action-Element-Modell, 2026-05-29)** — Backend (Sender, HMAC, Cron, Retry, abandoned-Trigger) + Editor-Tab „Webhooks" mit Liste/Add-Modal/Test/Logs/Verify-Snippet + Step-Pill-Badges. Schema-Erweiterung `webhook_subscriptions.funnel_id` + `trigger_type` + `trigger_page_id`. Branch `feature/aufgabe-40-webhook-actions`. Ersetzt den ursprünglichen C.5-Scope, der „1 globaler Tenant-Webhook am Ende" plante. **Bedingung für 29€-Webhook-Tier erfüllt.** | ~6 Tage |
+| C.4 | **Logic Jumps** („wenn Antwort = X springe zu Page Y"). Fokus-Roadmap sagt „kann v1.1" — Launch geht auch ohne. Folgt demselben Action-Element-Pattern wie Webhooks (eigener „Logik"-Tab). | 3-4 Tage |
+| **E-Mails-Tab dynamisch** | Existierender disabled „E-Mails"-Tab im Editor wird funktional. Pattern wiederverwenden: Liste pro Funnel + Trigger-Config (on_submit / after_page / on_abandoned) + Inhalts-Editor (Reuse React-Email). Bestehender hartkodierter Auto-Mail-Versand in `/api/submit` wird entfernt. | 2-3 Tage |
 
 ---
 

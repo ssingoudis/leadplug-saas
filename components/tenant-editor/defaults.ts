@@ -1,7 +1,11 @@
 import type { ContactFieldConfig, EditorState, EditorQuestion } from "@/types";
 
 export const DEFAULT_CONTACT_FIELDS: ContactFieldConfig[] = [
+  // Aufgabe 40 Polish: alle Default-Felder als "touched" markiert — Keys sind
+  // bewusst kanonisch ("name", "email", "telefon", "plz", "anrede") und sollen
+  // nicht durch Label-Edit überschrieben werden.
   {
+    _clientId: "default_anrede",
     key: "anrede",
     type: "radio",
     label: "Anrede",
@@ -9,8 +13,10 @@ export const DEFAULT_CONTACT_FIELDS: ContactFieldConfig[] = [
     required: false,
     visible: false,
     sort_order: 0,
+    _keyTouched: true,
   },
   {
+    _clientId: "default_name",
     key: "name",
     type: "text",
     label: "Vor- und Nachname",
@@ -18,8 +24,10 @@ export const DEFAULT_CONTACT_FIELDS: ContactFieldConfig[] = [
     required: true,
     visible: true,
     sort_order: 1,
+    _keyTouched: true,
   },
   {
+    _clientId: "default_email",
     key: "email",
     type: "email",
     label: "E-Mail-Adresse",
@@ -27,8 +35,10 @@ export const DEFAULT_CONTACT_FIELDS: ContactFieldConfig[] = [
     required: true,
     visible: true,
     sort_order: 2,
+    _keyTouched: true,
   },
   {
+    _clientId: "default_telefon",
     key: "telefon",
     type: "tel",
     label: "Telefonnummer",
@@ -36,8 +46,10 @@ export const DEFAULT_CONTACT_FIELDS: ContactFieldConfig[] = [
     required: false,
     visible: true,
     sort_order: 3,
+    _keyTouched: true,
   },
   {
+    _clientId: "default_plz",
     key: "plz",
     type: "plz",
     label: "Postleitzahl",
@@ -45,6 +57,7 @@ export const DEFAULT_CONTACT_FIELDS: ContactFieldConfig[] = [
     required: false,
     visible: false,
     sort_order: 4,
+    _keyTouched: true,
   },
 ];
 
@@ -80,6 +93,8 @@ export function makeDefaultWelcomePage(): EditorQuestion {
     numberUnit: "",
     checkboxLabel: "",
     welcomeButtonLabel: "Los geht's →",
+    // Aufgabe 40 Polish: Welcome-Pages haben generierten questionKey für page-config — kein title-Sync
+    _keyTouched: true,
   };
 }
 
@@ -114,11 +129,13 @@ export function makeAddressCustomPage(): EditorQuestion {
     numberUnit: "",
     checkboxLabel: "",
     customFields: [
-      { key: "strasse",  type: "text", label: "Straße",         placeholder: "Beispielstraße",  required: true, visible: true, sort_order: 0 },
-      { key: "hausnr",   type: "text", label: "Hausnummer",     placeholder: "12a",             required: true, visible: true, sort_order: 1 },
-      { key: "plz",      type: "plz",  label: "Postleitzahl",   placeholder: "12345",           required: true, visible: true, sort_order: 2 },
-      { key: "ort",      type: "text", label: "Ort",            placeholder: "Berlin",          required: true, visible: true, sort_order: 3 },
+      // Aufgabe 40 Polish: kanonische Adress-Keys → _keyTouched=true (kein Auto-Sync mit Label)
+      { _clientId: `cf_addr_${rand}_strasse`, key: "strasse",  type: "text", label: "Straße",         placeholder: "Beispielstraße",  required: true, visible: true, sort_order: 0, _keyTouched: true },
+      { _clientId: `cf_addr_${rand}_hausnr`,  key: "hausnr",   type: "text", label: "Hausnummer",     placeholder: "12a",             required: true, visible: true, sort_order: 1, _keyTouched: true },
+      { _clientId: `cf_addr_${rand}_plz`,     key: "plz",      type: "plz",  label: "Postleitzahl",   placeholder: "12345",           required: true, visible: true, sort_order: 2, _keyTouched: true },
+      { _clientId: `cf_addr_${rand}_ort`,     key: "ort",      type: "text", label: "Ort",            placeholder: "Berlin",          required: true, visible: true, sort_order: 3, _keyTouched: true },
     ],
+    _keyTouched: true,
   };
 }
 
@@ -155,6 +172,7 @@ export function makeDefaultCustomPage(): EditorQuestion {
     // Aufgabe 39 Polish: Custom-Karte startet leer. Stavros — Name/Email-Defaults waren oft
     // fehl am Platz. User fügt eigene Felder via Properties-Panel hinzu.
     customFields: [],
+    _keyTouched: true,
   };
 }
 
@@ -189,6 +207,8 @@ export const DEFAULT_QUESTION: EditorQuestion = {
   numberDefault: "",
   numberUnit: "",
   checkboxLabel: "Ja, ich stimme zu",
+  // Aufgabe 40 Polish: questionKey ist bewusst "interesse" — kein Auto-Sync
+  _keyTouched: true,
 };
 
 export const DEFAULT_EDITOR_STATE: EditorState = {

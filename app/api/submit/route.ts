@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { after } from 'next/server'
 import { getTenantConfig } from '@/lib/getTenantConfig'
 import {
   upsertSubmissionProgress,
@@ -6,9 +7,11 @@ import {
   updateEmailStatus,
   logHoneypot,
   deriveContactFromAnswers,
+  enrichContact,
 } from '@/lib/tracking'
 import { sendAllEmails } from '@/lib/sendEmails'
 import { validateContactField } from '@/lib/validateContactField'
+import { triggerOnSubmit, type SubmissionSnapshot } from '@/lib/webhooks'
 
 function getIp(req: Request): string | null {
   const forwarded = req.headers.get('x-forwarded-for')
@@ -89,10 +92,15 @@ export async function POST(req: Request) {
   // Aufgabe 35: Skip-Mode → keine Submit-Page-Validation (Submit-Page wird vom Widget gar nicht gerendert).
   // Stattdessen contact aus answers synthetisieren (Pattern-Match auf Email/Telefon/Name), damit
   // Pricing-Logik (contact->>'email') + Mail-Versand weiter funktionieren.
+  // Aufgabe 40 Polish: contact-Anreicherung läuft IMMER über beide Wege.
+  // deriveContactFromAnswers extrahiert Name/Email/Telefon aus answers
+  // (= Question-Pages + Custom-Karten-Felder).
+  // enrichContact extrahiert dieselben aus dem Submit-Page-contact.
+  // Submit-Mode wie Skip-Mode profitieren so von Custom-Karte mit Name-Fields.
   const skipMode = tenantConfig.skipSubmitStep ?? false
-  const effectiveContact = skipMode
-    ? { ...deriveContactFromAnswers(answers), ...contact }
-    : contact
+  const fromAnswers = deriveContactFromAnswers(answers, tenantConfig)
+  const fromContact = enrichContact(contact, tenantConfig)
+  const effectiveContact = { ...fromAnswers, ...fromContact }
 
   // 5. Dynamische Feldvalidierung — nur wenn Submit-Page aktiv ist
   if (!skipMode) {
@@ -139,6 +147,32 @@ export async function POST(req: Request) {
   // 9. Email-Status in DB schreiben
   if (submissionId) {
     await updateEmailStatus(submissionId, emailResults.customer, emailResults.tenant)
+  }
+
+  // 10. Webhooks (Aufgabe 40 — Action-Element-Modell)
+  //
+  // Fire-and-forget via next/server `after()`: die Response geht sofort raus, der
+  // Webhook-Versand läuft asynchron weiter. Failures landen als delivery_attempts
+  // mit status='retrying' + next_retry_at — der /api/cron/webhook-retry holt sie.
+  //
+  // Triggert nur on_submit-Subscriptions (after_page wird im Widget-Pfad via
+  // /api/track-progress getriggert — Phase 2 / nicht in MVP).
+  if (submissionId && tenantConfig.funnelId) {
+    const snapshot: SubmissionSnapshot = {
+      id:           submissionId,
+      session_id:   sessionId,
+      funnel_slug:  tenant,
+      tenant_id:    tenantConfig.id ?? null,
+      contact:      effectiveContact,
+      answers,
+      source_url:   sourceUrl || null,
+      created_at:   new Date().toISOString(),
+      completed_at: new Date().toISOString(),
+    }
+    after(
+      triggerOnSubmit(tenantConfig.funnelId, 'submission.completed', snapshot, tenantConfig)
+        .catch((err) => console.error('submit route: webhook trigger failed', err))
+    )
   }
 
   return NextResponse.json({ success: true })

@@ -1,6 +1,6 @@
 "use client";
 
-import { GripVertical, EyeOff } from "lucide-react";
+import { GripVertical, EyeOff, Webhook } from "lucide-react";
 import type { FieldMeta } from "./fieldMeta";
 
 interface Props {
@@ -10,7 +10,12 @@ interface Props {
   selected: boolean;
   hidden?: boolean;
   draggable?: boolean;
+  /** Aufgabe 40: Anzahl Webhooks die auf diese Page als trigger_page_id zeigen.
+      Wenn > 0 → kleines Webhook-Icon rechts neben dem Titel. Click → Tenant
+      springt in den Webhooks-Tab (wird via Window-Event vom Editor verkabelt). */
+  webhookCount?: number;
   onClick: () => void;
+  onWebhookBadgeClick?: () => void;
   /** dnd-kit refs (drag handle + draggable wrapper). Wird auf das ganze Pill gelegt,
       damit der Drag überall am Pill startet. Click vs Drag löst die activationConstraint
       des Sensors (distance: 4) automatisch — kurzer Klick = onClick, Bewegung > 4px = Drag. */
@@ -24,7 +29,9 @@ export function StepPill({
   selected,
   hidden = false,
   draggable = false,
+  webhookCount = 0,
   onClick,
+  onWebhookBadgeClick,
   dragHandleProps,
 }: Props) {
   return (
@@ -77,6 +84,22 @@ export function StepPill({
           </span>
         )}
       </button>
+
+      {webhookCount > 0 && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onWebhookBadgeClick?.();
+          }}
+          aria-label={`${webhookCount} Webhook${webhookCount > 1 ? "s" : ""} nach diesem Schritt — zur Konfiguration`}
+          title={`${webhookCount} Webhook${webhookCount > 1 ? "s" : ""} nach diesem Schritt — klicken zum Konfigurieren`}
+          className="mr-2 my-auto inline-flex items-center gap-1 rounded-md border border-violet-200 dark:border-violet-700/40 bg-violet-50 dark:bg-violet-900/30 px-1.5 py-1 text-[10px] font-semibold text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-900/50 transition-colors"
+        >
+          <Webhook size={10} strokeWidth={2.5} />
+          {webhookCount}
+        </button>
+      )}
     </div>
   );
 }

@@ -6,11 +6,20 @@
 > Für architektonisches Verständnis und Zweck der Tabellen: siehe [`project-overview.md`](project-overview.md) §4.
 > Bei jeder neuen Migration: dieses File neu regenerieren.
 
-- **Stand:** 2026-05-28 (nach Aufgabe 30 / Phase B.5)
-- **Letzte Migration:** `aufgabe_30b_drop_funnel_questions_and_contact_fields`
+- **Stand:** 2026-05-29 (nach Aufgabe 40 / Webhook-Actions)
+- **Letzte Migration:** `aufgabe_40_webhook_actions`
 - **Tabellen:** 10 in `public` (alle mit RLS aktiviert)
 - **Enums:** 4 (`billing_model_type`, `page_type`, `field_type`, `tenant_member_role`)
 - **Functions:** 5 — **Triggers:** 6 — **Views:** 0
+
+> **Aufgabe 40 Erweiterungen (2026-05-29):**
+> - `webhook_subscriptions` jetzt funnel-scoped (3 neue Spalten: `funnel_id NOT NULL`, `trigger_type` default `'on_submit'`, `trigger_page_id`) + CHECK + 2 neue Indices
+> - `webhook_delivery_attempts` Inspector + Backoff (4 neue Spalten: `next_retry_at`, `response_status_code`, `response_body`, `event_type`) + 1 neuer partial Index `idx_webhook_delivery_retry_due`
+> - `submissions.abandoned_webhook_fired_at` Cooldown-Marker für Cron + partial Index `idx_submissions_abandoned_pending`
+>
+> **Aufgabe 40 Polish-Migrationen (2026-05-29):**
+> - `aufgabe_40_name_field_types`: 3 neue Enum-Values im `field_type` Enum (`first_name`, `last_name`, `full_name`) — Server mapped diese verlässlich ins contact-jsonb. Plus Aggregation: wenn first + last beide gesetzt → `contact.name = "first last"`.
+> - `fix_submissions_tenant_slug_nullable`: `submissions.tenant_slug` von NOT NULL → NULLABLE. Latent-Bug seit Aufgabe 26 (Drop `tenants.slug`) — App-Code hatte keine Quelle mehr für die Spalte, alle Inserts schlugen mit Constraint-Violation fehl. Fix forward-only.
 
 ---
 
@@ -459,6 +468,7 @@ Eine Zeile pro User-Session (Partial-Submissions seit Aufgabe 34). Das ist die C
 | `customer_email_sent` | bool | YES | `false` | |
 | `tenant_email_sent` | bool | YES | `false` | |
 | `status` | text | NO | `'offen'` | CRM-Status (siehe Check) — orthogonal zu `completed_at` |
+| `abandoned_webhook_fired_at` | timestamptz | YES | NULL | **Aufgabe 40.** Cooldown-Marker für `/api/cron/webhook-retry`. NULL = abandoned-Webhook noch nicht gefeuert. Cron picked Rows wo `completed_at IS NULL AND abandoned_webhook_fired_at IS NULL AND created_at < NOW() - 10min`. |
 | `created_at` | timestamptz | YES | `now()` | |
 
 **Foreign Keys:**
@@ -481,6 +491,7 @@ Eine Zeile pro User-Session (Partial-Submissions seit Aufgabe 34). Das ist die C
 - `idx_submissions_tenant_id` — btree(tenant_id, created_at) — Haupt-Filter für Lead-Listen
 - `idx_submissions_funnel` — btree(funnel_slug, created_at) — für Funnel-spezifische Lookups + DELETE-Pfad
 - `idx_submissions_tenant` — btree(tenant_slug, created_at) — Legacy (nicht mehr aktiv genutzt, kann später entfallen)
+- `idx_submissions_abandoned_pending` — **partial** btree(created_at) WHERE completed_at IS NULL AND abandoned_webhook_fired_at IS NULL (Aufgabe 40, Cron-Pick-Query)
 
 **Triggers:** keine
 
@@ -528,27 +539,40 @@ View-Tracking pro Funnel-Render. Aktuell 277 Zeilen.
 
 ### 3.8 `webhook_subscriptions`
 
-Pro Tenant 1..N Webhook-Endpoints, an die Events geliefert werden. **Schema-Foundation für Webhook-Tier-Launch (Phase C.5)** — Sender-Code existiert noch nicht. Aktuell 0 Zeilen.
+**Funnel-scoped Webhook-Endpoints** (Aufgabe 40, 2026-05-29 — vorher tenant-globale Subscriptions aus B.6). Pro Funnel 1..N Webhooks mit eigener Trigger-Konfiguration. Sender-Code live in [`lib/webhooks.ts`](../lib/webhooks.ts).
 
 **Columns:**
 
 | Spalte | Typ | Nullable | Default | Constraints / Comment |
 |---|---|---|---|---|
 | `id` | uuid | NO | `gen_random_uuid()` | PK |
-| `tenant_id` | uuid | NO | — | FK → `tenants.id` ON DELETE CASCADE |
+| `tenant_id` | uuid | NO | — | FK → `tenants.id` ON DELETE CASCADE. Bleibt für RLS-Performance (vermeidet Join via funnels) |
+| `funnel_id` | uuid | **NO** | — | **Aufgabe 40.** FK → `funnels.id` ON DELETE CASCADE. App-Code muss tenant_id == funnel.tenant_id sicherstellen. |
 | `url` | text | NO | — | CHECK: `LIKE 'http%' AND length(url) >= 10`. HTTPS empfohlen, http nur für lokale Tests. |
-| `secret` | text | NO | — | CHECK: `length(secret) >= 16`. HMAC-Signing-Secret, app-generated bei Create. |
-| `event_types` | text[] | NO | `'{}'` | Liste der abonnierten Event-Types, z.B. `{"submission.created"}`. |
+| `secret` | text | NO | — | CHECK: `length(secret) >= 16`. HMAC-Signing-Secret, app-generated. Format `whsec_<64-hex>`. |
+| `event_types` | text[] | NO | `'{}'` | z.B. `{"submission.completed","submission.abandoned"}` für on_submit oder `{"step.advanced"}` für after_page. |
+| `trigger_type` | text | **NO** | `'on_submit'` | **Aufgabe 40.** CHECK IN (`on_submit`, `after_page`). on_submit = bei /api/submit + Cron-Abbrecher. after_page = nach Step-Advance über `trigger_page_id`. |
+| `trigger_page_id` | uuid | YES | — | **Aufgabe 40.** FK → `pages.id` ON DELETE SET NULL. Bei NULL und trigger_type='after_page': Sender skipped (UI zeigt „Trigger-Page entfernt, bitte neu konfigurieren"). |
 | `is_active` | bool | NO | `true` | |
 | `created_at` | timestamptz | NO | `now()` | |
 | `updated_at` | timestamptz | NO | `now()` | via Trigger |
 
-**Foreign Keys:** `tenant_id` → `tenants.id` ON DELETE CASCADE
+**Foreign Keys:**
+- `tenant_id` → `tenants.id` ON DELETE CASCADE
+- `funnel_id` → `funnels.id` ON DELETE CASCADE
+- `trigger_page_id` → `pages.id` ON DELETE SET NULL
+
+**Check Constraints:**
+- `webhook_subscriptions_url_check`: `url LIKE 'http%' AND length(url) >= 10`
+- `webhook_subscriptions_secret_min_length`: `length(secret) >= 16`
+- `webhook_subscriptions_trigger_type_check`: `trigger_type IN ('on_submit','after_page')`
 
 **Indices:**
 - `webhook_subscriptions_pkey` — UNIQUE btree(id)
 - `idx_webhook_subscriptions_tenant_id` — btree(tenant_id)
 - `idx_webhook_subscriptions_active` — btree(tenant_id, is_active) **WHERE is_active = true** (partial)
+- `idx_webhook_subscriptions_funnel_id` — btree(funnel_id) **(Aufgabe 40)**
+- `idx_webhook_subscriptions_trigger_page` — btree(trigger_page_id) **WHERE trigger_page_id IS NOT NULL** (partial, Aufgabe 40)
 
 **Triggers:**
 - `webhook_subscriptions_updated_at` — BEFORE UPDATE → `update_updated_at()`
@@ -563,19 +587,23 @@ Pro Tenant 1..N Webhook-Endpoints, an die Events geliefert werden. **Schema-Foun
 
 ### 3.9 `webhook_delivery_attempts`
 
-Audit-Trail jeder Webhook-Zustellungs-Versuche. Append-only (kein UPDATE durch User-Client). Aktuell 0 Zeilen.
+Audit-Trail jeder Webhook-Zustellungs-Versuche. Append-only (kein UPDATE durch User-Client; Sender updated via Service-Key). Inspector-Felder aus Aufgabe 40.
 
 **Columns:**
 
 | Spalte | Typ | Nullable | Default | Constraints / Comment |
 |---|---|---|---|---|
-| `id` | uuid | NO | `gen_random_uuid()` | PK |
+| `id` | uuid | NO | `gen_random_uuid()` | PK. Wird als `delivery_id` im Payload an Tenant geschickt → Dedup-Schutz auf Tenant-Seite. |
 | `subscription_id` | uuid | NO | — | FK → `webhook_subscriptions.id` ON DELETE CASCADE |
 | `submission_id` | uuid | YES | — | FK → `submissions.id` ON DELETE SET NULL (Audit bleibt erhalten) |
 | `attempt_count` | int | NO | `1` | CHECK >= 1 |
 | `status` | text | NO | `'pending'` | CHECK IN (`pending`, `retrying`, `success`, `failed`) |
-| `last_error` | text | YES | — | NULL bei Erfolg |
+| `last_error` | text | YES | — | Kurztext für UI-Inspector |
 | `delivered_at` | timestamptz | YES | — | NULL bis erfolgreich |
+| `next_retry_at` | timestamptz | YES | — | **Aufgabe 40.** Cron picked Rows mit `next_retry_at <= NOW()`. Stripe-Backoff: 1m/5m/30m/2h/6h. NULL bei success oder finalem failed. |
+| `response_status_code` | int | YES | — | **Aufgabe 40.** HTTP-Code des letzten Versuchs (für Inspector). |
+| `response_body` | text | YES | — | **Aufgabe 40.** Response-Body, app-side truncated auf 4000 Zeichen. |
+| `event_type` | text | YES | — | **Aufgabe 40.** `submission.completed` / `submission.abandoned` / `step.advanced` / `webhook.test`. |
 | `created_at` | timestamptz | NO | `now()` | |
 
 **Check Constraints:**
@@ -591,13 +619,14 @@ Audit-Trail jeder Webhook-Zustellungs-Versuche. Append-only (kein UPDATE durch U
 - `webhook_delivery_attempts_pkey` — UNIQUE btree(id)
 - `idx_webhook_delivery_attempts_subscription` — btree(subscription_id, created_at DESC) — für "letzte N Versuche pro Subscription"
 - `idx_webhook_delivery_attempts_submission` — btree(submission_id) **WHERE submission_id IS NOT NULL** (partial)
-- `idx_webhook_delivery_attempts_retry_queue` — btree(created_at) **WHERE status IN ('pending','retrying')** (partial) — Retry-Queue-Scan
+- `idx_webhook_delivery_attempts_retry_queue` — btree(created_at) **WHERE status IN ('pending','retrying')** (partial) — Legacy aus B.6, redundant zu neuem Index
+- `idx_webhook_delivery_retry_due` — btree(next_retry_at) **WHERE status IN ('pending','retrying') AND next_retry_at IS NOT NULL** (partial, Aufgabe 40) — Cron-Retry-Queue
 
 **Triggers:** keine (Append-only)
 
 **RLS-Policies:**
 - `webhook_delivery_attempts_select` (SELECT, `authenticated`): `subscription_id IN (SELECT id FROM webhook_subscriptions WHERE tenant_id IN (SELECT current_tenant_ids()))`
-- **Kein INSERT/UPDATE/DELETE-Policy** — Schreibzugriff nur via Service-Key durch System-Code (Webhook-Sender, kommt in Phase C.5)
+- **Kein INSERT/UPDATE/DELETE-Policy** — Schreibzugriff nur via Service-Key durch [`lib/webhooks.ts`](../lib/webhooks.ts) (Sender + Cron-Retry).
 
 ---
 

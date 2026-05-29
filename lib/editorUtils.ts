@@ -40,6 +40,93 @@ export function uid(): string {
 }
 
 // =============================================================================
+// Aufgabe 40 Polish — Field-Key-Auto-Gen + Validation
+//
+// Pattern wie Typeform/HubSpot/Stripe: jedes Field hat einen stabilen Key
+// für CRM-Mapping. Key wird beim Anlegen auto-generiert (type-aware oder
+// aus Titel), ist editierbar, validiert pro Page eindeutig.
+// =============================================================================
+
+/** Erlaubtes Format: lowercase a-z, 0-9, underscore. 1-64 Zeichen. */
+export const FIELD_KEY_PATTERN = /^[a-z][a-z0-9_]{0,63}$/;
+
+/** Type-aware Default-Keys für ContactFields. Diese sind die "kanonischen" Keys
+ *  die ein Tenant erwartet — z.B. ein "email"-Type-Field heißt `email`, nicht
+ *  `wie_ist_deine_email`. Wenn diese keys aber kollidieren (mehrere email-Felder),
+ *  ergänzt der Konflikt-Resolver Suffix `_2`, `_3`, …
+ */
+const TYPE_DEFAULT_KEYS: Record<string, string> = {
+  email: "email",
+  tel: "telefon",
+  plz: "plz",
+  first_name: "first_name",
+  last_name: "last_name",
+  full_name: "name",
+};
+
+/**
+ * Generiert einen sinnvollen field_key aus Type + optional Label,
+ * mit Konflikt-Auflösung gegen existierende Keys.
+ *
+ * Strategie:
+ *   1. Wenn `type` in TYPE_DEFAULT_KEYS → nimm den (z.B. email → "email")
+ *   2. Sonst: slugify aus Label
+ *   3. Sonst: fallback "field"
+ *   4. Bei Kollision: Suffix _2, _3, …
+ */
+export function generateFieldKey(
+  type: string,
+  label: string,
+  existingKeys: ReadonlySet<string> | string[],
+): string {
+  const taken =
+    existingKeys instanceof Set ? existingKeys : new Set(existingKeys);
+
+  let base = TYPE_DEFAULT_KEYS[type] || toKey(label) || "field";
+  // Schutz vor problematischen Slug-Ergebnissen (rein numerisch oder leer)
+  if (!FIELD_KEY_PATTERN.test(base)) base = `field_${base}`.slice(0, 64);
+
+  if (!taken.has(base)) return base;
+  for (let i = 2; i < 1000; i++) {
+    const candidate = `${base}_${i}`.slice(0, 64);
+    if (!taken.has(candidate)) return candidate;
+  }
+  // Fallback fast nicht erreichbar
+  return `${base}_${Math.random().toString(36).slice(2, 6)}`;
+}
+
+/** Validiert einen vom User editierten Key.
+ *  Returns null wenn valide, sonst eine deutsche Fehlermeldung.
+ *  Konflikt-Check (Eindeutigkeit pro Page) muss der Caller machen — wir kennen
+ *  hier nicht den Page-Kontext.
+ */
+export function validateFieldKey(key: string): string | null {
+  if (!key) return "Key darf nicht leer sein.";
+  if (key.length > 64) return "Key ist zu lang (max 64 Zeichen).";
+  if (!/^[a-z]/.test(key)) return "Key muss mit einem Kleinbuchstaben beginnen.";
+  if (!FIELD_KEY_PATTERN.test(key)) {
+    return "Nur Kleinbuchstaben, Zahlen und Unterstrich erlaubt.";
+  }
+  return null;
+}
+
+/** Stellt sicher dass ein Key in einer Liste eindeutig ist. Wenn nicht,
+ *  Suffix _2, _3, … Falls schon eindeutig, gibt's den Key unverändert zurück. */
+export function ensureUniqueKey(
+  key: string,
+  existingKeys: ReadonlySet<string> | string[],
+): string {
+  const taken =
+    existingKeys instanceof Set ? existingKeys : new Set(existingKeys);
+  if (!taken.has(key)) return key;
+  for (let i = 2; i < 1000; i++) {
+    const candidate = `${key}_${i}`.slice(0, 64);
+    if (!taken.has(candidate)) return candidate;
+  }
+  return `${key}_${Math.random().toString(36).slice(2, 6)}`;
+}
+
+// =============================================================================
 // EDITOR STATE → FUNNEL PROPS (für PreviewPanel)
 // =============================================================================
 
@@ -88,6 +175,10 @@ const OPTION_BASED_TYPES = new Set<QuestionType>([
 const TEXTISH_TYPES = new Set<QuestionType>([
   "short_text",
   "long_text",
+  // Aufgabe 40 Polish — Name-Field-Types verhalten sich wie Text auf Question-Pages
+  "first_name",
+  "last_name",
+  "full_name",
 ]);
 
 export function buildQuestions(
@@ -302,6 +393,10 @@ const CONTACT_TYPE_TO_FIELD_TYPE: Record<ContactFieldConfig["type"], string> = {
   multi_choice: "multi_choice",
   rating: "rating",
   scale: "scale",
+  // Aufgabe 40 Polish
+  first_name: "first_name",
+  last_name: "last_name",
+  full_name: "full_name",
 };
 
 // Welche Types nutzen options[] (für radio/dropdown/multi_choice)?
@@ -383,6 +478,10 @@ export function editorStateToPagesAndFields(
   const pages: PageInsertRow[] = [];
   const fields: FieldInsertRow[] = [];
 
+  // Aufgabe 40 Polish: Globale Key-Sammlung über alle Question-Pages
+  // (Custom-Pages haben eigene per-Page-Eindeutigkeit via DB-Constraint).
+  const allQuestionKeys = new Set<string>();
+
   // Steps (question + custom + welcome Pages interleaved nach Array-Reihenfolge)
   state.questions.forEach((q, idx) => {
     const pageId = newPageId();
@@ -420,11 +519,19 @@ export function editorStateToPagesAndFields(
         },
       });
 
-      // Custom-Fields wie Submit-Fields persistieren
+      // Custom-Fields wie Submit-Fields persistieren — Aufgabe 40 Polish:
+      // Existing keys IMMER behalten (auch hässliche/legacy mit Umlauten — Backward-Compat).
+      // Nur wenn leer: type-aware Default. Konflikt-Resolution pro Page via Suffix.
+      const usedKeysInPage = new Set<string>();
       (q.customFields ?? []).forEach((cf) => {
+        const rawKey = cf.key?.trim() ?? "";
+        const baseKey = rawKey || generateFieldKey(cf.type, cf.label, usedKeysInPage);
+        const finalKey = ensureUniqueKey(baseKey, usedKeysInPage);
+        usedKeysInPage.add(finalKey);
+
         fields.push({
           page_id: pageId,
-          field_key: cf.key,
+          field_key: finalKey,
           field_type: CONTACT_TYPE_TO_FIELD_TYPE[cf.type],
           label: cf.label,
           subtitle: null,
@@ -458,9 +565,16 @@ export function editorStateToPagesAndFields(
     // Types die placeholder als top-level Spalte nutzen (Suchhilfe für API-Filter etc.).
     const hasPlaceholder = TEXTISH_TYPES.has(q.questionType);
 
+    // Aufgabe 40 Polish: Existing keys IMMER behalten (Backward-Compat).
+    // Nur leere keys werden aus Title generiert. Konflikt-Resolution via Suffix.
+    const rawQKey = q.questionKey?.trim() ?? "";
+    const baseKey = rawQKey || generateFieldKey(q.questionType, q.title, allQuestionKeys);
+    const finalQKey = ensureUniqueKey(baseKey, allQuestionKeys);
+    allQuestionKeys.add(finalQKey);
+
     fields.push({
       page_id: pageId,
-      field_key: q.questionKey,
+      field_key: finalQKey,
       field_type: questionTypeToFieldType(q.questionType),
       label: q.title,
       subtitle: q.subtitle || null,
@@ -491,10 +605,17 @@ export function editorStateToPagesAndFields(
     config: {},
   });
 
+  // Aufgabe 40 Polish: Existing keys behalten, nur leere generieren. Konflikt-Resolution pro Submit-Page.
+  const usedKeysInSubmitPage = new Set<string>();
   state.contactFields.forEach((cf) => {
+    const rawCKey = cf.key?.trim() ?? "";
+    const baseCKey = rawCKey || generateFieldKey(cf.type, cf.label, usedKeysInSubmitPage);
+    const finalCKey = ensureUniqueKey(baseCKey, usedKeysInSubmitPage);
+    usedKeysInSubmitPage.add(finalCKey);
+
     fields.push({
       page_id: submitPageId,
-      field_key: cf.key,
+      field_key: finalCKey,
       field_type: CONTACT_TYPE_TO_FIELD_TYPE[cf.type],
       label: cf.label,
       subtitle: null,
@@ -544,6 +665,10 @@ function fieldTypeToContactType(ft: string): ContactFieldConfig["type"] {
     case "multi_choice": return "multi_choice";
     case "rating":       return "rating";
     case "scale":        return "scale";
+    // Aufgabe 40 Polish
+    case "first_name":   return "first_name";
+    case "last_name":    return "last_name";
+    case "full_name":    return "full_name";
     default:             return "text";
   }
 }
@@ -631,6 +756,10 @@ const VALID_QUESTION_TYPES: ReadonlySet<string> = new Set([
   "rating",
   "scale",
   "statement",
+  // Aufgabe 40 Polish
+  "first_name",
+  "last_name",
+  "full_name",
 ]);
 
 function fieldTypeToQuestionType(ft: string): QuestionType {
@@ -709,13 +838,19 @@ export function dbToEditorState(
         subtitle: typeof pageCfg.subtitle === "string" ? pageCfg.subtitle : "",
         welcomeButtonLabel: typeof pageCfg.button_label === "string" ? pageCfg.button_label : "Starten",
         visible: true,
+        // Aufgabe 40 Polish: existing keys aus DB sind "festgesetzt" — kein Auto-Sync
+        _keyTouched: true,
       };
     }
 
     // Aufgabe 38: Custom-Multi-Field-Page rekonstruieren
     if (page.page_type === "custom") {
       const pageCfg = pageConfigById.get(page.id) ?? {};
-      const customFields: ContactFieldConfig[] = pageFields.map((f) => fieldRowToContactConfig(f));
+      const customFields: ContactFieldConfig[] = pageFields.map((f) => ({
+        ...fieldRowToContactConfig(f),
+        _keyTouched: true, // existing key aus DB
+        _clientId: `cf_load_${f.id ?? uid()}`,
+      }));
       return {
         ...emptyEditorQuestion(page.id),
         kind: "custom",
@@ -724,6 +859,7 @@ export function dbToEditorState(
         subtitle: typeof pageCfg.subtitle === "string" ? pageCfg.subtitle : "",
         visible: true,
         customFields,
+        _keyTouched: true,
       };
     }
 
@@ -739,7 +875,11 @@ export function dbToEditorState(
 
     return {
       _id: uid(),
-      dbId: f.id,
+      // Aufgabe 40 Polish: dbId = page.id (NICHT field.id) — wird für after_page-Webhook-Trigger
+      // als trigger_page_id benutzt. Server prüft pages.id === trigger_page_id.
+      // Vorher hatte dbId f.id (field-id), was bei Webhook-Anlegen "trigger_page_id does not
+      // belong to this funnel"-Fehler verursachte.
+      dbId: page.id,
       kind: "question",
       questionKey: f.field_key,
       questionType,
@@ -779,12 +919,18 @@ export function dbToEditorState(
       scaleMax: questionType === "scale" && cfg.max != null ? String(cfg.max) : "10",
       scaleLabelLeft: questionType === "scale" && typeof cfg.labelLeft === "string" ? cfg.labelLeft : "",
       scaleLabelRight: questionType === "scale" && typeof cfg.labelRight === "string" ? cfg.labelRight : "",
+      // Aufgabe 40 Polish: existing key aus DB → kein Auto-Sync mehr (Stabilität)
+      _keyTouched: true,
     };
   });
 
   // ContactFields aus Submit-Page-Fields bauen
   const contactFields: ContactFieldConfig[] = submitPage
-    ? (fieldsByPage.get(submitPage.id) ?? []).map((f) => fieldRowToContactConfig(f))
+    ? (fieldsByPage.get(submitPage.id) ?? []).map((f) => ({
+        ...fieldRowToContactConfig(f),
+        _keyTouched: true, // existing key aus DB
+        _clientId: `cf_load_${f.id ?? uid()}`,
+      }))
     : DEFAULT_CONTACT_FIELDS;
 
   return {

@@ -1,8 +1,10 @@
 "use client";
 
-import { Trash2, Plus, Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
+import { Trash2, Plus, Eye, EyeOff, Pencil, AlertTriangle } from "lucide-react";
 import type { EditorQuestion, EditorOption, ContactFieldConfig } from "@/types";
 import { OptionsEditor } from "./OptionsEditor";
+import { validateFieldKey, toKey } from "@/lib/editorUtils";
 
 type FieldPropertiesProps =
   | {
@@ -208,6 +210,17 @@ function QuestionFieldProps({
           Info-Block ohne Eingabe. Wird mit Titel + Untertitel angezeigt und per OK-Klick weitergeführt — keine Antwort wird gespeichert.
         </p>
       )}
+
+      {/* Aufgabe 40 Polish: Feldname im Export — collapsed unter "Erweitert" am Ende.
+          Bei Statement-Pages weglassen (keine Antwort wird gespeichert → kein key im Payload). */}
+      {!isStatement && (
+        <AdvancedFieldSection>
+          <FieldKeyEditor
+            value={question.questionKey}
+            onChange={(newKey) => onPatch({ questionKey: newKey })}
+          />
+        </AdvancedFieldSection>
+      )}
     </div>
   );
 }
@@ -367,6 +380,14 @@ function ContactFieldProps({
           </Field>
         </>
       )}
+
+      {/* Aufgabe 40 Polish: Feldname im Export — collapsed unter "Erweitert" am Ende. */}
+      <AdvancedFieldSection>
+        <FieldKeyEditor
+          value={f.key}
+          onChange={(newKey) => onPatch({ key: newKey })}
+        />
+      </AdvancedFieldSection>
     </div>
   );
 }
@@ -496,5 +517,153 @@ function Toggle({
         />
       </button>
     </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Aufgabe 40 Polish — FieldKeyEditor
+   "Feldname im Export" (= field_key in DB, = JSON-Key im Webhook-Payload).
+   Wird vom Aufrufer in einen <details>-Block am Ende der Properties gewrappt.
+   Read-only: nur Mono-Display + ✏️-Button, keine Warning.
+   Edit-Mode: Input mit Live-Validation + kompakte Warning, Enter speichert, Esc cancelt.
+   ───────────────────────────────────────────────────────────────────────── */
+
+export function FieldKeyEditor({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (newKey: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const [error, setError] = useState<string | null>(null);
+
+  function startEdit() {
+    setDraft(value);
+    setError(null);
+    setEditing(true);
+  }
+  function cancelEdit() {
+    setDraft(value);
+    setError(null);
+    setEditing(false);
+  }
+  function commitEdit() {
+    // Wenn user nichts geändert hat → einfach schließen, auch bei legacy-keys
+    // mit Umlauten/Sonderzeichen, die das neue Pattern nicht erfüllen.
+    if (draft === value) {
+      setEditing(false);
+      setError(null);
+      return;
+    }
+    const err = validateFieldKey(draft);
+    if (err) {
+      setError(err);
+      return;
+    }
+    onChange(draft);
+    setEditing(false);
+  }
+  function onDraftChange(v: string) {
+    // Aufgabe 40 Polish: Live-Transform — user kann frei tippen ("Beschreibung",
+    // "Tätigkeit", "Mein Feld"), wir slug-ifizieren in Echtzeit auf "beschreibung",
+    // "taetigkeit", "mein_feld". Erspart die unfreundliche Lowercase-Mecker-Validation.
+    // Ausnahme: leere Eingabe + nur Sonderzeichen → wir lassen den Roh-Input damit
+    // der user den Cursor noch positionieren kann, Validation greift dann.
+    const transformed = v ? toKey(v) : "";
+    setDraft(transformed);
+    setError(transformed === value ? null : validateFieldKey(transformed));
+  }
+
+  if (!editing) {
+    return (
+      <div>
+        <div className="flex items-center gap-2">
+          <code className="flex-1 rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5 font-mono text-xs text-gray-700 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-300">
+            {value || <span className="italic text-gray-400">(wird beim Speichern generiert)</span>}
+          </code>
+          <button
+            type="button"
+            onClick={startEdit}
+            aria-label="Feldname bearbeiten"
+            title="Feldname bearbeiten"
+            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+          >
+            <Pencil size={12} />
+          </button>
+        </div>
+        <p className="mt-1 text-[10px] leading-snug text-gray-400 dark:text-gray-500">
+          So heißt das Feld in Zapier, Make oder deinem CRM.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <input
+        type="text"
+        value={draft}
+        onChange={(e) => onDraftChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commitEdit();
+          if (e.key === "Escape") cancelEdit();
+        }}
+        autoFocus
+        placeholder="z.B. email"
+        className={`w-full rounded-md border bg-white px-3 py-1.5 font-mono text-sm outline-none transition focus:ring-1 dark:bg-gray-800 dark:text-white ${
+          error
+            ? "border-red-400 text-red-700 focus:border-red-500 focus:ring-red-500/20 dark:border-red-600 dark:text-red-400"
+            : "border-gray-300 text-gray-900 focus:border-primary focus:ring-primary/20 dark:border-gray-700"
+        }`}
+      />
+      {error && (
+        <p className="mt-1 text-[10px] font-medium text-red-600 dark:text-red-400">{error}</p>
+      )}
+      {!error && (
+        <p className="mt-1 flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-400">
+          <AlertTriangle size={10} />
+          Ändern bricht ggf. bestehende CRM-Mappings. Großbuchstaben + Sonderzeichen werden automatisch angepasst.
+        </p>
+      )}
+      <div className="mt-2 flex justify-end gap-1.5">
+        <button
+          type="button"
+          onClick={cancelEdit}
+          className="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+        >
+          Abbrechen
+        </button>
+        <button
+          type="button"
+          onClick={commitEdit}
+          disabled={Boolean(error)}
+          className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Speichern
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Wrapper-Komponente: Collapsible „Erweitert"-Section am Ende beider Props-Blöcke.
+ *  Default kollabiert; klick öffnet den FieldKeyEditor und mögliche weitere Zukunfts-Features. */
+export function AdvancedFieldSection({ children }: { children: React.ReactNode }) {
+  return (
+    <details className="mt-2 rounded-lg border border-gray-200 bg-gray-50/50 dark:border-gray-800 dark:bg-gray-950/30">
+      <summary className="cursor-pointer select-none px-3 py-2 text-xs font-medium text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
+        Erweitert
+      </summary>
+      <div className="space-y-3 border-t border-gray-200 px-3 py-3 dark:border-gray-800">
+        <div>
+          <p className="mb-1 text-[11px] font-medium text-gray-600 dark:text-gray-400">
+            Feldname im Export
+          </p>
+          {children}
+        </div>
+      </div>
+    </details>
   );
 }

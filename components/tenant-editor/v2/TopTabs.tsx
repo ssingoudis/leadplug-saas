@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-export type TopTabKey = "content" | "design" | "logic" | "emails" | "share";
+export type TopTabKey = "content" | "design" | "logic" | "emails" | "webhooks" | "share";
 
 interface TabDef {
   key: TopTabKey;
@@ -15,7 +15,9 @@ const TABS: TabDef[] = [
   { key: "content", label: "Inhalt", disabled: false },
   { key: "design", label: "Design", disabled: false },
   { key: "logic", label: "Logik", badge: "bald", disabled: true },
-  { key: "emails", label: "E-Mails", disabled: true },
+  { key: "emails", label: "E-Mails", badge: "bald", disabled: true },
+  // Aufgabe 40: Webhooks als erste echte Action-Klasse (E-Mails folgen demselben Pattern).
+  { key: "webhooks", label: "Webhooks", disabled: false },
   { key: "share", label: "Einbinden", disabled: true },
 ];
 

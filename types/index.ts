@@ -26,6 +26,8 @@ export type QuestionType =
   | 'rating'      // 1-5 (oder N) Sterne mit Hover-Preview, Antwort als String "1"..."5"
   | 'scale'       // 0-N Skala (NPS-Style), Antwort als String "0"..."N"
   | 'statement'   // Info-Block ohne Input — User klickt OK/Weiter, keine Antwort gespeichert
+  // Aufgabe 40 Polish: Name-Field-Types — Skip-Mode-Funnels brauchen das für robustes contact-Mapping.
+  | 'first_name' | 'last_name' | 'full_name'
 
 export interface Option {
   label: string
@@ -93,6 +95,9 @@ export interface WelcomeConfig {
 
 export interface QuestionConfig {
   id: string
+  /** Aufgabe 40 Polish: echte DB-page-uuid (pages.id). Wird vom Widget für
+   *  after_page-Webhook-Trigger an /api/track-progress mitgeschickt. */
+  pageId?: string
   title: string
   subtitle?: string
   questionType: QuestionType
@@ -120,6 +125,8 @@ export interface ContactFieldConfig {
     | 'radio' | 'text' | 'email' | 'tel' | 'plz'
     | 'long_text' | 'number' | 'date' | 'checkbox' | 'dropdown'
     | 'slider' | 'multi_choice' | 'rating' | 'scale'
+    // Aufgabe 40 Polish: Name-Field-Types — Server mapped diese verlässlich ins contact-jsonb.
+    | 'first_name' | 'last_name' | 'full_name'
   label:        string
   placeholder?: string                           // Nur für textish (text/email/tel/plz/long_text/number)
   required:     boolean
@@ -140,6 +147,14 @@ export interface ContactFieldConfig {
   scaleMax?:        number
   scaleLabelLeft?:  string
   scaleLabelRight?: string
+  // Aufgabe 40 Polish: transient flag — Logik wie bei EditorQuestion._keyTouched.
+  // Wird beim DB-Save weggestrippt.
+  _keyTouched?: boolean
+  // Aufgabe 40 Polish: stabile React-Key + Sortable-ID für Editor-UI.
+  // Initial bei jedem Add/Load via crypto.randomUUID(). Wird beim Save weggestrippt.
+  // Entkoppelt den UI-Identifier vom field.key, damit der user den key live editieren
+  // kann ohne dass die Row re-mounted und Edit-State verliert.
+  _clientId?: string
 }
 
 export interface FunnelConfig {
@@ -260,6 +275,11 @@ export interface EditorQuestion {
   // "welcome" = Intro-Step am Anfang mit eigenem Button-Label.
   kind?: 'question' | 'custom' | 'welcome'
   customFields?: ContactFieldConfig[]
+  // Aufgabe 40 Polish: transient flag — nur im Editor-State, NICHT in DB persistiert.
+  // false = Auto-Sync questionKey ↔ toKey(title) bei jedem Title-Change.
+  // true = User hat questionKey manuell editiert → kein Auto-Sync mehr (Stabilität).
+  // Beim dbToEditorState wird das auf true gesetzt (alle existing keys sind "gesetzt").
+  _keyTouched?: boolean
 }
 
 export interface EditorState {

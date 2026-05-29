@@ -198,6 +198,12 @@ interface FunnelProps {
   // Live-Mode: TenantFunnelClient POSTet das an /api/track-progress.
   // Editor-Mode: undefined → kein Tracking.
   onAnswersChange?: (data: { answers: Record<string, string>; contact: Record<string, string> }) => void;
+  // Aufgabe 40 Polish: nach jedem Step-Advance über eine Page feuert (mit der dbId der gerade verlassenen
+  // Page). Wir liefern auch den aktuellen answers+contact-Snapshot mit, damit der Server-side UPSERT
+  // mit den korrekten Daten passiert (sonst würde leerer {}-Snapshot existing Daten überschreiben).
+  // Live-Mode: TenantFunnelClient POSTet das an /api/track-progress mit advancedPageId + snapshot.
+  // Server triggert dann after_page-Webhooks via triggerOnPageAdvance (mit server-side Dedup).
+  onPageAdvanced?: (pageId: string, snapshot: { answers: Record<string, string>; contact: Record<string, string> }) => void;
   onSubmit?: (data: {
     answers: Record<string, string>;
     contact: Record<string, string>;
@@ -232,6 +238,7 @@ export function Funnel({
   onDuplicateOption,
   onDeleteOption,
   onAnswersChange,
+  onPageAdvanced,
   onSubmit,
   skipSubmitStep = false,
   redirectUrl,
@@ -455,6 +462,7 @@ export function Funnel({
   // is briefly visible before the step transition fires (Typeform-Pattern).
   // C.1c: editMode short-circuit — Builder-Klick auf Option soll selektieren/editieren, nicht advancen.
   // Aufgabe 35: im Skip-Mode + letzter Frage feuert direkt /api/submit + zeigt Success.
+  // Aufgabe 40 Polish: nach Step-Advance feuert onPageAdvanced(pageId) — triggert after_page-Webhooks.
   const handleSelect = useCallback(
     (questionId: string, value: string) => {
       if (editMode) return;
@@ -465,12 +473,17 @@ export function Funnel({
           return;
         }
         if (currentStep < visibleQuestions.length) {
+          const advancingPageId = currentQuestion?.pageId;
           setSlideDirection(1);
           setCurrentStep((prev) => prev + 1);
+          if (advancingPageId) {
+            const snapshot = { answers: { ...answers, [questionId]: value }, contact: contactData };
+            onPageAdvanced?.(advancingPageId, snapshot);
+          }
         }
       }, 250);
     },
-    [currentStep, visibleQuestions.length, editMode, skipSubmitStep, isLastQuestion, autoFinish],
+    [currentStep, visibleQuestions.length, editMode, skipSubmitStep, isLastQuestion, autoFinish, currentQuestion, onPageAdvanced],
   );
 
   // Goes back one step. The zurück button is disabled at step 0.
@@ -484,15 +497,20 @@ export function Funnel({
 
   // Advances to the next step. Used by the Weiter button on non-choice question types.
   // Aufgabe 35: im Skip-Mode + letzter Frage Auto-Finish statt Step-Advance.
+  // Aufgabe 40 Polish: nach Step-Advance feuert onPageAdvanced(pageId) — triggert after_page-Webhooks.
   const handleNext = useCallback(() => {
     if (editMode) return;
     if (skipSubmitStep && isLastQuestion) {
       autoFinish();
       return;
     }
+    const advancingPageId = currentQuestion?.pageId;
     setSlideDirection(1);
     setCurrentStep((prev) => prev + 1);
-  }, [editMode, skipSubmitStep, isLastQuestion, autoFinish]);
+    if (advancingPageId) {
+      onPageAdvanced?.(advancingPageId, { answers, contact: contactData });
+    }
+  }, [editMode, skipSubmitStep, isLastQuestion, autoFinish, currentQuestion, onPageAdvanced, answers, contactData]);
 
   // Multiple-choice: toggles `value` in/out of the comma-separated answer string for `questionId`.
   const handleToggleMultiple = useCallback(
@@ -1185,15 +1203,26 @@ export function Funnel({
                         );
                       }
 
-                      // --- Text / Email / Tel / PLZ (Default-Fallback) ---
+                      // --- Text / Email / Tel / PLZ / Name (Default-Fallback) ---
+                      // Aufgabe 40 Polish: first_name/last_name/full_name werden wie text gerendert,
+                      // aber mit sinnvollen Platzhaltern wenn der Tenant keinen eigenen gesetzt hat.
+                      const inputType =
+                        field.type === "email" ? "email" :
+                        field.type === "tel"   ? "tel"   :
+                        "text";
+                      const defaultPlaceholder =
+                        field.type === "first_name" ? "Vorname" :
+                        field.type === "last_name"  ? "Nachname" :
+                        field.type === "full_name"  ? "Voller Name" :
+                        "";
                       return (
                         <div key={field.key}>
                           <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
                             {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
                           </label>
                           <input
-                            type={field.type === "plz" ? "text" : field.type}
-                            placeholder={field.placeholder ?? ""}
+                            type={inputType}
+                            placeholder={field.placeholder || defaultPlaceholder}
                             value={fieldValue}
                             onChange={(e) =>
                               setAnswers((prev) => ({ ...prev, [field.key]: e.target.value }))
@@ -1983,7 +2012,18 @@ export function Funnel({
                       );
                     }
 
-                    // --- Text / Email / Tel / PLZ (Default-Fallback) ---
+                    // --- Text / Email / Tel / PLZ / Name (Default-Fallback) ---
+                    // Aufgabe 40 Polish: first_name/last_name/full_name werden wie text gerendert
+                    // mit sensible default-Platzhaltern.
+                    const submitInputType =
+                      field.type === "email" ? "email" :
+                      field.type === "tel"   ? "tel"   :
+                      "text";
+                    const submitDefaultPlaceholder =
+                      field.type === "first_name" ? "Vorname" :
+                      field.type === "last_name"  ? "Nachname" :
+                      field.type === "full_name"  ? "Voller Name" :
+                      "";
                     return (
                       <div
                         key={field.key}
@@ -1994,8 +2034,8 @@ export function Funnel({
                           {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
                         </label>
                         <input
-                          type={field.type === "plz" ? "text" : field.type}
-                          placeholder={field.placeholder ?? ""}
+                          type={submitInputType}
+                          placeholder={field.placeholder || submitDefaultPlaceholder}
                           value={contactData[field.key] ?? ""}
                           onChange={(e) => handleContactChange(field.key, e.target.value)}
                           className="w-full bg-transparent border-b text-base @md:text-lg py-2 outline-none transition-colors font-light"

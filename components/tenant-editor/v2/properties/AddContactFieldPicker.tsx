@@ -13,11 +13,15 @@ const NUMERIC_PILL = "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg
 const RATING_PILL = "bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800";
 
 const CONTACT_TYPES: { type: ContactFieldType; icon: string; pillClass: string; description: string }[] = [
-  { type: "text",         icon: "T",  pillClass: TEXT_PILL,    description: "Vor-/Nachname, Firma, …" },
-  { type: "long_text",    icon: "¶",  pillClass: TEXT_PILL,    description: "Mehrzeiliger Text" },
+  // Aufgabe 40 Polish — Name-Felder ganz oben, weil häufigster Anwendungsfall
+  { type: "full_name",    icon: "👤", pillClass: TEXT_PILL,    description: "Voller Name (mappt auf contact.name)" },
+  { type: "first_name",   icon: "👤", pillClass: TEXT_PILL,    description: "Vorname (mappt auf contact.firstName)" },
+  { type: "last_name",    icon: "👤", pillClass: TEXT_PILL,    description: "Nachname (mappt auf contact.lastName)" },
   { type: "email",        icon: "@",  pillClass: TEXT_PILL,    description: "E-Mail-Adresse mit Validierung" },
   { type: "tel",          icon: "☎",  pillClass: TEXT_PILL,    description: "Telefonnummer" },
   { type: "plz",          icon: "⌗",  pillClass: TEXT_PILL,    description: "Postleitzahl (5 Ziffern)" },
+  { type: "text",         icon: "T",  pillClass: TEXT_PILL,    description: "Allgemeines Textfeld (Firma, Berufsbezeichnung, …)" },
+  { type: "long_text",    icon: "¶",  pillClass: TEXT_PILL,    description: "Mehrzeiliger Text" },
   { type: "number",       icon: "#",  pillClass: NUMERIC_PILL, description: "Zahleneingabe" },
   { type: "slider",       icon: "≡",  pillClass: NUMERIC_PILL, description: "Slider mit Min/Max-Bereich" },
   { type: "date",         icon: "▦",  pillClass: NUMERIC_PILL, description: "Datumsauswahl (Inline-Kalender)" },

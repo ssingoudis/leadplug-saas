@@ -9,6 +9,7 @@ import { StepList } from "./StepList";
 import { CenterCanvas } from "./CenterCanvas";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { ThemePanel } from "./ThemePanel";
+import { WebhooksPanel } from "./WebhooksPanel";
 import { AddContactFieldPicker } from "./properties/AddContactFieldPicker";
 import type { SelectedStep } from "./types";
 import {
@@ -16,6 +17,7 @@ import {
   makeAddressCustomPage,
   makeDefaultWelcomePage,
 } from "@/components/tenant-editor/defaults";
+import { generateFieldKey, toKey } from "@/lib/editorUtils";
 
 interface Props {
   initialState: EditorState;
@@ -27,6 +29,21 @@ interface Props {
 function makeId(): string {
   return `q_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
+
+/** Aufgabe 40 Polish: Semantic Types haben einen kanonischen Default-Key (email→"email"),
+ *  der unabhängig vom Label perfekt für CRM-Mapping ist. Bei diesen Types soll der Key
+ *  nicht beim Label-Edit mitgezogen werden → _keyTouched=true von Anfang an.
+ *
+ *  Generic Types haben keinen kanonischen Key — der wird aus dem Label abgeleitet.
+ *  Bei diesen soll der Key beim Label-Edit mit-syncen → _keyTouched=false. */
+const SEMANTIC_CONTACT_TYPES: ReadonlySet<ContactFieldConfig["type"]> = new Set([
+  "email",
+  "tel",
+  "plz",
+  "first_name",
+  "last_name",
+  "full_name",
+]);
 
 function defaultContactField(
   type: ContactFieldConfig["type"],
@@ -47,26 +64,31 @@ function defaultContactField(
     multi_choice: "Mehrfachauswahl",
     rating: "Sterne-Rating",
     scale: "Skala",
+    // Aufgabe 40 Polish
+    first_name: "Vorname",
+    last_name: "Nachname",
+    full_name: "Name",
   };
-  // Eindeutigen Key generieren — robust gegen Kollisionen mit System-Keys wie name/email/phone/plz/anrede.
+  const label = labelByType[type];
   const existingKeys = new Set(existing.map((f) => f.key));
-  let key: string;
-  do {
-    key = `custom_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
-  } while (existingKeys.has(key));
+  const key = generateFieldKey(type, label, existingKeys);
 
   const maxOrder = existing.reduce((m, f) => Math.max(m, f.sort_order), -1);
 
   return {
+    // Aufgabe 40 Polish: stabile UI-ID, entkoppelt von field.key.
+    _clientId: `cf_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
     key,
     type,
-    label: labelByType[type],
+    label,
     placeholder: "",
-    // Aufgabe 39 Polish: alle neuen Felder default required=true. Tenant kann auf optional umstellen.
-    // Stavros-Rationale: wer ein Feld hinzufügt will i.d.R. dass es ausgefüllt wird.
+    // Aufgabe 39 Polish: alle neuen Felder default required=true.
     required: true,
     visible: true,
     sort_order: maxOrder + 1,
+    // Aufgabe 40 Polish: semantic Types haben kanonischen Key (touched=true → stabil).
+    // Generic Types syncen ihren Key mit dem Label (touched=false → Auto-Sync aktiv).
+    _keyTouched: SEMANTIC_CONTACT_TYPES.has(type),
     ...(type === "radio" ? { options: ["Option 1", "Option 2"] } : {}),
   };
 }
@@ -103,6 +125,8 @@ function defaultQuestion(type: QuestionType): EditorQuestion {
     numberDefault: "",
     numberUnit: "",
     checkboxLabel: "",
+    // Aufgabe 40 Polish: neue Frage hat noch keinen "berührten" key → Auto-Sync mit Titel aktiv
+    _keyTouched: false,
   };
 }
 
@@ -137,6 +161,33 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
     }
     return { kind: "submit" };
   });
+
+  // Aufgabe 40: Map page_id → Anzahl after_page-Webhooks die auf diese Page zeigen.
+  // Wird beim Mount + nach jeder Subscription-Änderung im WebhooksPanel neu geladen.
+  // Für StepPill-Badges (visuelle Verbindung Builder ↔ Webhooks-Tab).
+  const [webhookCountsByPageId, setWebhookCountsByPageId] = useState<Record<string, number>>({});
+
+  const reloadWebhookCounts = useCallback(async () => {
+    if (!originalSlug) return;
+    try {
+      const res = await fetch(`/api/tenant/funnels/${originalSlug}/webhooks`);
+      if (!res.ok) return;
+      const subs: Array<{ trigger_type: string; trigger_page_id: string | null }> = await res.json();
+      const counts: Record<string, number> = {};
+      for (const sub of subs) {
+        if (sub.trigger_type === "after_page" && sub.trigger_page_id) {
+          counts[sub.trigger_page_id] = (counts[sub.trigger_page_id] ?? 0) + 1;
+        }
+      }
+      setWebhookCountsByPageId(counts);
+    } catch {
+      // silent — Badges sind nice-to-have, kein blocker
+    }
+  }, [originalSlug]);
+
+  useEffect(() => {
+    reloadWebhookCounts();
+  }, [reloadWebhookCounts]);
 
   const isDirty = useMemo(
     () => JSON.stringify(state) !== JSON.stringify(initialState),
@@ -186,7 +237,20 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
       setState((prev) => {
         const next = [...prev.questions];
         if (!next[index]) return prev;
-        next[index] = { ...next[index], ...patch };
+        const current = next[index];
+        const merged: EditorQuestion = { ...current, ...patch };
+
+        // Aufgabe 40 Polish: Auto-Sync questionKey ↔ Title — solange User den Key
+        // noch nicht manuell editiert hat (_keyTouched=false). Wenn der Patch den
+        // questionKey selbst setzt, mark _keyTouched=true (User hat ihn angefasst).
+        if (Object.prototype.hasOwnProperty.call(patch, "questionKey")) {
+          merged._keyTouched = true;
+        } else if (Object.prototype.hasOwnProperty.call(patch, "title") && !current._keyTouched) {
+          // Title hat sich geändert + Key noch nicht manuell editiert → sync
+          merged.questionKey = toKey(merged.title);
+        }
+
+        next[index] = merged;
         return { ...prev, questions: next };
       });
     },
@@ -267,14 +331,26 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
 
   // Aufgabe 38: Patch eines Felds innerhalb einer Custom-Page
   const handlePatchCustomField = useCallback(
-    (pageIndex: number, fieldKey: string, patch: Partial<ContactFieldConfig>) => {
+    (pageIndex: number, clientId: string, patch: Partial<ContactFieldConfig>) => {
       setState((prev) => {
         const next = [...prev.questions];
         const page = next[pageIndex];
         if (!page || page.kind !== "custom") return prev;
-        const fields = (page.customFields ?? []).map((f) =>
-          f.key === fieldKey ? { ...f, ...patch } : f,
-        );
+        const fields = (page.customFields ?? []).map((f) => {
+          if (f._clientId !== clientId) return f;
+          const merged: ContactFieldConfig = { ...f, ...patch };
+          // Aufgabe 40 Polish: gleiche Auto-Sync-Logik wie bei Question-Pages.
+          // Key-Patch → _keyTouched=true. Label-Patch + !_keyTouched → sync key zu toKey(label).
+          if (Object.prototype.hasOwnProperty.call(patch, "key")) {
+            merged._keyTouched = true;
+          } else if (
+            Object.prototype.hasOwnProperty.call(patch, "label") &&
+            !f._keyTouched
+          ) {
+            merged.key = toKey(merged.label) || f.key;
+          }
+          return merged;
+        });
         next[pageIndex] = { ...page, customFields: fields };
         return { ...prev, questions: next };
       });
@@ -300,12 +376,12 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
 
   // Aufgabe 38: Feld einer Custom-Page löschen
   const handleDeleteCustomField = useCallback(
-    (pageIndex: number, fieldKey: string) => {
+    (pageIndex: number, clientId: string) => {
       setState((prev) => {
         const next = [...prev.questions];
         const page = next[pageIndex];
         if (!page || page.kind !== "custom") return prev;
-        const fields = (page.customFields ?? []).filter((f) => f.key !== fieldKey);
+        const fields = (page.customFields ?? []).filter((f) => f._clientId !== clientId);
         next[pageIndex] = { ...page, customFields: fields };
         return { ...prev, questions: next };
       });
@@ -349,10 +425,23 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
   /* ─── Contact-Field-Handler (Submit-Page Multi-Field) ─── */
 
   const handlePatchContactField = useCallback(
-    (key: string, patch: Partial<ContactFieldConfig>) => {
+    (clientId: string, patch: Partial<ContactFieldConfig>) => {
       setState((prev) => ({
         ...prev,
-        contactFields: prev.contactFields.map((f) => (f.key === key ? { ...f, ...patch } : f)),
+        contactFields: prev.contactFields.map((f) => {
+          if (f._clientId !== clientId) return f;
+          const merged: ContactFieldConfig = { ...f, ...patch };
+          // Aufgabe 40 Polish: gleiche Auto-Sync-Logik wie bei Custom-Fields.
+          if (Object.prototype.hasOwnProperty.call(patch, "key")) {
+            merged._keyTouched = true;
+          } else if (
+            Object.prototype.hasOwnProperty.call(patch, "label") &&
+            !f._keyTouched
+          ) {
+            merged.key = toKey(merged.label) || f.key;
+          }
+          return merged;
+        }),
       }));
     },
     [],
@@ -365,10 +454,10 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
     });
   }, []);
 
-  const handleDeleteContactField = useCallback((key: string) => {
+  const handleDeleteContactField = useCallback((clientId: string) => {
     setState((prev) => ({
       ...prev,
-      contactFields: prev.contactFields.filter((f) => f.key !== key),
+      contactFields: prev.contactFields.filter((f) => f._clientId !== clientId),
     }));
   }, []);
 
@@ -648,8 +737,28 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
 
         {/* Body — Layout je nach Tab.
             C.2: Design-Tab versteckt StepList (Theme ist funnel-weit, kein Step) und ersetzt
-            PropertiesPanel durch ThemePanel. CenterCanvas bleibt für Live-Preview. */}
-        {activeTab === "design" ? (
+            PropertiesPanel durch ThemePanel. CenterCanvas bleibt für Live-Preview.
+            Aufgabe 40: Webhooks-Tab ist full-width Panel — kein Canvas, keine StepList,
+            weil Webhook-Config keine Page-Selection braucht. */}
+        {activeTab === "webhooks" ? (
+          mode === "create" || !originalSlug ? (
+            <div className="flex flex-1 items-center justify-center bg-gray-50 dark:bg-background p-8">
+              <div className="max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 text-center">
+                <p className="text-base font-semibold text-gray-900 dark:text-white">Funnel zuerst speichern</p>
+                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                  Webhooks sind funnel-spezifisch. Bitte speichere den Funnel einmal, dann kannst du hier
+                  deine ersten Webhook-Endpoints anlegen.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <WebhooksPanel
+              funnelSlug={originalSlug}
+              questions={state.questions}
+              onSubsChanged={reloadWebhookCounts}
+            />
+          )
+        ) : activeTab === "design" ? (
           <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_420px]">
             <CenterCanvas
               state={state}
@@ -679,6 +788,8 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
               onAddCustomPage={handleAddCustomPage}
               onAddAddressCard={handleAddAddressCard}
               onAddWelcome={handleAddWelcome}
+              webhookCountsByPageId={webhookCountsByPageId}
+              onSwitchToWebhooksTab={() => setActiveTab("webhooks")}
             />
             <CenterCanvas
               state={state}

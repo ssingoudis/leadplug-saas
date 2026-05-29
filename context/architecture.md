@@ -484,9 +484,9 @@ DB (pages + fields)
 
 ---
 
-## 12. Aktueller Zustand des Builders (2026-05-28 abends)
+## 12. Aktueller Zustand des Builders (2026-05-29)
 
-**Fertig (live auf main):**
+**Fertig (live auf main bzw. auf Feature-Branch):**
 - ✅ Aufgaben 25-31 (Schema-Refactor, B-Phase)
 - ✅ Aufgabe 32 (Editor-Shell v2)
 - ✅ Aufgabe 33 (Vorlagen + Field-Level-Properties)
@@ -499,11 +499,48 @@ DB (pages + fields)
 - ✅ Aufgabe 38 (Custom Multi-Field-Pages)
 - ✅ Aufgabe 39 (Welcome + Rating/Scale/Statement + End-Screen-Redirect + Builder-Cleanup)
 - ✅ Polish-Iteration nach 39 (UX-Bugs + Defaults + Visual-Builder)
+- ✅ **Aufgabe 40 (Webhook-Actions, 2026-05-29, auf Branch `feature/aufgabe-40-webhook-actions`)** — Action-Element-Modell: Webhooks sind dynamisch konfigurierbare Builder-Elemente im neuen „Webhooks"-Tab. Backend (Sender + HMAC + Cron + Retry + abandoned-Trigger), Editor-Tab + Step-Pill-Badges, CRUD-API. Schema additive (siehe `supabase-schema.md`). Replaces ursprünglichen C.5-Scope.
 
 **Offen vor Launch (siehe roadmap.md + builder-fokus-roadmap.html):**
-- Date-Picker als Inline-Kalender statt HTML5-default (im Polish-Loop offen)
-- C.5 Webhook-Sender (Backend + Subscription-CRUD-UI) — Bedingung für 29€-Tier
+- E-Mails-Tab dynamisch machen (folgt Webhook-Action-Pattern)
 - C.4 Logic Jumps (v1.1 OK)
-- D.1 Stripe Live
-- D.2 Conversion-Tracking via postMessage (Performance-Marketing-Blocker)
+- D.1 Stripe Live (aufgeschoben, Testkunden `free`-Tier)
+- D.2 Conversion-Tracking via postMessage + Script-Loader-Embed (Performance-Marketing-Blocker)
 - D.3 3-5 Demo-Funnels als Templates
+
+## 13. Action-Element-Architektur (Aufgabe 40)
+
+> Vollständig in Memory `strategy-action-modell` + CLAUDE.md §5 dokumentiert. Hier nur die Code-Karte.
+
+**Backend (Server):**
+- [`lib/webhooks.ts`](../lib/webhooks.ts) ~540 LOC — Sender + HMAC-Signing (Stripe-Pattern `t=,v1=`) + Payload-Builder (answers[] mit Labels + answers_flat mit Label-as-Value) + Backoff-Helper + 4 public Entry-Points: `triggerOnSubmit`, `triggerOnPageAdvance`, `retryDelivery`, `sendTestPayload`. Plus `generateWebhookSecret()` → `whsec_<64-hex>`.
+- [`app/api/submit/route.ts`](../app/api/submit/route.ts) erweitert um `after(triggerOnSubmit(funnelId, 'submission.completed', snapshot, tenantConfig))` — Submit-Response geht sofort raus, Webhook-Delivery läuft asynchron weiter.
+- [`app/api/cron/webhook-retry/route.ts`](../app/api/cron/webhook-retry/route.ts) alle 5 Min via [`vercel.json`](../vercel.json). Auth via `Authorization: Bearer $CRON_SECRET`. Macht Retries (Backoff `1m/5m/30m/2h/6h`) + abandoned-Trigger (10 Min Cooldown).
+- `app/api/tenant/funnels/[slug]/webhooks/...` — Subscription-CRUD + `/test` + `/logs`.
+
+**Frontend (Editor):**
+- [`components/tenant-editor/v2/TopTabs.tsx`](../components/tenant-editor/v2/TopTabs.tsx) erweitert: neuer Tab „Webhooks".
+- [`components/tenant-editor/v2/WebhooksPanel.tsx`](../components/tenant-editor/v2/WebhooksPanel.tsx) ~600 LOC — Container + Liste + collapsible Cards (Config, Test, Logs, Secret-Rotation, Verify-Snippet Node/Python/PHP).
+- [`components/tenant-editor/v2/WebhookAddModal.tsx`](../components/tenant-editor/v2/WebhookAddModal.tsx) — Add-Modal mit Trigger-Auswahl (on_submit / after_page) + Event-Multi-Select.
+- [`components/tenant-editor/v2/EditorShellV2.tsx`](../components/tenant-editor/v2/EditorShellV2.tsx) routet `activeTab === "webhooks"` auf WebhooksPanel (full-width) + lädt webhook-trigger_page_id Map für StepPill-Badges.
+- [`components/tenant-editor/v2/StepPill.tsx`](../components/tenant-editor/v2/StepPill.tsx) + [`StepList.tsx`](../components/tenant-editor/v2/StepList.tsx) erweitert um violettes Webhook-Badge mit Count. Click → springt in Webhooks-Tab.
+
+**Payload-Format (final):**
+```json
+{
+  "event": "submission.completed",
+  "delivery_id": "<uuid>",
+  "delivered_at": "2026-05-29T14:23:00Z",
+  "tenant_id": "<uuid>",
+  "funnel": { "id": "<uuid>", "slug": "...", "name": "..." },
+  "submission": { "id", "session_id", "created_at", "completed_at", "source_url", "lead_price" },
+  "available_channels": { "email": true, "telefon": false, "name": true },
+  "contact": { "email": "...", "name": "...", "telefon": "..." },
+  "answers": [
+    { "key": "...", "label": "...", "type": "single_choice", "value": "internal", "value_label": "User-readable" }
+  ],
+  "answers_flat": { "key": "User-readable label" }
+}
+```
+
+**HMAC-Header:** `X-LeadPlug-Signature: t=<unix-seconds>,v1=<hex-hmac-sha256>` über `<t>.<bodyJson>`. Tenant verifiziert mit dem Secret (Code-Snippets im Tab).
