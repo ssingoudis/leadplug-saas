@@ -108,7 +108,7 @@ Wichtige Spalten:
 |---|---|---|
 | `id` | Eindeutige ID dieser Subscription | uuid |
 | `funnel_id` | Zu welchem Funnel gehört das Abo? | uuid |
-| `url` | Wohin schicken? | `https://hooks.zapier.com/…` |
+| `url` | Wohin schicken? | URL des Tenant-CRMs (Zapier, Make, eigener Endpoint, …) |
 | `secret` | Geheimer Schlüssel für Signatur (siehe Teil 6) | `whsec_a8f3…` |
 | `event_types` | Bei welchen Events feuern? | `['submission.completed']` |
 | `trigger_type` | Wann genau? | `on_submit` oder `after_page` |

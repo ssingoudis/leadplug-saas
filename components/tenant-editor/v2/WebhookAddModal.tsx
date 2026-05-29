@@ -107,7 +107,7 @@ export function WebhookAddModal({ open, onClose, questions, onCreate }: Props) {
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://hooks.zapier.com/hooks/catch/123/abc/"
+              placeholder="https://dein-crm.example.com/webhook"
               className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-primary focus:outline-none"
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
