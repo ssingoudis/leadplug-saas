@@ -40,15 +40,15 @@ interface Props {
   onPatch: (patch: Partial<EditorState>) => void;
   onPatchQuestion: (index: number, patch: Partial<EditorQuestion>) => void;
   onDeleteQuestion: (index: number) => void;
-  // Submit-Page contact field operations
-  onPatchContactField: (key: string, patch: Partial<ContactFieldConfig>) => void;
+  // Submit-Page contact field operations — Aufgabe 40 Polish: clientId statt key als Identifier
+  onPatchContactField: (clientId: string, patch: Partial<ContactFieldConfig>) => void;
   onAddContactField: (type: ContactFieldConfig["type"]) => void;
-  onDeleteContactField: (key: string) => void;
+  onDeleteContactField: (clientId: string) => void;
   onReorderContactFields: (next: ContactFieldConfig[]) => void;
-  // Aufgabe 38: Custom-Multi-Field-Page Field-Operationen (pro page index + field key)
-  onPatchCustomField: (pageIndex: number, fieldKey: string, patch: Partial<ContactFieldConfig>) => void;
+  // Aufgabe 38: Custom-Multi-Field-Page Field-Operationen (pro page index + clientId)
+  onPatchCustomField: (pageIndex: number, clientId: string, patch: Partial<ContactFieldConfig>) => void;
   onAddCustomField: (pageIndex: number, type: ContactFieldConfig["type"]) => void;
-  onDeleteCustomField: (pageIndex: number, fieldKey: string) => void;
+  onDeleteCustomField: (pageIndex: number, clientId: string) => void;
   onReorderCustomFields: (pageIndex: number, next: ContactFieldConfig[]) => void;
   // C.1c WYSIWYG-Edit: bidirektionaler Sync mit CenterCanvas-Selektion
   selectedFieldRef: string;
@@ -92,9 +92,9 @@ export function PropertiesPanel({
           index={selected.questionIndex}
           onPatchQuestion={onPatchQuestion}
           onDelete={() => onDeleteQuestion(selected.questionIndex)}
-          onPatchCustomField={(key, patch) => onPatchCustomField(selected.questionIndex, key, patch)}
+          onPatchCustomField={(clientId, patch) => onPatchCustomField(selected.questionIndex, clientId, patch)}
           onAddCustomField={(type) => onAddCustomField(selected.questionIndex, type)}
-          onDeleteCustomField={(key) => onDeleteCustomField(selected.questionIndex, key)}
+          onDeleteCustomField={(clientId) => onDeleteCustomField(selected.questionIndex, clientId)}
           onReorderCustomFields={(next) => onReorderCustomFields(selected.questionIndex, next)}
         />
       ) : selected.kind === "question" ? (
@@ -228,15 +228,17 @@ function SubmitProps({
 }: {
   state: EditorState;
   onPatch: (patch: Partial<EditorState>) => void;
-  onPatchContactField: (key: string, patch: Partial<ContactFieldConfig>) => void;
+  onPatchContactField: (clientId: string, patch: Partial<ContactFieldConfig>) => void;
   onAddContactField: (type: ContactFieldConfig["type"]) => void;
-  onDeleteContactField: (key: string) => void;
+  onDeleteContactField: (clientId: string) => void;
   onReorderContactFields: (next: ContactFieldConfig[]) => void;
   selectedFieldRef: string;
   onSelectFieldRef: (ref: string) => void;
 }) {
   // Welcher Kontakt-Feld-Key ist momentan expandiert? Abgeleitet aus selectedFieldRef.
   // Sync mit CenterCanvas: Klick auf "contact_field_<key>" im Center → expand passende Row.
+  // Hinweis: Das hier basiert weiter auf field.key (CenterCanvas kennt nur field.key),
+  // NICHT auf _clientId — daher manuelle Aktualisierung wenn der user den key editiert.
   const expandedKey = selectedFieldRef.startsWith("contact_field_")
     ? selectedFieldRef.slice("contact_field_".length)
     : null;
@@ -257,8 +259,9 @@ function SubmitProps({
   function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
-    const oldIdx = state.contactFields.findIndex((f) => f.key === active.id);
-    const newIdx = state.contactFields.findIndex((f) => f.key === over.id);
+    // Aufgabe 40 Polish: drag-IDs sind _clientId (stable), nicht field.key (kann sich ändern)
+    const oldIdx = state.contactFields.findIndex((f) => f._clientId === active.id);
+    const newIdx = state.contactFields.findIndex((f) => f._clientId === over.id);
     if (oldIdx < 0 || newIdx < 0) return;
     onReorderContactFields(arrayMove(state.contactFields, oldIdx, newIdx));
   }
@@ -314,20 +317,22 @@ function SubmitProps({
       <Section title="Felder dieser Seite">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext
-            items={state.contactFields.map((f) => f.key)}
+            items={state.contactFields.map((f) => f._clientId ?? f.key)}
             strategy={verticalListSortingStrategy}
           >
             <div className="flex flex-col gap-1.5">
               {state.contactFields.map((f) => (
                 <SortableContactFieldRow
-                  key={f.key}
+                  // Aufgabe 40 Polish: stabile _clientId als React + Sortable-ID, NICHT field.key
+                  // (sonst remount bei jeder Key-Änderung während Live-Sync).
+                  key={f._clientId ?? f.key}
                   field={f}
                   expanded={expandedKey === f.key}
                   onToggle={() =>
                     onSelectFieldRef(expandedKey === f.key ? "" : `contact_field_${f.key}`)
                   }
-                  onPatch={(patch) => onPatchContactField(f.key, patch)}
-                  onDelete={() => onDeleteContactField(f.key)}
+                  onPatch={(patch) => onPatchContactField(f._clientId ?? f.key, patch)}
+                  onDelete={() => onDeleteContactField(f._clientId ?? f.key)}
                 />
               ))}
             </div>
@@ -380,14 +385,15 @@ function CustomPageProps({
   index: number;
   onPatchQuestion: (index: number, patch: Partial<EditorQuestion>) => void;
   onDelete: () => void;
-  onPatchCustomField: (key: string, patch: Partial<ContactFieldConfig>) => void;
+  onPatchCustomField: (clientId: string, patch: Partial<ContactFieldConfig>) => void;
   onAddCustomField: (type: ContactFieldConfig["type"]) => void;
-  onDeleteCustomField: (key: string) => void;
+  onDeleteCustomField: (clientId: string) => void;
   onReorderCustomFields: (next: ContactFieldConfig[]) => void;
 }) {
   const page = state.questions[index];
   const [showAddPicker, setShowAddPicker] = useState(false);
-  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  // Aufgabe 40 Polish: expanded-State trackt jetzt _clientId statt key (stabil bei key-Edit).
+  const [expandedClientId, setExpandedClientId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -402,8 +408,8 @@ function CustomPageProps({
   function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
-    const oldIdx = fields.findIndex((f) => f.key === active.id);
-    const newIdx = fields.findIndex((f) => f.key === over.id);
+    const oldIdx = fields.findIndex((f) => (f._clientId ?? f.key) === active.id);
+    const newIdx = fields.findIndex((f) => (f._clientId ?? f.key) === over.id);
     if (oldIdx < 0 || newIdx < 0) return;
     onReorderCustomFields(arrayMove(fields, oldIdx, newIdx));
   }
@@ -437,20 +443,23 @@ function CustomPageProps({
       <Section title="Felder dieser Karte">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext
-            items={fields.map((f) => f.key)}
+            items={fields.map((f) => f._clientId ?? f.key)}
             strategy={verticalListSortingStrategy}
           >
             <div className="flex flex-col gap-1.5">
-              {fields.map((f) => (
-                <SortableContactFieldRow
-                  key={f.key}
-                  field={f}
-                  expanded={expandedKey === f.key}
-                  onToggle={() => setExpandedKey((prev) => (prev === f.key ? null : f.key))}
-                  onPatch={(patch) => onPatchCustomField(f.key, patch)}
-                  onDelete={() => onDeleteCustomField(f.key)}
-                />
-              ))}
+              {fields.map((f) => {
+                const cid = f._clientId ?? f.key;
+                return (
+                  <SortableContactFieldRow
+                    key={cid}
+                    field={f}
+                    expanded={expandedClientId === cid}
+                    onToggle={() => setExpandedClientId((prev) => (prev === cid ? null : cid))}
+                    onPatch={(patch) => onPatchCustomField(cid, patch)}
+                    onDelete={() => onDeleteCustomField(cid)}
+                  />
+                );
+              })}
             </div>
           </SortableContext>
         </DndContext>
@@ -512,8 +521,10 @@ function SortableContactFieldRow({
   onPatch: (patch: Partial<ContactFieldConfig>) => void;
   onDelete: () => void;
 }) {
+  // Aufgabe 40 Polish: useSortable id ist stable _clientId, nicht field.key — sonst remount bei
+  // Live-Key-Sync mitten im Tippen.
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
-    useSortable({ id: field.key });
+    useSortable({ id: field._clientId ?? field.key });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -539,6 +550,10 @@ function SortableContactFieldRow({
     multi_choice: "☑",
     rating: "★",
     scale: "⊢",
+    // Aufgabe 40 Polish
+    first_name: "👤",
+    last_name: "👤",
+    full_name: "👤",
   };
   const icon = iconByType[field.type] ?? "T";
   const TEXT_PILL = "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800";
@@ -550,6 +565,8 @@ function SortableContactFieldRow({
     radio: CHOICE_PILL, dropdown: CHOICE_PILL, multi_choice: CHOICE_PILL,
     number: NUMERIC_PILL, date: NUMERIC_PILL, checkbox: NUMERIC_PILL, slider: NUMERIC_PILL,
     rating: RATING_PILL, scale: RATING_PILL,
+    // Aufgabe 40 Polish — Name-Fields wie TEXT
+    first_name: TEXT_PILL, last_name: TEXT_PILL, full_name: TEXT_PILL,
   };
   const pillClass = pillByType[field.type] ?? TEXT_PILL;
 
@@ -832,11 +849,15 @@ function TypeSelect({
         onChange={(e) => onChange(e.target.value as QuestionType)}
         className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pr-9 text-sm text-gray-900 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
       >
-        {QUESTION_TYPE_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
+        {QUESTION_TYPE_OPTIONS
+          // Aufgabe 40 Polish: Name-Field-Types nicht als eigenständige Question-Type
+          // anbieten — die gehören nur in Multi-Field-Karten + Submit-Page-Kontaktformular.
+          .filter((o) => o.value !== "first_name" && o.value !== "last_name" && o.value !== "full_name")
+          .map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
       </select>
       <ChevronDown
         size={14}

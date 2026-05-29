@@ -47,6 +47,10 @@ const QUESTION_META: Record<QuestionType, FieldMeta> = {
   rating: { label: "Sterne-Rating", category: "numeric", pillClass: RATING_PILL, icon: "★" },
   scale: { label: "Skala (0-N)", category: "numeric", pillClass: RATING_PILL, icon: "⊢" },
   statement: { label: "Info-Block", category: "text", pillClass: STATEMENT_PILL, icon: "ⓘ" },
+  // Aufgabe 40 Polish — Name-Field-Types
+  first_name: { label: "Vorname", category: "text", pillClass: TEXT_PILL, icon: "👤" },
+  last_name: { label: "Nachname", category: "text", pillClass: TEXT_PILL, icon: "👤" },
+  full_name: { label: "Name", category: "text", pillClass: TEXT_PILL, icon: "👤" },
 };
 
 export function questionMeta(type: QuestionType): FieldMeta {
@@ -110,5 +114,9 @@ export function contactFieldTypeLabel(type: ContactFieldConfig["type"]): string 
     case "multi_choice": return "Mehrfachauswahl";
     case "rating":       return "Sterne-Rating";
     case "scale":        return "Skala";
+    // Aufgabe 40 Polish
+    case "first_name":   return "Vorname";
+    case "last_name":    return "Nachname";
+    case "full_name":    return "Name";
   }
 }

@@ -68,6 +68,14 @@ export function validateContactField(field: ContactFieldConfig, value: string): 
     case "scale":
       return !value.trim() ? `Bitte wählen Sie einen Wert auf der Skala.` : ""
 
+    // Aufgabe 40 Polish: Name-Field-Types — wie text, aber mit klarerer Fehlermeldung.
+    case "first_name":
+      return !value.trim() ? "Bitte geben Sie Ihren Vornamen ein." : ""
+    case "last_name":
+      return !value.trim() ? "Bitte geben Sie Ihren Nachnamen ein." : ""
+    case "full_name":
+      return !value.trim() ? "Bitte geben Sie Ihren Namen ein." : ""
+
     default:
       return ""
   }

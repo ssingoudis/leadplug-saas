@@ -40,6 +40,10 @@ function fieldTypeToContactType(ft: string): ContactFieldConfig['type'] {
     case 'multi_choice': return 'multi_choice'
     case 'rating':       return 'rating'
     case 'scale':        return 'scale'
+    // Aufgabe 40 Polish
+    case 'first_name':   return 'first_name'
+    case 'last_name':    return 'last_name'
+    case 'full_name':    return 'full_name'
     default:             return 'text' // defensive fallback
   }
 }
@@ -52,6 +56,8 @@ const VALID_QUESTION_TYPES: ReadonlySet<string> = new Set([
   'email', 'tel', 'date', 'number', 'dropdown', 'checkbox',
   // Aufgabe 39
   'rating', 'scale', 'statement',
+  // Aufgabe 40 Polish
+  'first_name', 'last_name', 'full_name',
 ])
 function fieldTypeToQuestionType(ft: string): QuestionType {
   return VALID_QUESTION_TYPES.has(ft) ? (ft as QuestionType) : 'single_choice'
@@ -108,6 +114,8 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
       const pageCfg = page.config ?? {}
       return {
         id: typeof pageCfg.page_key === 'string' && pageCfg.page_key ? pageCfg.page_key : page.id,
+        // Aufgabe 40 Polish: echte page-uuid für after_page-Webhook-Trigger
+        pageId: page.id,
         title: typeof pageCfg.title === 'string' ? pageCfg.title : '',
         subtitle: typeof pageCfg.subtitle === 'string' ? pageCfg.subtitle : undefined,
         questionType: 'single_choice',
@@ -137,6 +145,8 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
       }))
       return {
         id: typeof pageCfg.page_key === 'string' && pageCfg.page_key ? pageCfg.page_key : page.id,
+        // Aufgabe 40 Polish: echte page-uuid für after_page-Webhook-Trigger
+        pageId: page.id,
         title: typeof pageCfg.title === 'string' ? pageCfg.title : '',
         subtitle: typeof pageCfg.subtitle === 'string' ? pageCfg.subtitle : undefined,
         // Custom-Page hat keinen klassischen questionType — Default-Wert nur fürs Type-System,
@@ -166,6 +176,8 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
     const opts = Array.isArray(f.options) ? f.options : []
     return {
       id: f.field_key,
+      // Aufgabe 40 Polish: echte page-uuid für after_page-Webhook-Trigger
+      pageId: page.id,
       title: f.label,
       subtitle: f.subtitle ?? undefined,
       questionType: fieldTypeToQuestionType(f.field_type),

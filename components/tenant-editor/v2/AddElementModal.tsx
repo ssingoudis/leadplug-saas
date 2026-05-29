@@ -27,6 +27,17 @@ const GROUPS: { key: string; label: string; categories: string[] }[] = [
   { key: "numeric", label: "Numerisch & Datum", categories: ["numeric"] },
 ];
 
+/**
+ * Aufgabe 40 Polish: Question-Types die KEINE einzelne Page bekommen sollen.
+ * Name-Field-Types sind sinnvoll im Kontext einer Multi-Field-Karte (AddContactFieldPicker),
+ * aber eine eigene Question-Page nur mit „Vorname" ist UX-Quatsch.
+ */
+const EXCLUDED_AS_SINGLE_PAGE: ReadonlySet<QuestionType> = new Set([
+  "first_name",
+  "last_name",
+  "full_name",
+]);
+
 export function AddElementModal({
   open,
   onClose,
@@ -143,7 +154,8 @@ export function AddElementModal({
 
             {GROUPS.map((group) => {
               const items = QUESTION_TYPE_OPTIONS.filter((opt) =>
-                group.categories.includes(questionMeta(opt.value).category),
+                group.categories.includes(questionMeta(opt.value).category) &&
+                !EXCLUDED_AS_SINGLE_PAGE.has(opt.value),
               );
               if (items.length === 0) return null;
               return (

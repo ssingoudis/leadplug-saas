@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>LeadPlug — Webhook-Architektur (Aufgabe 40)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *      { box-sizing: border-box; margin: 0; padding: 0; }
+    html   { scroll-behavior: smooth; }
+    body   {
+      background: #f8fafc;
+      color: #0f172a;
+      font-family: 'Inter', system-ui, sans-serif;
+      line-height: 1.55;
+      padding: 40px 24px 80px;
+    }
+    .container { max-width: 1100px; margin: 0 auto; }
+    .mono { font-family: 'JetBrains Mono', 'Courier New', monospace; }
+
+    /* ---- Header ---- */
+    .hero {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    .hero .pill {
+      display: inline-block;
+      background: #0f172a;
+      color: #fff;
+      padding: 4px 14px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+    }
+    .hero h1 {
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: -0.8px;
+      margin-bottom: 10px;
+    }
+    .hero p {
+      font-size: 15px;
+      color: #475569;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    /* ---- Sections ---- */
+    h2 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+      margin: 56px 0 16px;
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+    h2::before {
+      content: '';
+      width: 4px;
+      height: 22px;
+      background: #2563eb;
+      border-radius: 2px;
+    }
+    h3 {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 22px 0 10px;
+      color: #1e293b;
+    }
+    p, li { font-size: 14px; color: #334155; }
+    p { margin-bottom: 10px; }
+    code.inline {
+      background: #f1f5f9;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: #0f172a;
+    }
+
+    /* ---- Three-worlds-map ---- */
+    .worlds {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin: 20px 0;
+    }
+    .world {
+      background: #fff;
+      border: 2px solid;
+      border-radius: 14px;
+      padding: 18px;
+    }
+    .world.client  { border-color: #94a3b8; }
+    .world.server  { border-color: #2563eb; }
+    .world.tenant  { border-color: #14b8a6; }
+    .world .tag {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+    .world.client  .tag { color: #64748b; }
+    .world.server  .tag { color: #2563eb; }
+    .world.tenant  .tag { color: #0f766e; }
+    .world h4 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .world p { font-size: 12px; color: #64748b; margin: 0; }
+
+    /* ---- DB-Schema (tables) ---- */
+    .schema-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 16px;
+    }
+    .table-card {
+      background: #fff;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .table-card.wide { grid-column: span 2; }
+    .table-card .table-head {
+      background: #0f172a;
+      color: #fff;
+      padding: 8px 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .table-card .table-head .badge {
+      font-size: 10px;
+      background: #fbbf24;
+      color: #78350f;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+    }
+    .table-card .table-head .badge.new { background: #34d399; color: #064e3b; }
+    .table-card .columns {
+      list-style: none;
+      padding: 0;
+    }
+    .table-card .columns li {
+      display: flex;
+      gap: 8px;
+      padding: 5px 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      border-bottom: 1px solid #f1f5f9;
+      color: #334155;
+      align-items: baseline;
+    }
+    .table-card .columns li:last-child { border-bottom: none; }
+    .table-card .columns .col-name { font-weight: 700; color: #0f172a; min-width: 200px; }
+    .table-card .columns .col-type { color: #94a3b8; }
+    .table-card .columns .col-note {
+      flex: 1;
+      text-align: right;
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      color: #64748b;
+    }
+    .table-card .columns li.new {
+      background: #f0fdf4;
+    }
+    .table-card .columns li.new .col-name { color: #047857; }
+
+    /* ---- Sequence diagrams ---- */
+    .seq {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 16px 0;
+    }
+    .seq-title {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .seq-title .step-num {
+      display: inline-flex;
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      background: #2563eb;
+      color: #fff;
+      align-items: center; justify-content: center;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .seq-lanes {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .seq-lane {
+      text-align: center;
+      padding: 6px 0;
+      border-bottom: 2px solid;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .seq-lane.client { border-color: #94a3b8; color: #64748b; }
+    .seq-lane.server { border-color: #2563eb; color: #2563eb; }
+    .seq-lane.tenant { border-color: #14b8a6; color: #0f766e; }
+    .seq-steps {
+      list-style: none;
+      padding: 0;
+      counter-reset: seq-num;
+    }
+    .seq-steps li {
+      display: grid;
+      grid-template-columns: 26px 1fr;
+      gap: 10px;
+      padding: 7px 0;
+      align-items: baseline;
+      font-size: 12px;
+      border-bottom: 1px dashed #f1f5f9;
+      color: #334155;
+    }
+    .seq-steps li:last-child { border-bottom: none; }
+    .seq-steps li::before {
+      counter-increment: seq-num;
+      content: counter(seq-num);
+      grid-column: 1;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: #f1f5f9;
+      color: #475569;
+      text-align: center;
+      font-size: 10px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 22px;
+    }
+    .seq-steps .arrow {
+      font-family: 'JetBrains Mono', monospace;
+      color: #94a3b8;
+      font-size: 11px;
+      margin-left: 4px;
+    }
+    .seq-steps code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      background: #f1f5f9;
+      padding: 1px 5px;
+      border-radius: 3px;
+      color: #1e293b;
+    }
+    .seq-steps small {
+      display: block;
+      font-size: 10px;
+      color: #94a3b8;
+      margin-top: 1px;
+    }
+
+    /* ---- Payload preview ---- */
+    .payload {
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 10px;
+      padding: 18px 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      overflow-x: auto;
+      margin: 16px 0;
+    }
+    .payload .key { color: #93c5fd; }
+    .payload .str { color: #fde68a; }
+    .payload .num { color: #f472b6; }
+    .payload .bool { color: #c4b5fd; }
+    .payload .null { color: #94a3b8; font-style: italic; }
+    .payload .com { color: #64748b; font-style: italic; }
+
+    /* ---- HMAC diagram ---- */
+    .hmac-flow {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 18px 20px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 16px;
+      margin-top: 14px;
+    }
+    .hmac-side {
+      padding: 12px;
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+    .hmac-side h5 {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #64748b;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .hmac-arrow {
+      font-size: 26px;
+      color: #94a3b8;
+    }
+
+    /* ---- Status cards ---- */
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .status {
+      background: #fff;
+      border-radius: 12px;
+      border-top: 4px solid;
+      padding: 16px;
+    }
+    .status.ok    { border-color: #22c55e; }
+    .status.open  { border-color: #f59e0b; }
+    .status.bug   { border-color: #ef4444; }
+    .status h4 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .status.ok h4   { color: #15803d; }
+    .status.open h4 { color: #b45309; }
+    .status.bug h4  { color: #b91c1c; }
+    .status ul {
+      list-style: none;
+      padding: 0;
+    }
+    .status li {
+      font-size: 12px;
+      padding: 4px 0 4px 18px;
+      position: relative;
+      color: #334155;
+    }
+    .status li::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 8px;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+    }
+    .status.ok li::before   { background: #22c55e; }
+    .status.open li::before { background: #f59e0b; }
+    .status.bug li::before  { background: #ef4444; }
+
+    /* ---- UI map ---- */
+    .ui-map {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 18px;
+      margin-top: 16px;
+    }
+    .ui-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .ui-tab {
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #94a3b8;
+    }
+    .ui-tab.active {
+      color: #0f172a;
+      border-bottom: 2px solid #2563eb;
+      margin-bottom: -1px;
+    }
+    .ui-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      background: #f1f5f9;
+      border-radius: 999px;
+      font-size: 11px;
+      color: #334155;
+      margin-right: 6px;
+    }
+    .ui-pill.violet { background: #ede9fe; color: #6d28d9; }
+
+    /* ---- Quick reference ---- */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      margin-top: 14px;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 12px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    th {
+      background: #f8fafc;
+      font-weight: 700;
+      color: #475569;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+    }
+    td:first-child { font-weight: 600; color: #0f172a; }
+
+    /* ---- TOC ---- */
+    .toc {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-bottom: 30px;
+    }
+    .toc h4 {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+    .toc ol {
+      list-style: none;
+      padding: 0;
+      columns: 2;
+      column-gap: 30px;
+    }
+    .toc li {
+      font-size: 12px;
+      margin-bottom: 5px;
+    }
+    .toc a {
+      color: #2563eb;
+      text-decoration: none;
+    }
+    .toc a:hover { text-decoration: underline; }
+
+    /* ---- Note boxes ---- */
+    .note {
+      background: #eff6ff;
+      border-left: 4px solid #2563eb;
+      padding: 12px 16px;
+      border-radius: 4px;
+      margin: 12px 0;
+      font-size: 13px;
+      color: #1e3a8a;
+    }
+    .note.warn {
+      background: #fef3c7;
+      border-left-color: #f59e0b;
+      color: #78350f;
+    }
+    .note.danger {
+      background: #fee2e2;
+      border-left-color: #ef4444;
+      color: #7f1d1d;
+    }
+    .note strong { font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- ──────────── HERO ──────────── -->
+    <header class="hero">
+      <span class="pill">Stand 2026-05-29 · Aufgabe 40</span>
+      <h1>Webhook-Architektur</h1>
+      <p>
+        Vollständige technische Karte des Webhook-Subsystems im Action-Element-Modell.
+        Tenants verbinden ihr CRM mit ihrem LeadPlug-Funnel per HTTP-POST —
+        fire-and-forget mit Auto-Retry + Abbrecher-Capture.
+      </p>
+    </header>
+
+    <!-- ──────────── TOC ──────────── -->
+    <div class="toc">
+      <h4>Inhalt</h4>
+      <ol>
+        <li><a href="#kern">1 · Action-Element-Modell</a></li>
+        <li><a href="#welten">2 · Die drei Welten</a></li>
+        <li><a href="#schema">3 · DB-Schema</a></li>
+        <li><a href="#code">4 · Code-Layout</a></li>
+        <li><a href="#completed">5 · Flow: Completed-Webhook</a></li>
+        <li><a href="#abandoned">6 · Flow: Abbrecher-Webhook</a></li>
+        <li><a href="#retry">7 · Flow: Retry</a></li>
+        <li><a href="#payload">8 · Payload-Format</a></li>
+        <li><a href="#hmac">9 · HMAC-Signatur</a></li>
+        <li><a href="#ui">10 · UI im Editor</a></li>
+        <li><a href="#status">11 · Status &amp; Known Issues</a></li>
+        <li><a href="#quickref">12 · Quick-Reference</a></li>
+      </ol>
+    </div>
+
+    <!-- ──────────── 1 — Mission ──────────── -->
+    <h2 id="kern">1 · Action-Element-Modell — die Kern-Idee</h2>
+    <p>
+      LeadPlug ist „eine Art Typeform-Klon": <strong>alle Output-Mechanismen sind
+      dynamisch konfigurierbare Builder-Elemente</strong>. Webhooks sind die
+      erste Action-Klasse — E-Mails, Logic-Jumps, Slack-Notifications folgen
+      demselben Pattern.
+    </p>
+
+    <div class="schema-grid">
+      <div class="table-card">
+        <div class="table-head" style="background:#94a3b8;">VORHER (vor Aufgabe 40)</div>
+        <div style="padding:14px; font-size:12px; color:#64748b; line-height:1.7;">
+          <strong style="color:#0f172a;">/api/submit</strong> → hartkodiert →
+          Mail + (geplanter) Tenant-globaler Webhook.<br>
+          Tenant konnte nichts steuern. Trigger immer „bei Submit".
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-head" style="background:#16a34a;">JETZT (Aufgabe 40)</div>
+        <div style="padding:14px; font-size:12px; color:#15803d; line-height:1.7;">
+          <strong style="color:#0f172a;">Funnel</strong> → N Action-Subscriptions im Editor-Tab.<br>
+          Pro Webhook: <em>wann</em> (<code class="inline">on_submit</code> oder
+          <code class="inline">after_page:&lt;id&gt;</code>) und <em>welche Events</em>
+          (completed, abandoned, step.advanced).<br>
+          Tenant entscheidet, wir vorplanen nicht.
+        </div>
+      </div>
+    </div>
+
+    <!-- ──────────── 2 — Drei Welten ──────────── -->
+    <h2 id="welten">2 · Die drei Welten</h2>
+    <p>
+      Der Sender lebt server-side. Cron läuft in Vercel. Tenant-CRM ist außerhalb
+      — Zapier, Make, Pipedream, n8n, oder direkter Endpoint.
+    </p>
+    <div class="worlds">
+      <div class="world client">
+        <div class="tag">① Endkunde-Browser</div>
+        <h4>Live-Widget (iFrame)</h4>
+        <p>
+          Sendet /api/submit beim Funnel-Ende (oder Auto-Finish im Skip-Mode).
+          Sendet /api/track-progress alle 600ms-debounced bei Antwort-Änderungen.
+        </p>
+      </div>
+      <div class="world server">
+        <div class="tag">② LeadPlug-Server (Vercel)</div>
+        <h4>Sender + Cron + Editor-API</h4>
+        <p>
+          <strong>lib/webhooks.ts</strong> baut Payload + HMAC, postet mit Timeout,
+          loggt in delivery_attempts.<br>
+          <strong>after()</strong> aus /api/submit triggert fire-and-forget.<br>
+          <strong>Cron</strong> alle 5 Min macht Retries + Abbrecher-Trigger.
+        </p>
+      </div>
+      <div class="world tenant">
+        <div class="tag">③ Tenant-CRM</div>
+        <h4>Zapier / Pipedrive / HubSpot / …</h4>
+        <p>
+          Empfängt POST mit JSON-Payload + HMAC-Header. Verifiziert optional die
+          Signatur. Legt Lead im CRM an, triggert Slack-Notify, …
+        </p>
+      </div>
+    </div>
+
+    <!-- ──────────── 3 — DB-Schema ──────────── -->
+    <h2 id="schema">3 · DB-Schema</h2>
+    <p>
+      Drei Tabellen + 1 Snapshot-Spalte auf <code class="inline">submissions</code>.
+      Aufgabe 40 fügt zu <code class="inline">webhook_subscriptions</code> die
+      Funnel-Scope + Trigger-Konfig hinzu, zu <code class="inline">webhook_delivery_attempts</code>
+      die Inspector- + Backoff-Felder, und zu <code class="inline">submissions</code>
+      den Cooldown-Marker.
+    </p>
+
+    <div class="schema-grid">
+
+      <div class="table-card wide">
+        <div class="table-head">
+          public.webhook_subscriptions
+          <span class="badge new">erweitert</span>
+        </div>
+        <ul class="columns">
+          <li><span class="col-name">id</span><span class="col-type">uuid PK</span><span class="col-note">gen_random_uuid()</span></li>
+          <li><span class="col-name">tenant_id</span><span class="col-type">uuid FK</span><span class="col-note">→ tenants, für RLS-Speed</span></li>
+          <li class="new"><span class="col-name">funnel_id</span><span class="col-type">uuid NOT NULL FK</span><span class="col-note">→ funnels (CASCADE)</span></li>
+          <li><span class="col-name">url</span><span class="col-type">text NOT NULL</span><span class="col-note">CHECK 'http%' + len ≥ 10</span></li>
+          <li><span class="col-name">secret</span><span class="col-type">text NOT NULL</span><span class="col-note">whsec_&lt;64hex&gt;</span></li>
+          <li><span class="col-name">event_types</span><span class="col-type">text[]</span><span class="col-note">['submission.completed', …]</span></li>
+          <li class="new"><span class="col-name">trigger_type</span><span class="col-type">text NOT NULL</span><span class="col-note">CHECK in (on_submit, after_page)</span></li>
+          <li class="new"><span class="col-name">trigger_page_id</span><span class="col-type">uuid FK</span><span class="col-note">→ pages (SET NULL)</span></li>
+          <li><span class="col-name">is_active</span><span class="col-type">bool DEFAULT true</span><span class="col-note"></span></li>
+          <li><span class="col-name">created_at, updated_at</span><span class="col-type">timestamptz</span><span class="col-note">Trigger für updated_at</span></li>
+        </ul>
+      </div>
+
+      <div class="table-card wide">
+        <div class="table-head">
+          public.webhook_delivery_attempts
+          <span class="badge new">erweitert</span>
+        </div>
+        <ul class="columns">
+          <li><span class="col-name">id</span><span class="col-type">uuid PK</span><span class="col-note">= delivery_id im Payload</span></li>
+          <li><span class="col-name">subscription_id</span><span class="col-type">uuid FK</span><span class="col-note">→ subs (CASCADE)</span></li>
+          <li><span class="col-name">submission_id</span><span class="col-type">uuid FK</span><span class="col-note">→ submissions (SET NULL)</span></li>
+          <li><span class="col-name">attempt_count</span><span class="col-type">int DEFAULT 1</span><span class="col-note">CHECK ≥ 1</span></li>
+          <li><span class="col-name">status</span><span class="col-type">text</span><span class="col-note">pending / retrying / success / failed</span></li>
+          <li class="new"><span class="col-name">event_type</span><span class="col-type">text</span><span class="col-note">submission.completed / .abandoned / step.advanced / webhook.test</span></li>
+          <li><span class="col-name">last_error</span><span class="col-type">text</span><span class="col-note">Kurztext für UI-Inspector</span></li>
+          <li><span class="col-name">delivered_at</span><span class="col-type">timestamptz</span><span class="col-note">NULL bis erfolgreich</span></li>
+          <li class="new"><span class="col-name">next_retry_at</span><span class="col-type">timestamptz</span><span class="col-note">Backoff-Sortierfeld für Cron</span></li>
+          <li class="new"><span class="col-name">response_status_code</span><span class="col-type">int</span><span class="col-note">HTTP-Code (Inspector)</span></li>
+          <li class="new"><span class="col-name">response_body</span><span class="col-type">text</span><span class="col-note">App-truncated auf 4000 Zeichen</span></li>
+          <li><span class="col-name">created_at</span><span class="col-type">timestamptz</span><span class="col-note"></span></li>
+        </ul>
+      </div>
+
+      <div class="table-card wide">
+        <div class="table-head">
+          public.submissions
+          <span class="badge new">+1 Spalte</span>
+        </div>
+        <ul class="columns">
+          <li class="new"><span class="col-name">abandoned_webhook_fired_at</span><span class="col-type">timestamptz</span><span class="col-note">Cooldown-Marker für Cron — verhindert Doppel-Trigger</span></li>
+          <li style="background:#fef9c3;"><span class="col-name">tenant_slug</span><span class="col-type">text</span><span class="col-note">Hotfix 2026-05-29: NOT NULL droppen</span></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <h3>Neue Indices</h3>
+    <ul style="padding-left:18px;">
+      <li><code class="inline">idx_webhook_subscriptions_funnel_id</code> — Sender-Query "alle Subs eines Funnels"</li>
+      <li><code class="inline">idx_webhook_subscriptions_trigger_page</code> (partial) — after_page-Lookup</li>
+      <li><code class="inline">idx_webhook_delivery_retry_due</code> (partial, status IN pending/retrying AND next_retry_at IS NOT NULL) — Cron-Retry-Queue</li>
+      <li><code class="inline">idx_submissions_abandoned_pending</code> (partial) — Cron-Abbrecher-Pick</li>
+    </ul>
+
+    <!-- ──────────── 4 — Code-Layout ──────────── -->
+    <h2 id="code">4 · Code-Layout</h2>
+    <p>Sender ist eine Datei. UI ist 2 Files. CRUD-API sind 4 Routes.</p>
+    <div class="schema-grid">
+      <div class="table-card wide">
+        <div class="table-head">lib/webhooks.ts (~540 LOC)</div>
+        <ul class="columns">
+          <li><span class="col-name">buildSignatureHeader</span><span class="col-note">HMAC-SHA256 Stripe-Pattern</span></li>
+          <li><span class="col-name">buildPayload</span><span class="col-note">answers[] + answers_flat</span></li>
+          <li><span class="col-name">postWithTimeout</span><span class="col-note">fetch + 10s AbortController</span></li>
+          <li><span class="col-name">deliverNewAttempt</span><span class="col-note">INSERT delivery_attempts</span></li>
+          <li><span class="col-name">retryDelivery</span><span class="col-note">Cron re-run</span></li>
+          <li><span class="col-name">triggerOnSubmit</span><span class="col-note">public — von /api/submit + Cron</span></li>
+          <li><span class="col-name">triggerOnPageAdvance</span><span class="col-note">public — vorbereitet, NOCH NICHT verkabelt</span></li>
+          <li><span class="col-name">sendTestPayload</span><span class="col-note">public — Test-Button</span></li>
+          <li><span class="col-name">generateWebhookSecret</span><span class="col-note">whsec_&lt;64hex&gt;</span></li>
+          <li><span class="col-name">nextRetryDelayMs</span><span class="col-note">Backoff [1m, 5m, 30m, 2h, 6h]</span></li>
+        </ul>
+      </div>
+
+      <div class="table-card">
+        <div class="table-head">CRUD-API</div>
+        <ul class="columns">
+          <li><span class="col-name">GET /webhooks</span><span class="col-note">Liste</span></li>
+          <li><span class="col-name">POST /webhooks</span><span class="col-note">Create + Reveal</span></li>
+          <li><span class="col-name">GET /webhooks/[id]</span><span class="col-note">Detail</span></li>
+          <li><span class="col-name">PATCH /webhooks/[id]</span><span class="col-note">Update / Rotate</span></li>
+          <li><span class="col-name">DELETE /webhooks/[id]</span><span class="col-note">Löschen</span></li>
+          <li><span class="col-name">POST .../test</span><span class="col-note">Mock-Senden</span></li>
+          <li><span class="col-name">GET .../logs</span><span class="col-note">Letzte N Versuche</span></li>
+        </ul>
+      </div>
+
+      <div class="table-card">
+        <div class="table-head">Editor-UI</div>
+        <ul class="columns">
+          <li><span class="col-name">TopTabs.tsx</span><span class="col-note">+ 'Webhooks' Tab</span></li>
+          <li><span class="col-name">EditorShellV2.tsx</span><span class="col-note">Route + Badge-Sync</span></li>
+          <li><span class="col-name">WebhooksPanel.tsx (~600)</span><span class="col-note">Liste + Detail-Cards</span></li>
+          <li><span class="col-name">WebhookAddModal.tsx</span><span class="col-note">Add-Modal</span></li>
+          <li><span class="col-name">StepPill.tsx</span><span class="col-note">+ webhookCount-Badge</span></li>
+          <li><span class="col-name">StepList.tsx</span><span class="col-note">Propagation</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ──────────── 5 — Flow: Completed ──────────── -->
+    <h2 id="completed">5 · Flow: Completed-Webhook</h2>
+    <div class="seq">
+      <div class="seq-title">
+        <span class="step-num">①</span>
+        Erfolgreiches Submit eines Endkunden — der häufigste Pfad
+      </div>
+      <div class="seq-lanes">
+        <div class="seq-lane client">Browser</div>
+        <div class="seq-lane server">LeadPlug-Server</div>
+        <div class="seq-lane tenant">Tenant-CRM</div>
+      </div>
+      <ol class="seq-steps">
+        <li><div>User klickt letzte Antwort. Widget POSTet <code>/api/submit</code><br><span class="arrow">───────────►</span></div></li>
+        <li><div><strong>Server:</strong> Honeypot &amp; Rate-Limit-Check, Validation, <code>getTenantConfig</code>, <code>upsertSubmissionProgress(completed=true)</code> setzt completed_at = NOW(), <code>sendAllEmails</code>, <code>updateEmailStatus</code></div></li>
+        <li><div><strong>Server:</strong> Antwort <code>{success: true}</code> geht sofort raus <span class="arrow">◄───────────</span><br><small>UI kann Erfolgsseite anzeigen, kein Warten auf Tenant-CRM</small></div></li>
+        <li><div><strong>Server (after-Hook im Hintergrund):</strong> <code>triggerOnSubmit(funnelId, 'submission.completed', snapshot, tenantConfig)</code></div></li>
+        <li><div><strong>Server:</strong> <code>SELECT subs WHERE funnel_id=X AND is_active AND trigger_type='on_submit' AND event_types contains event</code></div></li>
+        <li><div><strong>Server:</strong> Parallel pro Match: <code>buildPayload</code> + HMAC-Sig + <code>postWithTimeout(url, body, sig, 10s)</code> <span class="arrow">───────────►</span></div></li>
+        <li><div><strong>Tenant:</strong> Zapier empfängt, verifiziert Sig (optional), legt Deal in Pipedrive an, schickt Slack-Notify, antwortet 200 OK <span class="arrow">◄───────────</span></div></li>
+        <li><div><strong>Server:</strong> <code>INSERT delivery_attempts {status: 'success', response_status_code: 200, delivered_at: NOW()}</code></div></li>
+      </ol>
+    </div>
+
+    <!-- ──────────── 6 — Flow: Abandoned ──────────── -->
+    <h2 id="abandoned">6 · Flow: Abbrecher-Webhook (10 Min Cooldown)</h2>
+    <div class="seq">
+      <div class="seq-title">
+        <span class="step-num">②</span>
+        User füllt Email + Telefon ein, schließt dann Tab — Cron holt nach
+      </div>
+      <div class="seq-lanes">
+        <div class="seq-lane client">Browser</div>
+        <div class="seq-lane server">Vercel Cron + Server</div>
+        <div class="seq-lane tenant">Tenant-CRM</div>
+      </div>
+      <ol class="seq-steps">
+        <li><div><strong>t=0:</strong> User tippt sich durch — jede 600ms-debounced <code>/api/track-progress</code> UPSERTet submissions-Row mit contact + answers + completed_at=NULL <span class="arrow">───────────►</span></div></li>
+        <li><div><strong>t=14:00:</strong> User schließt Tab</div></li>
+        <li><div><strong>Cron läuft alle 5 Min — t=14:15:</strong> <code>GET /api/cron/webhook-retry</code> mit <code>Authorization: Bearer $CRON_SECRET</code></div></li>
+        <li><div><strong>Server:</strong> Auth-Check, dann <code>SELECT submissions WHERE completed_at IS NULL AND abandoned_webhook_fired_at IS NULL AND created_at &lt; NOW() - 10min</code></div></li>
+        <li><div><strong>Server:</strong> Pro Match: <code>effectiveContact = derive(answers) ∪ contact</code></div></li>
+        <li><div><strong>Server:</strong> Skip wenn weder email noch telefon → trotzdem Marker setzen, sonst Endlos-Re-Pick</div></li>
+        <li><div><strong>Server:</strong> Sonst: <code>triggerOnSubmit(funnelId, 'submission.abandoned', snapshot, tenantConfig)</code> <span class="arrow">───────────►</span></div></li>
+        <li><div><strong>Tenant:</strong> Zapier empfängt + verarbeitet wie completed, nur mit <code>"event": "submission.abandoned"</code> + <code>"completed_at": null</code> <span class="arrow">◄───────────</span></div></li>
+        <li><div><strong>Server:</strong> <code>UPDATE submissions SET abandoned_webhook_fired_at = NOW()</code> — verhindert Doppel-Trigger im nächsten Cron-Run</div></li>
+      </ol>
+    </div>
+    <div class="note warn">
+      <strong>Cooldown-Wahl:</strong> 10 Min ist ein bewusster Trade-Off zwischen Speed-to-Lead
+      (je schneller der Tenant anruft, desto höher die Recovery-Chance — Studien: &lt;5 Min = 9× höhere Connect-Rate)
+      und falscher Trigger-Vermeidung (User schreibt Email, geht aufs WC, kommt 8 Min später wieder).
+    </div>
+
+    <!-- ──────────── 7 — Flow: Retry ──────────── -->
+    <h2 id="retry">7 · Flow: Retry bei Endpoint-Failure</h2>
+    <div class="seq">
+      <div class="seq-title">
+        <span class="step-num">③</span>
+        Tenant-CRM antwortet 5xx oder Timeout — Cron versucht's nochmal mit Backoff
+      </div>
+      <div class="seq-lanes">
+        <div class="seq-lane server">Cron picked attempt</div>
+        <div class="seq-lane server">retryDelivery</div>
+        <div class="seq-lane tenant">Tenant-CRM</div>
+      </div>
+      <ol class="seq-steps">
+        <li><div><strong>Vorlauf:</strong> Vorheriger Versuch endete mit <code>status='retrying'</code>, <code>attempt_count=1</code>, <code>next_retry_at = NOW + 1min</code></div></li>
+        <li><div><strong>Cron-Run:</strong> <code>SELECT delivery_attempts WHERE status IN ('pending','retrying') AND next_retry_at &lt;= NOW() ORDER BY next_retry_at LIMIT 50</code></div></li>
+        <li><div><strong>Server:</strong> Pro Match → <code>retryDelivery(attemptId)</code></div></li>
+        <li><div><strong>Server:</strong> Re-load attempt + subscription (Join). Skip wenn !is_active → status='failed'</div></li>
+        <li><div><strong>Server:</strong> Re-load submission via FK. Wenn gelöscht → status='failed' (audit bleibt)</div></li>
+        <li><div><strong>Server:</strong> tenantConfig laden (lazy import um Circular zu vermeiden)</div></li>
+        <li><div><strong>Server:</strong> Re-build Payload mit <strong>derselben delivery_id</strong> (Idempotency auf Tenant-Seite!)</div></li>
+        <li><div><strong>Server:</strong> HMAC neu signieren + POST <span class="arrow">───────────►</span></div></li>
+        <li><div><strong>Tenant:</strong> 200 OK <span class="arrow">◄───────────</span> oder wieder Fehler</div></li>
+        <li><div><strong>Server:</strong> Wenn OK → <code>status='success', delivered_at=NOW(), next_retry_at=NULL</code>. Sonst → <code>attempt_count++</code> und entweder <code>next_retry_at = NOW + nextRetryDelayMs(N)</code> oder bei N≥6 <code>status='failed'</code></div></li>
+      </ol>
+    </div>
+
+    <div class="note">
+      <strong>Backoff-Schedule (Stripe-Klassiker):</strong>
+      Versuch 1 ist sofort. Versuch 2 nach 1 Min, 3 nach 5 Min, 4 nach 30 Min,
+      5 nach 2 h, 6 nach 6 h. Danach <code>failed</code>. Total = ~9 h, deckt
+      typische CRM-Outages ab.
+    </div>
+
+    <!-- ──────────── 8 — Payload ──────────── -->
+    <h2 id="payload">8 · Payload-Format</h2>
+    <p>
+      Beides drin: <strong>self-describing Array</strong> für Zapier-Visual-Builder
+      mit klaren Labels, plus <strong>flache Map</strong> mit Label-statt-Value
+      für direkte CRM-Field-Zuordnung.
+    </p>
+    <div class="payload"><span class="com">// Gekürzt — Vollformat siehe webhook-architecture.md</span>
+{
+  <span class="key">"event"</span>: <span class="str">"submission.completed"</span>,
+  <span class="key">"delivery_id"</span>: <span class="str">"&lt;uuid&gt;"</span>,            <span class="com">// = webhook_delivery_attempts.id, Dedup-Hook</span>
+  <span class="key">"delivered_at"</span>: <span class="str">"2026-05-29T08:10:54.241Z"</span>,
+  <span class="key">"tenant_id"</span>: <span class="str">"&lt;uuid&gt;"</span>,
+  <span class="key">"funnel"</span>: { <span class="key">"id"</span>: <span class="str">"&lt;uuid&gt;"</span>, <span class="key">"slug"</span>: <span class="str">"leadplug"</span>, <span class="key">"name"</span>: <span class="str">"LeadPlug"</span> },
+  <span class="key">"submission"</span>: {
+    <span class="key">"id"</span>: <span class="str">"&lt;uuid&gt;"</span>,
+    <span class="key">"session_id"</span>: <span class="str">"&lt;uuid&gt;"</span>,
+    <span class="key">"created_at"</span>: <span class="str">"…"</span>,
+    <span class="key">"completed_at"</span>: <span class="str">"…"</span> | <span class="null">null</span>,        <span class="com">// null bei .abandoned</span>
+    <span class="key">"source_url"</span>: <span class="str">"…"</span> | <span class="null">null</span>
+  },
+  <span class="key">"available_channels"</span>: {                <span class="com">// schnelle Filter-Hilfe für Zapier</span>
+    <span class="key">"email"</span>: <span class="bool">true</span>, <span class="key">"telefon"</span>: <span class="bool">true</span>, <span class="key">"name"</span>: <span class="bool">true</span>
+  },
+  <span class="key">"contact"</span>: { <span class="key">"email"</span>: <span class="str">"…"</span>, <span class="key">"name"</span>: <span class="str">"…"</span>, <span class="key">"telefon"</span>: <span class="str">"…"</span> },
+  <span class="key">"answers"</span>: [                            <span class="com">// für Visual-Builder mit Labels</span>
+    {
+      <span class="key">"key"</span>: <span class="str">"problem"</span>,
+      <span class="key">"label"</span>: <span class="str">"Was ist dein Problem?"</span>,
+      <span class="key">"type"</span>: <span class="str">"single_choice"</span>,
+      <span class="key">"value"</span>: <span class="str">"zu_wenig"</span>,             <span class="com">// interner Wert</span>
+      <span class="key">"value_label"</span>: <span class="str">"Zu wenig Leads"</span>  <span class="com">// user-readable</span>
+    }
+  ],
+  <span class="key">"answers_flat"</span>: {                       <span class="com">// für Direct-CRM-Mapping</span>
+    <span class="key">"problem"</span>: <span class="str">"Zu wenig Leads"</span>          <span class="com">// = value_label, nicht "zu_wenig"</span>
+  }
+}</div>
+
+    <!-- ──────────── 9 — HMAC ──────────── -->
+    <h2 id="hmac">9 · HMAC-Signatur (Stripe-Pattern)</h2>
+    <p>
+      Header <code class="inline">X-LeadPlug-Signature: t=&lt;ts&gt;,v1=&lt;hex&gt;</code>.
+      Tenant kann optional die Echtheit verifizieren — Code-Snippets für Node/Python/PHP
+      stehen direkt im Editor-UI.
+    </p>
+    <div class="hmac-flow">
+      <div class="hmac-side">
+        <h5>① LeadPlug-Sender</h5>
+        <div class="mono" style="font-size:11px; color:#0f172a;">
+          t  = Math.floor(Date.now()/1000)<br>
+          v1 = <strong>HMAC-SHA256(secret,</strong><br>
+          &nbsp;&nbsp;<code style="font-size:10px;">"${t}.${bodyJson}"</code>)<br>
+          .toHex()<br><br>
+          Header: <code style="font-size:10px;">t=${t},v1=${v1}</code>
+        </div>
+      </div>
+      <div class="hmac-arrow">→</div>
+      <div class="hmac-side">
+        <h5>② Tenant-Server</h5>
+        <div class="mono" style="font-size:11px; color:#0f172a;">
+          Header parsen → t + v1<br>
+          rawBody = req.raw  <em style="font-size:10px;color:#94a3b8;">(vor JSON.parse!)</em><br>
+          expected = HMAC-SHA256(secret,<br>
+          &nbsp;&nbsp;<code style="font-size:10px;">"${t}.${rawBody}"</code>)<br><br>
+          compare_digest(expected, v1) ?<br>
+          → match: trusten<br>
+          → mismatch: 401
+        </div>
+      </div>
+    </div>
+    <div class="note">
+      <strong>Optional aber empfohlen:</strong> Timestamp gegen <code class="inline">now()</code>
+      prüfen (z.B. nur akzeptieren wenn <code class="inline">|now - t| &lt; 300</code> Sek)
+      → Replay-Schutz.
+    </div>
+
+    <!-- ──────────── 10 — UI ──────────── -->
+    <h2 id="ui">10 · UI im Editor</h2>
+    <p>
+      Neuer Tab „Webhooks" neben „E-Mails" und „Einbinden". Step-Pills in der Sidebar
+      kriegen ein violettes Webhook-Badge wenn ein <code class="inline">after_page</code>-Trigger
+      auf die Page zeigt.
+    </p>
+    <div class="ui-map">
+      <div class="ui-tabs">
+        <span class="ui-tab">Inhalt</span>
+        <span class="ui-tab">Design</span>
+        <span class="ui-tab">Logik <span style="background:#fef3c7;color:#92400e;font-size:9px;padding:1px 5px;border-radius:3px;margin-left:4px;">bald</span></span>
+        <span class="ui-tab">E-Mails <span style="background:#fef3c7;color:#92400e;font-size:9px;padding:1px 5px;border-radius:3px;margin-left:4px;">bald</span></span>
+        <span class="ui-tab active">Webhooks</span>
+        <span class="ui-tab">Einbinden <span style="background:#fef3c7;color:#92400e;font-size:9px;padding:1px 5px;border-radius:3px;margin-left:4px;">bald</span></span>
+      </div>
+      <div style="display:grid; grid-template-columns: 300px 1fr; gap:18px; padding:10px 0;">
+        <div>
+          <p style="font-size:11px; font-weight:700; text-transform:uppercase; color:#64748b; margin-bottom:8px;">Fragen</p>
+          <div style="background:#f1f5f9; padding:8px; border-radius:6px; font-size:12px; display:flex; align-items:center; margin-bottom:6px;">
+            <span style="flex:1;">1 · Welche Art von Betrieb?</span>
+          </div>
+          <div style="background:#f1f5f9; padding:8px; border-radius:6px; font-size:12px; display:flex; align-items:center; margin-bottom:6px;">
+            <span style="flex:1;">2 · Was ist dein Problem?</span>
+            <span class="ui-pill violet">🔗 1</span>
+          </div>
+          <div style="background:#f1f5f9; padding:8px; border-radius:6px; font-size:12px; display:flex; align-items:center;">
+            <span style="flex:1;">3 · Beschreibe …</span>
+          </div>
+          <p style="font-size:10px; color:#94a3b8; margin-top:8px; font-style:italic;">
+            ← violettes Badge = after_page-Webhook<br>
+            Klick → springt in Webhooks-Tab
+          </p>
+        </div>
+        <div>
+          <p style="font-size:11px; font-weight:700; text-transform:uppercase; color:#64748b; margin-bottom:8px;">Webhooks</p>
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px; margin-bottom:6px; font-size:12px;">
+            <p style="font-weight:600; margin-bottom:2px;">https://hooks.zapier.com/…</p>
+            <p style="color:#64748b; font-size:11px;">feuert am Funnel-Ende · submission.completed, submission.abandoned</p>
+          </div>
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px; font-size:12px;">
+            <p style="font-weight:600; margin-bottom:2px;">https://hook.eu1.make.com/…</p>
+            <p style="color:#64748b; font-size:11px;">feuert nach „Was ist dein Problem?" · step.advanced</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ──────────── 11 — Status ──────────── -->
+    <h2 id="status">11 · Status &amp; Known Issues</h2>
+    <div class="status-grid">
+
+      <div class="status ok">
+        <h4>✓ Verifiziert (Smoke-Test 2026-05-29)</h4>
+        <ul>
+          <li>Migration auf Production live</li>
+          <li>Webhook anlegen + Secret-Reveal</li>
+          <li>Test-Senden → HTTP 200 + Mock-Payload</li>
+          <li>Echter Submit → completed-Webhook</li>
+          <li>Cron-Auth (401 vs 200)</li>
+          <li>Abbrecher-Trigger (Cooldown wirkt)</li>
+          <li>Dedup-Schutz (kein 2. Trigger)</li>
+          <li>HMAC-Header Stripe-Pattern</li>
+          <li>Inspector zeigt Code + Body</li>
+        </ul>
+      </div>
+
+      <div class="status open">
+        <h4>○ Nicht getestet (= Risiko / TODO)</h4>
+        <ul>
+          <li>Retry-Backoff live (1m → 6h Schedule)</li>
+          <li>Multi-Sub pro Funnel</li>
+          <li>after_page-Trigger im Widget-Pfad</li>
+          <li>Production-Cron auf Vercel</li>
+          <li>Secret-Rotation gegen aktiven Endpoint</li>
+        </ul>
+      </div>
+
+      <div class="status bug">
+        <h4>! Hotfixes &amp; Known Issues</h4>
+        <ul>
+          <li><strong>FIXED:</strong> submissions.tenant_slug NOT NULL → NULLable (2026-05-29)</li>
+          <li><strong>FIXED:</strong> Race track-progress vs submit (Pre-SELECT-Guard in upsertSubmissionProgress)</li>
+          <li><strong>FIXED:</strong> 4xx-Spam-Retries → sofort failed bei Client-Errors (Stripe-Pattern)</li>
+          <li><strong>FIXED:</strong> after_page-Trigger jetzt live verkabelt (Widget → /api/track-progress → triggerOnPageAdvance + server-side Dedup)</li>
+          <li><strong>NEW:</strong> Name-Field-Types (first_name, last_name, full_name) + contact.name-Aggregation</li>
+          <li><strong>NEW:</strong> Field-Key-System mit Auto-Gen + Stabilität bei Label-Re-Names + Live-Transform</li>
+          <li>Backoff-Schedule hartkodiert — wenn Tenants konfigurierbar wollen, neue Spalte</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- ──────────── 12 — Quick-Ref ──────────── -->
+    <h2 id="quickref">12 · Quick-Reference</h2>
+    <table>
+      <thead>
+        <tr><th>Situation</th><th>Was tun</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Neuer Output-Mechanismus (Slack, Email, Discord)</td><td>Folge Webhook-Pattern: eigener Tab + Subscriptions pro Funnel + Trigger-Konfig</td></tr>
+        <tr><td>Tenant fragt nach mid-funnel-Trigger</td><td>Dedup-Logik in /api/track-progress aktivieren → triggerOnPageAdvance verkabeln</td></tr>
+        <tr><td>Tenant fragt nach editierbarem field_key</td><td>Editor-Erweiterung im Properties-Panel — heute auto-generated</td></tr>
+        <tr><td>Webhook spammt</td><td>Subscription pausieren via UI (is_active=false)</td></tr>
+        <tr><td>Tenant verloren Secret</td><td>Secret rotieren via UI — alter Endpoint muss neuen Wert kriegen</td></tr>
+        <tr><td>Webhook kommt nicht an</td><td>Logs-Drawer → status_code + response_body. 4xx = Tenant-Endpoint-Issue, kein Retry</td></tr>
+        <tr><td>Production-Cron läuft nicht</td><td>Vercel-ENV <code class="inline">CRON_SECRET</code> setzen + Redeploy</td></tr>
+        <tr><td>DB-Migration nötig</td><td>Schema-Erweiterung an webhook_subscriptions, gleicher Sender bleibt</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note" style="margin-top:48px;">
+      <strong>Begleit-Doku:</strong>
+      <a href="webhook-architecture.md" style="color:#2563eb;">webhook-architecture.md</a>
+      (lange Lesversion, mit allen Code-Pfaden) ·
+      <a href="../CLAUDE.md" style="color:#2563eb;">CLAUDE.md §5 + §13.5</a> ·
+      <a href="supabase-schema.md" style="color:#2563eb;">supabase-schema.md §3.8 / §3.9</a> ·
+      Memory <code class="inline">strategy-action-modell</code>.
+    </div>
+
+  </div>
+</body>
+</html>

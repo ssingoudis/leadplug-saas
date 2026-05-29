@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server'
+import { after } from 'next/server'
 import { getTenantConfig } from '@/lib/getTenantConfig'
-import { upsertSubmissionProgress, logHoneypot, deriveContactFromAnswers } from '@/lib/tracking'
+import {
+  upsertSubmissionProgress,
+  logHoneypot,
+  deriveContactFromAnswers,
+  enrichContact,
+} from '@/lib/tracking'
+import { triggerOnPageAdvance, type SubmissionSnapshot } from '@/lib/webhooks'
 
 function getIp(req: Request): string | null {
   const forwarded = req.headers.get('x-forwarded-for')
@@ -69,6 +76,14 @@ export async function POST(req: Request) {
   const { sessionId, tenant, answers, contact } = body
   const sourceUrl = typeof body.sourceUrl === 'string' ? body.sourceUrl : ''
   const userAgent = typeof body.userAgent === 'string' ? body.userAgent : ''
+  // Aufgabe 40 Polish: optionaler Page-Advance-Trigger.
+  // Vom Widget gesetzt wenn user über eine Page advancet → triggert after_page-Webhooks
+  // (mit server-side Dedup via webhook_delivery_attempts).
+  const advancedPageId =
+    typeof (body as Record<string, unknown>).advancedPageId === 'string' &&
+    UUID_RE.test((body as Record<string, unknown>).advancedPageId as string)
+      ? ((body as Record<string, unknown>).advancedPageId as string)
+      : null
 
   const tenantConfig = await getTenantConfig(tenant)
   if (!tenantConfig || !tenantConfig.id) {
@@ -81,12 +96,13 @@ export async function POST(req: Request) {
   // Aufgabe 35: im Skip-Mode (kein Submit-Schritt) bleibt contact aus dem Widget leer.
   // Damit Pricing-Logik (contact->>'email') auch für Abbrecher trifft, synthetisieren
   // wir contact aus den answers per Pattern-Match.
-  const skipMode = tenantConfig.skipSubmitStep ?? false
-  const effectiveContact = skipMode
-    ? { ...deriveContactFromAnswers(answers), ...contact }
-    : contact
+  // Aufgabe 40 Polish: identisch zu /api/submit — Anreicherung läuft über beide Wege
+  // (answers für Custom-Karten-Felder, contact für Submit-Page-Felder).
+  const fromAnswers = deriveContactFromAnswers(answers, tenantConfig)
+  const fromContact = enrichContact(contact, tenantConfig)
+  const effectiveContact = { ...fromAnswers, ...fromContact }
 
-  await upsertSubmissionProgress({
+  const submissionId = await upsertSubmissionProgress({
     sessionId,
     funnelSlug: tenant,
     tenantId:   tenantConfig.id,
@@ -98,6 +114,27 @@ export async function POST(req: Request) {
     ipAddress: ip ?? undefined,
     completed: false,
   })
+
+  // Aufgabe 40 Polish: after_page-Webhook-Trigger.
+  // Fire-and-forget via after() — Response geht sofort raus, Webhook läuft im Hintergrund.
+  // server-side Dedup in triggerOnPageAdvance verhindert Doppel-Trigger pro Page+Submission.
+  if (advancedPageId && submissionId && tenantConfig.funnelId) {
+    const snapshot: SubmissionSnapshot = {
+      id:           submissionId,
+      session_id:   sessionId,
+      funnel_slug:  tenant,
+      tenant_id:    tenantConfig.id ?? null,
+      contact:      effectiveContact,
+      answers,
+      source_url:   sourceUrl || null,
+      created_at:   new Date().toISOString(),
+      completed_at: null,
+    }
+    after(
+      triggerOnPageAdvance(tenantConfig.funnelId, advancedPageId, snapshot, tenantConfig)
+        .catch((err) => console.error('track-progress route: after_page trigger failed', err))
+    )
+  }
 
   return NextResponse.json({ success: true })
 }

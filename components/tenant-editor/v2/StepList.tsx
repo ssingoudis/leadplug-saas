@@ -37,6 +37,9 @@ interface Props {
   // Aufgabe 39: Adresse-Quick-Card + Welcome-Screen
   onAddAddressCard: (atIndex?: number) => void;
   onAddWelcome: (atIndex?: number) => void;
+  // Aufgabe 40: Webhook-Badges auf Step-Pills
+  webhookCountsByPageId?: Record<string, number>;
+  onSwitchToWebhooksTab?: () => void;
 }
 
 export function StepList({
@@ -48,6 +51,8 @@ export function StepList({
   onAddCustomPage,
   onAddAddressCard,
   onAddWelcome,
+  webhookCountsByPageId = {},
+  onSwitchToWebhooksTab,
 }: Props) {
   // null = Modal zu, number = Modal offen und neue Frage wird an dieser Position eingefügt.
   // questions.length = an's Ende anfügen (= aktuelles Default-Verhalten).
@@ -83,6 +88,7 @@ export function StepList({
               )}
               {state.questions.map((q, idx) => {
                 const step: SelectedStep = { kind: "question", questionIndex: idx };
+                const webhookCount = q.dbId ? (webhookCountsByPageId[q.dbId] ?? 0) : 0;
                 return (
                   <div key={q._id} className="flex flex-col">
                     <SortableQuestionItem
@@ -90,6 +96,8 @@ export function StepList({
                       number={idx + 1}
                       selected={isSameStep(selected, step)}
                       onClick={() => onSelect(step)}
+                      webhookCount={webhookCount}
+                      onWebhookBadgeClick={onSwitchToWebhooksTab}
                     />
                     {/* Edge nach jeder Frage (außer der letzten — da übernimmt der Add-Button unten) */}
                     {idx < state.questions.length - 1 && (
@@ -195,11 +203,15 @@ function SortableQuestionItem({
   number,
   selected,
   onClick,
+  webhookCount,
+  onWebhookBadgeClick,
 }: {
   question: EditorQuestion;
   number: number;
   selected: boolean;
   onClick: () => void;
+  webhookCount?: number;
+  onWebhookBadgeClick?: () => void;
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: question._id });
@@ -231,6 +243,8 @@ function SortableQuestionItem({
           ...listeners,
         }}
         onClick={onClick}
+        webhookCount={webhookCount}
+        onWebhookBadgeClick={onWebhookBadgeClick}
       />
     </div>
   );

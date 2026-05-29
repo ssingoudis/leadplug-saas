@@ -104,6 +104,37 @@ export function TenantFunnelClient({ config }: Props) {
     }
   }
 
+  /**
+   * Aufgabe 40 Polish: After-Page-Webhook-Trigger. Wird vom Widget gefeuert wenn
+   * der User über eine Page advancet. Wir POSTen page_id + den aktuellen answers/
+   * contact-Snapshot an /api/track-progress — Server upsertet (wie normaler
+   * track-progress-Call) UND triggert after_page-Webhooks via triggerOnPageAdvance.
+   * Server-side Dedup verhindert Doppel-Trigger pro Page+Session.
+   */
+  async function handlePageAdvanced(
+    pageId: string,
+    snapshot: { answers: Record<string, string>; contact: Record<string, string> },
+  ) {
+    try {
+      await fetch('/api/track-progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          tenant: config.slug,
+          answers: snapshot.answers,
+          contact: snapshot.contact,
+          honeypot: '',
+          advancedPageId: pageId,
+          sourceUrl: typeof document !== 'undefined' ? document.referrer : '',
+          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+        }),
+      })
+    } catch {
+      // silently drop — fire-and-forget
+    }
+  }
+
   return (
     <Funnel
       theme={config.theme}
@@ -117,6 +148,7 @@ export function TenantFunnelClient({ config }: Props) {
       redirectUrl={config.redirectUrl}
       onSubmit={handleSubmit}
       onAnswersChange={handleAnswersChange}
+      onPageAdvanced={handlePageAdvanced}
     />
   )
 }

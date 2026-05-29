@@ -109,20 +109,48 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
-## Aktuell: Builder-Polish-Loop (2026-05-28+)
+## Aktuell: Aufgabe 40 — Webhook-Actions + Robustheits-Polish (2026-05-29)
 
-**Status:** Builder-Final-Sprint (Aufgaben 35-C.2) ist auf main gemerged (Commit `9e3f3f4`).
-**Bevor C.5/D.1/D.2/D.3 angegangen werden:** Iterations-Phase, in der Stavros visuelles & UX-Feedback zum Builder gibt und Anpassungen direkt eingearbeitet werden. Kein neuer Schema-Touch, kein neuer Sprint-Plan — kurze, gezielte Edits.
+**Update 2026-05-29 abends — Robustheits-Polish nach Smoke-Test:**
+- ✅ Hotfix `submissions.tenant_slug` NOT NULL → NULLable (Pre-Existing Bug seit Aufgabe 26 entdeckt + gefixt)
+- ✅ Race-Fix in `upsertSubmissionProgress`: track-progress überschreibt completed-Rows nicht mehr
+- ✅ Name-Field-Types: `first_name`, `last_name`, `full_name` als first-class Field-Types, contact.name-Aggregation
+- ✅ Field-Key-System: Auto-Gen + Editor-UI „Feldname im Export" + Stabilität bei Label-Re-Names + Live-Transform (Slug/Lowercase)
+- ✅ Stable `_clientId` für ContactField-UI (verhindert UI-Remount bei Live-Key-Sync)
+- ✅ Sender: 4xx → sofort failed (kein 9h-Retry-Spam gegen kaputte Tenant-URLs)
+- ✅ `after_page`-Trigger LIVE verkabelt (Widget → /api/track-progress → triggerOnPageAdvance + server-side Dedup)
+- ✅ `lead_price` aus Webhook-Payload (Pricing ist Abo-only Konsens)
 
-## Post-Sprint-Agenda (in Reihenfolge, beginnt NACH Polish-Loop)
 
-1. **C.5 — Webhook-Sender** (~4-5 Tage) — Backend (HTTP-POST + HMAC + Retry, DB-Schema seit B.6) + Dashboard-UI „Webhook hinzufügen / testen / Logs". **Bedingung für 29€-Tier.**
-2. **D.1 — Stripe Live** (~1 Tag) — ENV `sk_live_`, Live-Price-IDs, Live-Webhook, Portal-Config.
-3. **D.2 — Conversion-Tracking** (~1-2 Tage) — Widget sendet bei Submit `postMessage`, Parent-Seite ruft `fbq()` / `gtag()`. **Performance-Marketing-Blocker.**
-4. **D.3 — 3-5 Demo-Funnels als Templates** (~2-3 Tage) — Content-Arbeit, kein Engineering.
-5. **(Optional)** C.4 — Logic Jumps (~3-4 Tage) — Fokus-Roadmap sagt „v1.1 OK".
 
-Total bis Launch: ~9-13 Tage Engineering + Stripe-Setup.
+**Status:** Branch `feature/aufgabe-40-webhook-actions`. Backend + Editor-UI komplett, Type-Check clean. Test-Smoke + Doku-Pass ausstehend, danach Merge.
+
+**Strategischer Konsens (siehe Memory `strategy-action-modell`):** Webhooks sind dynamisch konfigurierbare Action-Elemente im Funnel-Editor — kein impliziter „feuert immer am Ende"-Automatismus. LeadPlug ist „eine Art Typeform-Klon", alle Output-Mechanismen (Webhook jetzt, E-Mail später) folgen demselben Pattern: eigener Tab im Editor, Liste pro Funnel, pro Action Trigger-Konfiguration. Der heutige hartkodierte Auto-Mail-Versand bei `/api/submit` ist „alt" und wird im Email-Tab-Sprint ebenfalls dynamisch.
+
+**Umsetzungs-Highlights:**
+- **Schema** (Migration `aufgabe_40_webhook_actions`, additive): `webhook_subscriptions.funnel_id` + `trigger_type` + `trigger_page_id`; `webhook_delivery_attempts.next_retry_at` + `response_status_code` + `response_body` + `event_type`; `submissions.abandoned_webhook_fired_at` + 4 neue Indices.
+- **Sender** ([`lib/webhooks.ts`](../lib/webhooks.ts)): HMAC-SHA256-Signing im Stripe-Pattern `X-LeadPlug-Signature: t=<ts>,v1=<hex>`. Payload-Builder mit `answers[]` (Array, self-describing) + `answers_flat` (Map, label statt value). Test-Modus mit Mock-Daten.
+- **Trigger** in [`/api/submit`](../app/api/submit/route.ts): `after(triggerOnSubmit(...))` — fire-and-forget via Next 16 `after()`.
+- **Cron** ([`/api/cron/webhook-retry`](../app/api/cron/webhook-retry/route.ts)) alle 5 Min: (a) Retries mit Backoff (1m/5m/30m/2h/6h, dann failed) (b) Abbrecher-Trigger nach 10 Min Cooldown + Email-oder-Telefon-Check. Auth via `Authorization: Bearer $CRON_SECRET`.
+- **CRUD-API** unter `app/api/tenant/funnels/[slug]/webhooks/...`: GET-Liste, POST-Create (returnt Secret 1×), GET/PATCH/DELETE pro Sub, `/test` (Mock-Senden), `/logs` (Delivery-Attempts).
+- **Editor-Tab „Webhooks"** ([`components/tenant-editor/v2/WebhooksPanel.tsx`](../components/tenant-editor/v2/WebhooksPanel.tsx) + `WebhookAddModal.tsx`): Liste mit Cards, Add-Modal mit Trigger-Auswahl, Edit-Section mit URL/Events/Trigger-Konfig, Test-Button mit Status-Anzeige, Logs-Drawer mit Inspector (status_code + response_body), Secret-Rotation, Verify-Snippet-Tabs (Node/Python/PHP).
+- **StepPill-Badge** (Modell 3 Hybrid): wenn `after_page`-Webhook auf Page X zeigt, rendert die Pill in der StepList ein violettes Webhook-Icon mit Count. Click springt in den Webhooks-Tab.
+- **`vercel.json`** mit `crons: ["*/5 * * * *"]`.
+
+**Konsens-Entscheidungen (2026-05-29):**
+- Cooldown für abandoned-Trigger: **10 Min** (statt Stripe-default 30 Min — Speed-to-Lead ist im Lead-Gen wichtig).
+- Webhooks sind **funnel-scoped** (1 Tenant kann je Funnel andere Endpoints konfigurieren).
+- Payload-Format: **beides** (answers-Array für Zapier-Visual + answers_flat für Direct-CRM).
+- field_keys bleiben **auto-generiert** (kein Editor-Override) — wenn ein Tenant fragt, in 1-2 Std nachgereicht.
+- Action-Element-Modell statt Auto-Trigger — selber Pattern wird E-Mails-Tab später anwenden.
+
+## Post-Sprint-Agenda (NACH Aufgabe 40)
+
+1. **E-Mails-Tab dynamisch machen** — selbes Pattern wie Webhooks-Tab. Bestehender disabled Tab-Slot wird funktional.
+2. **D.2 — Conversion-Tracking + Script-Loader-Embed** (~2-3 Tage) — Widget sendet bei Submit `postMessage`, Parent ruft `fbq()` / `gtag()`. Step-Tracking-Variante für Facebook-Funnel-Drop-Off-Analytics. **Performance-Marketing-Blocker.**
+3. **D.3 — 3-5 Demo-Funnels als Templates** (~2-3 Tage) — Content.
+4. **D.1 — Stripe Live** (~1 Tag) — aufgeschoben weil Testkunden `free`-Tier kriegen.
+5. **(Optional)** C.4 Logic Jumps + Submit-Page-Cleanup.
 
 ---
 

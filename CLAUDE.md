@@ -83,7 +83,7 @@ Drei Tiers pro Tenant (Agentur). Preise sind Richtwerte:
 **MVP = "fertig"** wenn folgendes gilt:
 
 - Du kannst mit gutem Gewissen einer etablierten Agentur ein 15-Min-Demo geben
-- Größtenteils funktional, nicht perfekt
+- **Robust und production-ready ab Tag 1** — Fehler werden abgefangen, Edge-Cases sind durchdacht, Daten gehen nicht verloren
 - Reliability > Feature-Breite
 - Builder fühlt sich nicht peinlich an im Vergleich zu Typeform/FormFlow
 
@@ -100,6 +100,15 @@ Drei Tiers pro Tenant (Agentur). Preise sind Richtwerte:
 - **Email + Telefon als Question-Types raus** (waren nur kosmetische Text-Inputs). Bleiben als ContactField-Types auf Submit-Page.
 - **Partial-Submissions live**: jede User-Session bekommt DB-Row mit `session_id` UPSERT + `completed_at` Flag. Abbrecher mit Email werden zu Leads. Pricing-Modell zählt Completed + Abandoned-mit-Email als Lead.
 - **DSGVO ignoriert für jetzt** — Rechtsgrundlage Art. 6 (1) (b) Vertragsanbahnung greift.
+
+**Architektur-Konsens aus Aufgabe 40 (2026-05-29) — Action-Element-Modell:**
+
+LeadPlug ist „eine Art Typeform-Klon". **Alle Output-Mechanismen sind dynamisch konfigurierbare Builder-Elemente, kein impliziter Automatismus:**
+- **Webhooks** ✅ live als erste Action-Klasse — eigener Editor-Tab „Webhooks". Pro Funnel N Subscriptions, pro Subscription Trigger-Konfig (`on_submit` Default / `after_page:<id>` für Mid-Funnel). Visuelle Step-Pill-Badges im Builder bei `after_page`-Triggern. Sender + HMAC + Cron + Retry: siehe [`lib/webhooks.ts`](lib/webhooks.ts).
+- **E-Mails** kommen als nächste Action-Klasse, selbes Pattern (siehe `context/roadmap.md`). Der existierende disabled „E-Mails"-Tab im Editor wird funktional. Der heutige hartkodierte Mail-Versand in `/api/submit` wird durch dynamische Konfiguration ersetzt.
+- **Logic-Jumps** (C.4) folgen demselben Pattern (eigener „Logik"-Tab).
+- **Bei neuen Output-Mechanismen** (Slack, Discord, etc.): folge dem Action-Modell — eigener Tab oder Plugin-System, NIE als hartkodierter Trigger in der Submit-Pipeline.
+- **Submit-Page-Abschaffung geplant**: heute hartkodiertes Element bleibt für Übergang (toggleable via `skip_submit_step`). Backend-Trigger (`/api/submit`) ist Submit-Page-agnostisch — wenn die Page aus dem Editor verschwindet, ändert sich am Webhook-Sender nichts.
 
 **Aktueller Sprint — „Builder-Final" (5 Aufgaben in einem Rutsch, Branch `feature/builder-final-sprint`):**
 
@@ -134,6 +143,9 @@ Nach Sprint-Abschluss: Sprint-Review mit Stavros, dann nächster Block (voraussi
 - [`context/builder-fokus-roadmap.html`](context/builder-fokus-roadmap.html) — **strategische Roadmap bis Launch** (Lifestyle-Business via Direct-Sales an DACH-Marketing-Agenturen, ~4-5 Wo Engineering). Definiert Scope (was bleibt, was gestrichen ist, was on-demand kommt). **Erste Anlaufstelle für „was sollen wir bauen".**
 - [`context/roadmap.md`](context/roadmap.md) — **granulare Aufgaben-Liste** (Phasen A-E, Sub-Nummern B.1, B.2, …, C.1, C.2, …) mit Detail-Beschreibungen und Phase-B-Historie. **Erste Anlaufstelle für „welche Aufgabe konkret als Nächstes".** Inhaltlich der Fokus-Roadmap unterzuordnen.
 - [`context/architecture.md`](context/architecture.md) — **technische Karte des Produkts**: wie ist die App gebaut, wo lebt was, welche Komponente macht welchen Job. Builder + Widget + Mapping + Submission-Pipeline. **Erste Anlaufstelle für „wo ist X im Code".**
+- [`context/webhook-architecture.md`](context/webhook-architecture.md) — **Webhook-Subsystem vollständig** (Aufgabe 40): DB-Schema, Code-Layout, Sequence-Diagramme (completed/abandoned/retry/test), Payload-Format, HMAC, ENV-Vars, UI-Verkabelung, Known-Issues. **Erste Anlaufstelle für „wie funktioniert der Webhook-Sender".**
+- [`context/webhook-architecture.html`](context/webhook-architecture.html) — **dieselbe Architektur visuell** (Stavros-Style): Tabellen-Karten, Sequence-Diagramme als Lanes, Payload-Highlighting, Status-Cards.
+- [`context/webhook-erklaert.md`](context/webhook-erklaert.md) — **Webhooks von Anfang an erklärt** für Lernende mit Programmier-Grundkenntnissen. Konzept-Einstieg mit Analogien, Use-Case, DB-Tabellen, End-to-End-Flow, HMAC, Backoff, Cron, Dedup, Glossar. **Erste Anlaufstelle wenn jemand das System komplett neu kennenlernt.**
 - [`context/architecture.html`](context/architecture.html) — **dieselbe Architektur visuell** (vom Stavros gepflegt) — 3-Worlds-Map, DB-Tree, Page-Flow, Field-Types-Grid, Komponenten-Baum, Decisions-Legend.
 - [`context/project-overview.md`](context/project-overview.md) — Code-Struktur (Verzeichnisse), DB-Schema, API-Routes
 - [`context/supabase-schema.md`](context/supabase-schema.md) — vollständige technische DB-Referenz (Enums, Tables, RLS, Indices, Functions)
@@ -302,7 +314,10 @@ Klare Trennung — keine Override-Hierarchien zwischen Tabellen:
 - `aufgabe_34_strip_icon_keys_from_field_options`: UPDATE auf `fields.options` jsonb — `icon_key` + `icon_url` aus allen Option-Objekten gestrippt (45 Fields betroffen, 175 Option-Einträge). Forward-only, kein DOWN-Pfad (Brand-Decision).
 - `aufgabe_34_partial_submissions_schema`: `submissions.session_id uuid NOT NULL UNIQUE` + `submissions.completed_at timestamptz NULL` + 2 Indices. Backfill: 26 bestehende Rows als completed markiert. UPSERT-Identität für Partial-Submissions.
 
-**Nächste DB-Arbeit:** Aufgabe 35 (`funnels.skip_submit_step boolean DEFAULT false`).
+**Aufgabe 40 Schema-Erweiterungen (2026-05-29):**
+- `aufgabe_40_webhook_actions`: `webhook_subscriptions.funnel_id NOT NULL` + `trigger_type DEFAULT 'on_submit'` + `trigger_page_id` (FK pages SET NULL) + CHECK + 2 neue Indices. `webhook_delivery_attempts.next_retry_at` + `response_status_code` + `response_body` + `event_type` + Retry-Queue-Index. `submissions.abandoned_webhook_fired_at` + partial Index für Cron-Cooldown. Additive — kein Backfill (webhook_* Tabellen waren leer).
+
+**Nächste DB-Arbeit:** keine geplant — E-Mails-Tab-Sprint wird vermutlich neue `email_subscriptions`-Tabelle nach Webhook-Pattern anlegen.
 
 ---
 
