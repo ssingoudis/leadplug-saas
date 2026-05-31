@@ -15,8 +15,9 @@ const TABS: TabDef[] = [
   { key: "content", label: "Inhalt", disabled: false },
   { key: "design", label: "Design", disabled: false },
   { key: "logic", label: "Logik", badge: "bald", disabled: true },
-  { key: "emails", label: "E-Mails", badge: "bald", disabled: true },
-  // Aufgabe 40: Webhooks als erste echte Action-Klasse (E-Mails folgen demselben Pattern).
+  // Aufgabe 41: E-Mails als 2. Action-Klasse (Webhook-Pattern wiederverwendet).
+  { key: "emails", label: "E-Mails", disabled: false },
+  // Aufgabe 40: Webhooks als erste echte Action-Klasse.
   { key: "webhooks", label: "Webhooks", disabled: false },
   { key: "share", label: "Einbinden", disabled: true },
 ];

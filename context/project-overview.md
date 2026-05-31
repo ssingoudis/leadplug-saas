@@ -406,6 +406,10 @@ Append-only Log jedes Webhook-Versandsversuchs.
 | `/api/tenant/funnels` | GET / POST | Tenant: Funnel-Liste / neuen anlegen |
 | `/api/tenant/funnels/[slug]` | GET / PUT / DELETE | Tenant: einzelner Funnel |
 | `/api/tenant/slug-check` | POST | Slug-Verfügbarkeit prüfen |
+| `/api/tenant/funnels/[slug]/webhooks` + Sub-Routes | GET/POST/PATCH/DELETE/test/logs | Webhook-Subscription-CRUD (Aufgabe 40) |
+| `/api/tenant/funnels/[slug]/emails` + Sub-Routes | GET/POST/PATCH/DELETE/test/logs | E-Mail-Drip-Subscription-CRUD (Aufgabe 41) |
+| `/api/tenant/funnels/[slug]/preview-leads` | GET | Top 5 completed Submissions für E-Mail-Vorschau-Picker (Aufgabe 41) |
+| `/api/cron/webhook-retry` | GET | Cron alle 5 Min — Webhook + E-Mail-Queue (Bearer-Auth via `CRON_SECRET`) |
 | `/api/leads/[id]` | PUT | Lead-Status updaten (`offen`/`kontaktiert`/`abgeschlossen`) |
 | `/api/stripe/checkout` | POST | Stripe Checkout-Session erstellen |
 | `/api/stripe/portal` | POST | Stripe Customer-Portal-Link |

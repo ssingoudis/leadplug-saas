@@ -6,12 +6,23 @@
 > Für architektonisches Verständnis und Zweck der Tabellen: siehe [`project-overview.md`](project-overview.md) §4.
 > Bei jeder neuen Migration: dieses File neu regenerieren.
 
-- **Stand:** 2026-05-29 (nach Aufgabe 40 / Webhook-Actions)
-- **Letzte Migration:** `aufgabe_40_webhook_actions`
-- **Tabellen:** 10 in `public` (alle mit RLS aktiviert)
+- **Stand:** 2026-05-31 (nach Aufgabe 41 + Custom-Recipient-Polish)
+- **Letzte Migration:** `aufgabe_41_custom_recipient`
+- **Tabellen:** 12 in `public` (alle mit RLS aktiviert)
 - **Enums:** 4 (`billing_model_type`, `page_type`, `field_type`, `tenant_member_role`)
-- **Functions:** 5 — **Triggers:** 6 — **Views:** 0
+- **Functions:** 5 — **Triggers:** 7 — **Views:** 0
 
+> **Aufgabe 41 Polish-Migration `aufgabe_41_custom_recipient` (2026-05-31 abends):**
+> - `email_subscriptions.recipient_type` CHECK-Constraint erweitert auf `IN ('customer','tenant','custom')`.
+> - Neue Spalte `email_subscriptions.recipient_value text NULL` für Custom-Adressen (comma-separated, bis 3 Adressen, App-side enforced).
+> - Neuer CHECK `email_subscriptions_custom_has_recipient`: bei `recipient_type='custom'` muss `recipient_value` gefüllt sein (`length(trim) > 0`).
+> - Additive Migration, kein Backfill (24 Bestands-Subs hatten recipient_type ∈ customer/tenant, bleiben unverändert gültig).
+>
+> **Aufgabe 41 Initiale Migration `aufgabe_41_email_subscriptions` (2026-05-31 morgens):**
+> - **Neue Tabelle `email_subscriptions`** — pro Funnel N Drip-Mails. Spalten: `id`, `funnel_id` (FK funnels ON DELETE CASCADE), `tenant_id` (FK tenants ON DELETE CASCADE), `name`, `recipient_type`, `delay_minutes` (CHECK >= 0, Default 0), `subject`, `body_html` (TipTap-Output), `from_local`, `is_active`, `created_at`, `updated_at`. Plus CHECK-Constraints für subject/body/name nicht-leer, 2 partial Indices (`funnel_id`, `funnel_active` WHERE is_active), updated_at-Trigger, 4 RLS-Policies (Select/Insert/Update/Delete).
+> - **Neue Tabelle `email_delivery_attempts`** — Drip-Queue + Audit. Spalten: `id`, `subscription_id` (FK ON DELETE CASCADE), `submission_id` (FK ON DELETE SET NULL), `scheduled_at` NOT NULL (= completed_at + delay), `attempt_count` (Default 0), `status` (CHECK pending/retrying/success/failed), `last_error`, `resend_message_id`, `recipient_address`, `delivered_at`, `next_retry_at`, `created_at`. 4 Indices (subscription, submission, **due-pending** WHERE status=pending, **due-retrying** WHERE status=retrying), 1 SELECT-Policy.
+> - **Backfill:** 24 Default-Subscriptions für 12 bestehende Funnels (Customer-Confirmation + Tenant-Notification, beide delay=0). Reproduziert das alte hartkodierte Mail-Verhalten 1:1.
+>
 > **Aufgabe 40 Erweiterungen (2026-05-29):**
 > - `webhook_subscriptions` jetzt funnel-scoped (3 neue Spalten: `funnel_id NOT NULL`, `trigger_type` default `'on_submit'`, `trigger_page_id`) + CHECK + 2 neue Indices
 > - `webhook_delivery_attempts` Inspector + Backoff (4 neue Spalten: `next_retry_at`, `response_status_code`, `response_body`, `event_type`) + 1 neuer partial Index `idx_webhook_delivery_retry_due`

@@ -484,7 +484,7 @@ DB (pages + fields)
 
 ---
 
-## 12. Aktueller Zustand des Builders (2026-05-29)
+## 12. Aktueller Zustand des Builders (2026-05-31)
 
 **Fertig (live auf main bzw. auf Feature-Branch):**
 - ✅ Aufgaben 25-31 (Schema-Refactor, B-Phase)
@@ -499,10 +499,10 @@ DB (pages + fields)
 - ✅ Aufgabe 38 (Custom Multi-Field-Pages)
 - ✅ Aufgabe 39 (Welcome + Rating/Scale/Statement + End-Screen-Redirect + Builder-Cleanup)
 - ✅ Polish-Iteration nach 39 (UX-Bugs + Defaults + Visual-Builder)
-- ✅ **Aufgabe 40 (Webhook-Actions, 2026-05-29, auf Branch `feature/aufgabe-40-webhook-actions`)** — Action-Element-Modell: Webhooks sind dynamisch konfigurierbare Builder-Elemente im neuen „Webhooks"-Tab. Backend (Sender + HMAC + Cron + Retry + abandoned-Trigger), Editor-Tab + Step-Pill-Badges, CRUD-API. Schema additive (siehe `supabase-schema.md`). Replaces ursprünglichen C.5-Scope.
+- ✅ **Aufgabe 40 (Webhook-Actions, 2026-05-29)** — Action-Element-Modell: Webhooks sind dynamisch konfigurierbare Builder-Elemente im neuen „Webhooks"-Tab. Backend (Sender + HMAC + Cron + Retry + abandoned-Trigger), Editor-Tab + Step-Pill-Badges, CRUD-API. Schema additive (siehe `supabase-schema.md`). Replaces ursprünglichen C.5-Scope.
+- ✅ **Aufgabe 41 (E-Mail-Drip-Actions, 2026-05-31, auf Branch `feature/aufgabe-41-emails-tab`)** — Drip-System für Lead-Nurturing: zeitversetzte Mail-Sequenz nach Submit (`delay_minutes`). TipTap-WYSIWYG-Editor mit Custom Variable + Magic-Section Nodes. 3-Pane-In-Place-Layout (Liste · Editor · Live-Vorschau, resizable). Auto-Save mit 1.5 s Debounce. Vorschau mit Mock- oder echten Lead-Daten. Schema `email_subscriptions` + `email_delivery_attempts` (Queue-Pattern). Cron erweitert um due-pending + due-retrying. Hartkodierter `sendAllEmails`-Pfad in `/api/submit` durch Backfill-Subscriptions ersetzt. **Detail-Doku: [`email-drip-architektur.md`](email-drip-architektur.md).**
 
 **Offen vor Launch (siehe roadmap.md + builder-fokus-roadmap.html):**
-- E-Mails-Tab dynamisch machen (folgt Webhook-Action-Pattern)
 - C.4 Logic Jumps (v1.1 OK)
 - D.1 Stripe Live (aufgeschoben, Testkunden `free`-Tier)
 - D.2 Conversion-Tracking via postMessage + Script-Loader-Embed (Performance-Marketing-Blocker)
@@ -525,7 +525,7 @@ DB (pages + fields)
 - [`components/tenant-editor/v2/EditorShellV2.tsx`](../components/tenant-editor/v2/EditorShellV2.tsx) routet `activeTab === "webhooks"` auf WebhooksPanel (full-width) + lädt webhook-trigger_page_id Map für StepPill-Badges.
 - [`components/tenant-editor/v2/StepPill.tsx`](../components/tenant-editor/v2/StepPill.tsx) + [`StepList.tsx`](../components/tenant-editor/v2/StepList.tsx) erweitert um violettes Webhook-Badge mit Count. Click → springt in Webhooks-Tab.
 
-**Payload-Format (final):**
+**Payload-Format Webhook (final):**
 ```json
 {
   "event": "submission.completed",
@@ -544,3 +544,29 @@ DB (pages + fields)
 ```
 
 **HMAC-Header:** `X-LeadPlug-Signature: t=<unix-seconds>,v1=<hex-hmac-sha256>` über `<t>.<bodyJson>`. Tenant verifiziert mit dem Secret (Code-Snippets im Tab).
+
+## 14. E-Mail-Drip-Architektur (Aufgabe 41)
+
+> Vollständige Detail-Doku: [`email-drip-architektur.md`](email-drip-architektur.md). Hier nur die Code-Karte.
+
+**Konzeptueller Unterschied zu Webhooks:** E-Mails sind **Sequenzen** (Drip), keine Events. Trigger ist `delay_minutes nach Submit` — kein `after_page`, kein `on_abandoned`. Lead-Nurturing-Use-Case.
+
+**Backend:**
+- [`lib/emails.ts`](../lib/emails.ts) ~430 LOC — Sender (Resend + DynamicEmail-Render) + Queue-Insert (`scheduleAttemptsForSubmission`) + Backoff (1m/5m/30m/2h/6h, 4xx→permanent) + Public Entry-Points: `triggerEmailsOnSubmit`, `processPendingDelivery`, `retryEmailDelivery`, `sendTestEmail` (mit Draft-Override), `aggregateEmailStatusForSubmission` (Dashboard-Badges).
+- [`lib/emailTemplates.ts`](../lib/emailTemplates.ts) — HTML-Substitutions-Pipeline: `<span data-variable="X">{{X}}</span>` → HTML-escaped Value via `resolveVar()`, `<div data-magic-section="X">` → fertiges Sub-HTML (`renderAnswersOverview` / `renderContactSummary` / `renderDashboardButton`). Subject läuft denselben Pfad mit HTML-Tag-Strip. Plus `AVAILABLE_TOKENS` als Editor-Picker-Quelle.
+- [`emails/DynamicEmail.tsx`](../emails/DynamicEmail.tsx) — React-Email-Shell mit Brand-Color-Header, dangerouslySetInnerHTML-Body, Footer.
+- [`/api/submit`](../app/api/submit/route.ts): `after(triggerEmailsOnSubmit(...).then(aggregate...))` — Submit-Response geht sofort raus, Drip-Queue wird gefüllt + sofort fällige Mails (delay=0) versendet.
+- [`/api/cron/webhook-retry`](../app/api/cron/webhook-retry/route.ts) erweitert: Section „E-Mail-Queue" pickt `status='pending' AND scheduled_at <= NOW()` + `status='retrying' AND next_retry_at <= NOW()`.
+- `app/api/tenant/funnels/[slug]/emails/...` — Subscription-CRUD + `/test` (mit Draft-Override) + `/logs` + `/preview-leads` (top 5 completed Submissions für Vorschau-Lead-Picker).
+
+**Frontend (Editor):**
+- [`components/tenant-editor/v2/EmailsPanel.tsx`](../components/tenant-editor/v2/EmailsPanel.tsx) ~900 LOC — 3-Pane-Layout (Liste · Editor · Live-Vorschau). Draft-State lebt im Panel (`useState<EmailDraft>`), Editor + Vorschau lesen denselben Draft → Live-Updates beim Tippen. Auto-Save via `useEffect` mit `setTimeout(handleSave, 1500)`. Switch-Warn bei dirty (`trySwitchTo`). Resize-Handle zwischen Editor und Vorschau (320–900 px). Demo-Mode-Fallback bei API-Fehler.
+- [`components/tenant-editor/v2/email/EmailEditor.tsx`](../components/tenant-editor/v2/email/EmailEditor.tsx) — TipTap-Wrapper, single-line oder full-mode. Toolbar mit Standard-Marks + Portal-Dropdowns für „+Variable" / „+Baustein".
+- [`components/tenant-editor/v2/email/VariableNode.ts`](../components/tenant-editor/v2/email/VariableNode.ts) — Custom TipTap-Inline-Atom. NodeView rendert violetten Chip mit human-Label („Lead-Name" statt `contact.name`). Speichert sich als `<span data-variable="contact.name">{{contact.name}}</span>`.
+- [`components/tenant-editor/v2/email/MagicSectionNode.ts`](../components/tenant-editor/v2/email/MagicSectionNode.ts) — Custom TipTap-Block-Atom. NodeView rendert dashed Block-Card mit X-Button (Hover rot) zum Entfernen. Speichert sich als `<div data-magic-section="answers_overview"></div>`.
+
+**Magic-Sections:**
+- `answers_overview` — graue Box mit allen sichtbaren Antworten formatiert
+- `contact_summary` — Kontakt-Felder-Box (Name/Email/Telefon mit mailto:/tel: Links)
+- `dashboard_button` — vordefinierter CTA „Lead im Dashboard ansehen →" (Magic-Section, nur für Tenant-Mails sinnvoll)
+- **CTA-Button (eigener Link)** — über `CtaButtonNode`: anpassbarer Button mit Label + URL, inline editierbar (siehe `email-drip-architektur.md`)

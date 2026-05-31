@@ -4,14 +4,13 @@ import { getTenantConfig } from '@/lib/getTenantConfig'
 import {
   upsertSubmissionProgress,
   isRateLimited,
-  updateEmailStatus,
   logHoneypot,
   deriveContactFromAnswers,
   enrichContact,
 } from '@/lib/tracking'
-import { sendAllEmails } from '@/lib/sendEmails'
 import { validateContactField } from '@/lib/validateContactField'
 import { triggerOnSubmit, type SubmissionSnapshot } from '@/lib/webhooks'
+import { triggerEmailsOnSubmit, aggregateEmailStatusForSubmission } from '@/lib/emails'
 
 function getIp(req: Request): string | null {
   const forwarded = req.headers.get('x-forwarded-for')
@@ -131,32 +130,15 @@ export async function POST(req: Request) {
     completed:  true,
   })
 
-  // 8. E-Mails senden (Fehler loggen, nicht werfen – Endkunde bekommt immer success:true)
-  let emailResults = { customer: false, tenant: false }
-  try {
-    emailResults = await sendAllEmails({
-      contact: effectiveContact,
-      answers,
-      tenantConfig,
-      submittedAt: new Date(),
-    })
-  } catch (err) {
-    console.error('submit route: email pipeline failed', err)
-  }
-
-  // 9. Email-Status in DB schreiben
-  if (submissionId) {
-    await updateEmailStatus(submissionId, emailResults.customer, emailResults.tenant)
-  }
-
-  // 10. Webhooks (Aufgabe 40 — Action-Element-Modell)
+  // 8. Webhooks + E-Mails (Aufgabe 40 / 41 — Action-Element-Modell)
   //
   // Fire-and-forget via next/server `after()`: die Response geht sofort raus, der
-  // Webhook-Versand läuft asynchron weiter. Failures landen als delivery_attempts
-  // mit status='retrying' + next_retry_at — der /api/cron/webhook-retry holt sie.
+  // Webhook- und Mail-Versand läuft asynchron weiter. Failures landen als
+  // delivery_attempts mit status='retrying' + next_retry_at — der Cron holt sie.
   //
-  // Triggert nur on_submit-Subscriptions (after_page wird im Widget-Pfad via
-  // /api/track-progress getriggert — Phase 2 / nicht in MVP).
+  // E-Mails ersetzen den hartkodierten sendAllEmails-Pfad. Bestehende Funnels haben
+  // durch den Migration-Backfill aus Aufgabe 41 zwei Default-Subscriptions
+  // (Customer-Confirmation + Tenant-Notification), das alte Verhalten bleibt 1:1.
   if (submissionId && tenantConfig.funnelId) {
     const snapshot: SubmissionSnapshot = {
       id:           submissionId,
@@ -172,6 +154,11 @@ export async function POST(req: Request) {
     after(
       triggerOnSubmit(tenantConfig.funnelId, 'submission.completed', snapshot, tenantConfig)
         .catch((err) => console.error('submit route: webhook trigger failed', err))
+    )
+    after(
+      triggerEmailsOnSubmit(tenantConfig.funnelId, snapshot, tenantConfig)
+        .then(() => aggregateEmailStatusForSubmission(submissionId))
+        .catch((err) => console.error('submit route: email trigger failed', err))
     )
   }
 
