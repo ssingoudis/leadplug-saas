@@ -64,7 +64,8 @@ export function WebhooksPanel({ funnelSlug, questions, onSubsChanged }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [revealedSecret, setRevealedSecret] = useState<{ subId: string; secret: string } | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Aufgabe 45: Master-Detail (Liste · Detail) wie EmailsPanel — selectedId statt expand.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // --- Load ---
   const loadSubs = useCallback(async () => {
@@ -105,7 +106,7 @@ export function WebhooksPanel({ funnelSlug, questions, onSubsChanged }: Props) {
     const created = await res.json();
     setShowAdd(false);
     setRevealedSecret({ subId: created.id, secret: created.secret });
-    setExpandedId(created.id);
+    setSelectedId(created.id);
     await loadSubs();
     await onSubsChanged?.();
   }
@@ -141,65 +142,130 @@ export function WebhooksPanel({ funnelSlug, questions, onSubsChanged }: Props) {
       return;
     }
     if (revealedSecret?.subId === id) setRevealedSecret(null);
-    if (expandedId === id) setExpandedId(null);
+    if (selectedId === id) setSelectedId(null);
     await loadSubs();
     await onSubsChanged?.();
   }
 
+  const selectedSub = subs.find((s) => s.id === selectedId) ?? null;
+
   // ----------------------------------------------------------------------
   return (
-    <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-background">
-      <div className="mx-auto max-w-3xl px-6 py-8">
-        {/* Header */}
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Webhooks</h2>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Schicke Leads automatisch an dein CRM (Zapier, Make, Pipedream, n8n, eigener Endpoint).
-              Du kannst pro Funnel beliebig viele Webhooks anlegen.
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div
+        className="grid min-h-0 flex-1 bg-gray-50 dark:bg-background"
+        style={{ gridTemplateColumns: "280px minmax(0, 1fr)" }}
+      >
+        {/* LEFT: Liste */}
+        <aside className="flex min-h-0 flex-col overflow-hidden border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+          <div className="border-b border-gray-200 dark:border-gray-800 px-4 py-3">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white">Webhooks</h2>
+            <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+              Leads automatisch an dein CRM (Zapier, Make, n8n, eigener Endpoint).
             </p>
           </div>
-          <button
-            onClick={() => setShowAdd(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
-          >
-            <Plus size={14} strokeWidth={2.5} />
-            Webhook hinzufügen
-          </button>
-        </div>
+          <div className="flex-1 overflow-y-auto">
+            {loading ? (
+              <div className="p-4 text-center text-xs text-gray-400">Lade…</div>
+            ) : error ? (
+              <div className="m-3 rounded-lg border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-900/20 p-3 text-xs text-red-700 dark:text-red-300">
+                {error}
+              </div>
+            ) : subs.length === 0 ? (
+              <div className="p-6 text-center">
+                <Send size={20} className="mx-auto mb-2 text-gray-300" />
+                <p className="text-xs text-gray-500 dark:text-gray-400">Noch kein Webhook angelegt.</p>
+              </div>
+            ) : (
+              <ul className="py-1">
+                {subs.map((sub) => {
+                  const triggerPage = sub.trigger_page_id
+                    ? questions.find((q) => q.dbId === sub.trigger_page_id)
+                    : null;
+                  return (
+                    <li key={sub.id}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedId(sub.id)}
+                        className={`w-full px-3 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
+                          selectedId === sub.id
+                            ? "bg-primary/10 dark:bg-primary/20 border-l-2 border-primary"
+                            : "border-l-2 border-transparent"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-xs font-medium text-gray-900 dark:text-white flex-1" title={sub.url}>
+                            {sub.url}
+                          </p>
+                          {!sub.is_active && (
+                            <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-gray-500 dark:text-gray-400">
+                              pause
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 truncate text-[10px] text-gray-500 dark:text-gray-400">
+                          {sub.trigger_type === "on_submit"
+                            ? "feuert am Funnel-Ende"
+                            : triggerPage
+                              ? `nach „${triggerPage.title || "Frage"}"`
+                              : "Trigger entfernt"}
+                        </p>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+          <div className="border-t border-gray-200 dark:border-gray-800 p-3">
+            <button
+              onClick={() => setShowAdd(true)}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary-hover"
+            >
+              <Plus size={14} strokeWidth={2.5} />
+              Webhook hinzufügen
+            </button>
+          </div>
+        </aside>
 
-        {/* Revealed-Secret Banner */}
-        {revealedSecret && (
-          <SecretRevealBanner secret={revealedSecret.secret} onDismiss={() => setRevealedSecret(null)} />
-        )}
-
-        {/* Liste / Empty-State */}
-        {loading ? (
-          <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 text-center text-sm text-gray-400">
-            Lade…
-          </div>
-        ) : error ? (
-          <div className="rounded-2xl border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-900/20 p-4 text-sm text-red-700 dark:text-red-300">
-            {error}
-          </div>
-        ) : subs.length === 0 ? (
-          <EmptyState onAdd={() => setShowAdd(true)} />
-        ) : (
-          <div className="space-y-3">
-            {subs.map((sub) => (
-              <SubscriptionCard
-                key={sub.id}
-                sub={sub}
-                questions={questions}
-                funnelSlug={funnelSlug}
-                expanded={expandedId === sub.id}
-                onToggleExpand={() => setExpandedId(expandedId === sub.id ? null : sub.id)}
-                onPatch={(body) => patchSub(sub.id, body)}
-                onDelete={() => deleteSub(sub.id)}
-              />
-            ))}
-          </div>
-        )}
+        {/* RIGHT: Detail */}
+        <section className="flex min-h-0 flex-col overflow-y-auto">
+          {selectedSub ? (
+            <WebhookDetail
+              key={selectedSub.id}
+              sub={selectedSub}
+              questions={questions}
+              funnelSlug={funnelSlug}
+              revealedSecret={revealedSecret?.subId === selectedSub.id ? revealedSecret.secret : null}
+              onDismissSecret={() => setRevealedSecret(null)}
+              onPatch={(body) => patchSub(selectedSub.id, body)}
+              onDelete={() => deleteSub(selectedSub.id)}
+            />
+          ) : (
+            <div className="flex flex-1 items-center justify-center p-8">
+              <div className="text-center">
+                <Send size={22} className="mx-auto mb-3 text-gray-300" />
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  {subs.length === 0 ? "Noch kein Webhook" : "Webhook auswählen"}
+                </p>
+                <p className="mx-auto mt-1 max-w-xs text-xs text-gray-500 dark:text-gray-400">
+                  {subs.length === 0
+                    ? "Leg deinen ersten Webhook an, um Leads automatisch an dein CRM zu schicken."
+                    : "Wähle links einen Webhook, um ihn zu bearbeiten."}
+                </p>
+                {subs.length === 0 && (
+                  <button
+                    onClick={() => setShowAdd(true)}
+                    className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
+                  >
+                    <Plus size={14} strokeWidth={2.5} />
+                    Ersten Webhook anlegen
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
       </div>
 
       <WebhookAddModal
@@ -258,81 +324,43 @@ function SecretRevealBanner({ secret, onDismiss }: { secret: string; onDismiss: 
 }
 
 // ===========================================================================
-// EmptyState
+// WebhookDetail — Detail-Pane für den ausgewählten Webhook (Aufgabe 45 Master-Detail)
 // ===========================================================================
 
-function EmptyState({ onAdd }: { onAdd: () => void }) {
-  return (
-    <div className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-10 text-center">
-      <div className="mx-auto mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <Send size={18} />
-      </div>
-      <p className="text-sm font-semibold text-gray-900 dark:text-white">Noch kein Webhook konfiguriert</p>
-      <p className="mx-auto mt-1 max-w-sm text-xs text-gray-500 dark:text-gray-400">
-        Leg deinen ersten Webhook an um Leads automatisch in dein CRM zu schicken.
-        Wir senden eine HTTP-POST-Nachricht mit allen Antworten + Kontaktdaten.
-      </p>
-      <button
-        onClick={onAdd}
-        className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
-      >
-        <Plus size={14} strokeWidth={2.5} />
-        Ersten Webhook anlegen
-      </button>
-    </div>
-  );
-}
-
-// ===========================================================================
-// SubscriptionCard — Liste-Item mit collapsible Detail-Section
-// ===========================================================================
-
-interface SubCardProps {
+interface WebhookDetailProps {
   sub: SubscriptionRow;
   questions: EditorQuestion[];
   funnelSlug: string;
-  expanded: boolean;
-  onToggleExpand: () => void;
+  revealedSecret: string | null;
+  onDismissSecret: () => void;
   onPatch: (body: Record<string, unknown>) => Promise<void>;
   onDelete: () => Promise<void>;
 }
 
-function SubscriptionCard({ sub, questions, funnelSlug, expanded, onToggleExpand, onPatch, onDelete }: SubCardProps) {
-  const triggerPage = sub.trigger_page_id
-    ? questions.find((q) => q.dbId === sub.trigger_page_id)
-    : null;
-
+function WebhookDetail({
+  sub,
+  questions,
+  funnelSlug,
+  revealedSecret,
+  onDismissSecret,
+  onPatch,
+  onDelete,
+}: WebhookDetailProps) {
   return (
-    <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
-      {/* Header-Zeile (immer sichtbar) */}
-      <div className="flex items-center gap-3 px-4 py-3">
-        <button onClick={onToggleExpand} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-          {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-        </button>
-
+    <div className="flex flex-col">
+      {/* Header: URL + aktiv-Toggle */}
+      <div className="flex items-center gap-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-5 py-3">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="truncate text-sm font-medium text-gray-900 dark:text-white" title={sub.url}>
-              {sub.url}
-            </p>
-            {!sub.is_active && (
-              <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-[10px] font-semibold uppercase text-gray-500 dark:text-gray-400">
-                pausiert
-              </span>
-            )}
-          </div>
-          <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-            {sub.trigger_type === "on_submit"
-              ? "feuert am Funnel-Ende"
-              : triggerPage
-                ? `feuert nach „${triggerPage.title || "Unbenannte Frage"}"`
-                : "Trigger-Schritt entfernt — bitte neu konfigurieren"}
-            {" · "}
-            {sub.event_types.length > 0 ? sub.event_types.join(", ") : "alle Events"}
+          <p className="truncate text-sm font-semibold text-gray-900 dark:text-white" title={sub.url}>
+            {sub.url}
           </p>
+          {!sub.is_active && (
+            <span className="mt-0.5 inline-block rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-[10px] font-semibold uppercase text-gray-500 dark:text-gray-400">
+              pausiert
+            </span>
+          )}
         </div>
-
-        <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
+        <label className="flex items-center gap-1.5 whitespace-nowrap text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
           <input
             type="checkbox"
             checked={sub.is_active}
@@ -343,33 +371,31 @@ function SubscriptionCard({ sub, questions, funnelSlug, expanded, onToggleExpand
         </label>
       </div>
 
-      {/* Expanded-Section */}
-      {expanded && (
-        <div className="border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-950/30 px-4 py-4 space-y-4">
-          <ConfigSection sub={sub} questions={questions} onPatch={onPatch} />
-          <TestSection funnelSlug={funnelSlug} subId={sub.id} />
-          <LogsSection funnelSlug={funnelSlug} subId={sub.id} />
-          <VerifySnippetSection />
-          <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-800 pt-3">
-            <button
-              onClick={() => {
-                if (!confirm("Neues Secret generieren? Der alte Secret wird sofort ungültig — bestehende CRM-Integrationen müssen den neuen Wert bekommen.")) return;
-                onPatch({ rotate_secret: true });
-              }}
-              className="text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900"
-            >
-              Secret rotieren
-            </button>
-            <button
-              onClick={onDelete}
-              className="inline-flex items-center gap-1 text-xs font-medium text-red-600 hover:text-red-700"
-            >
-              <Trash2 size={12} />
-              Löschen
-            </button>
-          </div>
+      <div className="space-y-4 p-5">
+        {revealedSecret && <SecretRevealBanner secret={revealedSecret} onDismiss={onDismissSecret} />}
+        <ConfigSection sub={sub} questions={questions} onPatch={onPatch} />
+        <TestSection funnelSlug={funnelSlug} subId={sub.id} />
+        <LogsSection funnelSlug={funnelSlug} subId={sub.id} />
+        <VerifySnippetSection />
+        <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-800 pt-3">
+          <button
+            onClick={() => {
+              if (!confirm("Neues Secret generieren? Der alte Secret wird sofort ungültig — bestehende CRM-Integrationen müssen den neuen Wert bekommen.")) return;
+              onPatch({ rotate_secret: true });
+            }}
+            className="text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900"
+          >
+            Secret rotieren
+          </button>
+          <button
+            onClick={onDelete}
+            className="inline-flex items-center gap-1 text-xs font-medium text-red-600 hover:text-red-700"
+          >
+            <Trash2 size={12} />
+            Löschen
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }

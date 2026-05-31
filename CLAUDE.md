@@ -111,15 +111,14 @@ LeadPlug ist „eine Art Typeform-Klon". **Alle Output-Mechanismen sind dynamisc
 - **Wichtig — Webhooks ≠ E-Mails im Trigger-Modell:** Webhooks pushen Events (Timing matched dem Event: `on_submit`, `after_page`, abandoned-Cron). E-Mails sind Sequenzen (Timing relativ zum Submit via `delay_minutes`). Bei zukünftigen Actions: passendes Modell pro Use-Case wählen, nicht zwanghaft 1:1-Klon.
 - **Submit-Page-Abschaffung geplant**: heute hartkodiertes Element bleibt für Übergang (toggleable via `skip_submit_step`). Backend-Trigger (`/api/submit`) ist Submit-Page-agnostisch — wenn die Page aus dem Editor verschwindet, ändert sich am Webhook-/E-Mail-Sender nichts.
 
-**Aktueller Sprint — „Builder-Final" (5 Aufgaben in einem Rutsch, Branch `feature/builder-final-sprint`):**
+**Conversion-Tracking** ✅ live (Aufgaben 42 + 43 / D.2, 2026-05-31) — **kein** Action-Element, sondern Embed-Mechanik: das Widget meldet den Submit PII-frei per `postMessage` an die einbettende Seite, der zentral ausgelieferte `embed.js`-Script-Loader feuert daraufhin Conversions (GTM-`dataLayer`-Push `leadplug_lead` + Meta/Google-Auto-Fire + `window.LeadPlug.onLead`-Callback).
+- **Aufgabe 42** = event-basiertes Fundament + `embed.js`-Loader (Upgrade des bestehenden `public/embed.js`, abwärtskompatibel zu `data-funnel-slug`/`data-slug`).
+- **Aufgabe 43 = Turnkey:** Tenant trägt **Meta-Pixel-ID** + **Google-Ads-Conversion** pro Funnel im Editor-Reiter „Einbinden" ein (DB: `funnels.meta_pixel_id` / `google_ads_conversion`). Die IDs reisen PII-frei in der `funnel-submit`-Message mit; `embed.js` injiziert bei Bedarf den Pixel-Basiscode + feuert automatisch (Format-Whitelist client+server). **Tracking ist pro Funnel** (Agentur nutzt je Endkunde ein anderes Pixel). Die frühere globale `/dashboard/embed`-Seite + `EmbedBlock` wurden entfernt — Embed-Code + Tracking leben jetzt im Editor-Reiter „Einbinden" (konsistent zu Webhooks/E-Mails). Server-CAPI bleibt on-demand.
+- Sender + Loader + Turnkey: siehe [`context/conversion-tracking.md`](context/conversion-tracking.md).
 
-1. Aufgabe 35 (~1.5 Std): Submit-Button als Default-off + optionale Vorlage „Bestätigungs-Schritt"
-2. Aufgabe 36 (~2-3 Std): Lead-Inbox 3 Tabs (Completed / Abgebrochen-mit-Email / Abgebrochen-ohne-Email)
-3. Aufgabe 37 (~1 Std): Bottom-Right Floating-Nav-Bug in Live-Widget fixen
-4. C.1d Cutover: alten v1-Editor + ?v=2-Flag entfernen
-5. C.2 Theme-Panel + Logo-Upload
+**Builder-Final-Sprint** ✅ abgeschlossen + gemerged (Aufgaben 35–37 + C.1d + C.2). Danach gebaut + gemerged: Aufgabe 38 (Custom Multi-Field-Pages), 39 (Welcome/End-Screen + Rating/Scale/Statement), 40 (Webhooks), 41 (E-Mail-Drip), 42 (Conversion-Tracking, oben).
 
-Nach Sprint-Abschluss: Sprint-Review mit Stavros, dann nächster Block (voraussichtlich C.5 Webhook-Sender + C.4 Logic Jumps + Phase D Launch-Prep).
+**Offen bis Launch (Phase D-Rest):** D.1 Stripe Test→Live (~1 Tag, aufgeschoben — Testkunden bekommen `free`-Tier), D.3 3-5 Demo-Funnel-Templates (Content). **Optional / v1.1:** C.4 Logic Jumps (eigener „Logik"-Tab, Action-Element-Pattern). Danach: Launch + Direct-Sales.
 
 **Bewusst gestrichen** (nicht mehr im Plan — siehe [`context/builder-fokus-roadmap.html`](context/builder-fokus-roadmap.html) für Begründungen):
 
@@ -148,6 +147,7 @@ Nach Sprint-Abschluss: Sprint-Review mit Stavros, dann nächster Block (voraussi
 - [`context/webhook-architecture.html`](context/webhook-architecture.html) — **dieselbe Architektur visuell** (Stavros-Style): Tabellen-Karten, Sequence-Diagramme als Lanes, Payload-Highlighting, Status-Cards.
 - [`context/webhook-erklaert.md`](context/webhook-erklaert.md) — **Webhooks von Anfang an erklärt** für Lernende mit Programmier-Grundkenntnissen. Konzept-Einstieg mit Analogien, Use-Case, DB-Tabellen, End-to-End-Flow, HMAC, Backoff, Cron, Dedup, Glossar. **Erste Anlaufstelle wenn jemand das System komplett neu kennenlernt.**
 - [`context/email-drip-architektur.md`](context/email-drip-architektur.md) — **E-Mail-Drip-Subsystem vollständig** (Aufgabe 41): DB-Schema, Code-Layout (Sender, Queue, Cron), TipTap-Editor + Custom-Nodes, Template-Substitutions-Regex, UI-Architektur (3-Pane mit Draft-Lift), Sequence-Diagramme (immediate/delayed/retry/test). **Erste Anlaufstelle für „wie funktioniert der E-Mail-Drip-Sender".**
+- [`context/conversion-tracking.md`](context/conversion-tracking.md) — **Conversion-Tracking + `embed.js`-Script-Loader vollständig** (Aufgabe 42 / D.2): postMessage-Bridge (iFrame→Parent), `embed.js`-Loader, Code-Layout, Tenant-Einbettung, 3 Abgreif-Wege (GTM-`dataLayer` / data-Attribute / `onLead`-Callback), Sicherheits-/PII-Modell. **Erste Anlaufstelle für „wie kommen Funnel-Leads als Conversion zu Meta/Google".**
 - [`context/architecture.html`](context/architecture.html) — **dieselbe Architektur visuell** (vom Stavros gepflegt) — 3-Worlds-Map, DB-Tree, Page-Flow, Field-Types-Grid, Komponenten-Baum, Decisions-Legend.
 - [`context/project-overview.md`](context/project-overview.md) — Code-Struktur (Verzeichnisse), DB-Schema, API-Routes
 - [`context/supabase-schema.md`](context/supabase-schema.md) — vollständige technische DB-Referenz (Enums, Tables, RLS, Indices, Functions)
@@ -245,6 +245,7 @@ Enthält: Design-Token (Light + Dark Mode), Komponenten-API, Dark-Mode-Implement
 ### Zwei getrennte Design-Welten
 
 - **`components/ui/`** → Dashboard & Tenant-Portal (das obige System)
+- **`components/tenant-editor/v2/ui/Panel.tsx`** → **Editor-Design-System** (Aufgabe 45): geteilte Primitive `PanelShell · PanelHeader · Section · Field · FieldHint` für alle Editor-Tabs. **Neue Editor-Panels/Sektionen damit bauen, nicht lokal duplizieren.** Drei kanonische Layout-Templates: Canvas+Properties (Tab „Bearbeiten" — Inhalt+Design vereint mit Inspektor-Umschalter), Master-Detail (E-Mails, Webhooks), Einzelspalte-Config (Einbinden). Speichern-Modell: globaler Top-Save nur auf „Bearbeiten" (Dokument), Ressourcen-Tabs speichern pro Eintrag.
 - **`components/funnel.tsx`** → Widget-UI (Farben aus DB, komplett eigenständig). **Nur in Absprache anfassen** — keine spontanen KI-Edits an dieser Datei. Erweiterungen oder Refactors (neue Feldtypen, Design-Updates, etc.) brauchen explizite Freigabe und einen klaren Grund. Default-Haltung: hands off, frag nach. **Stand seit Aufgabe 34 (2026-05-28):** Datei ist signifikant gewachsen (~1500 LOC) durch Typeform-Redesign, framer-motion-Slide, EditableText-Helper für WYSIWYG-Edit, SortableEditOption für Canvas-Drag, Partial-Submissions-Hook. Auslagerung in `components/funnel/*` ist Option für eine kommende Pause-Aufgabe wenn die Datei unhandhabbar wird.
 
 ---
@@ -302,7 +303,7 @@ Klare Trennung — keine Override-Hierarchien zwischen Tabellen:
 | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `tenants`                                      | **Nur Agentur-Account-Daten:** Stripe-Felder, billing_model, billing_price, lead_price, is_active. Optional Anzeigename der Agentur             |
 | `tenant_members`                               | N:M-Junction Tenant ↔ User mit `role` (`owner` / `admin` / `member`). **Minimal — keine Profile-Felder** (kein display_name, kein phone). YAGNI |
-| `funnels`                                      | **Alle endkunden-spezifischen Daten:** Footer (company_name, email, phone), notification_email, Theme (Farben, Font, Radius), Texte, Slug       |
+| `funnels`                                      | **Alle endkunden-spezifischen Daten:** Footer (company_name, email, phone), notification_email, Theme (Farben, Font, Radius), Texte, Slug, Conversion-Tracking-IDs (`meta_pixel_id`, `google_ads_conversion`) |
 | `pages` + `fields`                             | Funnel-Inhalt. Pro Funnel: N × question-Pages mit je 1 Field + 1 × submit-Page (alle Kontaktfelder als Fields) + 1 × success-Page (leer)        |
 | `submissions`                                  | Lead-Daten (Snapshot-Pattern — keine FK auf Funnel/Tenant, damit auch nach Löschen erhalten)                                                    |
 
@@ -322,6 +323,9 @@ Klare Trennung — keine Override-Hierarchien zwischen Tabellen:
 **Aufgabe 41 Schema-Erweiterungen (2026-05-31):**
 - `aufgabe_41_email_subscriptions`: 2 neue Tabellen. `email_subscriptions(id, funnel_id, tenant_id, name, recipient_type, delay_minutes, subject, body_html, from_local, is_active, …)` mit CHECK-Constraints (recipient_type IN customer/tenant, delay_minutes>=0, subject/body/name nicht leer) + 2 partial Indices + updated_at-Trigger + 4 RLS-Policies. `email_delivery_attempts(id, subscription_id, submission_id, scheduled_at, attempt_count, status, recipient_address, resend_message_id, next_retry_at, delivered_at, …)` mit CHECK (status IN pending/retrying/success/failed) + 4 Indices (subscription, submission, due-pending, due-retrying) + 1 SELECT-Policy. **Backfill:** 2 Default-Subscriptions pro existierendem Funnel (Customer-Confirmation + Tenant-Notification, beide delay=0) → 24 Rows für 12 bestehende Funnels. Forward-only mit DOWN-File für Rollback. Additive — keine bestehenden Daten geändert.
 - `aufgabe_41_custom_recipient` (2026-05-31 abends): `email_subscriptions.recipient_type` CHECK erweitert um `'custom'` + neue Spalte `recipient_value text NULL` (comma-separated, max 3 Adressen, App-side enforced) + CHECK „bei custom muss recipient_value gefüllt sein". Additive, kein Backfill nötig.
+
+**Aufgabe 43 Schema-Erweiterung (2026-05-31):**
+- `aufgabe_43_funnel_tracking`: `funnels` + `meta_pixel_id text NULL` + `google_ads_conversion text NULL` (Turnkey-Conversion-Tracking, pro Funnel). Nullable, additiv, kein Backfill, kein CHECK (Format app-seitig validiert: `^[0-9]{5,20}$` / `^AW-[0-9]+(/[\w-]+)?$`). Direkt auf Produktion appliziert (mit User-Go — Branch-Test für 2 nullable Spalten unverhältnismäßig). DOWN-File vorhanden.
 
 **Nächste DB-Arbeit:** keine geplant.
 

@@ -1,5 +1,7 @@
 # embed.js – Wie das Einbettungs-Script funktioniert
 
+> **Stand seit Aufgabe 42 / D.2 (2026-05-31):** `public/embed.js` wurde erweitert um **Conversion-Tracking** (GTM-`dataLayer`-Push `leadplug_lead` + optionale Meta/Google-`data`-Attribute + `window.LeadPlug.onLead`-Callback) und **Sicherheits-Härtung** (Origin- + Source-Check, Höhen-Clamp). Neues kanonisches Slug-Attribut: **`data-leadplug`**; die hier beschriebenen `data-funnel-slug` (Div) und `data-slug` (Script) bleiben **abwärtskompatibel** unterstützt. Das Widget sendet beim Absenden zusätzlich `{ type:'funnel-submit', funnel:'<slug>' }`. Vollständige Tracking-Referenz: [`context/conversion-tracking.md`](../context/conversion-tracking.md). Die untenstehende Code-Erklärung beschreibt die Resize-Grundlogik — das Prinzip ist unverändert, nur ergänzt.
+
 `public/embed.js` ist das Script das Kunden auf ihrer Website einbinden. Es erstellt den iFrame automatisch, erkennt den Funnel-Slug, und hört auf Höhen-Updates vom Widget. Der Kunde muss nichts manuell konfigurieren außer dem Slug.
 
 ---

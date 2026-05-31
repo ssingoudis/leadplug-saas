@@ -248,6 +248,8 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
     questions,
     skipSubmitStep: row.skip_submit_step ?? false,
     redirectUrl: row.redirect_url ?? undefined,
+    metaPixelId: row.meta_pixel_id ?? undefined,
+    googleAdsConversion: row.google_ads_conversion ?? undefined,
   }
 }
 
@@ -279,6 +281,7 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
       footer_company_name, footer_email, footer_phone,
       email_sender_local, notification_email,
       skip_submit_step, redirect_url,
+      meta_pixel_id, google_ads_conversion,
       primary_color, text_color, background_color, page_background_color,
       font, border_radius, max_width,
       tenants!funnels_tenant_id_fkey (

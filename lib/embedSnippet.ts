@@ -1,5 +1,5 @@
 // Einzige Wahrheit für das Embed-Snippet, das Tenants auf ihre Website kopieren.
-// Wird sowohl von EmbedBlock (Embed-Seite) als auch vom Editor-Shortcut benutzt.
+// Wird vom „Einbinden"-Tab im Funnel-Editor (SharePanel) benutzt.
 //
 // Hardening-Geschichte:
 // - Origin-Check (e.origin === ALLOWED) — schützt gegen fremde iframes auf der Tenant-Seite
@@ -10,8 +10,11 @@
 //
 // Limitation: Diese Hardenings landen nur in NEUEN Snippets die Tenants frisch kopieren.
 // Bestehende Embeds auf Tenant-Seiten laufen mit der alten Logik weiter — funktionieren,
-// kriegen aber die Sicherheits-Hardenings nicht. Saubere Lösung dafür ist das Script-Loader-
-// Modell (Typeform-Stil) — geplant für Aufgabe D.2 Conversion-Tracking.
+// kriegen aber die Sicherheits-Hardenings nicht.
+//
+// Seit Aufgabe 42 (D.2) ist das Script-Loader-Modell (`buildScriptEmbed`, siehe unten) der
+// empfohlene Weg — dort liegt die iFrame- + Tracking-Logik zentral in `/embed.js` und ist
+// jederzeit ohne Tenant-Aktion updatebar. Dieses iFrame-Snippet bleibt als Fallback bestehen.
 export function buildEmbedSnippet(slug: string, url: string, companyName: string): string {
   const allowedOrigin = new URL(url).origin;
   return `<iframe
@@ -34,4 +37,19 @@ export function buildEmbedSnippet(slug: string, url: string, companyName: string
   });
 })();
 <\/script>`;
+}
+
+// Empfohlenes Embed seit Aufgabe 42 (D.2): Script-Loader statt statischem iFrame.
+// Der Tenant kopiert nur diese zwei Zeilen — `/embed.js` erzeugt das iFrame, verdrahtet
+// die Höhen-Anpassung UND das Conversion-Tracking (GTM-dataLayer + optionale Meta/Google-
+// Pixel + Callback). Da die Logik zentral in /embed.js lebt, profitieren bestehende Embeds
+// automatisch von künftigen Updates — kein erneutes Kopieren nötig.
+//
+// Optionales Conversion-Tracking über data-Attribute am <div> (keine LeadPlug-Konfig nötig):
+//   data-meta-lead                         → fbq('track','Lead') wenn der Meta-Pixel geladen ist
+//   data-google-conversion="AW-123/AbCdEf" → gtag('event','conversion',{ send_to })
+// `origin` ist der App-Origin (z.B. https://app.leadplug.de), von dem /embed.js geladen wird.
+export function buildScriptEmbed(slug: string, origin: string): string {
+  return `<div data-leadplug="${slug}"></div>
+<script src="${origin}/embed.js" defer><\/script>`;
 }

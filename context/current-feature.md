@@ -109,7 +109,91 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
-## Aktuell: Aufgabe 41 — E-Mails als Drip-Action-Element (2026-05-31)
+## Aktuell: Aufgabe 45 — Editor-Design-System: Voll-Unifizierung der /edit-Tabs (2026-05-31)
+
+**Status:** Code auf Branch `feature/aufgabe-42-conversion-tracking` (uncommitted, mit 42–44). Type-Check grün. Visuell iterativ mit Stavros abgenommen. Kein DB-/API-Touch.
+
+**Warum:** Editor war Tab-für-Tab gewachsen → 5 Tabs, 4 Layout-Skelette, 2 Speichern-Modelle, 3 Sektion-Stile. Stavros: „insgesamt unstimmig". Gewählt: gemeinsames Editor-Design-System.
+
+**Umsetzung (phasiert, mit visuellen Checkpoints):**
+- **Geteilte Primitive** [`components/tenant-editor/v2/ui/Panel.tsx`](../components/tenant-editor/v2/ui/Panel.tsx): `PanelShell · PanelHeader · Section · Field · FieldHint` — kanonisiert aus dem bis dahin in jedem Panel duplizierten ThemePanel-Code. `ThemePanel` + `PropertiesPanel` laufen jetzt darauf (eine Quelle statt 2 Kopien).
+- **Ein Speichern-Modell** ([`EditorShellV2.tsx`](../components/tenant-editor/v2/EditorShellV2.tsx)): globaler Top-„Speichern" nur auf dem Dokument-Tab „Bearbeiten" (bzw. wenn ungesicherte Dokument-Änderungen bestehen). Ressourcen-Tabs (E-Mails/Webhooks/Einbinden) speichern pro Eintrag → kein doppeltes Speichern mehr.
+- **Webhooks → Master-Detail** ([`WebhooksPanel.tsx`](../components/tenant-editor/v2/WebhooksPanel.tsx)): von zentrierter Karten-Liste + Modal auf Liste·Detail umgebaut — gleiches Layout wie E-Mails (`SubscriptionCard`→`WebhookDetail`, `selectedId` statt expand). Logik (CRUD/Test/Logs/Secret) unverändert wiederverwendet. Add-Modal bleibt vorerst fürs Anlegen.
+- **Inhalt + Design zu einem Tab „Bearbeiten" zusammengelegt** ([`TopTabs.tsx`](../components/tenant-editor/v2/TopTabs.tsx) + `EditorShellV2`): 3-Pane (StepList · Canvas · Inspektor). Rechter Inspektor hat einen **Umschalter „Inhalt | Design"** (`inspectorMode`): Inhalt = Schritt-Eigenschaften (`PropertiesPanel`), Design = funnel-weites Theme (`ThemePanel`). Scope wird vom `PanelHeader` angesagt. Top-Tabs jetzt: Bearbeiten · Logik (bald) · E-Mails · Webhooks · Einbinden (6 → 5).
+
+**Konsens-Entscheidungen:**
+- Drei kanonische Templates: A Canvas+Properties (Bearbeiten), B Master-Detail (E-Mails, Webhooks), C Einzelspalte-Config (Einbinden).
+- Design nicht als eigener Tab (wirkte „verloren" als 2-Pane) → in „Bearbeiten" integriert mit Inspektor-Umschalter (gleiches Skelett wie Inhalt, Theme-Vorschau je Schritt).
+- Funnel-Brand-Farbe nur im Canvas; Editor-Chrome bleibt Indigo. Widget (`funnel.tsx`) unberührt.
+
+**Offen / Nice-to-have:** Einbinden-Section-Feinschliff, StepList-/Listen-Breiten-Angleich, Dark-Mode-/Abstands-Durchgang — fein-granular, am besten mit visueller Kontrolle.
+
+---
+
+## Aufgabe 44 — Navigations-Refactor: Side-Nav-Shell + Vollbild-Editor-Takeover (2026-05-31)
+
+**Status:** Code auf Branch `feature/aufgabe-42-conversion-tracking` (weiterhin uncommitted mit 42+43). Type-Check grün, Smoke-Test grün (App bootet, Auth-Guard intakt, 0 Konsolen-Fehler). **Visuelle Abnahme durch Stavros offen** (Shell ist hinter Login — headless nicht prüfbar).
+
+**Warum:** „Doppel-Navigation" — globale Top-Navbar + Editor-Tab-Leiste lagen als zwei gleich-aussehende Horizontal-Bars direkt übereinander (Ursache: Editor rendert im Dashboard-Layout, saß per `top:64px` unter dem Header). Beratung → Entscheidung: zwei Modi trennen.
+
+**Umsetzung:**
+- **Verwaltungs-Modus → linke Side-Nav** (Vercel-Stil, einklappbar): [`components/dashboard/Sidebar.tsx`](../components/dashboard/Sidebar.tsx) (Desktop-Rail `w-60`/`w-16` collapse + localStorage `lp_sidenav_collapsed`; Mobile = Top-Bar + Drawer als `MobileNav`-Export). Nav-Daten zentral in [`navItems.ts`](../components/dashboard/navItems.ts).
+- **Bau-Modus → Icon-Leiste bleibt (VS-Code-Muster, KEIN Takeover):** [`DashboardShell.tsx`](../components/dashboard/DashboardShell.tsx) schaltet per `usePathname()`: Editor-Routen → `<Sidebar forceCollapsed/>` (fixierte 64px-Icon-Leiste, links) + Editor daneben; sonst volle Side-Nav. [`EditorShellV2`](../components/tenant-editor/v2/EditorShellV2.tsx) Container `top:64px` → `inset-y-0 right-0 left-0 lg:left-16` (sitzt rechts neben der Leiste). Die Nav verschwindet nie.
+- **Layout:** [`app/dashboard/layout.tsx`](../app/dashboard/layout.tsx) rendert `DashboardShell` statt `DashboardHeader`+Wrapper (Auth/Tenant-Logik unverändert).
+- **Footer = konsolidiertes User-Menü** (Vercel-Stil): Avatar + Name/Email + „…"-Trigger → Popover mit Account · Theme-Umschalter · Abmelden. Ersetzt den inkonsistenten nackten Theme-Icon. Theme-Init (dark-class on mount) lebt jetzt hier (Desktop) bzw. in `MobileNav`-`ThemeToggle` (Mobile).
+- **Collapse-Toggle** als ruhige Zeile unten („‹ Einklappen") statt floatendem Pfeil oben rechts.
+- **Gelöscht:** `app/dashboard/DashboardHeader.tsx` + `app/dashboard/TabNav.tsx`. Reuse: `__editorGuard`-Unsaved-Guard (Nav-Links im Editor bleiben klickbar → Guard schützt).
+
+**Iteration 1 (Stavros-Feedback nach erstem Bild):** (a) Vollbild-Takeover war Überkorrektur — Side-Nav ist vertikal, löst die Doppel-Leiste schon → im Editor bleibt die Icon-Leiste stehen. (b) Footer-Theme-Icon inkonsistent → User-Menü-Popover. (c) Collapse-Pfeil oben rechts → ruhige Zeile unten.
+
+**Offen:** erneute visuelle Abnahme; danach Nachzug der Nav-Beschreibungen in `architecture.md` + HTML-Diagrammen (Top-Nav → Side-Nav). Kein DB-/API-Touch, voll reversibel.
+
+---
+
+## Aufgabe 43 — Turnkey-Conversion-Tracking + Plattform-Anleitungen (2026-05-31)
+
+**Status:** Code auf Branch `feature/aufgabe-42-conversion-tracking` (direkte Fortsetzung von Aufgabe 42, gleicher Branch). Migration **auf Produktion angewendet** (2 nullable Spalten, additiv). Type-Check grün. E2E-Browser-Test grün. Vollreferenz: [`conversion-tracking.md`](conversion-tracking.md).
+
+**Warum:** Aufgabe 42 ließ den Kunden seinen Pixel selbst in GTM/Code verdrahten — laut Stavros nach dem Anschauen zu kompliziert („Copy-Paste ist das Maximum, niemand fummelt im Code"). Turnkey: Pixel-ID **einmal in ein Feld** eintragen, Snippet bleibt die 2 Zeilen, `embed.js` feuert automatisch.
+
+**Migration** (`aufgabe_43_funnel_tracking`, additiv, DOWN vorhanden): `funnels` + `meta_pixel_id text NULL` + `google_ads_conversion text NULL`. Nullable, kein Backfill, kein CHECK (Format app-seitig). Direkt auf Produktion appliziert (mit Stavros-Go — Branch-Test für 2 Spalten unverhältnismäßig).
+
+**Umsetzung:**
+- **Config-Fluss:** `getTenantConfig` lädt die 2 Spalten → `TenantConfig.metaPixelId` / `.googleAdsConversion` ([`types/index.ts`](../types/index.ts)). `TenantFunnelClient` sendet sie **PII-frei** im `funnel-submit`-postMessage mit (`meta`/`google`).
+- **[`public/embed.js`](../public/embed.js):** `funnel-submit`-Handler erweitert — IDs aus der Message (Vorrang) oder Fallback data-Attribute. `fireMeta` (init+track, Basiscode-Injection wenn `fbq` fehlt) + `fireGoogle` (gtag-Injection wenn `gtag` fehlt). **Format-Whitelist** vor jeder Injection (`^[0-9]{5,20}$` / `^AW-[0-9]+(/[\w-]+)?$`) — XSS/Injection-Schutz.
+- **Save/Load:** [`app/api/tenant/funnels/[slug]/tracking/route.ts`](../app/api/tenant/funnels/%5Bslug%5D/tracking/route.ts) — `GET` (Prefill) + `PATCH` (speichern), user-client + RLS, serverseitige Format-Whitelist.
+- **UI — Editor-Reiter „Einbinden" (statt globaler Seite):** Nach Stavros-Feedback („zwei Einbinden-Reiter verwirren; Tracking ist pro Funnel") wurde der **deaktivierte Editor-Reiter `share` aktiviert** ([`TopTabs.tsx`](../components/tenant-editor/v2/TopTabs.tsx)) und ein **[`SharePanel`](../components/tenant-editor/v2/SharePanel.tsx)** gebaut (Snippet + `TrackingSettings` + `PlatformGuides` + GTM/Callback-Details), full-width wie Webhooks/E-Mails ([`EditorShellV2.tsx`](../components/tenant-editor/v2/EditorShellV2.tsx), mit „Funnel zuerst speichern"-Guard im Create-Modus).
+- **Komponenten:** [`TrackingSettings.tsx`](../components/dashboard/TrackingSettings.tsx) (Eingabe + PATCH + DSGVO-Hinweis), [`PlatformGuides.tsx`](../components/dashboard/PlatformGuides.tsx) (WordPress/Wix/Squarespace/Webflow/Jimdo via `<details>`), [`CodeSnippet.tsx`](../components/dashboard/CodeSnippet.tsx) (CodeBlock+CopyBar, aus EmbedBlock extrahiert).
+- **Entfernt (Konsolidierung):** globale Menü-Seite `app/dashboard/embed/page.tsx` + `components/dashboard/EmbedBlock.tsx` + Nav-Eintrag in [`TabNav.tsx`](../app/dashboard/TabNav.tsx) + Icon in [`DashboardHeader.tsx`](../app/dashboard/DashboardHeader.tsx). Eine Agentur nutzt je Endkunde ein anderes Pixel → Tracking gehört pro Funnel, nicht global.
+
+**E2E verifiziert (Headless-Browser):** gültige IDs → `fbq('init',<id>)`+`fbq('track','Lead')` + `gtag('event','conversion',{send_to})` + dataLayer + onLead. Ungültige IDs (`abc` / `https://evil…`) → von Whitelist geblockt (kein fbq/gtag), dataLayer+onLead feuern weiter.
+
+**Bewusst ausgeklammert (on-demand):** mehrere Pixel pro *einzelnem* Funnel; Server-CAPI.
+
+---
+
+## Aufgabe 42 (vorher) — Conversion-Tracking + `embed.js` Script-Loader (D.2, 2026-05-31)
+
+**Status:** Code auf Branch `feature/aufgabe-42-conversion-tracking`, Type-Check grün. Kein DB-Touch (rein additiver Code). Vollreferenz: [`conversion-tracking.md`](conversion-tracking.md).
+
+**Warum:** Laut Fokus-Roadmap der einzige rote Launch-Blocker — Performance-Agenturen können ohne Conversion-Signal ihre Ads nicht auf Leads optimieren. Funnel läuft im iFrame auf Fremddomain → Pixel der Kundenseite sieht den Submit nicht → Brücke via `postMessage`.
+
+**Gewähltes Modell (Beratung mit Stavros): A — event-basiert.** Keine Pixel-IDs in der DB, kein Editor-UI. Funnel feuert ein sauberes Event, die (technische) Agentur verdrahtet ihre Pixel selbst (GTM). Begründung: Zielgruppe lebt in GTM + „nicht over-engineeren". Turnkey (DB+UI) + Server-CAPI bewusst als spätere On-Demand-Stufen (Letzteres passt später als Action-Element in `/api/submit`).
+
+**Umsetzung:**
+- **[`components/TenantFunnelClient.tsx`](../components/TenantFunnelClient.tsx)**: `handleSubmit` sendet **vor** dem `await fetch` ein PII-freies `window.parent.postMessage({ type:'funnel-submit', funnel:<slug> }, '*')` (guard `window.parent !== window`). Sofort-Feuern = robust gegen `redirectUrl`-Race. Deckt Submit- + Skip-Mode ab. **`components/funnel.tsx` unangetastet** (§11 hands-off).
+- **[`public/embed.js`](../public/embed.js) (Upgrade des Alt-Loaders)**: **Wichtiger Fund während der Umsetzung** — es existierte bereits ein älteres `public/embed.js` (Slug-Schema `data-funnel-slug`/`data-slug`, nur Resize, kein Tracking, eigenes Anleitungen/-Doku-Ökosystem). Meine zunächst geplante Route `app/embed.js/route.ts` kollidierte damit (`conflicting public file and page file`). Nach Rücksprache mit Stavros: **altes Loader-File in-place upgraden** statt Route. Neuer Stand: self-deriving Origin, erzeugt iFrames pro Slug-Container, globale Message-Bridge (Resize mit Clamp 100–10000 + origin+source-gehärtet) + `funnel-submit` → `dataLayer`-Push `{event:'leadplug_lead'}` + optionale `data-meta-lead`/`data-google-conversion`-Auto-Fires + `window.LeadPlug.onLead`-Callback. **Abwärtskompatibel:** erkennt neu `data-leadplug` **und** Legacy `data-funnel-slug`/`data-slug`. Route-Datei wieder gelöscht.
+- **[`lib/embedSnippet.ts`](../lib/embedSnippet.ts)**: `buildScriptEmbed(slug, origin)` (empfohlenes 2-Zeilen-Snippet); `buildEmbedSnippet` bleibt als iFrame-Fallback. Kommentar aktualisiert.
+- **[`components/dashboard/EmbedBlock.tsx`](../components/dashboard/EmbedBlock.tsx)**: Script-Snippet primär (Badge „Empfohlen · mit Conversion-Tracking"), iFrame als aufklappbarer Fallback. `CopyBar`-Subkomponente extrahiert. Neue Prop `origin`.
+- **[`app/dashboard/embed/page.tsx`](../app/dashboard/embed/page.tsx)**: Platzhalter „Bald verfügbar" → echte Doku-Karte mit 3 Abgreif-Wegen (GTM-`leadplug_lead` / data-Attribute / `onLead`-Callback) inkl. Code-Beispielen. `origin=base` an EmbedBlock.
+
+**Sicherheit:** keine PII im postMessage; `/embed.js`-Listener prüft `e.origin` + `e.source === iframe.contentWindow`; Höhen-Clamp 100–10000.
+
+**Bewusst ausgeklammert (on-demand):** Turnkey-Pixel-ID-im-Editor (DB+UI), Server-CAPI. Stacken additiv, kein Rework. Pre-launch → keine bestehenden Production-Embeds, um die man sich sorgen müsste.
+
+---
+
+## Aufgabe 41 (vorher) — E-Mails als Drip-Action-Element (2026-05-31)
 
 **Status:** Migration appliziert (24 Default-Subscriptions via Backfill für 12 existierende Funnels), Code auf Branch `feature/aufgabe-41-emails-tab`, Type-Check + Build grün.
 

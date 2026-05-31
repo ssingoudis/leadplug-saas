@@ -1,6 +1,7 @@
 "use client";
 
 import type { EditorState, FunnelFont } from "@/types";
+import { PanelShell, PanelHeader, Section, Field, FieldHint } from "./ui/Panel";
 
 interface Props {
   state: EditorState;
@@ -31,8 +32,8 @@ export function ThemePanel({ state, onPatch }: Props) {
   const radiusIndex = Math.max(0, RADIUS_STEPS.indexOf(state.borderRadius));
 
   return (
-    <aside className="flex h-full w-full flex-col overflow-y-auto border-l border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-      <Header />
+    <PanelShell>
+      <PanelHeader badge="D" scope="Funnel-weit" title="Design" />
 
       <Section title="Markenfarbe">
         <ColorField
@@ -109,51 +110,13 @@ export function ThemePanel({ state, onPatch }: Props) {
           Änderungen werden live in der Mitte angezeigt. Speichern via Speichern-Button oben.
         </p>
       </Section>
-    </aside>
+    </PanelShell>
   );
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   Building blocks
+   Building blocks (Theme-spezifisch; PanelShell/Header/Section/Field aus ui/Panel)
    ───────────────────────────────────────────────────────────────────────────── */
-
-function Header() {
-  return (
-    <div className="flex items-center gap-2 border-b border-gray-200 px-5 py-4 dark:border-gray-800">
-      <span className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-violet-200 bg-violet-100 text-xs font-bold text-violet-700 dark:border-violet-800 dark:bg-violet-900/30 dark:text-violet-300">
-        D
-      </span>
-      <div className="flex flex-col">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-          Funnel-weit
-        </span>
-        <span className="text-sm font-semibold text-gray-900 dark:text-white">Design</span>
-      </div>
-    </div>
-  );
-}
-
-function Section({ title, children }: { title?: string; children: React.ReactNode }) {
-  return (
-    <div className="border-b border-gray-100 px-5 py-4 last:border-b-0 dark:border-gray-800/60">
-      {title && (
-        <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-          {title}
-        </h3>
-      )}
-      <div className="flex flex-col gap-3">{children}</div>
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1">
-      <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{label}</span>
-      {children}
-    </label>
-  );
-}
 
 function ColorField({
   label,
@@ -201,7 +164,7 @@ function ColorField({
           </button>
         )}
       </div>
-      {hint && <span className="text-[11px] leading-relaxed text-gray-400 dark:text-gray-500">{hint}</span>}
+      {hint && <FieldHint>{hint}</FieldHint>}
     </Field>
   );
 }
@@ -219,7 +182,7 @@ function Select<T extends string>({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value as T)}
-      className="w-full appearance-none rounded-lg border border-gray-300 bg-white bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%20stroke%3D%22%239ca3af%22%3E%3Cpath%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22M6%208l4%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:18px_18px] bg-[right_0.5rem_center] bg-no-repeat px-3 py-2 pr-9 text-sm text-gray-900 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+      className="w-full appearance-none rounded-lg border border-gray-300 bg-white bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%20stroke%3D%22%239ca3af%22%3E%3Cpath%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22M6%208l4%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[18px_18px] bg-position-[right_0.5rem_center] bg-no-repeat px-3 py-2 pr-9 text-sm text-gray-900 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
     >
       {options.map((o) => (
         <option key={o.value} value={o.value}>

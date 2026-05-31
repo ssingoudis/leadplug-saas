@@ -400,9 +400,9 @@
     </div>
 
     <div class="nav-item child">
-      <span class="badge badge-tab">Tab</span>
-      <strong>Embed</strong> – iFrame-Code-Generator für aktive Funnels
-      <span class="nav-route">/dashboard/embed</span>
+      <span class="badge badge-tab">Editor-Reiter</span>
+      <strong>Einbinden</strong> – Embed-Code + Conversion-Tracking, pro Funnel (globaler Tab in Aufgabe 43 entfernt)
+      <span class="nav-route">/dashboard/funnels/[slug]/edit → „Einbinden"</span>
     </div>
 
     <div class="nav-item child">
@@ -506,11 +506,11 @@
         <td>total_views (kumulativ) für Conversion</td>
       </tr>
       <tr>
-        <td><span class="mono">/dashboard/embed</span></td>
+        <td><span class="mono">/api/tenant/funnels/[slug]/tracking</span></td>
         <td><span class="mono">funnels</span></td>
-        <td><span class="tag tag-read">SELECT</span></td>
+        <td><span class="tag tag-read">SELECT</span> + UPDATE</td>
         <td>Server (RLS)</td>
-        <td>slug aller aktiven Funnels für Code-Generator</td>
+        <td>Conversion-IDs (meta_pixel_id, google_ads_conversion) lesen/speichern — Aufgabe 43</td>
       </tr>
       <tr>
         <td><span class="mono">/dashboard/account</span></td>

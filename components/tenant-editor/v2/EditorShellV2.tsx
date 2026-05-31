@@ -11,6 +11,7 @@ import { PropertiesPanel } from "./PropertiesPanel";
 import { ThemePanel } from "./ThemePanel";
 import { WebhooksPanel } from "./WebhooksPanel";
 import { EmailsPanel } from "./EmailsPanel";
+import { SharePanel } from "./SharePanel";
 import { AddContactFieldPicker } from "./properties/AddContactFieldPicker";
 import type { SelectedStep } from "./types";
 import {
@@ -139,6 +140,9 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isTestMode, setIsTestMode] = useState(false);
   const [activeTab, setActiveTab] = useState<TopTabKey>("content");
+  // Aufgabe 45: rechter Inspektor im „Bearbeiten"-Tab — „content" = Schritt-Eigenschaften,
+  // „design" = funnel-weites Theme. (Inhalt + Design sind ein Tab mit Umschalter.)
+  const [inspectorMode, setInspectorMode] = useState<"content" | "design">("content");
   const [showExitModal, setShowExitModal] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
 
@@ -211,7 +215,7 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // Exit-Guard registrieren (identische Signatur zu v1, konsumiert von TabNav/DashboardHeader/UserMenu).
+  // Exit-Guard registrieren (identische Signatur zu v1, konsumiert von Sidebar/MobileNav/UserMenu).
   useEffect(() => {
     if (isDirty) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -683,6 +687,12 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
 
   const canSave = Boolean(state.funnelName);
 
+  // Aufgabe 45: Speichern-Modell vereinheitlicht. „Dokument-Tabs" (Inhalt/Design) speichern
+  // über den globalen Top-Button. „Ressourcen-Tabs" (E-Mails/Webhooks/Einbinden) speichern
+  // inline pro Element → der Top-Button wird dort ausgeblendet (außer es gibt ungesicherte
+  // Dokument-Änderungen), ein passiver Hinweis ersetzt ihn. Schluss mit Doppel-Speichern.
+  const isDocumentTab = activeTab === "content";
+
   return (
     <>
       {showNamePrompt && <NamePromptModal pendingName={pendingName} setPendingName={setPendingName} onConfirm={confirmNamePrompt} onCancel={cancelNamePrompt} />}
@@ -691,8 +701,7 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
       )}
 
       <div
-        className="fixed inset-x-0 bottom-0 flex flex-col bg-gray-50 dark:bg-[#0d1117]"
-        style={{ top: "64px" }}
+        className="fixed inset-y-0 right-0 left-0 lg:left-16 flex flex-col bg-gray-50 dark:bg-[#0d1117]"
       >
         {/* Top-Bar: Back + Title + Save + Status */}
         <header className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-2 dark:border-gray-800 dark:bg-gray-900">
@@ -720,16 +729,22 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
             {saveError && (
               <span className="hidden text-xs text-red-600 dark:text-red-400 md:inline">{saveError}</span>
             )}
-            <SaveBadge isDirty={isDirty} isSaving={isSaving} />
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={!canSave || isSaving}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Save size={14} />
-              {isSaving ? "Speichern…" : "Speichern"}
-            </button>
+            {/* Aufgabe 45: globaler Save nur auf Dokument-Tabs (Inhalt/Design) — oder wenn es
+                ungesicherte Dokument-Änderungen gibt. Ressourcen-Tabs speichern pro Eintrag. */}
+            {(isDocumentTab || isDirty) && (
+              <>
+                <SaveBadge isDirty={isDirty} isSaving={isSaving} />
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={!canSave || isSaving}
+                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Save size={14} />
+                  {isSaving ? "Speichern…" : "Speichern"}
+                </button>
+              </>
+            )}
           </div>
         </header>
 
@@ -773,25 +788,20 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
           ) : (
             <EmailsPanel funnelSlug={originalSlug} state={state} />
           )
-        ) : activeTab === "design" ? (
-          <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_420px]">
-            <CenterCanvas
-              state={state}
-              selected={selected}
-              companyName={companyName}
-              isTestMode={isTestMode}
-              onToggleTestMode={() => setIsTestMode((t) => !t)}
-              selectedFieldRef={selectedFieldRef}
-              onSelectField={setSelectedFieldRef}
-              onTextChange={handleTextChange}
-              onAddOption={handleAddOption}
-              onReorderOptions={handleReorderOptions}
-              onDuplicateOption={handleDuplicateOption}
-              onDeleteOption={handleDeleteOption}
-              onAddCustomFieldRequest={() => setCanvasFieldPickerOpen(true)}
-            />
-            <ThemePanel state={state} onPatch={handlePatch} />
-          </div>
+        ) : activeTab === "share" ? (
+          mode === "create" || !originalSlug ? (
+            <div className="flex flex-1 items-center justify-center bg-gray-50 dark:bg-background p-8">
+              <div className="max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 text-center">
+                <p className="text-base font-semibold text-gray-900 dark:text-white">Funnel zuerst speichern</p>
+                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                  Der Einbett-Code und das Conversion-Tracking sind funnel-spezifisch. Bitte speichere den Funnel
+                  einmal, dann findest du hier deinen Code und die Tracking-Einstellungen.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <SharePanel funnelSlug={originalSlug} funnelName={state.funnelName} />
+          )
         ) : (
           <div className="grid min-h-0 flex-1 grid-cols-[420px_minmax(0,1fr)_420px]">
             <StepList
@@ -821,23 +831,49 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
               onDeleteOption={handleDeleteOption}
               onAddCustomFieldRequest={() => setCanvasFieldPickerOpen(true)}
             />
-            <PropertiesPanel
-              state={state}
-              selected={selected}
-              onPatch={handlePatch}
-              onPatchQuestion={handlePatchQuestion}
-              onDeleteQuestion={handleDeleteQuestion}
-              onPatchContactField={handlePatchContactField}
-              onAddContactField={handleAddContactField}
-              onDeleteContactField={handleDeleteContactField}
-              onReorderContactFields={handleReorderContactFields}
-              onPatchCustomField={handlePatchCustomField}
-              onAddCustomField={handleAddCustomField}
-              onDeleteCustomField={handleDeleteCustomField}
-              onReorderCustomFields={handleReorderCustomFields}
-              selectedFieldRef={selectedFieldRef}
-              onSelectFieldRef={setSelectedFieldRef}
-            />
+            <div className="flex min-h-0 flex-col">
+              {/* Aufgabe 45: Inspektor-Umschalter Inhalt | Design (rechte Spalte des Bearbeiten-Tabs).
+                  „Inhalt" = Eigenschaften des gewählten Schritts, „Design" = funnel-weites Theme. */}
+              <div className="flex shrink-0 items-center gap-1 border-b border-l border-gray-200 bg-white p-2 dark:border-gray-800 dark:bg-gray-900">
+                {(["content", "design"] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setInspectorMode(m)}
+                    className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      inspectorMode === m
+                        ? "bg-primary/10 text-primary"
+                        : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                    }`}
+                  >
+                    {m === "content" ? "Inhalt" : "Design"}
+                  </button>
+                ))}
+              </div>
+              <div className="min-h-0 flex-1">
+                {inspectorMode === "content" ? (
+                  <PropertiesPanel
+                    state={state}
+                    selected={selected}
+                    onPatch={handlePatch}
+                    onPatchQuestion={handlePatchQuestion}
+                    onDeleteQuestion={handleDeleteQuestion}
+                    onPatchContactField={handlePatchContactField}
+                    onAddContactField={handleAddContactField}
+                    onDeleteContactField={handleDeleteContactField}
+                    onReorderContactFields={handleReorderContactFields}
+                    onPatchCustomField={handlePatchCustomField}
+                    onAddCustomField={handleAddCustomField}
+                    onDeleteCustomField={handleDeleteCustomField}
+                    onReorderCustomFields={handleReorderCustomFields}
+                    selectedFieldRef={selectedFieldRef}
+                    onSelectFieldRef={setSelectedFieldRef}
+                  />
+                ) : (
+                  <ThemePanel state={state} onPatch={handlePatch} />
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>

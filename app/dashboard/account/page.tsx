@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Card from '@/components/ui/Card'
 
@@ -47,9 +48,11 @@ function SaveButton({ loading, saved }: { loading: boolean; saved: boolean }) {
 
 export default function AccountPage() {
   const supabase = createClient()
+  const router = useRouter()
 
   const [email, setEmail]               = useState('')
   const [displayName, setDisplayName]   = useState('')
+  const [tenantId, setTenantId]         = useState<string | null>(null)
   const [phone, setPhone]               = useState('')
   const [saving, setSaving]             = useState(false)
   const [saved, setSaved]               = useState(false)
@@ -64,13 +67,23 @@ export default function AccountPage() {
   const [loaded, setLoaded]             = useState(false)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       setEmail(user.email ?? '')
-      setDisplayName(user.user_metadata?.display_name ?? '')
       setPhone(user.user_metadata?.phone ?? '')
+      // Anzeigename = tenants.company_name (der Name, der in der Navigation angezeigt wird).
+      // RLS (tenants_select) liefert nur den eigenen Tenant.
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('id, company_name')
+        .maybeSingle()
+      if (tenant) {
+        setTenantId(tenant.id)
+        setDisplayName(tenant.company_name ?? '')
+      }
       setLoaded(true)
-    })
+    })()
   }, [])
 
   async function handleProfileSave(e: React.SyntheticEvent) {
@@ -79,15 +92,27 @@ export default function AccountPage() {
     setInfoError(null)
     setSaved(false)
 
-    const { error } = await supabase.auth.updateUser({
-      data: { display_name: displayName, phone },
-    })
+    let ok = true
+    // Anzeigename → tenants.company_name (RLS: tenants_update für owner/admin).
+    const trimmed = displayName.trim()
+    if (tenantId) {
+      const { error } = await supabase
+        .from('tenants')
+        .update({ company_name: trimmed || null })
+        .eq('id', tenantId)
+      if (error) ok = false
+    }
+    // Telefon bleibt in den Auth-Metadaten.
+    const { error: metaErr } = await supabase.auth.updateUser({ data: { phone } })
+    if (metaErr) ok = false
 
     setSaving(false)
-    if (error) {
+    if (!ok) {
       setInfoError('Fehler beim Speichern.')
     } else {
       setSaved(true)
+      // Server-Layout (Sidebar-Footer liest tenant.company_name) neu laden.
+      router.refresh()
       setTimeout(() => setSaved(false), 3000)
     }
   }
@@ -129,10 +154,10 @@ export default function AccountPage() {
         <form onSubmit={handleProfileSave} className="flex flex-col gap-4">
           <Field label="E-Mail" value={email} readOnly />
           <Field
-            label="Anzeigename (optional)"
+            label="Anzeigename (in der Navigation sichtbar)"
             value={displayName}
             onChange={setDisplayName}
-            placeholder="z. B. Max Mustermann"
+            placeholder="z. B. Deine Agentur"
           />
           <Field
             label="Telefon (optional)"

@@ -317,6 +317,8 @@ Das Widget pro Tenant. Ein Tenant kann mehrere haben. Aktuell 12 Zeilen.
 | `font` | text | YES | — |
 | `border_radius` | text | YES | — |
 | `max_width` | text | YES | — |
+| `meta_pixel_id` | text | YES | — |
+| `google_ads_conversion` | text | YES | — |
 | `total_views` | int4 | NO | `0` |
 | `created_at` | timestamptz | YES | `now()` |
 | `updated_at` | timestamptz | YES | `now()` |

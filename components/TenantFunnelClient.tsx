@@ -85,6 +85,27 @@ export function TenantFunnelClient({ config }: Props) {
     contact: Record<string, string>
     honeypot: string
   }) {
+    // D.2 Conversion-Tracking: dem einbettenden Parent signalisieren, dass ein Lead
+    // abgeschickt wurde — die Parent-Seite (embed.js) feuert daraufhin Meta/Google-Conversions.
+    // BEWUSST sofort (vor dem await): robust gegen redirectUrl-Race (Widget kann den iFrame
+    // wegnavigieren) und gegen verworfene fetch-Promises. Der Widget-Pfad ruft onSubmit nur bei
+    // echtem User-Abschluss → kein Fehlfeuern bei Bots/Honeypot (die füllen kein echtes Formular aus).
+    // KEINE PII im Payload (kein email/name): targetOrigin '*' ist von jedem Parent-Skript lesbar;
+    // Meta-'Lead' / Google-'conversion' brauchen clientseitig keine personenbezogenen Daten.
+    // Aufgabe 43 (Turnkey): die hinterlegten Pixel-IDs reisen mit — embed.js feuert damit
+    // automatisch. Pixel-IDs sind öffentliche Bezeichner (kein PII), daher unbedenklich.
+    if (typeof window !== 'undefined' && window.parent !== window) {
+      window.parent.postMessage(
+        {
+          type: 'funnel-submit',
+          funnel: config.slug,
+          meta: config.metaPixelId ?? null,
+          google: config.googleAdsConversion ?? null,
+        },
+        '*',
+      )
+    }
+
     try {
       await fetch('/api/submit', {
         method: 'POST',

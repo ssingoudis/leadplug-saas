@@ -602,7 +602,7 @@ font:                 'system'
 </script>
 ```
 
-Wird in [`lib/embedSnippet.ts`](../lib/embedSnippet.ts) generiert und im Dashboard unter `/dashboard/embed` angezeigt.
+Wird in [`lib/embedSnippet.ts`](../lib/embedSnippet.ts) generiert und pro Funnel im **Editor-Reiter „Einbinden"** ([`SharePanel.tsx`](../components/tenant-editor/v2/SharePanel.tsx)) angezeigt. Seit Aufgabe 42/43 ist der empfohlene Weg der Script-Loader (`<script src=".../embed.js">`) statt des hier gezeigten iFrame-Snippets; das iFrame bleibt als Fallback. Conversion-Tracking siehe [`conversion-tracking.md`](conversion-tracking.md). *(Die globale `/dashboard/embed`-Menüseite wurde in Aufgabe 43 entfernt.)*
 
 ### postMessage-Logik im Widget
 - `ResizeObserver` misst den äußeren Container nach jedem Render
