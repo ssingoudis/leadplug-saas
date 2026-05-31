@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { retryDelivery, triggerOnSubmit, type SubmissionSnapshot } from '@/lib/webhooks'
+import { processPendingDelivery, retryEmailDelivery, aggregateEmailStatusForSubmission } from '@/lib/emails'
 import { getTenantConfig } from '@/lib/getTenantConfig'
 import { deriveContactFromAnswers } from '@/lib/tracking'
 
@@ -183,10 +184,97 @@ export async function GET(req: Request) {
   }
 
   // ----------------------------------------------------------------------
+  // 3. E-Mail-Queue (Aufgabe 41 — Drip-Modell)
+  //
+  // Ein Lauf macht zwei Dinge:
+  //   a) DUE PENDING:  status='pending'  AND scheduled_at <= NOW()
+  //      → Erstversand für Drip-Mails deren Zeit gekommen ist
+  //   b) DUE RETRYING: status='retrying' AND next_retry_at <= NOW()
+  //      → Backoff-Retry für temporäre Fehler
+  //
+  // Beide Pfade rufen processAttempt — identische Send-Logik, nur unterschiedliche
+  // Pick-Bedingungen.
+  // ----------------------------------------------------------------------
+  let emailDueCount = 0
+  let emailDueProcessed = 0
+  let emailRetryCount = 0
+  let emailRetryProcessed = 0
+  const touchedSubmissions = new Set<string>()
+
+  try {
+    const nowIso = new Date().toISOString()
+
+    // a) due pending — Drip-Erstversand
+    const { data: duePending, error: dpErr } = await supabase
+      .from('email_delivery_attempts')
+      .select('id, submission_id')
+      .eq('status', 'pending')
+      .lte('scheduled_at', nowIso)
+      .order('scheduled_at', { ascending: true })
+      .limit(MAX_RETRIES_PER_RUN)
+
+    if (dpErr) {
+      console.error('cron: due-pending email query failed', dpErr)
+    } else if (duePending && duePending.length > 0) {
+      emailDueCount = duePending.length
+      for (const att of duePending) {
+        try {
+          await processPendingDelivery(att.id, supabase)
+          emailDueProcessed++
+          if (att.submission_id) touchedSubmissions.add(att.submission_id as string)
+        } catch (err) {
+          console.error('cron: processPendingDelivery threw', err, att.id)
+        }
+      }
+    }
+
+    // b) due retrying — Backoff-Retry
+    const { data: dueRetry, error: drErr } = await supabase
+      .from('email_delivery_attempts')
+      .select('id, submission_id')
+      .eq('status', 'retrying')
+      .not('next_retry_at', 'is', null)
+      .lte('next_retry_at', nowIso)
+      .order('next_retry_at', { ascending: true })
+      .limit(MAX_RETRIES_PER_RUN)
+
+    if (drErr) {
+      console.error('cron: due-retry email query failed', drErr)
+    } else if (dueRetry && dueRetry.length > 0) {
+      emailRetryCount = dueRetry.length
+      for (const att of dueRetry) {
+        try {
+          await retryEmailDelivery(att.id, supabase)
+          emailRetryProcessed++
+          if (att.submission_id) touchedSubmissions.add(att.submission_id as string)
+        } catch (err) {
+          console.error('cron: retryEmailDelivery threw', err, att.id)
+        }
+      }
+    }
+  } catch (err) {
+    console.error('cron: email-queue block exception', err)
+  }
+
+  // Lead-Row-Badges (customer_email_sent / tenant_email_sent) aktualisieren
+  // für alle Submissions, deren Mail-Status sich in diesem Run geändert haben kann.
+  for (const sid of touchedSubmissions) {
+    await aggregateEmailStatusForSubmission(sid, supabase).catch((err) =>
+      console.error('cron: aggregate-email-status failed', err, sid),
+    )
+  }
+
+  // ----------------------------------------------------------------------
   return NextResponse.json({
     ok: true,
     elapsed_ms: Date.now() - startedAt,
-    retries: { picked: retryCount, success: retrySuccess },
-    abandoned: { picked: abandonedCount, triggered: abandonedTriggered },
+    webhooks: {
+      retries:   { picked: retryCount, success: retrySuccess },
+      abandoned: { picked: abandonedCount, triggered: abandonedTriggered },
+    },
+    emails: {
+      due_pending:  { picked: emailDueCount, processed: emailDueProcessed },
+      due_retrying: { picked: emailRetryCount, processed: emailRetryProcessed },
+    },
   })
 }

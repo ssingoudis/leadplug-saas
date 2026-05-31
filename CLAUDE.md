@@ -101,14 +101,15 @@ Drei Tiers pro Tenant (Agentur). Preise sind Richtwerte:
 - **Partial-Submissions live**: jede User-Session bekommt DB-Row mit `session_id` UPSERT + `completed_at` Flag. Abbrecher mit Email werden zu Leads. Pricing-Modell zählt Completed + Abandoned-mit-Email als Lead.
 - **DSGVO ignoriert für jetzt** — Rechtsgrundlage Art. 6 (1) (b) Vertragsanbahnung greift.
 
-**Architektur-Konsens aus Aufgabe 40 (2026-05-29) — Action-Element-Modell:**
+**Architektur-Konsens aus Aufgaben 40 + 41 (2026-05-29/31) — Action-Element-Modell:**
 
 LeadPlug ist „eine Art Typeform-Klon". **Alle Output-Mechanismen sind dynamisch konfigurierbare Builder-Elemente, kein impliziter Automatismus:**
-- **Webhooks** ✅ live als erste Action-Klasse — eigener Editor-Tab „Webhooks". Pro Funnel N Subscriptions, pro Subscription Trigger-Konfig (`on_submit` Default / `after_page:<id>` für Mid-Funnel). Visuelle Step-Pill-Badges im Builder bei `after_page`-Triggern. Sender + HMAC + Cron + Retry: siehe [`lib/webhooks.ts`](lib/webhooks.ts).
-- **E-Mails** kommen als nächste Action-Klasse, selbes Pattern (siehe `context/roadmap.md`). Der existierende disabled „E-Mails"-Tab im Editor wird funktional. Der heutige hartkodierte Mail-Versand in `/api/submit` wird durch dynamische Konfiguration ersetzt.
-- **Logic-Jumps** (C.4) folgen demselben Pattern (eigener „Logik"-Tab).
+- **Webhooks** ✅ live (Aufgabe 40) — Event-Push an externe CRMs. Eigener Editor-Tab „Webhooks". Pro Funnel N Subscriptions, pro Subscription Trigger-Konfig (`on_submit` Default / `after_page:<id>` für Mid-Funnel). Visuelle Step-Pill-Badges im Builder bei `after_page`-Triggern. Sender + HMAC + Cron + Retry: siehe [`lib/webhooks.ts`](lib/webhooks.ts).
+- **E-Mails** ✅ live (Aufgabe 41) — **Drip-System für Lead-Nurturing**. Eigener Editor-Tab „E-Mails", 3-Pane In-Place-Editor (Liste · Editor · Live-Vorschau). Pro Funnel N Drip-Mails mit `delay_minutes` (0 = sofort via `after()`, N = N Min nach Submit via Cron-Queue) + `recipient_type ('customer'|'tenant')`. TipTap-WYSIWYG-Editor mit Custom Variable-Chips + Magic-Section-Block-Cards. Live-Vorschau (resizable) mit Mock- oder echten Lead-Daten. Auto-Save mit 1.5 s Debounce. Hartkodierter Mail-Versand in `/api/submit` durch Backfill-Subscriptions ersetzt → Verhalten 1:1 erhalten. Sender + Queue + Cron: siehe [`lib/emails.ts`](lib/emails.ts) + [`context/email-drip-architektur.md`](context/email-drip-architektur.md).
+- **Logic-Jumps** (C.4) folgen demselben Action-Element-Pattern (eigener „Logik"-Tab).
 - **Bei neuen Output-Mechanismen** (Slack, Discord, etc.): folge dem Action-Modell — eigener Tab oder Plugin-System, NIE als hartkodierter Trigger in der Submit-Pipeline.
-- **Submit-Page-Abschaffung geplant**: heute hartkodiertes Element bleibt für Übergang (toggleable via `skip_submit_step`). Backend-Trigger (`/api/submit`) ist Submit-Page-agnostisch — wenn die Page aus dem Editor verschwindet, ändert sich am Webhook-Sender nichts.
+- **Wichtig — Webhooks ≠ E-Mails im Trigger-Modell:** Webhooks pushen Events (Timing matched dem Event: `on_submit`, `after_page`, abandoned-Cron). E-Mails sind Sequenzen (Timing relativ zum Submit via `delay_minutes`). Bei zukünftigen Actions: passendes Modell pro Use-Case wählen, nicht zwanghaft 1:1-Klon.
+- **Submit-Page-Abschaffung geplant**: heute hartkodiertes Element bleibt für Übergang (toggleable via `skip_submit_step`). Backend-Trigger (`/api/submit`) ist Submit-Page-agnostisch — wenn die Page aus dem Editor verschwindet, ändert sich am Webhook-/E-Mail-Sender nichts.
 
 **Aktueller Sprint — „Builder-Final" (5 Aufgaben in einem Rutsch, Branch `feature/builder-final-sprint`):**
 
@@ -146,6 +147,7 @@ Nach Sprint-Abschluss: Sprint-Review mit Stavros, dann nächster Block (voraussi
 - [`context/webhook-architecture.md`](context/webhook-architecture.md) — **Webhook-Subsystem vollständig** (Aufgabe 40): DB-Schema, Code-Layout, Sequence-Diagramme (completed/abandoned/retry/test), Payload-Format, HMAC, ENV-Vars, UI-Verkabelung, Known-Issues. **Erste Anlaufstelle für „wie funktioniert der Webhook-Sender".**
 - [`context/webhook-architecture.html`](context/webhook-architecture.html) — **dieselbe Architektur visuell** (Stavros-Style): Tabellen-Karten, Sequence-Diagramme als Lanes, Payload-Highlighting, Status-Cards.
 - [`context/webhook-erklaert.md`](context/webhook-erklaert.md) — **Webhooks von Anfang an erklärt** für Lernende mit Programmier-Grundkenntnissen. Konzept-Einstieg mit Analogien, Use-Case, DB-Tabellen, End-to-End-Flow, HMAC, Backoff, Cron, Dedup, Glossar. **Erste Anlaufstelle wenn jemand das System komplett neu kennenlernt.**
+- [`context/email-drip-architektur.md`](context/email-drip-architektur.md) — **E-Mail-Drip-Subsystem vollständig** (Aufgabe 41): DB-Schema, Code-Layout (Sender, Queue, Cron), TipTap-Editor + Custom-Nodes, Template-Substitutions-Regex, UI-Architektur (3-Pane mit Draft-Lift), Sequence-Diagramme (immediate/delayed/retry/test). **Erste Anlaufstelle für „wie funktioniert der E-Mail-Drip-Sender".**
 - [`context/architecture.html`](context/architecture.html) — **dieselbe Architektur visuell** (vom Stavros gepflegt) — 3-Worlds-Map, DB-Tree, Page-Flow, Field-Types-Grid, Komponenten-Baum, Decisions-Legend.
 - [`context/project-overview.md`](context/project-overview.md) — Code-Struktur (Verzeichnisse), DB-Schema, API-Routes
 - [`context/supabase-schema.md`](context/supabase-schema.md) — vollständige technische DB-Referenz (Enums, Tables, RLS, Indices, Functions)
@@ -208,8 +210,8 @@ Beispiele: `feature/aufgabe-25-schema-refactor`, `feature/aufgabe-26-pages-field
 - **Primärquelle ist Supabase.** `getTenantConfig()` lädt ausschließlich aus der DB — kein JSON-Fallback.
 - **Supabase Service Key nur server-side**, niemals mit `NEXT_PUBLIC_`-Prefix.
 - **Partial-Submissions seit Aufgabe 34 (2026-05-28):** `/api/track-progress` macht UPSERT auf `submissions.session_id` (debounced vom Widget), `/api/submit` macht denselben UPSERT mit `completed_at = NOW()` + Mails. **NIE wieder Insert in `submissions` ohne `session_id`** — die Spalte ist UNIQUE + NOT NULL. `logSubmission` in `lib/tracking.ts` ist deprecated, neue Code-Pfade nutzen `upsertSubmissionProgress`.
-- **Reihenfolge in `/api/submit`:** erst `upsertSubmissionProgress(completed=true)` (Supabase, setzt completed_at), dann E-Mails. Billing darf nie durch E-Mail-Fehler verloren gehen.
-- **Nur 2 E-Mails pro Submission:** Danke-Mail an den Anfragenden (kein PDF, keine Preisschätzung) + Lead-Benachrichtigung an den Tenant.
+- **Reihenfolge in `/api/submit`:** erst `upsertSubmissionProgress(completed=true)` (Supabase, setzt completed_at), dann `triggerOnSubmit` (Webhooks) + `triggerEmailsOnSubmit` (Drip-Mails) via `after()`. Billing darf nie durch Webhook-/Mail-Fehler verloren gehen.
+- **E-Mails seit Aufgabe 41 (2026-05-31) dynamisch via Drip-System** — kein hartkodierter Versand mehr. Pro Funnel sind in `email_subscriptions` 1..N Mails konfigurierbar (Backfill legt 2 Default-Subs an: Customer-Confirmation + Tenant-Notification, beide delay=0). Versand-Pfad: `triggerEmailsOnSubmit` in [`lib/emails.ts`](lib/emails.ts) inserts pending attempts in `email_delivery_attempts`, sofort fällige (delay=0) werden via `after()` versendet, delayed (delay>0) vom Cron alle 5 Min gepickt. **Veraltet & gelöscht:** `lib/sendEmails.ts`, `emails/CustomerConfirmation.tsx`, `emails/TenantLeadNotification.tsx`, `lib/tracking.ts.updateEmailStatus` (jetzt `aggregateEmailStatusForSubmission` in `lib/emails.ts`).
 - **Kein PDF, keine Preisschätzung** — `generatePDF.ts` und `priceCalculator.ts` sind deprecated.
 - **Fehler in Tracking / E-Mail:** loggen, **nicht werfen**. Endkunde bekommt immer `{success:true}`.
 - **Bot-Schutz:** Honeypot-Feld im Formular (server-side prüfen). Bei ausgelöstem Honeypot: 200 zurückgeben, aber nicht in DB speichern. Gilt sowohl für `/api/submit` als auch `/api/track-progress`.
@@ -317,7 +319,11 @@ Klare Trennung — keine Override-Hierarchien zwischen Tabellen:
 **Aufgabe 40 Schema-Erweiterungen (2026-05-29):**
 - `aufgabe_40_webhook_actions`: `webhook_subscriptions.funnel_id NOT NULL` + `trigger_type DEFAULT 'on_submit'` + `trigger_page_id` (FK pages SET NULL) + CHECK + 2 neue Indices. `webhook_delivery_attempts.next_retry_at` + `response_status_code` + `response_body` + `event_type` + Retry-Queue-Index. `submissions.abandoned_webhook_fired_at` + partial Index für Cron-Cooldown. Additive — kein Backfill (webhook_* Tabellen waren leer).
 
-**Nächste DB-Arbeit:** keine geplant — E-Mails-Tab-Sprint wird vermutlich neue `email_subscriptions`-Tabelle nach Webhook-Pattern anlegen.
+**Aufgabe 41 Schema-Erweiterungen (2026-05-31):**
+- `aufgabe_41_email_subscriptions`: 2 neue Tabellen. `email_subscriptions(id, funnel_id, tenant_id, name, recipient_type, delay_minutes, subject, body_html, from_local, is_active, …)` mit CHECK-Constraints (recipient_type IN customer/tenant, delay_minutes>=0, subject/body/name nicht leer) + 2 partial Indices + updated_at-Trigger + 4 RLS-Policies. `email_delivery_attempts(id, subscription_id, submission_id, scheduled_at, attempt_count, status, recipient_address, resend_message_id, next_retry_at, delivered_at, …)` mit CHECK (status IN pending/retrying/success/failed) + 4 Indices (subscription, submission, due-pending, due-retrying) + 1 SELECT-Policy. **Backfill:** 2 Default-Subscriptions pro existierendem Funnel (Customer-Confirmation + Tenant-Notification, beide delay=0) → 24 Rows für 12 bestehende Funnels. Forward-only mit DOWN-File für Rollback. Additive — keine bestehenden Daten geändert.
+- `aufgabe_41_custom_recipient` (2026-05-31 abends): `email_subscriptions.recipient_type` CHECK erweitert um `'custom'` + neue Spalte `recipient_value text NULL` (comma-separated, max 3 Adressen, App-side enforced) + CHECK „bei custom muss recipient_value gefüllt sein". Additive, kein Backfill nötig.
+
+**Nächste DB-Arbeit:** keine geplant.
 
 ---
 

@@ -9,7 +9,7 @@ import { motion, AnimatePresence, type Variants } from "framer-motion";
 // ~30KB (react-day-picker + date-fns) bleiben aus dem Initial-Bundle.
 const DateInlinePicker = dynamic(() => import("./funnel/DateInlinePicker"), {
   ssr: false,
-  loading: () => <div className="mb-3 h-[320px] w-full max-w-[320px] animate-pulse rounded-lg bg-gray-100 dark:bg-gray-800" />,
+  loading: () => <div className="mb-3 h-80 w-full max-w-80 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-800" />,
 });
 import {
   DndContext,
@@ -781,7 +781,7 @@ export function Funnel({
         }}
       >
         {/* Progress-Bar 1px oben — Typeform-Pattern */}
-        <div className="h-[2px] w-full" style={{ backgroundColor: `color-mix(in srgb, ${theme.textColor} 8%, transparent)` }}>
+        <div className="h-0.5 w-full" style={{ backgroundColor: `color-mix(in srgb, ${theme.textColor} 8%, transparent)` }}>
           <div
             className="h-full transition-[width] duration-300"
             style={{ width: `${progress}%`, backgroundColor: theme.primaryColor }}

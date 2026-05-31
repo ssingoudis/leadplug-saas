@@ -109,7 +109,114 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
-## Aktuell: Aufgabe 40 — Webhook-Actions + Robustheits-Polish (2026-05-29)
+## Aktuell: Aufgabe 41 — E-Mails als Drip-Action-Element (2026-05-31)
+
+**Status:** Migration appliziert (24 Default-Subscriptions via Backfill für 12 existierende Funnels), Code auf Branch `feature/aufgabe-41-emails-tab`, Type-Check + Build grün.
+
+**Strategischer Pivot mittendrin:** ursprünglich als 1:1-Klon des Webhook-Tabs gebaut (trigger_type on_submit/after_page/on_abandoned + Markdown-Body). Nach Stavros' Feedback („Vorlagen-Editor unbrauchbar, Trigger sind irrelevant für E-Mails") komplett umgebaut zum **Drip-Modell für Lead-Nurturing**: E-Mails laufen zeitversetzt nach Submit (0 Min / 1 Tag / 3 Tage / …). Webhooks bleiben unverändert beim Event-Push-Modell.
+
+**Schema** (Migration `aufgabe_41_email_subscriptions`, additive):
+- `email_subscriptions` — pro Funnel N Drip-Mails: `delay_minutes int` · `recipient_type ('customer'|'tenant')` · `subject text` · `body_html text` (TipTap-Output) · `is_active` · `from_local`. CHECK-Constraints + 2 partial Indices + updated_at-Trigger + 4 RLS-Policies.
+- `email_delivery_attempts` — Queue + Audit-Trail: `scheduled_at` (= completed_at + delay_minutes) · `status (pending|retrying|success|failed)` · `attempt_count` · `resend_message_id` · `recipient_address` · `next_retry_at`. 4 Indices (subscription, submission, due-pending, due-retrying) + 1 SELECT-Policy.
+- **Backfill:** für jeden Funnel 2 Default-Subscriptions (Customer-Confirmation + Tenant-Notification, beide delay=0) → reproduziert das heutige hartkodierte Mail-Verhalten 1:1. Keine Verhaltens-Änderung beim Cutover.
+
+**Sender** ([`lib/emails.ts`](../lib/emails.ts)):
+- `triggerEmailsOnSubmit(funnelId, snapshot, tenantConfig)` — beim Submit insertet für jede aktive Subscription eine attempt-Row mit `scheduled_at = NOW() + delay_minutes`, sendet sofort alle die jetzt fällig sind (delay=0) via `after()`.
+- `processPendingDelivery(attemptId)` + `retryEmailDelivery(attemptId)` — Cron-Pfade.
+- Backoff identisch zu Webhooks (1m/5m/30m/2h/6h). 4xx von Resend → sofort `failed`. 5xx/Timeout → `retrying`.
+- `aggregateEmailStatusForSubmission(submissionId)` — schreibt nach Send-Pass aggregiert `customer_email_sent` / `tenant_email_sent` in submissions (für Dashboard-Lead-Badges).
+- `sendTestEmail(subId, options)` — options enthält `customRecipient`, `draftSubject`, `draftBodyHtml`, `draftRecipientType`. **Test-Mail rendert immer den aktuellen Editor-Stand**, auch wenn noch nicht gespeichert.
+
+**Templates** ([`lib/emailTemplates.ts`](../lib/emailTemplates.ts) + [`emails/DynamicEmail.tsx`](../emails/DynamicEmail.tsx)):
+- TipTap-Output ist HTML mit `<span data-variable="contact.name">{{contact.name}}</span>` + `<div data-magic-section="answers_overview">`.
+- Server-Render via Regex-Substitution: Variable-Spans → HTML-escaped Value, Magic-Section-Divs → fertiges Sub-HTML (Antworten-Box · Kontakt-Box · Dashboard-Button).
+- `DynamicEmail.tsx` React-Email-Shell mit Brand-Color-Header + dangerouslySetInnerHTML Body + Footer.
+
+**Cron** ([`/api/cron/webhook-retry`](../app/api/cron/webhook-retry/route.ts), erweitert):
+- Bestehende Webhook-Sektionen unverändert.
+- Neu: due-pending (`status='pending' AND scheduled_at <= NOW()`) + due-retrying (`status='retrying' AND next_retry_at <= NOW()`). Beide rufen denselben `processAttempt`-Pfad.
+- Nach jedem Lauf: `aggregateEmailStatusForSubmission` für alle berührten Submissions.
+
+**CRUD-API** unter [`app/api/tenant/funnels/[slug]/emails/...`](../app/api/tenant/funnels/%5Bslug%5D/emails/route.ts):
+- GET-Liste · POST-Create · GET/PATCH/DELETE pro Sub · `/test` (mit Draft-Override-Parametern) · `/logs` (Delivery-Attempts).
+- Neue Route `/preview-leads`: liefert top 5 completed Submissions für den Vorschau-Lead-Picker im Editor.
+
+**UI** (komplett neu, kein Modal):
+- [`components/tenant-editor/v2/EmailsPanel.tsx`](../components/tenant-editor/v2/EmailsPanel.tsx) — **3-Pane-Layout** (Liste · Editor · Live-Vorschau), wie Funnel-Editor.
+- Linke Spalte: Liste mit Name + Trigger-Label + Recipient-Badge. Switch-Wrapper `trySwitchTo()` warnt bei ungesichertem Draft.
+- Mittlere Spalte: Editor mit Name-Input + Delay (Anzahl + Einheit Min/Std/Tage) + Recipient + Subject (TipTap single-line) + Body (TipTap full) + Test-Mail (collapsible) + Logs (collapsible).
+- Rechte Spalte: Vorschau, **resizable per Drag-Handle** (320–900 px), mit Dropdown „Mock-Lead" / echte Leads aus `preview-leads`-API. Mail-Card auf `maxWidth: 600 px` zentriert (identisch zu echter Mail).
+- **TipTap-Editor** ([`components/tenant-editor/v2/email/`](../components/tenant-editor/v2/email/)): Custom `VariableNode` (inline-Chip) + `MagicSectionNode` (block-Card mit X-Button zum Entfernen). Toolbar mit Bold/Italic/H2/H3/Listen/Link + Portal-Dropdowns für „+Variable" / „+Baustein" (kein Cropping mehr).
+- **Live-Update:** Draft-State im `EmailsPanel`, Editor + Vorschau lesen denselben Draft → Vorschau aktualisiert sich bei jedem Keystroke.
+- **Auto-Save:** Debounced 1.5 s nach letztem Keystroke. Status-Indikator: „Speichere…" / „Ungesichert · auto-save in ~1.5 s" / „Gespeichert".
+- **Demo-Mode:** wenn API-Call fehlschlägt (z.B. Tabellen fehlen), Auto-Fallback auf 3 In-Memory Mock-Subscriptions mit gelbem Banner. Test/Logs sind im Demo-Mode disabled.
+
+**Wiring:**
+- [`/api/submit/route.ts`](../app/api/submit/route.ts): hartkodierter `sendAllEmails`-Call raus, `triggerEmailsOnSubmit` + `aggregateEmailStatusForSubmission` via `after()`.
+- [`/api/track-progress/route.ts`](../app/api/track-progress/route.ts): kein E-Mail-Trigger (E-Mails haben kein after_page, das ist Webhook-Domain).
+- [`TopTabs.tsx`](../components/tenant-editor/v2/TopTabs.tsx): „E-Mails"-Tab aktiv (war disabled).
+- [`EditorShellV2.tsx`](../components/tenant-editor/v2/EditorShellV2.tsx): routet auf `EmailsPanel` (full-width, kein Canvas).
+
+**Cleanup:**
+- ❌ `lib/sendEmails.ts` gelöscht (hartkodiert)
+- ❌ `emails/CustomerConfirmation.tsx` gelöscht
+- ❌ `emails/TenantLeadNotification.tsx` gelöscht
+- ❌ `lib/tracking.ts.updateEmailStatus` gelöscht (jetzt `aggregateEmailStatusForSubmission` in `lib/emails.ts`)
+- ❌ `marked` dep deinstalliert (TipTap-Output ist HTML, kein Markdown nötig)
+
+**Konsens-Entscheidungen (2026-05-31):**
+- E-Mails = **Lead-Nurturing-Drip** (zeitversetzt). Nicht 1:1 zu Webhooks. Recipient nur customer|tenant (kein custom in v1). Trigger nur delay_minutes (kein after_page, kein on_abandoned).
+- **TipTap-WYSIWYG** statt Markdown-Editor. Variablen + Bausteine als Chips, nicht als Token-Text. Neue Deps: `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-link`, `@tiptap/extension-placeholder`.
+- **In-Place-Editor** statt Modal — konsistent zu Funnel-Builder.
+- **Live-Vorschau** mit Mock + echten Leads, resizable.
+- **Auto-Save** mit 1.5 s Debounce.
+
+**Polish-Iterationen nach erstem Migration-Apply (2026-05-31 Nachmittag → Abend):**
+
+Nach dem ersten Doku-Pass folgten mehrere Runden Iteration auf Stavros-Feedback. Alle in derselben Branch `feature/aufgabe-41-emails-tab`, alle uncommitted bis zum finalen Commit.
+
+- **CTA-Button-Baustein** (`components/tenant-editor/v2/email/CtaButtonNode.ts`): Custom TipTap-Block-Atom mit **inline editierbaren `label` + `url`-Attributen** (zwei `<input>`-Felder direkt im NodeView). Renderer in `lib/emailTemplates.ts` (`renderCtaButton`) generiert Brand-Color-Button. URL-Whitelist auf `^https?://` (XSS-Schutz). Verfügbar via „+Baustein"-Dropdown als „🔗 Link-Button". Ersetzt den vordefinierten `dashboard_button`-Magic-Section funktional (Legacy-Renderer bleibt für Backfill-Mails).
+- **Anpassbarer Heading bei Antworten-Box + Kontakt-Box:** `MagicSectionNode` bekommt `heading`-Attribut. NodeView zeigt für `answers_overview` + `contact_summary` einen Heading-Input mit Placeholder vom Default-Wert. Speichert sich als `data-heading="..."`-Attribut. Renderer (`renderAnswersOverview`, `renderContactSummary`) schluckt optionalen `customHeading`.
+- **Dashboard-Button aus Picker raus:** `AVAILABLE_TOKENS.magic` zeigt nur noch `answers_overview` + `contact_summary`. Legacy-Block bleibt im Editor-View für existierende Backfill-Mails ("Dashboard-Button (Legacy)"-Label im LABEL_MAP).
+- **Drag-and-Drop für alle Block-/Inline-Atoms:** `draggable: true` auf `MagicSectionNode` + `CtaButtonNode` + `VariableNode`. `cursor: grab` im NodeView. TipTap-Native-Drag → Tenant verschiebt Bausteine/Variablen durch den Text. `stopEvent`-Handler sorgt dafür dass Inputs/Buttons im NodeView ihre normalen Events behalten.
+- **Custom-Recipient (Migration `aufgabe_41_custom_recipient`):** Neue Spalte `email_subscriptions.recipient_value text NULL` + CHECK-Constraint-Erweiterung auf `recipient_type IN ('customer','tenant','custom')` + CHECK dass `recipient_value` bei `custom` gefüllt ist. **Multi-Recipient bis 3 Adressen** comma-separated im selben `recipient_value`-String (kein N:M-Schema-Refactor). Sender splittet beim Send, Resend bekommt `to: string[]`-Array (1 Send-Call, alle im To-Header). UI: dynamische Liste mit „+ Weitere Adresse"-Button + X-Button pro Adresse + Live-Email-Validation + DSGVO-Hinweis. **Bugfix unterwegs:** `addOne()` ändert nur lokalen State (kein onChange) — `serializeRecipients` filterte leere Slots raus → Add-Button machte vorher nichts.
+- **3-Pane In-Place-Editor + Resizable Vorschau:** Add-Modal komplett gelöscht. Layout: Liste (280 px) · Editor (flex) · Vorschau (340-1100 px resizable, default 680). Drag-Handle als 6 px-Spalte zwischen Editor und Vorschau (`GripVertical`-Icon, Brand-Color bei Hover). Mail-Card in Vorschau auf `maxWidth: 600 px` mittig zentriert (= echte Mail-Breite). Inline `<style>`-Block in Vorschau überschreibt Tailwind-p/h/ul-Resets — Optik identisch zur Production-Mail.
+- **Live-Vorschau via Draft-Lift:** Draft-State aus `SelectedEditor` ins `EmailsPanel` hochgezogen. Editor + Vorschau lesen denselben Draft → Update bei jedem Keystroke. `dirty`/`saving` jetzt im Parent.
+- **Manual Save + UnsavedChangesModal:** Auto-Save (1.5 s Debounce) wieder entfernt nach User-Feedback („katastrophe, macht einen verrückt"). Speichern-Button bleibt sichtbar wenn dirty, Label wechselt zu „Speichere…" während Save. Bei Subscription-Switch mit dirty Draft zeigt jetzt **`UnsavedChangesModal`** (TriangleAlert-Icon, 3 Buttons Abbrechen/Verwerfen/Speichern) statt Browser-`confirm()`.
+- **Karten-Toggle statt Selects:**
+  - **Trigger**: 2 Karten „Sofort" (⚡) / „Verzögert" (🕒). Bei Verzögert öffnet sich Sub-Picker mit Number + Unit. Defaultet auf „1 Tag" beim Switch.
+  - **Empfänger**: 3 Karten „An den Lead" (👤) / „An dich" (📥, zeigt konkrete `notification_email` darunter, amber Warnung wenn leer) / „Eigene Adresse" (@). Aktive Karte mit Brand-Border + Tint.
+- **Inline-HTML-Styles für Mail-Render** (`inlineGenericTagStyles` in `lib/emailTemplates.ts`): nach der Variable-/Magic-/CTA-Substitution werden alle `<p>` / `<h2>` / `<h3>` / `<ul>` / `<ol>` / `<li>` / `<a>` / `<hr>` mit inline `style="…"` versehen. Bugfix: Gmail/Outlook stripen `<p>`-Margins aus CSS-Blöcken → Zeilenumbrüche aus TipTap (Enter = neuer `<p>`) waren in der echten Mail unsichtbar. Tags die bereits `style=` haben (Magic-Sections, CTA-Buttons) bleiben unverändert. Leere `<p></p>` (doppelter Enter) werden zu `<p>&nbsp;</p>` damit Browser sie nicht kollabieren.
+- **Echte Lead-Daten in Vorschau:** Neue Route [`/preview-leads`](../app/api/tenant/funnels/%5Bslug%5D/preview-leads/route.ts) liefert top 5 completed Submissions. Dropdown im Vorschau-Header schaltet zwischen Mock-Lead (Max Mustermann) und echten Leads.
+- **Test-Mail nimmt Draft-Daten:** `/test`-Route schluckt `draft_subject` / `draft_body_html` / `draft_recipient_type` / `draft_recipient_value` als Override. Frontend schickt immer den aktuellen Draft mit. So testet der Tenant immer den ungesicherten Stand.
+- **Variable-Picker reduziert:** nur `Daten vom Lead` (contact.*) + `Datum/Zeit` (submitted_at). Funnel-Variablen (`funnel.name` etc.) aus dem Picker raus — die werden vom Tenant direkt getippt (sind nicht pro-Lead-dynamisch). `resolveVar()` versteht `{{funnel.*}}` weiterhin für Backwards-Compat mit Backfill-Mails.
+- **Subject ohne Variable-Toolbar:** Subject-TipTap rendert nur das Eingabefeld, kein „+Variable"-Button mehr. Existing Chips aus Backfill werden weiter angezeigt.
+- **Name inline editierbar im Header:** kein separates Name-Feld mehr im Body. Header hat Titel-gestylten `<input>` mit Hover-Border-Cue, Focus-Highlight, Pencil-Icon-Tooltip „Klick zum Umbenennen".
+- **Tailwind-Canonical-Classes-Fixes** (6 Stellen): `h-[320px]` / `max-w-[320px]` / `h-[2px]` / `z-[60..100]` auf canonical-form (lints-clean).
+- **Demo-Mode**: bei API-Fehler (Tabellen nicht da) fällt UI auf 3 In-Memory Mock-Subscriptions zurück + gelbes Banner. Im Demo-Mode sind Test-Send + Logs disabled.
+
+**Migration-History für Aufgabe 41:**
+1. `aufgabe_41_email_subscriptions` (2026-05-31 morgens) — initiale Tabellen + Backfill (24 Subscriptions)
+2. `aufgabe_41_custom_recipient` (2026-05-31 abends) — `recipient_value` column + CHECK-Erweiterung für `custom`
+
+**Konsens-Entscheidungen (2026-05-31):**
+- E-Mails = **Lead-Nurturing-Drip** (zeitversetzt). Nicht 1:1 zu Webhooks. Trigger nur delay_minutes (kein after_page, kein on_abandoned).
+- **TipTap-WYSIWYG** statt Markdown-Editor. Variablen + Bausteine als Chips, nicht als Token-Text.
+- **In-Place-Editor** statt Modal — konsistent zu Funnel-Builder.
+- **Live-Vorschau** mit Mock + echten Leads, resizable, identisch zur echten Mail.
+- **Manuelles Speichern** statt Auto-Save (User-Kontrolle). Warn-Modal beim Verlassen.
+- **CTA-Button** als anpassbarer Universal-Baustein (Label + URL inline editierbar). Vordefinierte Magic-Section-Variante `dashboard_button` aus Picker entfernt.
+- **Custom-Recipient** mit max 3 Adressen pro Subscription (Resend-Kontingent-Schutz). Multi via comma-separated string ohne Schema-Refactor.
+- **Inline-HTML-Styles** im Mail-Render (Gmail/Outlook-Kompatibilität).
+
+**Bekannte Nice-to-Haves (verschoben, nicht-blockierend):**
+- Mobile-Responsive (3-Pane bricht unter ~1100 px) — wird mit dem allgemeinen Design-Pass für alle Editor-Tabs gefixt.
+
+---
+
+## History (vorher)
+
+## Aufgabe 40 — Webhook-Actions + Robustheits-Polish (2026-05-29)
 
 **Update 2026-05-29 abends — Robustheits-Polish nach Smoke-Test:**
 - ✅ Hotfix `submissions.tenant_slug` NOT NULL → NULLable (Pre-Existing Bug seit Aufgabe 26 entdeckt + gefixt)

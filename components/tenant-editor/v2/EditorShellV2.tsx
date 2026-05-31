@@ -10,6 +10,7 @@ import { CenterCanvas } from "./CenterCanvas";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { ThemePanel } from "./ThemePanel";
 import { WebhooksPanel } from "./WebhooksPanel";
+import { EmailsPanel } from "./EmailsPanel";
 import { AddContactFieldPicker } from "./properties/AddContactFieldPicker";
 import type { SelectedStep } from "./types";
 import {
@@ -758,6 +759,20 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
               onSubsChanged={reloadWebhookCounts}
             />
           )
+        ) : activeTab === "emails" ? (
+          mode === "create" || !originalSlug ? (
+            <div className="flex flex-1 items-center justify-center bg-gray-50 dark:bg-background p-8">
+              <div className="max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 text-center">
+                <p className="text-base font-semibold text-gray-900 dark:text-white">Funnel zuerst speichern</p>
+                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                  E-Mail-Aktionen sind funnel-spezifisch. Bitte speichere den Funnel einmal, dann kannst du hier
+                  deine ersten E-Mails anlegen.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <EmailsPanel funnelSlug={originalSlug} state={state} />
+          )
         ) : activeTab === "design" ? (
           <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_420px]">
             <CenterCanvas
@@ -882,7 +897,7 @@ function NamePromptModal({
   onCancel: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
         <div className="p-6">
           <h3 className="mb-2 text-base font-bold text-gray-900 dark:text-white">
@@ -936,7 +951,7 @@ function ExitModal({
   onSave: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
       <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
         <div className="p-6">
           <div className="mb-4 flex items-start gap-4">

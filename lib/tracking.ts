@@ -264,26 +264,6 @@ export async function upsertSubmissionProgress(params: {
   }
 }
 
-export async function updateEmailStatus(
-  submissionId: string,
-  customerSent: boolean,
-  tenantSent: boolean,
-): Promise<void> {
-  const supabase = getSupabase()
-  if (!supabase) return
-
-  try {
-    const { error } = await supabase
-      .from('submissions')
-      .update({ customer_email_sent: customerSent, tenant_email_sent: tenantSent })
-      .eq('id', submissionId)
-
-    if (error) console.error('Supabase email status update error:', error)
-  } catch (err) {
-    console.error('Supabase email status update exception:', err)
-  }
-}
-
 export async function logHoneypot(params: {
   funnelSlug?: string
   ipAddress?: string
