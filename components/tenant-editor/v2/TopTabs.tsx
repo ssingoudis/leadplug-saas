@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-export type TopTabKey = "content" | "design" | "logic" | "emails" | "webhooks" | "share";
+export type TopTabKey = "content" | "logic" | "emails" | "webhooks" | "share";
 
 interface TabDef {
   key: TopTabKey;
@@ -12,14 +12,15 @@ interface TabDef {
 }
 
 const TABS: TabDef[] = [
-  { key: "content", label: "Inhalt", disabled: false },
-  { key: "design", label: "Design", disabled: false },
+  // Aufgabe 45: Inhalt + Design in einem Tab „Bearbeiten" (Inspektor-Umschalter rechts).
+  { key: "content", label: "Bearbeiten", disabled: false },
   { key: "logic", label: "Logik", badge: "bald", disabled: true },
   // Aufgabe 41: E-Mails als 2. Action-Klasse (Webhook-Pattern wiederverwendet).
   { key: "emails", label: "E-Mails", disabled: false },
   // Aufgabe 40: Webhooks als erste echte Action-Klasse.
   { key: "webhooks", label: "Webhooks", disabled: false },
-  { key: "share", label: "Einbinden", disabled: true },
+  // Aufgabe 43: Einbinden-Tab pro Funnel (Embed-Snippet + Conversion-Tracking + Anleitungen).
+  { key: "share", label: "Einbinden", disabled: false },
 ];
 
 interface Props {

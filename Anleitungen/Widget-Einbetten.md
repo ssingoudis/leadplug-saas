@@ -25,12 +25,14 @@ Mehrere Divs (verschiedene Slugs) auf einer Seite werden alle erkannt.
 
 ```html
 <!-- Platzhalter an gewünschter Position -->
-<div data-funnel-slug="DEIN-SLUG"></div>
+<div data-leadplug="DEIN-SLUG"></div>
 
 <!-- Script-Tag irgendwo auf der Seite, z.B. vor </body> -->
 <!-- Kein data-slug am Script nötig – der Slug steht am div -->
 <script src="https://DEINE-DOMAIN.de/embed.js"></script>
 ```
+
+> **Attribut-Hinweis:** `data-leadplug` ist das aktuelle, empfohlene Attribut. Das ältere `data-funnel-slug` wird weiterhin unterstützt (abwärtskompatibel) – bestehende Einbettungen brechen nicht.
 
 ---
 
@@ -54,6 +56,25 @@ Wenn auf der Zielseite kein externes Script erlaubt ist (z.B. wegen Content Secu
   });
 </script>
 ```
+
+---
+
+## Conversion-Tracking (Google Ads & Facebook)
+
+Mit **Variante A oder B** (über `embed.js`) meldet jeder abgeschickte Funnel automatisch einen Lead an die einbettende Seite. So optimieren Google Ads / Facebook auf Lead-Generierung statt nur auf Klicks. Drei Wege, das abzugreifen:
+
+1. **Google Tag Manager (empfohlen):** Bei jedem Lead wird `window.dataLayer.push({ event: "leadplug_lead", funnel: "DEIN-SLUG" })` gefeuert. In GTM einen Trigger „Benutzerdefiniertes Ereignis" auf `leadplug_lead` anlegen, daran die eigenen Conversion-Tags hängen.
+2. **Ohne GTM – data-Attribute am `<div>`:**
+   ```html
+   <!-- Meta-Pixel: feuert fbq('track','Lead') -->
+   <div data-leadplug="DEIN-SLUG" data-meta-lead></div>
+
+   <!-- Google Ads: feuert gtag('event','conversion', { send_to }) -->
+   <div data-leadplug="DEIN-SLUG" data-google-conversion="AW-123456789/AbCdEfGh"></div>
+   ```
+3. **Eigener Code:** `window.LeadPlug = { onLead: function (e) { /* e.funnel */ } }`.
+
+Aus Datenschutzgründen werden **keine personenbezogenen Daten** an die einbettende Seite übergeben – nur das Lead-Signal und der Funnel-Slug. Variante C (direktes iFrame) hat **kein** Tracking. Volle technische Referenz: [`context/conversion-tracking.md`](../context/conversion-tracking.md).
 
 ---
 
@@ -96,7 +117,7 @@ Transparenz funktioniert in allen modernen Browsern ohne zusätzliche Attribute.
 
 ## Wie es funktioniert
 
-- `embed.js` liest den Slug aus `data-slug` (am Script-Tag) oder `data-funnel-slug` (am Div)
+- `embed.js` liest den Slug aus `data-leadplug` (empfohlen) bzw. `data-funnel-slug` (am Div) oder `data-slug` (am Script-Tag)
 - Die Widget-URL lautet `{domain}/{slug}` – Next.js lädt dort die Konfiguration aus Supabase
-- Das Widget sendet bei jeder Layoutänderung `window.parent.postMessage({ type: 'funnel-resize', height: X }, '*')`
-- `embed.js` empfängt die Nachricht und setzt `iframe.style.height` – kein Scrollen im iframe, immer korrekte Höhe
+- Das Widget sendet bei jeder Layoutänderung `window.parent.postMessage({ type: 'funnel-resize', height: X }, '*')` und beim Absenden `{ type: 'funnel-submit', funnel: '<slug>' }`
+- `embed.js` empfängt die Nachrichten (origin- + source-gehärtet), setzt `iframe.style.height` und feuert bei `funnel-submit` die Conversions (dataLayer + optionale Pixel + Callback)

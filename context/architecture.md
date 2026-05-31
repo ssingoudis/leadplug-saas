@@ -184,7 +184,8 @@ text  email  tel  plz  radio  long_text  number  date  checkbox  dropdown
 
 ```
 EditorShellV2.tsx (~750 LOC)              ← der Hauptcontainer
-├── TopTabs.tsx                            ← „Inhalt / Design / Logik / E-Mails / Einbinden"
+├── TopTabs.tsx                            ← „Bearbeiten / Logik / E-Mails / Webhooks / Einbinden" (Inhalt+Design = ein Tab mit Inspektor-Umschalter)
+├── ui/Panel.tsx                           ← geteilte Editor-Primitive (PanelShell/PanelHeader/Section/Field)
 ├── StepList.tsx                           ← linke Sidebar (Page-Liste, drag-reorder, +Button)
 │   ├── StepPill.tsx                       ← einzelne Page-Pille
 │   └── AddElementModal.tsx                ← „+ Frage hinzufügen"-Modal

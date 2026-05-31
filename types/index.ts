@@ -212,6 +212,8 @@ export interface TenantConfig {
   contactFields: ContactFieldConfig[]
   skipSubmitStep: boolean      // Aufgabe 35: wenn true, kein Submit-Schritt — Funnel endet nach letzter Frage direkt auf Success-Page
   redirectUrl?: string         // Aufgabe 39: wenn gesetzt, Widget redirected nach Submit auf diese URL statt Success-Page
+  metaPixelId?: string         // Aufgabe 43: Meta-Pixel-ID — embed.js feuert fbq('track','Lead') beim Submit
+  googleAdsConversion?: string // Aufgabe 43: Google-Ads-Conversion send_to (AW-XXX/Label) — embed.js feuert gtag conversion
 }
 
 // Dynamische Kontaktdaten — Keys entsprechen den ContactFieldConfig.key-Werten.

@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { Power } from 'lucide-react'
-import DashboardHeader from './DashboardHeader'
+import DashboardShell from '@/components/dashboard/DashboardShell'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -80,14 +80,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-background" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      <DashboardHeader
-        userName={tenant.company_name ?? user.email ?? ''}
+    <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      <DashboardShell
+        userName={tenant.company_name || user.email || ''}
         userEmail={user.email ?? ''}
-      />
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8">
+      >
         {children}
-      </div>
+      </DashboardShell>
     </div>
   )
 }
