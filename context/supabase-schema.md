@@ -6,9 +6,12 @@
 > Für architektonisches Verständnis und Zweck der Tabellen: siehe [`project-overview.md`](project-overview.md) §4.
 > Bei jeder neuen Migration: dieses File neu regenerieren.
 
-- **Stand:** 2026-05-31 (nach Aufgabe 41 + Custom-Recipient-Polish)
-- **Letzte Migration:** `aufgabe_41_custom_recipient`
+- **Stand:** 2026-06-01 (nach Aufgabe 46 — submissions.notes)
+- **Letzte Migration:** `aufgabe_46_submissions_notes`
 - **Tabellen:** 12 in `public` (alle mit RLS aktiviert)
+
+> **Aufgabe 46 Migration `aufgabe_46_submissions_notes` (2026-06-01):** `submissions.notes text NULL` — freie interne CRM-Notiz pro Lead. Additiv, kein Backfill, kein CHECK (Längen-Cap app-seitig). Status-Workflow (`submissions.status`) unverändert, nur UI-Relabel auf Neu/Kontaktiert/Erledigt.
+> _(Hinweis: Header-Migrationsliste in §5 ist nicht lückenlos nachgepflegt — `aufgabe_43_funnel_tracking` + dieses 46 sind in den Tabellen-Sektionen erfasst.)_
 - **Enums:** 4 (`billing_model_type`, `page_type`, `field_type`, `tenant_member_role`)
 - **Functions:** 5 — **Triggers:** 7 — **Views:** 0
 
@@ -482,6 +485,7 @@ Eine Zeile pro User-Session (Partial-Submissions seit Aufgabe 34). Das ist die C
 | `tenant_email_sent` | bool | YES | `false` | |
 | `status` | text | NO | `'offen'` | CRM-Status (siehe Check) — orthogonal zu `completed_at` |
 | `abandoned_webhook_fired_at` | timestamptz | YES | NULL | **Aufgabe 40.** Cooldown-Marker für `/api/cron/webhook-retry`. NULL = abandoned-Webhook noch nicht gefeuert. Cron picked Rows wo `completed_at IS NULL AND abandoned_webhook_fired_at IS NULL AND created_at < NOW() - 10min`. |
+| `notes` | text | YES | NULL | **Aufgabe 46.** Freie interne CRM-Notiz des Tenants zu diesem Lead. Editierbar über `/api/leads/[id]` PATCH (User-Client + RLS). Kein CHECK — Längen-Cap (~5000) app-seitig. |
 | `created_at` | timestamptz | YES | `now()` | |
 
 **Foreign Keys:**

@@ -15,7 +15,7 @@ async function getLeadsData(): Promise<{ submissions: TenantSubmission[]; funnel
   ] = await Promise.all([
     supabase
       .from('submissions')
-      .select('id, created_at, completed_at, contact, answers, customer_email_sent, tenant_email_sent, funnel_slug')
+      .select('id, created_at, completed_at, contact, answers, status, notes, funnel_slug')
       .order('created_at', { ascending: false }),
     // Frage-Metadaten: pages mit page_type='question' + ihre Fields (genau 1 pro Page)
     supabase
@@ -66,38 +66,33 @@ async function getLeadsData(): Promise<{ submissions: TenantSubmission[]; funnel
     questionsByFunnel.set(slug, list)
   }
 
+  // Aufgabe 46: Mini-CRM. Bucket-Klassifikation entfällt — eine Liste, neueste oben.
+  // Türsteher: nur kontaktierbare Leads (E-Mail oder Telefon vorhanden) landen im CRM,
+  // kontaktlose Tracking-Spuren werden ausgeblendet (zählen nur in der Statistik).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const enriched: TenantSubmission[] = ((submissions ?? []) as any[]).map((s) => {
-    const c = (s.contact ?? {}) as Record<string, string>
-    const completedAt = (s.completed_at as string | null) ?? null
-    const email = (c.email as string | undefined)?.trim() || null
-    // Aufgabe 36: Bucket-Klassifikation
-    // completed: finaler Submit-Klick (completed_at gesetzt)
-    // abandoned_with_email: Session offen, aber Email vorhanden → wertvoller Abbrecher-Lead
-    // abandoned_without_email: Session offen, keine Email → reine Tracking-Spur, kein Lead
-    const bucket: TenantSubmission['bucket'] = completedAt
-      ? 'completed'
-      : email
-        ? 'abandoned_with_email'
-        : 'abandoned_without_email'
-    return {
-      id: s.id as string,
-      created_at: s.created_at as string,
-      completed_at: completedAt,
-      bucket,
-      contact_name: (c.name as string | undefined) ?? null,
-      contact_email: email,
-      contact_phone: (c.telefon as string | undefined) ?? null,
-      contact_anrede: (c.anrede as string | undefined) ?? null,
-      contact: s.contact as Record<string, string> | null,
-      answers: s.answers as Record<string, string> | null,
-      customer_email_sent: (s.customer_email_sent as boolean) ?? false,
-      tenant_email_sent: (s.tenant_email_sent as boolean) ?? false,
-      funnel_slug: s.funnel_slug as string,
-      funnel_name: funnelNameMap[s.funnel_slug as string] ?? (s.funnel_slug as string),
-      questions: questionsByFunnel.get(s.funnel_slug as string) ?? [],
-    }
-  })
+  const enriched: TenantSubmission[] = ((submissions ?? []) as any[])
+    .map((s) => {
+      const c = (s.contact ?? {}) as Record<string, string>
+      const email = (c.email as string | undefined)?.trim() || null
+      const phone = (c.telefon as string | undefined)?.trim() || null
+      return {
+        id: s.id as string,
+        created_at: s.created_at as string,
+        completed_at: (s.completed_at as string | null) ?? null,
+        status: (s.status as TenantSubmission['status']) ?? 'offen',
+        notes: (s.notes as string | null) ?? null,
+        contact_name: (c.name as string | undefined) ?? null,
+        contact_email: email,
+        contact_phone: phone,
+        contact_anrede: (c.anrede as string | undefined) ?? null,
+        contact: s.contact as Record<string, string> | null,
+        answers: s.answers as Record<string, string> | null,
+        funnel_slug: s.funnel_slug as string,
+        funnel_name: funnelNameMap[s.funnel_slug as string] ?? (s.funnel_slug as string),
+        questions: questionsByFunnel.get(s.funnel_slug as string) ?? [],
+      }
+    })
+    .filter((s) => s.contact_email || s.contact_phone)
 
   const funnels: FunnelOption[] = (funnelRows ?? []).map(
     (f) => ({ slug: (f as { slug: string }).slug, name: funnelNameMap[(f as { slug: string }).slug] ?? (f as { slug: string }).slug })

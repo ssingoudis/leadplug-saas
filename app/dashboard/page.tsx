@@ -25,7 +25,7 @@ async function getData() {
     // Abgebrochene Sessions landen in der Lead-Inbox unter eigenen Tabs.
     supabase
       .from('submissions')
-      .select('id, created_at, completed_at, contact, answers, customer_email_sent, tenant_email_sent, funnel_slug')
+      .select('id, created_at, completed_at, contact, answers, status, notes, funnel_slug')
       .not('completed_at', 'is', null)
       .order('created_at', { ascending: false })
       .limit(50),
@@ -80,24 +80,22 @@ async function getData() {
     questionsByFunnel.set(slug, list)
   }
 
-  // Submissions mit Questions anreichern
+  // Submissions mit Questions anreichern (Aufgabe 46: neue CRM-Shape mit status + notes)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const enrichedSubmissions: TenantSubmission[] = ((submissions ?? []) as any[]).map((s) => {
     const c = (s.contact ?? {}) as Record<string, string>
-    // Diese Query filtert bereits auf completed_at IS NOT NULL → bucket ist immer "completed".
     return {
       id: s.id as string,
       created_at: s.created_at as string,
       completed_at: (s.completed_at as string | null) ?? null,
-      bucket: 'completed' as const,
+      status: (s.status as TenantSubmission['status']) ?? 'offen',
+      notes: (s.notes as string | null) ?? null,
       contact_name: (c.name as string | undefined) ?? null,
       contact_email: (c.email as string | undefined) ?? null,
       contact_phone: (c.telefon as string | undefined) ?? null,
       contact_anrede: (c.anrede as string | undefined) ?? null,
       contact: s.contact as Record<string, string> | null,
       answers: s.answers as Record<string, string> | null,
-      customer_email_sent: (s.customer_email_sent as boolean) ?? false,
-      tenant_email_sent: (s.tenant_email_sent as boolean) ?? false,
       funnel_slug: s.funnel_slug as string,
       funnel_name: funnelNameMap[s.funnel_slug as string] ?? (s.funnel_slug as string),
       questions: questionsByFunnel.get(s.funnel_slug as string) ?? [],
