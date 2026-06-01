@@ -209,7 +209,6 @@ Reine Agentur-Account-Tabelle nach Aufgabe 28 / Phase B.4. Aktuell 9 Zeilen.
 | `id` | uuid | NO | `gen_random_uuid()` | PK |
 | `company_name` | text | NO | — | Comment: "Firmenname" (Anzeigename der Agentur) |
 | `is_active` | bool | YES | `true` | Comment: "Legt fest, ob das iFrame aktiv ist oder nicht" |
-| `website` | text | YES | — | **Deprecated (Aufgabe 46).** App liest die Spalte nicht mehr (Code-Refs in `getTenantConfig`/`emailTemplates`/`TenantConfig` entfernt, Daten geleert). Spalte physisch noch vorhanden — kann nach dem Deploy dieses Branches per Mini-Migration gedroppt werden. |
 | `billing_model` | `billing_model_type` | NO | `'per_month'` | Comment: "Abrechnungsmodell" |
 | `lead_price` | numeric | YES | `3.00` | Comment: "Preis pro Lead in €" |
 | `billing_price` | numeric | YES | — | Comment: "Preis pro Monat fix in €" |
@@ -220,7 +219,7 @@ Reine Agentur-Account-Tabelle nach Aufgabe 28 / Phase B.4. Aktuell 9 Zeilen.
 | `created_at` | timestamptz | YES | `now()` | |
 | `updated_at` | timestamptz | YES | `now()` | wird via Trigger aktualisiert |
 
-> **In Aufgabe 26 gedroppt:** `slug`, `auth_user_id`. **In Aufgabe 28 gedroppt:** `notification_email`, `public_email`, `public_phone`, `address`.
+> **In Aufgabe 26 gedroppt:** `slug`, `auth_user_id`. **In Aufgabe 28 gedroppt:** `notification_email`, `public_email`, `public_phone`, `address`. **In Aufgabe 46c gedroppt:** `website`.
 
 **Foreign Keys:** keine eigenen FKs — `tenants.id` ist FK-Target für `tenant_members.tenant_id`, `funnels.tenant_id`, `funnel_view_logs.tenant_id`, `submissions.tenant_id`, `webhook_subscriptions.tenant_id`.
 
