@@ -109,7 +109,46 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
-## Aktuell: Aufgabe 45 — Editor-Design-System: Voll-Unifizierung der /edit-Tabs (2026-05-31)
+## Aktuell: Aufgabe 46 — Leads zu Mini-CRM + Kontakte-Merge + Billing-Box (2026-06-01)
+
+**Status:** Code auf Branch `feature/aufgabe-46-leads-crm`. Migration `aufgabe_46_submissions_notes` **auf Produktion appliziert** (1 nullable Spalte, additiv, DOWN vorhanden). Type-Check grün. Tenant `Stavros` auf `billing_model='free'` gesetzt. Visuelle Abnahme offen. Teil 1 des Programms „Dashboard-Konsolidierung & Mini-CRM".
+
+**Warum:** Das Dashboard-Areal zeigte dieselben `submissions`-Daten dreifach (Dashboard-Tabelle, Leads-Seite, Kontakte-Seite). Das CRM-Rückgrat (`submissions.status` + PATCH-Route `app/api/leads/[id]`) existierte seit Aufgabe 20, war aber **in keinem UI verdrahtet**. Ziel: ein schlankes Mini-CRM hinter dem Funnel-Leadmagnet.
+
+**Entschieden (mit Stavros):**
+- Status behält DB-Werte `offen/kontaktiert/abgeschlossen`, UI labelt neu → **Neu · Kontaktiert · Erledigt** (kein Enum-Change).
+- **Türsteher**: nur kontaktierbare Submissions (E-Mail ODER Telefon) erscheinen als Leads; kontaktlose Tracking-Spuren werden ausgeblendet (zählen weiter in Statistik). Live: 32 Submissions → 26 Leads.
+- Die alten 3 Bucket-Tabs (Abgeschlossen / Abbrecher-mit-Mail / Abbrecher-ohne-Mail) + „Kunde/Info"-Mail-Badges **komplett raus** (technisches Rauschen).
+- **Kontakte-Seite entfernt** (war redundant zu Leads-„Abgeschlossen", kein Dedup).
+
+**Umsetzung:**
+- **Migration** `aufgabe_46_submissions_notes`: `submissions.notes text NULL` (freie interne CRM-Notiz pro Lead). Additiv, kein Backfill, kein CHECK (Längen-Cap ~5000 app-seitig).
+- **API** [`app/api/leads/[id]/route.ts`](../app/api/leads/%5Bid%5D/route.ts): PATCH akzeptiert jetzt `{ status?, notes? }` (mind. eins). Status-Validierung wie gehabt, `notes` getrimmt, leer → NULL. User-Client + RLS.
+- **Leads-Seite** [`app/dashboard/leads/page.tsx`](../app/dashboard/leads/page.tsx): Select um `status, notes` erweitert, Mail-Felder raus, Türsteher-Filter im Enrich, Bucket-Logik entfernt.
+- **CRM-Tabelle** [`app/dashboard/TenantLeadsTable.tsx`](../app/dashboard/TenantLeadsTable.tsx) neu: Status-Tabs `Alle/Neu/Kontaktiert/Erledigt` mit Zählern; klickbarer **Status-Badge pro Zeile** (Dropdown → optimistic PATCH); Detail mit Status-Segmented-Control + **Notiz-Textarea (debounced Autosave ~800 ms)**. `resolveAnswer`/Detail/Filter wiederverwendet. Keine Mail-Badges.
+- **Dashboard** [`app/dashboard/page.tsx`](../app/dashboard/page.tsx): Mapping an neue Shape angeglichen (Interim — Phase 2 baut Dashboard um).
+- **Kontakte entfernt**: `app/dashboard/kontakte/page.tsx` + `components/leads/LeadsTable.tsx` gelöscht, Nav-Eintrag + `Users`-Icon-Import in [`navItems.ts`](../components/dashboard/navItems.ts) raus.
+- **Billing** [`app/dashboard/billing/BillingClient.tsx`](../app/dashboard/billing/BillingClient.tsx): grüne Kostenlos-Info-Box bei `status==='free'`. Kein Feature-Gate aktiv (`isBillingActive()` nirgends aufgerufen) → rein kosmetisch. Abo-Button + Test-Kachel blenden sich für `free` automatisch aus. Stripe-Pfad intakt.
+
+**Iteration (gleiche Session, Stavros-Feedback):**
+- **Kanban-Board** in [`TenantLeadsTable.tsx`](../app/dashboard/TenantLeadsTable.tsx): List/Board-Umschalter oben. Board = 3 Spalten (Neu/Kontaktiert/Erledigt) via `@dnd-kit/core` (`useDraggable`/`useDroppable`/`DragOverlay`, schon vorhandene Dep) — Karte in andere Spalte ziehen = optimistischer Status-PATCH. Klick auf Karte → `LeadDetailModal` (geteilter `LeadDetailBody`: Kontakt+Antworten+Status+Notiz). `justDragged`-Ref unterdrückt Klick direkt nach Drag.
+- **CRM-Notizfeld gesperrt**: `NotesEditor` jetzt Anzeige-Modus (Notiz-Text + ✎ / „+ Notiz hinzufügen") → Klick öffnet Textarea mit Speichern/Abbrechen. Autosave entfernt (explizites Speichern, nicht permanent editierbar).
+- **Status-Sortierung** „Neu → Erledigt" als Sort-Option in der Liste.
+- **Sanfter Status-Wechsel**: Listen-Zeilen via `framer-motion` `AnimatePresence` (Opacity-Exit) — kein abruptes Wegspringen mehr beim Statuswechsel.
+- **„Feldname im Export" gehärtet** ([`FieldProperties.tsx`](../components/tenant-editor/v2/properties/FieldProperties.tsx) `FieldKeyEditor`): gesperrter Zustand ist jetzt ein eindeutig-gelockter Button (🔒 + „Ändern") statt input-artiger Box.
+
+**Iteration 2 — Phasen 2-4 des Programms (2026-06-01, Commit 2):**
+- **P2 Dashboard als Übersicht** [`app/dashboard/page.tsx`](../app/dashboard/page.tsx): volle Lead-Tabelle raus → 14-Tage-Chart + 3 KPIs (Leads gesamt/Aufrufe/Conversion) + **Pipeline-Karte** (Neu/Kontaktiert/Erledigt, klickbar → `/dashboard/leads?status=…`) + **Neueste-Leads-Teaser**. Leads-Seite liest `?status=`-Param ([`leads/page.tsx`](../app/dashboard/leads/page.tsx) → `TenantLeadsTable.initialStatus`). _(4 Zusatz-Cards waren testweise drin, auf Stavros-Wunsch wieder entfernt — Dashboard-Feinschliff bleibt für ganz am Ende.)_
+- **P3 Statistik-Cockpit** ([`statistiken/`](../app/dashboard/statistiken/)): **Aufruf-Quelle vereinheitlicht** — `funnel_view_logs` ist jetzt die *einzige* Quelle für „Aufrufe"/Conversion (überall: Dashboard, Statistiken, Funnel-Liste). `total_views`-Zähler + `increment_funnel_views` aus dem Code raus, `track-view` schreibt nur noch den Log. Grund: nur Logs haben Zeitstempel → einzige konsistente, periodenfähige Quelle (Zahlen ändern sich: dein Funnel 114→291, Demos ohne Logs 0). **Chart-Ausrichtung gefixt** (Labels exakt unter Balken, `pl-8`-Hack raus). Neuer **Dual-Linien-Chart** `ViewsLeadsTrend` (Aufrufe vs. Ausgefüllt, generisch monatlich+täglich). **Funnel-Filter** als Client-Cockpit `StatistikenCockpit` (instant, kein Reload; filtert alles). Monats-Aufklapp: Dual-Linie (Überblick) + die zwei Tages-Balken (Detail, alle Tage beschriftet). Monats-Header ausgeschrieben (April 2026).
+- **P4 Account** [`account/page.tsx`](../app/dashboard/account/page.tsx): **Danger Zone — Account löschen** mit Tipp-Bestätigung (Agentur-Name) + Server-Route [`api/account/delete`](../app/api/account/delete/route.ts) (Owner-geprüft, löscht Submissions + Tenant-Cascade + Auth-User, Service-Key). Website/Logo/Team bewusst weggelassen (nicht genutzt).
+- **`tenants.website` deprecated**: Code-Refs raus (`getTenantConfig`/`emailTemplates`/`TenantConfig`), Daten geleert (6 Demo-Tenants → NULL). Spalte bleibt physisch (Prod-Sicherheit), Drop nach Deploy.
+- **DB**: `total_views` + `increment_funnel_views` per Migration [`aufgabe_46b_drop_total_views`](../supabase/migrations/20260601130000_aufgabe_46b_drop_total_views.sql) gedroppt (Stavros-Go nach dem Commit — Prod-Dashboard auf altem `main` betroffen bis Deploy; öffentliche Widgets nicht, da `getTenantConfig` den Zähler nie las).
+
+**Folgephasen (Plan, noch offen):** Cockpit-Stats optional (Antworten-Auswertung/Drop-off/Eingangs-Zeiten) · P5 Admin-Cockpit (Cross-Tenant, Owner-gated) · Dashboard-Feinschliff ganz am Ende · `tenants.website` physisch droppen nach Deploy.
+
+---
+
+## Aufgabe 45 — Editor-Design-System: Voll-Unifizierung der /edit-Tabs (2026-05-31)
 
 **Status:** Code auf Branch `feature/aufgabe-42-conversion-tracking` (uncommitted, mit 42–44). Type-Check grün. Visuell iterativ mit Stavros abgenommen. Kein DB-/API-Touch.
 

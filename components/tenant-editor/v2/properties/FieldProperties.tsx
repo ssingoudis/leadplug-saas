@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2, Plus, Eye, EyeOff, Pencil, AlertTriangle } from "lucide-react";
+import { Trash2, Plus, Eye, EyeOff, Pencil, AlertTriangle, Lock } from "lucide-react";
 import type { EditorQuestion, EditorOption, ContactFieldConfig } from "@/types";
 import { OptionsEditor } from "./OptionsEditor";
 import { validateFieldKey, toKey } from "@/lib/editorUtils";
@@ -577,24 +577,29 @@ export function FieldKeyEditor({
   }
 
   if (!editing) {
+    // Gesperrter Zustand: bewusst KEIN Input-Look. Die ganze Zeile ist ein Button,
+    // der erst nach Klick in den Bearbeiten-Modus schaltet → der Feldname kann nie
+    // versehentlich geändert werden (Schloss-Icon signalisiert „gesperrt").
     return (
       <div>
-        <div className="flex items-center gap-2">
-          <code className="flex-1 rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5 font-mono text-xs text-gray-700 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-300">
+        <button
+          type="button"
+          onClick={startEdit}
+          aria-label="Feldname bearbeiten"
+          title="Feldname bearbeiten"
+          className="group flex w-full items-center gap-2 rounded-md border border-gray-200 bg-gray-100/70 px-3 py-1.5 text-left transition-colors hover:border-primary/40 dark:border-gray-800 dark:bg-gray-900/50"
+        >
+          <Lock size={11} className="shrink-0 text-gray-400 dark:text-gray-500" />
+          <code className="flex-1 truncate font-mono text-xs text-gray-600 dark:text-gray-300">
             {value || <span className="italic text-gray-400">(wird beim Speichern generiert)</span>}
           </code>
-          <button
-            type="button"
-            onClick={startEdit}
-            aria-label="Feldname bearbeiten"
-            title="Feldname bearbeiten"
-            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
-          >
-            <Pencil size={12} />
-          </button>
-        </div>
+          <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-medium text-gray-400 transition-colors group-hover:text-primary dark:text-gray-500">
+            <Pencil size={10} />
+            Ändern
+          </span>
+        </button>
         <p className="mt-1 text-[10px] leading-snug text-gray-400 dark:text-gray-500">
-          So heißt das Feld in Zapier, Make oder deinem CRM.
+          So heißt das Feld in Zapier, Make oder deinem CRM. Klick auf „Ändern" zum Bearbeiten.
         </p>
       </div>
     );

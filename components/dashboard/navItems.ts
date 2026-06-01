@@ -1,4 +1,4 @@
-import { LayoutDashboard, Layers, Inbox, Users, BarChart2, CreditCard } from 'lucide-react'
+import { LayoutDashboard, Layers, Inbox, BarChart2, CreditCard } from 'lucide-react'
 
 // Aufgabe 44: Eine Quelle für die App-Navigation (Side-Nav Desktop + Mobile-Drawer).
 // Ersetzt die früheren TABS (TabNav.tsx) + TAB_ICONS (DashboardHeader.tsx).
@@ -13,7 +13,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard',     href: '/dashboard',             icon: LayoutDashboard },
   { label: 'Meine Funnels', href: '/dashboard/funnels',     icon: Layers },
   { label: 'Leads',         href: '/dashboard/leads',       icon: Inbox },
-  { label: 'Kontakte',      href: '/dashboard/kontakte',    icon: Users },
   { label: 'Statistiken',   href: '/dashboard/statistiken', icon: BarChart2 },
   { label: 'Billing',       href: '/dashboard/billing',     icon: CreditCard },
 ]

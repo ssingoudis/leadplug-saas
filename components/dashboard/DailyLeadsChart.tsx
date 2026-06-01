@@ -48,64 +48,66 @@ export default function DailyLeadsChart({ data }: { data: DayData[] }) {
           ))}
         </div>
 
-        {/* Chart area — pt-4 gibt Luft über dem höchsten Balken */}
-        <div className="relative flex-1 h-28 pt-4">
+        {/* Chart-Spalte: Balken + X-Achse teilen sich dieselbe Breite → exakte Ausrichtung */}
+        <div className="flex-1">
+          <div className="relative h-28 pt-4">
 
-          {/* Horizontal grid lines */}
-          {ticks.map((t) => (
-            <div
-              key={t}
-              className="absolute left-0 right-0 border-t border-gray-100 dark:border-gray-800"
-              style={{ bottom: `${max > 0 ? (t / max) * 100 : 0}%` }}
-            />
-          ))}
+            {/* Horizontal grid lines */}
+            {ticks.map((t) => (
+              <div
+                key={t}
+                className="absolute left-0 right-0 border-t border-gray-100 dark:border-gray-800"
+                style={{ bottom: `${max > 0 ? (t / max) * 100 : 0}%` }}
+              />
+            ))}
 
-          {/* Bars */}
-          <div className="flex items-end gap-0.75 h-full relative">
-            {data.map((day, i) => {
-              const hovered = hoveredIdx === i
-              const barPct  = day.count > 0 ? Math.max((day.count / max) * 100, 8) : 0
+            {/* Bars */}
+            <div className="flex items-end gap-0.75 h-full relative">
+              {data.map((day, i) => {
+                const hovered = hoveredIdx === i
+                const barPct  = day.count > 0 ? Math.max((day.count / max) * 100, 8) : 0
 
-              return (
-                <div
-                  key={day.date}
-                  className="relative flex flex-1 flex-col items-center justify-end h-full cursor-default"
-                  onMouseEnter={() => setHoveredIdx(i)}
-                  onMouseLeave={() => setHoveredIdx(null)}
-                >
-                  {/* Tooltip */}
-                  {hovered && (
-                    <div className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-10 whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1.5 text-xs text-white shadow-lg">
-                      <span className="font-semibold">{day.count} Lead{day.count !== 1 ? 's' : ''}</span>
-                      <span className="text-gray-400 ml-1.5">{weekday(day.date)} {fmtDate(day.date)}</span>
-                    </div>
-                  )}
-
-                  {/* Bar */}
+                return (
                   <div
-                    className={`w-full rounded-t-sm transition-colors duration-100 ${
-                      day.count === 0 ? 'bg-gray-100 dark:bg-gray-700' : hovered ? 'bg-primary-hover' : 'bg-primary'
-                    }`}
-                    style={{ height: day.count > 0 ? `${barPct}%` : '2px' }}
-                  />
-                </div>
-              )
-            })}
+                    key={day.date}
+                    className="relative flex flex-1 flex-col items-center justify-end h-full cursor-default"
+                    onMouseEnter={() => setHoveredIdx(i)}
+                    onMouseLeave={() => setHoveredIdx(null)}
+                  >
+                    {/* Tooltip */}
+                    {hovered && (
+                      <div className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-10 whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1.5 text-xs text-white shadow-lg">
+                        <span className="font-semibold">{day.count} Lead{day.count !== 1 ? 's' : ''}</span>
+                        <span className="text-gray-400 ml-1.5">{weekday(day.date)} {fmtDate(day.date)}</span>
+                      </div>
+                    )}
+
+                    {/* Bar */}
+                    <div
+                      className={`w-full rounded-t-sm transition-colors duration-100 ${
+                        day.count === 0 ? 'bg-gray-100 dark:bg-gray-700' : hovered ? 'bg-primary-hover' : 'bg-primary'
+                      }`}
+                      style={{ height: day.count > 0 ? `${barPct}%` : '2px' }}
+                    />
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* X-Achse — gleicher gap wie die Balken → jedes Label sitzt exakt unter seinem Balken */}
+          <div className="flex gap-0.75 mt-1.5">
+            {data.map((day, i) => (
+              <div key={day.date} className="flex-1 flex flex-col items-center">
+                <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 leading-tight hidden sm:block">{weekday(day.date)}</span>
+                <span className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight hidden sm:block">{fmtDate(day.date)}</span>
+                {(i % 3 === 0) && (
+                  <span className="text-[9px] text-gray-400 dark:text-gray-500 leading-tight sm:hidden">{fmtDate(day.date)}</span>
+                )}
+              </div>
+            ))}
           </div>
         </div>
-      </div>
-
-      {/* X-axis — desktop: alle Labels, mobile: jeden 3. */}
-      <div className="flex mt-1.5 pl-8">
-        {data.map((day, i) => (
-          <div key={day.date} className="flex-1 flex flex-col items-center">
-            <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 leading-tight hidden sm:block">{weekday(day.date)}</span>
-            <span className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight hidden sm:block">{fmtDate(day.date)}</span>
-            {(i % 3 === 0) && (
-              <span className="text-[9px] text-gray-400 dark:text-gray-500 leading-tight sm:hidden">{fmtDate(day.date)}</span>
-            )}
-          </div>
-        ))}
       </div>
     </div>
   )

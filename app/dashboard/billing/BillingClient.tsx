@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import { STATUS_LABELS, STATUS_COLORS, type SubscriptionStatus } from '@/lib/billing'
-import { CreditCard, ExternalLink, CheckCircle2, AlertCircle } from 'lucide-react'
+import { CreditCard, ExternalLink, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react'
 
 interface BillingClientProps {
   status: SubscriptionStatus
@@ -67,6 +67,19 @@ export default function BillingClient({
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Kostenlos-Box — aktuell läuft LeadPlug für alle kostenlos (kein Feature-Gate aktiv). */}
+      {status === 'free' && (
+        <div className="flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 p-4 text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">
+          <Sparkles size={18} className="mt-0.5 shrink-0" />
+          <div className="text-sm">
+            <p className="font-semibold">Du nutzt LeadPlug aktuell kostenlos — im vollen Funktionsumfang.</p>
+            <p className="mt-0.5 text-green-700/90 dark:text-green-300/80">
+              Es fallen keine Kosten an und du musst nichts tun. Wir melden uns rechtzeitig, falls sich daran etwas ändert.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Feedback-Banner */}
       {successParam && (
         <div className="flex items-center gap-3 p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300 text-sm font-medium">

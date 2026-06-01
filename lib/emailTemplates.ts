@@ -124,7 +124,6 @@ function resolveVar(name: string, ctx: TemplateContext): string {
       case 'name':              return ctx.tenantConfig.companyName ?? ''
       case 'email':             return ctx.tenantConfig.publicEmail ?? ''
       case 'phone':             return ctx.tenantConfig.phone ?? ''
-      case 'website':           return ctx.tenantConfig.website ?? ''
       case 'success_message':   return ctx.tenantConfig.funnel.successMessage ?? ''
       case 'response_message':  return ctx.tenantConfig.funnel.responseMessage ?? ''
       case 'slug':              return ctx.tenantConfig.slug ?? ''

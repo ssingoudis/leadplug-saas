@@ -201,7 +201,6 @@ export interface TenantConfig {
   notificationEmail: string    // Wohin neue Leads gesendet werden
   emailSenderLocal?: string    // Lokalteil der Absender-Adresse, z.B. "anfragen" → anfragen@domain.de
   phone?: string
-  website?: string
   theme: FunnelTheme
   funnel: FunnelConfig
   billingModel: 'per_lead' | 'per_month' | 'per_year'

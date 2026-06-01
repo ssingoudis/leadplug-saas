@@ -30,10 +30,23 @@ async function getFunnels(): Promise<FunnelItem[]> {
 
   const { data: funnels } = await supabase
     .from("funnels")
-    .select("slug, funnel_name, contact_form_title, is_active, primary_color, total_views, created_at")
+    .select("id, slug, funnel_name, contact_form_title, is_active, primary_color, created_at")
     .eq("tenant_id", tenant.id)
     .order("is_active", { ascending: false })
     .order("created_at", { ascending: true });
+
+  // Aufrufe pro Funnel aus funnel_view_logs (Aufgabe 46 Phase 3 — kein total_views-Zähler mehr).
+  const funnelIds = (funnels ?? []).map((f) => f.id);
+  const viewMap: Record<string, number> = {};
+  if (funnelIds.length > 0) {
+    const { data: logs } = await supabase
+      .from("funnel_view_logs")
+      .select("funnel_id")
+      .in("funnel_id", funnelIds);
+    for (const row of logs ?? []) {
+      if (row.funnel_id) viewMap[row.funnel_id] = (viewMap[row.funnel_id] ?? 0) + 1;
+    }
+  }
 
   const slugs = (funnels ?? []).map((f) => f.slug);
   const countMap: Record<string, number> = {};
@@ -56,7 +69,7 @@ async function getFunnels(): Promise<FunnelItem[]> {
     funnelName: f.funnel_name || f.contact_form_title || "Unbenannter Funnel",
     isActive: f.is_active ?? true,
     primaryColor: f.primary_color ?? "#22c55e",
-    totalViews: f.total_views ?? 0,
+    totalViews: viewMap[f.id] ?? 0,
     leadCount: countMap[f.slug] ?? 0,
   }));
 }

@@ -1,8 +1,26 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import Card from '@/components/ui/Card'
 import StatTile from '@/components/ui/StatTile'
 import DailyLeadsChart, { type DayData } from '@/components/dashboard/DailyLeadsChart'
-import TenantLeadsTable, { type TenantSubmission, type FunnelOption } from './TenantLeadsTable'
+
+type LeadStatus = 'offen' | 'kontaktiert' | 'abgeschlossen'
+
+const STATUS_ORDER: LeadStatus[] = ['offen', 'kontaktiert', 'abgeschlossen']
+const STATUS_META: Record<LeadStatus, { label: string; dot: string; pill: string }> = {
+  offen:         { label: 'Neu',        dot: 'bg-amber-500',  pill: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+  kontaktiert:   { label: 'Kontaktiert', dot: 'bg-purple-500', pill: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
+  abgeschlossen: { label: 'Erledigt',   dot: 'bg-green-500',  pill: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+}
+
+type Row = {
+  id: string
+  created_at: string
+  completed_at: string | null
+  status: string
+  contact: Record<string, string> | null
+  funnel_slug: string
+}
 
 async function getData() {
   const supabase = await createClient()
@@ -11,142 +29,150 @@ async function getData() {
   since14.setDate(since14.getDate() - 13)
   since14.setHours(0, 0, 0, 0)
 
-  const [
-    { data: funnels },
-    { data: submissions },
-    { data: chartRows },
-    { data: questionPageRows },
-  ] = await Promise.all([
-    supabase
-      .from('funnels')
-      .select('id, slug, funnel_name, total_views')
-      .eq('is_active', true),
-    // Dashboard-Übersicht zeigt nur abgeschlossene Leads (= das was als "echter Lead" zählt).
-    // Abgebrochene Sessions landen in der Lead-Inbox unter eigenen Tabs.
+  const [{ data: funnels }, { data: submissions }, { count: viewCount }] = await Promise.all([
+    supabase.from('funnels').select('slug, funnel_name').eq('is_active', true),
     supabase
       .from('submissions')
-      .select('id, created_at, completed_at, contact, answers, customer_email_sent, tenant_email_sent, funnel_slug')
-      .not('completed_at', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(50),
-    supabase
-      .from('submissions')
-      .select('created_at')
-      .not('completed_at', 'is', null)
-      .gte('created_at', since14.toISOString()),
-    // Frage-Metadaten: pages mit page_type='question' + ihre Fields (genau 1 pro Page)
-    supabase
-      .from('pages')
-      .select('id, funnel_id')
-      .eq('page_type', 'question'),
+      .select('id, created_at, completed_at, status, contact, funnel_slug')
+      .order('created_at', { ascending: false }),
+    // Aufrufe = Zeilen in funnel_view_logs (RLS-scoped auf den Tenant).
+    supabase.from('funnel_view_logs').select('*', { count: 'exact', head: true }),
   ])
 
-  // Frage-Fields nachladen (Field hat field_key, label, options — entspricht alter funnel_questions-Shape)
-  const questionPageIds = (questionPageRows ?? []).map((p) => p.id)
-  const { data: questionFieldRows } = questionPageIds.length > 0
-    ? await supabase
-        .from('fields')
-        .select('page_id, field_key, label, options')
-        .in('page_id', questionPageIds)
-    : { data: [] as { page_id: string; field_key: string; label: string; options: unknown }[] }
-
-  // Funnel-Name-Map + slug-by-id für Questions-Aggregation
   const funnelNameMap: Record<string, string> = {}
-  const funnelSlugById = new Map<string, string>()
-  for (const f of (funnels ?? []) as { id: string; slug: string; funnel_name: string | null }[]) {
+  for (const f of (funnels ?? []) as { slug: string; funnel_name: string | null }[]) {
     funnelNameMap[f.slug] = f.funnel_name ?? f.slug
-    funnelSlugById.set(f.id, f.slug)
   }
 
-  // page_id → funnel_id Lookup
-  const funnelIdByPageId = new Map<string, string>()
-  for (const p of (questionPageRows ?? []) as { id: string; funnel_id: string }[]) {
-    funnelIdByPageId.set(p.id, p.funnel_id)
-  }
+  const all = (submissions ?? []) as Row[]
 
-  // Questions (von Question-Pages) per Funnel-Slug indexieren
-  const questionsByFunnel = new Map<string, TenantSubmission['questions']>()
-  for (const f of (questionFieldRows ?? []) as { page_id: string; field_key: string; label: string; options: unknown }[]) {
-    const funnelId = funnelIdByPageId.get(f.page_id)
-    if (!funnelId) continue
-    const slug = funnelSlugById.get(funnelId)
-    if (!slug) continue
-    const list = questionsByFunnel.get(slug) ?? []
-    list.push({
-      question_key: f.field_key,
-      title: f.label,
-      options: Array.isArray(f.options) ? f.options as { value: string; label: string }[] : [],
+  // Kontaktierbare Leads (= das CRM-Universum: E-Mail oder Telefon vorhanden).
+  const leads = all
+    .map((s) => {
+      const c = s.contact ?? {}
+      return {
+        id: s.id,
+        created_at: s.created_at,
+        status: (s.status as LeadStatus) ?? 'offen',
+        funnel_slug: s.funnel_slug,
+        name: (c.name ?? '').trim(),
+        anrede: (c.anrede ?? '').trim(),
+        email: (c.email ?? '').trim(),
+        phone: (c.telefon ?? '').trim(),
+      }
     })
-    questionsByFunnel.set(slug, list)
+    .filter((l) => l.email || l.phone)
+
+  const statusCounts: Record<LeadStatus, number> = {
+    offen: leads.filter((l) => l.status === 'offen').length,
+    kontaktiert: leads.filter((l) => l.status === 'kontaktiert').length,
+    abgeschlossen: leads.filter((l) => l.status === 'abgeschlossen').length,
   }
+  const totalLeads = leads.length
+  const recent = leads.slice(0, 5)
 
-  // Submissions mit Questions anreichern
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const enrichedSubmissions: TenantSubmission[] = ((submissions ?? []) as any[]).map((s) => {
-    const c = (s.contact ?? {}) as Record<string, string>
-    // Diese Query filtert bereits auf completed_at IS NOT NULL → bucket ist immer "completed".
-    return {
-      id: s.id as string,
-      created_at: s.created_at as string,
-      completed_at: (s.completed_at as string | null) ?? null,
-      bucket: 'completed' as const,
-      contact_name: (c.name as string | undefined) ?? null,
-      contact_email: (c.email as string | undefined) ?? null,
-      contact_phone: (c.telefon as string | undefined) ?? null,
-      contact_anrede: (c.anrede as string | undefined) ?? null,
-      contact: s.contact as Record<string, string> | null,
-      answers: s.answers as Record<string, string> | null,
-      customer_email_sent: (s.customer_email_sent as boolean) ?? false,
-      tenant_email_sent: (s.tenant_email_sent as boolean) ?? false,
-      funnel_slug: s.funnel_slug as string,
-      funnel_name: funnelNameMap[s.funnel_slug as string] ?? (s.funnel_slug as string),
-      questions: questionsByFunnel.get(s.funnel_slug as string) ?? [],
-    }
-  })
+  // Conversion + 14-Tage-Chart auf Basis abgeschlossener Submissions.
+  const completed = all.filter((s) => s.completed_at)
+  const totalViews = viewCount ?? 0
+  const conversion = totalViews > 0 ? Math.round((completed.length / totalViews) * 100) : 0
 
-  const funnelList: FunnelOption[] = (funnels ?? []).map(
-    (f) => ({ slug: (f as { slug: string }).slug, name: funnelNameMap[(f as { slug: string }).slug] ?? (f as { slug: string }).slug })
-  )
-
-  // Stats
-  const totalViews = (funnels ?? []).reduce((s, f) => s + ((f as { total_views: number | null }).total_views ?? 0), 0)
-  const leadsLast14 = (chartRows ?? []).length
-  const conversion = totalViews > 0 ? Math.round((enrichedSubmissions.length / totalViews) * 100) : 0
-
-  // 14-Tage-Chart
   const dailyMap = new Map<string, number>()
   for (let i = 13; i >= 0; i--) {
     const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000)
     dailyMap.set(d.toISOString().slice(0, 10), 0)
   }
-  for (const row of (chartRows ?? []) as { created_at: string }[]) {
-    const key = new Date(row.created_at).toISOString().slice(0, 10)
+  for (const s of completed) {
+    const key = new Date(s.created_at).toISOString().slice(0, 10)
     if (dailyMap.has(key)) dailyMap.set(key, (dailyMap.get(key) ?? 0) + 1)
   }
   const dailyData: DayData[] = Array.from(dailyMap.entries()).map(([date, count]) => ({ date, count }))
 
-  return { enrichedSubmissions, funnelList, totalViews, leadsLast14, conversion, dailyData }
+  return { funnelNameMap, statusCounts, totalLeads, recent, totalViews, conversion, dailyData }
 }
 
 export default async function DashboardPage() {
-  const { enrichedSubmissions, funnelList, totalViews, leadsLast14, conversion, dailyData } = await getData()
+  const { funnelNameMap, statusCounts, totalLeads, recent, totalViews, conversion, dailyData } = await getData()
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Chart */}
+      {/* 14-Tage-Chart */}
       <DailyLeadsChart data={dailyData} />
 
-      {/* Stats */}
+      {/* Kennzahlen */}
       <div className="grid grid-cols-3 gap-4">
-        <StatTile value={leadsLast14} label="Leads (14 Tage)" />
+        <StatTile value={totalLeads} label="Leads gesamt" />
         <StatTile value={totalViews} label="Aufrufe gesamt" />
         <StatTile value={`${conversion} %`} label="Conversion" />
       </div>
 
-      {/* Leads */}
-      <Card>
-        <TenantLeadsTable submissions={enrichedSubmissions} funnels={funnelList} />
-      </Card>
+      {/* Pipeline + Neueste Leads */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Pipeline */}
+        <Card title="Pipeline">
+          <div className="flex flex-col gap-2">
+            {STATUS_ORDER.map((st) => {
+              const m = STATUS_META[st]
+              return (
+                <Link
+                  key={st}
+                  href={`/dashboard/leads?status=${st}`}
+                  className="flex items-center justify-between rounded-xl border border-gray-100 px-4 py-3 transition hover:border-primary/40 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800"
+                >
+                  <span className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                    <span className={`h-2 w-2 rounded-full ${m.dot}`} />
+                    {m.label}
+                  </span>
+                  <span className="text-lg font-bold text-gray-900 dark:text-white">{statusCounts[st]}</span>
+                </Link>
+              )
+            })}
+          </div>
+        </Card>
+
+        {/* Neueste Leads */}
+        <div className="lg:col-span-2">
+          <Card title="Neueste Leads">
+            {recent.length === 0 ? (
+              <p className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">Noch keine Leads.</p>
+            ) : (
+              <div className="flex flex-col">
+                {recent.map((l, idx) => {
+                  const m = STATUS_META[l.status as LeadStatus]
+                  return (
+                    <div
+                      key={l.id}
+                      className={`flex items-center gap-3 py-3 ${idx < recent.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''}`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                          {[l.anrede, l.name].filter(Boolean).join(' ') || '—'}
+                        </p>
+                        <p className="truncate text-xs text-gray-400">{l.email || l.phone}</p>
+                      </div>
+                      <span className="hidden max-w-32 shrink-0 truncate text-xs text-gray-400 dark:text-gray-500 sm:block">
+                        {funnelNameMap[l.funnel_slug] ?? l.funnel_slug}
+                      </span>
+                      <span className="shrink-0 text-xs text-gray-400">
+                        {new Date(l.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
+                      </span>
+                      {m && (
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${m.pill}`}>
+                          {m.label}
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            <div className="mt-4 text-right">
+              <Link href="/dashboard/leads" className="text-sm font-semibold text-primary hover:underline">
+                Alle Leads →
+              </Link>
+            </div>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }

@@ -6,9 +6,12 @@
 > Für architektonisches Verständnis und Zweck der Tabellen: siehe [`project-overview.md`](project-overview.md) §4.
 > Bei jeder neuen Migration: dieses File neu regenerieren.
 
-- **Stand:** 2026-05-31 (nach Aufgabe 41 + Custom-Recipient-Polish)
-- **Letzte Migration:** `aufgabe_41_custom_recipient`
+- **Stand:** 2026-06-01 (nach Aufgabe 46 — submissions.notes)
+- **Letzte Migration:** `aufgabe_46_submissions_notes`
 - **Tabellen:** 12 in `public` (alle mit RLS aktiviert)
+
+> **Aufgabe 46 Migration `aufgabe_46_submissions_notes` (2026-06-01):** `submissions.notes text NULL` — freie interne CRM-Notiz pro Lead. Additiv, kein Backfill, kein CHECK (Längen-Cap app-seitig). Status-Workflow (`submissions.status`) unverändert, nur UI-Relabel auf Neu/Kontaktiert/Erledigt.
+> _(Hinweis: Header-Migrationsliste in §5 ist nicht lückenlos nachgepflegt — `aufgabe_43_funnel_tracking` + dieses 46 sind in den Tabellen-Sektionen erfasst.)_
 - **Enums:** 4 (`billing_model_type`, `page_type`, `field_type`, `tenant_member_role`)
 - **Functions:** 5 — **Triggers:** 7 — **Views:** 0
 
@@ -130,6 +133,8 @@ $$;
 ```
 
 ### `increment_funnel_views(funnel_slug text) → void`
+> **Deprecated (Aufgabe 46 Phase 3)** — wird zusammen mit `funnels.total_views` per `aufgabe_46b_drop_total_views` nach dem Deploy gedroppt. `track-view` ruft sie nicht mehr auf.
+
 Inkrementiert `funnels.total_views` für einen Funnel. `SECURITY DEFINER` — wird auch ohne RLS-Rechte für `funnels` ausgeführt. Aufrufbar durch jeden (z.B. via `/api/track-view`).
 
 ```sql
@@ -204,7 +209,7 @@ Reine Agentur-Account-Tabelle nach Aufgabe 28 / Phase B.4. Aktuell 9 Zeilen.
 | `id` | uuid | NO | `gen_random_uuid()` | PK |
 | `company_name` | text | NO | — | Comment: "Firmenname" (Anzeigename der Agentur) |
 | `is_active` | bool | YES | `true` | Comment: "Legt fest, ob das iFrame aktiv ist oder nicht" |
-| `website` | text | YES | — | Comment: "Firmenwebseite" |
+| `website` | text | YES | — | **Deprecated (Aufgabe 46).** App liest die Spalte nicht mehr (Code-Refs in `getTenantConfig`/`emailTemplates`/`TenantConfig` entfernt, Daten geleert). Spalte physisch noch vorhanden — kann nach dem Deploy dieses Branches per Mini-Migration gedroppt werden. |
 | `billing_model` | `billing_model_type` | NO | `'per_month'` | Comment: "Abrechnungsmodell" |
 | `lead_price` | numeric | YES | `3.00` | Comment: "Preis pro Lead in €" |
 | `billing_price` | numeric | YES | — | Comment: "Preis pro Monat fix in €" |
@@ -319,7 +324,7 @@ Das Widget pro Tenant. Ein Tenant kann mehrere haben. Aktuell 12 Zeilen.
 | `max_width` | text | YES | — |
 | `meta_pixel_id` | text | YES | — |
 | `google_ads_conversion` | text | YES | — |
-| `total_views` | int4 | NO | `0` |
+| `total_views` | int4 | NO | `0` | **Deprecated (Aufgabe 46 Phase 3).** App liest/schreibt nicht mehr — Aufrufe kommen jetzt ausschließlich aus `funnel_view_logs`. Wird per Migration `aufgabe_46b_drop_total_views` **nach dem Deploy** gedroppt (mit `increment_funnel_views`). |
 | `created_at` | timestamptz | YES | `now()` |
 | `updated_at` | timestamptz | YES | `now()` |
 
@@ -482,6 +487,7 @@ Eine Zeile pro User-Session (Partial-Submissions seit Aufgabe 34). Das ist die C
 | `tenant_email_sent` | bool | YES | `false` | |
 | `status` | text | NO | `'offen'` | CRM-Status (siehe Check) — orthogonal zu `completed_at` |
 | `abandoned_webhook_fired_at` | timestamptz | YES | NULL | **Aufgabe 40.** Cooldown-Marker für `/api/cron/webhook-retry`. NULL = abandoned-Webhook noch nicht gefeuert. Cron picked Rows wo `completed_at IS NULL AND abandoned_webhook_fired_at IS NULL AND created_at < NOW() - 10min`. |
+| `notes` | text | YES | NULL | **Aufgabe 46.** Freie interne CRM-Notiz des Tenants zu diesem Lead. Editierbar über `/api/leads/[id]` PATCH (User-Client + RLS). Kein CHECK — Längen-Cap (~5000) app-seitig. |
 | `created_at` | timestamptz | YES | `now()` | |
 
 **Foreign Keys:**

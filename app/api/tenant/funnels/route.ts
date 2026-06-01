@@ -26,7 +26,7 @@ export async function GET() {
   const { data: funnels, error } = await supabase
     .from("funnels")
     .select(
-      "id, slug, funnel_name, contact_form_title, is_active, primary_color, total_views, created_at",
+      "id, slug, funnel_name, contact_form_title, is_active, primary_color, created_at",
     )
     .eq("tenant_id", tenant.id)
     .order("created_at", { ascending: true });
@@ -53,7 +53,6 @@ export async function GET() {
     funnelName: f.funnel_name || f.contact_form_title || "Unbenannter Funnel",
     isActive: f.is_active ?? true,
     primaryColor: f.primary_color ?? "#22c55e",
-    totalViews: f.total_views ?? 0,
     leadCount: countMap[f.slug] ?? 0,
   }));
 
