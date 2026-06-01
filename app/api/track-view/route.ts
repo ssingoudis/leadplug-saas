@@ -20,10 +20,13 @@ export async function POST(req: NextRequest) {
 
   const supabase = createClient(supabaseUrl, key)
 
-  const [, { data: funnel }] = await Promise.all([
-    supabase.rpc('increment_funnel_views', { funnel_slug: slug }),
-    supabase.from('funnels').select('id, tenant_id').eq('slug', slug).single(),
-  ])
+  // Aufgabe 46 (Phase 3): funnel_view_logs ist die einzige Aufruf-Quelle (Zeitstempel
+  // → per-Periode aufschlüsselbar). Der frühere total_views-Zähler entfällt.
+  const { data: funnel } = await supabase
+    .from('funnels')
+    .select('id, tenant_id')
+    .eq('slug', slug)
+    .single()
 
   if (funnel) {
     await supabase

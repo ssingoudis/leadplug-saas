@@ -56,55 +56,57 @@ export default function MonthlyLeadsChart({ data }: { data: MonthData[] }) {
           ))}
         </div>
 
-        {/* Chart */}
-        <div className="relative flex-1 h-32 pt-4">
-          {ticks.map((t) => (
-            <div
-              key={t}
-              className="absolute left-0 right-0 border-t border-gray-100 dark:border-gray-800"
-              style={{ bottom: `${max > 0 ? (t / max) * 100 : 0}%` }}
-            />
-          ))}
+        {/* Chart-Spalte: Balken + X-Achse teilen sich dieselbe Breite → exakte Ausrichtung */}
+        <div className="flex-1">
+          <div className="relative h-32 pt-4">
+            {ticks.map((t) => (
+              <div
+                key={t}
+                className="absolute left-0 right-0 border-t border-gray-100 dark:border-gray-800"
+                style={{ bottom: `${max > 0 ? (t / max) * 100 : 0}%` }}
+              />
+            ))}
 
-          <div className="flex items-end gap-1 h-full relative">
-            {padded.map((d, i) => {
-              const isPad  = d.month.startsWith('_')
-              const hovered = !isPad && hoveredIdx === i
-              const barPct  = d.count > 0 ? Math.max((d.count / max) * 100, 8) : 0
+            <div className="flex items-end gap-1 h-full relative">
+              {padded.map((d, i) => {
+                const isPad  = d.month.startsWith('_')
+                const hovered = !isPad && hoveredIdx === i
+                const barPct  = d.count > 0 ? Math.max((d.count / max) * 100, 8) : 0
 
-              return (
-                <div
-                  key={d.month}
-                  className="relative flex flex-1 flex-col items-center justify-end h-full cursor-default"
-                  onMouseEnter={() => !isPad && setHoveredIdx(i)}
-                  onMouseLeave={() => setHoveredIdx(null)}
-                >
-                  {hovered && (
-                    <div className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-10 whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1.5 text-xs text-white shadow-lg">
-                      <span className="font-semibold">{d.count} Lead{d.count !== 1 ? 's' : ''}</span>
-                      <span className="text-gray-400 ml-1.5">{fmtMonthFull(d.month)}</span>
-                    </div>
-                  )}
+                return (
                   <div
-                    className={`w-full rounded-t-sm transition-colors duration-100 ${
-                      d.count === 0 ? 'bg-gray-100 dark:bg-gray-700' : hovered ? 'bg-primary-hover' : 'bg-primary'
-                    }`}
-                    style={{ height: d.count > 0 ? `${barPct}%` : '2px' }}
-                  />
-                </div>
-              )
-            })}
+                    key={d.month}
+                    className="relative flex flex-1 flex-col items-center justify-end h-full cursor-default"
+                    onMouseEnter={() => !isPad && setHoveredIdx(i)}
+                    onMouseLeave={() => setHoveredIdx(null)}
+                  >
+                    {hovered && (
+                      <div className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-10 whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1.5 text-xs text-white shadow-lg">
+                        <span className="font-semibold">{d.count} Lead{d.count !== 1 ? 's' : ''}</span>
+                        <span className="text-gray-400 ml-1.5">{fmtMonthFull(d.month)}</span>
+                      </div>
+                    )}
+                    <div
+                      className={`w-full rounded-t-sm transition-colors duration-100 ${
+                        d.count === 0 ? 'bg-gray-100 dark:bg-gray-700' : hovered ? 'bg-primary-hover' : 'bg-primary'
+                      }`}
+                      style={{ height: d.count > 0 ? `${barPct}%` : '2px' }}
+                    />
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* X-Achse — gleicher gap wie die Balken */}
+          <div className="flex gap-1 mt-1.5">
+            {padded.map((d) => (
+              <div key={d.month} className="flex-1 flex items-center justify-center">
+                <span className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight">{fmtMonth(d.month)}</span>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
-
-      {/* X-Achse */}
-      <div className="flex mt-1.5 pl-8">
-        {padded.map((d) => (
-          <div key={d.month} className="flex-1 flex items-center justify-center">
-            <span className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight">{fmtMonth(d.month)}</span>
-          </div>
-        ))}
       </div>
     </div>
   )

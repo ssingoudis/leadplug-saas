@@ -66,6 +66,11 @@ export default function AccountPage() {
 
   const [loaded, setLoaded]             = useState(false)
 
+  const [showDelete, setShowDelete]     = useState(false)
+  const [confirmText, setConfirmText]   = useState('')
+  const [deleting, setDeleting]         = useState(false)
+  const [deleteError, setDeleteError]   = useState<string | null>(null)
+
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -139,6 +144,22 @@ export default function AccountPage() {
     }
   }
 
+  const confirmPhrase = displayName.trim() || 'LÖSCHEN'
+
+  async function handleDeleteAccount() {
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      const res = await fetch('/api/account/delete', { method: 'POST' })
+      if (!res.ok) throw new Error('delete failed')
+      // Account ist weg → harter Redirect auf Login (Session ungültig).
+      window.location.href = '/login'
+    } catch {
+      setDeleting(false)
+      setDeleteError('Account konnte nicht gelöscht werden. Bitte versuche es erneut.')
+    }
+  }
+
   if (!loaded) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -182,6 +203,68 @@ export default function AccountPage() {
           </div>
         </form>
       </Card>
+
+      {/* Danger Zone */}
+      <div className="rounded-2xl border border-red-200 bg-red-50/50 p-6 dark:border-red-900/40 dark:bg-red-900/10">
+        <h2 className="text-base font-bold text-red-700 dark:text-red-400">Account löschen</h2>
+        <p className="mt-1 text-sm text-red-700/80 dark:text-red-300/80">
+          Löscht deinen Account, alle Funnels, Leads und Daten unwiderruflich. Das kann nicht rückgängig gemacht werden.
+        </p>
+        <button
+          type="button"
+          onClick={() => { setShowDelete(true); setConfirmText(''); setDeleteError(null) }}
+          className="mt-4 rounded-xl border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-600 hover:text-white dark:border-red-800 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white"
+        >
+          Account löschen
+        </button>
+      </div>
+
+      {/* Lösch-Bestätigung */}
+      {showDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => { if (!deleting) setShowDelete(false) }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-base font-bold text-gray-900 dark:text-white">Account wirklich löschen?</h3>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              Alle Funnels, Leads und Daten werden{' '}
+              <strong className="text-red-600 dark:text-red-400">unwiderruflich</strong> gelöscht. Tippe zur Bestätigung{' '}
+              <strong className="text-gray-800 dark:text-gray-200">{confirmPhrase}</strong> ein.
+            </p>
+            <input
+              type="text"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder={confirmPhrase}
+              autoFocus
+              className="mt-3 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-800 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+            />
+            {deleteError && <p className="mt-2 text-sm text-red-500">{deleteError}</p>}
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowDelete(false)}
+                disabled={deleting}
+                className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={deleting || confirmText.trim() !== confirmPhrase}
+                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {deleting ? 'Wird gelöscht…' : 'Endgültig löschen'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )

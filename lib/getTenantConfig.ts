@@ -220,7 +220,6 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
     notificationEmail: row.notification_email,
     emailSenderLocal:  row.email_sender_local ?? undefined,
     phone:             row.footer_phone || undefined,
-    website:           tenant.website  ?? undefined,
     theme: {
       primaryColor:        theme.primary_color        ?? '#22c55e',
       textColor:           theme.text_color           ?? '#1f2937',
@@ -285,7 +284,7 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
       primary_color, text_color, background_color, page_background_color,
       font, border_radius, max_width,
       tenants!funnels_tenant_id_fkey (
-        id, company_name, website, is_active,
+        id, company_name, is_active,
         billing_model, lead_price, billing_price
       ),
       pages!pages_funnel_id_fkey (

@@ -101,7 +101,18 @@ async function getLeadsData(): Promise<{ submissions: TenantSubmission[]; funnel
   return { submissions: enriched, funnels }
 }
 
-export default async function LeadsPage() {
+const VALID_STATUS = ['offen', 'kontaktiert', 'abgeschlossen'] as const
+
+export default async function LeadsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>
+}) {
+  const { status } = await searchParams
+  const initialStatus = (VALID_STATUS as readonly string[]).includes(status ?? '')
+    ? (status as (typeof VALID_STATUS)[number])
+    : 'alle'
+
   const { submissions, funnels } = await getLeadsData()
 
   return (
@@ -116,7 +127,7 @@ export default async function LeadsPage() {
         </Card>
       ) : (
         <Card>
-          <TenantLeadsTable submissions={submissions} funnels={funnels} />
+          <TenantLeadsTable submissions={submissions} funnels={funnels} initialStatus={initialStatus} />
         </Card>
       )}
     </div>

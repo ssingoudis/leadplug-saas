@@ -133,6 +133,8 @@ $$;
 ```
 
 ### `increment_funnel_views(funnel_slug text) → void`
+> **Deprecated (Aufgabe 46 Phase 3)** — wird zusammen mit `funnels.total_views` per `aufgabe_46b_drop_total_views` nach dem Deploy gedroppt. `track-view` ruft sie nicht mehr auf.
+
 Inkrementiert `funnels.total_views` für einen Funnel. `SECURITY DEFINER` — wird auch ohne RLS-Rechte für `funnels` ausgeführt. Aufrufbar durch jeden (z.B. via `/api/track-view`).
 
 ```sql
@@ -207,7 +209,7 @@ Reine Agentur-Account-Tabelle nach Aufgabe 28 / Phase B.4. Aktuell 9 Zeilen.
 | `id` | uuid | NO | `gen_random_uuid()` | PK |
 | `company_name` | text | NO | — | Comment: "Firmenname" (Anzeigename der Agentur) |
 | `is_active` | bool | YES | `true` | Comment: "Legt fest, ob das iFrame aktiv ist oder nicht" |
-| `website` | text | YES | — | Comment: "Firmenwebseite" |
+| `website` | text | YES | — | **Deprecated (Aufgabe 46).** App liest die Spalte nicht mehr (Code-Refs in `getTenantConfig`/`emailTemplates`/`TenantConfig` entfernt, Daten geleert). Spalte physisch noch vorhanden — kann nach dem Deploy dieses Branches per Mini-Migration gedroppt werden. |
 | `billing_model` | `billing_model_type` | NO | `'per_month'` | Comment: "Abrechnungsmodell" |
 | `lead_price` | numeric | YES | `3.00` | Comment: "Preis pro Lead in €" |
 | `billing_price` | numeric | YES | — | Comment: "Preis pro Monat fix in €" |
@@ -322,7 +324,7 @@ Das Widget pro Tenant. Ein Tenant kann mehrere haben. Aktuell 12 Zeilen.
 | `max_width` | text | YES | — |
 | `meta_pixel_id` | text | YES | — |
 | `google_ads_conversion` | text | YES | — |
-| `total_views` | int4 | NO | `0` |
+| `total_views` | int4 | NO | `0` | **Deprecated (Aufgabe 46 Phase 3).** App liest/schreibt nicht mehr — Aufrufe kommen jetzt ausschließlich aus `funnel_view_logs`. Wird per Migration `aufgabe_46b_drop_total_views` **nach dem Deploy** gedroppt (mit `increment_funnel_views`). |
 | `created_at` | timestamptz | YES | `now()` |
 | `updated_at` | timestamptz | YES | `now()` |
 

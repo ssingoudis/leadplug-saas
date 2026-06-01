@@ -2,18 +2,25 @@
 
 import { useState } from 'react'
 import type { MonthData } from './MonthlyLeadsChart'
+import ViewsLeadsTrend, { type TrendPoint } from './ViewsLeadsTrend'
 
-const DE_MONTHS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
+const DE_MONTHS_FULL = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
+const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
 
 function fmtMonthFull(ym: string) {
   const [y, m] = ym.split('-')
-  return `${DE_MONTHS[parseInt(m, 10) - 1]} ${y}`
+  return `${DE_MONTHS_FULL[parseInt(m, 10) - 1]} ${y}`
 }
 
 function fmtDate(day: number, monthKey: string): string {
   const [y, mo] = monthKey.split('-')
   return new Date(parseInt(y), parseInt(mo) - 1, day)
     .toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })
+}
+
+function getWeekday(day: number, monthKey: string): string {
+  const [y, mo] = monthKey.split('-')
+  return WEEKDAYS[new Date(parseInt(y), parseInt(mo) - 1, day).getDay()]
 }
 
 function getDailyData(timestamps: string[], monthKey: string): { day: number; count: number }[] {
@@ -35,13 +42,6 @@ function getDailyData(timestamps: string[], monthKey: string): { day: number; co
   return Array.from(map.entries()).map(([day, count]) => ({ day, count }))
 }
 
-const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
-
-function getWeekday(day: number, monthKey: string): string {
-  const [y, mo] = monthKey.split('-')
-  return WEEKDAYS[new Date(parseInt(y), parseInt(mo) - 1, day).getDay()]
-}
-
 function niceTicks(max: number): number[] {
   if (max === 0) return [0]
   if (max <= 4) return [0, max]
@@ -49,7 +49,7 @@ function niceTicks(max: number): number[] {
   return [0, mid, max]
 }
 
-// ─── Full-width Daily Chart ───────────────────────────────────────────────────
+// ─── Balken-Chart pro Tag (eine Reihe: Aufrufe ODER Leads) ────────────────────
 
 function DailyMonthChart({
   data, color, title, monthKey, unit,
@@ -68,78 +68,78 @@ function DailyMonthChart({
   const avg   = data.length > 0 ? (total / data.length).toFixed(1).replace('.', ',') : '0'
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm px-5 pt-4 pb-4">
-      <div className="flex items-baseline justify-between mb-4">
+    <div className="rounded-xl bg-white px-5 pt-4 pb-4 shadow-sm dark:bg-gray-900">
+      <div className="mb-4 flex items-baseline justify-between">
         <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{title}</p>
         <span className="text-xs text-gray-400 dark:text-gray-500">Ø {avg} / Tag</span>
       </div>
 
       <div className="flex gap-3">
-        {/* Y-axis */}
-        <div className="flex flex-col justify-between h-28 shrink-0 text-right">
+        {/* Y-Achse */}
+        <div className="flex h-28 shrink-0 flex-col justify-between text-right">
           {[...ticks].reverse().map((t) => (
-            <span key={t} className="text-xs text-gray-400 dark:text-gray-500 leading-none">{t}</span>
+            <span key={t} className="text-xs leading-none text-gray-400 dark:text-gray-500">{t}</span>
           ))}
         </div>
 
-        {/* Chart area */}
-        <div className="relative flex-1 h-28 pt-4">
-          {/* Grid lines */}
-          {ticks.map((t) => (
-            <div
-              key={t}
-              className="absolute left-0 right-0 border-t border-gray-100 dark:border-gray-800"
-              style={{ bottom: `${max > 0 ? (t / max) * 100 : 0}%` }}
-            />
-          ))}
+        {/* Chart-Spalte: Balken + X-Achse teilen sich dieselbe Breite → exakte Ausrichtung */}
+        <div className="flex-1">
+          <div className="relative h-28 pt-4">
+            {ticks.map((t) => (
+              <div
+                key={t}
+                className="absolute left-0 right-0 border-t border-gray-100 dark:border-gray-800"
+                style={{ bottom: `${max > 0 ? (t / max) * 100 : 0}%` }}
+              />
+            ))}
 
-          {/* Bars */}
-          <div className="flex items-end gap-px h-full relative">
-            {data.map((d) => {
-              const isHover = hoveredDay === d.day
-              const barPct  = d.count > 0 ? Math.max((d.count / max) * 100, 8) : 0
+            <div className="flex items-end gap-px h-full relative">
+              {data.map((d) => {
+                const isHover = hoveredDay === d.day
+                const barPct  = d.count > 0 ? Math.max((d.count / max) * 100, 8) : 0
 
-              return (
-                <div
-                  key={d.day}
-                  className="relative flex flex-1 flex-col items-center justify-end h-full cursor-default"
-                  onMouseEnter={() => setHoveredDay(d.day)}
-                  onMouseLeave={() => setHoveredDay(null)}
-                >
-                  {isHover && (
-                    <div className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-10 whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1.5 text-white shadow-lg text-center">
-                      <span className="block text-xs font-semibold">{d.count} {unit}</span>
-                      <span className="block text-[10px]">{fmtDate(d.day, monthKey)}</span>
-                    </div>
-                  )}
+                return (
                   <div
-                    className={`w-full rounded-t-sm transition-colors duration-100 ${d.count === 0 ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
-                    style={d.count > 0 ? {
-                      height:          `${barPct}%`,
-                      backgroundColor: color,
-                      filter:          isHover ? 'brightness(0.82)' : 'none',
-                    } : { height: '2px' }}
-                  />
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* X-axis — desktop: alle Labels, mobile: jeden 7. Tag (1,8,15,22,29) */}
-      <div className="flex mt-1.5 pl-8">
-        {data.map((d) => (
-          <div key={d.day} className="flex-1 flex justify-center">
-            <div className="flex flex-col items-center">
-              <span className="text-[9px] font-medium text-gray-500 dark:text-gray-400 leading-tight hidden sm:block">{getWeekday(d.day, monthKey)}</span>
-              <span className="text-[9px] text-gray-400 dark:text-gray-500 leading-tight hidden sm:block">{d.day}</span>
-              {(d.day % 7 === 1) && (
-                <span className="text-[9px] text-gray-400 dark:text-gray-500 leading-tight sm:hidden">{d.day}</span>
-              )}
+                    key={d.day}
+                    className="relative flex flex-1 flex-col items-center justify-end h-full cursor-default"
+                    onMouseEnter={() => setHoveredDay(d.day)}
+                    onMouseLeave={() => setHoveredDay(null)}
+                  >
+                    {isHover && (
+                      <div className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-10 whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1.5 text-white shadow-lg text-center">
+                        <span className="block text-xs font-semibold">{d.count} {unit}</span>
+                        <span className="block text-[10px]">{fmtDate(d.day, monthKey)}</span>
+                      </div>
+                    )}
+                    <div
+                      className={`w-full rounded-t-sm transition-colors duration-100 ${d.count === 0 ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
+                      style={d.count > 0 ? {
+                        height:          `${barPct}%`,
+                        backgroundColor: color,
+                        filter:          isHover ? 'brightness(0.82)' : 'none',
+                      } : { height: '2px' }}
+                    />
+                  </div>
+                )
+              })}
             </div>
           </div>
-        ))}
+
+          {/* X-Achse — gleicher gap wie die Balken (gap-px) → jeder Tag exakt unter seinem Balken */}
+          <div className="flex gap-px mt-1.5">
+            {data.map((d) => (
+              <div key={d.day} className="flex-1 flex justify-center">
+                <div className="flex flex-col items-center">
+                  <span className="text-[9px] font-medium text-gray-500 dark:text-gray-400 leading-tight hidden sm:block">{getWeekday(d.day, monthKey)}</span>
+                  <span className="text-[9px] text-gray-400 dark:text-gray-500 leading-tight hidden sm:block">{d.day}</span>
+                  {(d.day % 7 === 1) && (
+                    <span className="text-[9px] text-gray-400 dark:text-gray-500 leading-tight sm:hidden">{d.day}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -162,36 +162,46 @@ function ExpandedMonth({
   const today = new Date()
   const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
   const todayDay = today.getDate()
+  const inRange = (d: { day: number }) => m.month !== currentMonthKey || d.day <= todayDay
 
-  const dailyViews = getDailyData(viewLogTimestamps, m.month)
-    .filter((d) => m.month !== currentMonthKey || d.day <= todayDay)
-  const dailyLeads = getDailyData(submissionTimestamps, m.month)
-    .filter((d) => m.month !== currentMonthKey || d.day <= todayDay)
+  const dailyViews = getDailyData(viewLogTimestamps, m.month).filter(inRange)
+  const dailyLeads = getDailyData(submissionTimestamps, m.month).filter(inRange)
+
+  // Überblick: beide Reihen zu einer Aufrufe-vs-Ausgefüllt-Linie zippen (tagweise gleich indexiert).
+  const trendData: TrendPoint[] = dailyViews.map((dv, idx) => ({
+    label: String(dv.day),
+    tooltip: fmtDate(dv.day, m.month),
+    views: dv.count,
+    count: dailyLeads[idx]?.count ?? 0,
+  }))
 
   return (
-    <div className="px-8 pb-8 pt-5 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 flex flex-col gap-5">
+    <div className="flex flex-col gap-5 border-t border-gray-100 bg-gray-50/50 px-8 pt-5 pb-8 dark:border-gray-700 dark:bg-gray-800/50">
 
-      {/* Row 1: Stat boxes — mirrors Gesamtstatistik layout */}
+      {/* Stat-Boxen — spiegelt das Gesamtstatistik-Layout */}
       <div className="flex gap-4">
-        <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl px-5 py-4 text-center shadow-sm">
-          <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Leads</p>
+        <div className="flex-1 rounded-xl bg-white px-5 py-4 text-center shadow-sm dark:bg-gray-800">
+          <p className="mb-1 text-xs text-gray-400 dark:text-gray-500">Leads</p>
           <p className="text-2xl font-bold text-gray-900 dark:text-white">{m.count}</p>
         </div>
         {hasViews && (
           <>
-            <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl px-5 py-4 text-center shadow-sm">
-              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Aufrufe</p>
+            <div className="flex-1 rounded-xl bg-white px-5 py-4 text-center shadow-sm dark:bg-gray-800">
+              <p className="mb-1 text-xs text-gray-400 dark:text-gray-500">Aufrufe</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{m.views}</p>
             </div>
-            <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl px-5 py-4 text-center shadow-sm">
-              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Conversion</p>
+            <div className="flex-1 rounded-xl bg-white px-5 py-4 text-center shadow-sm dark:bg-gray-800">
+              <p className="mb-1 text-xs text-gray-400 dark:text-gray-500">Conversion</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{conversion} %</p>
             </div>
           </>
         )}
       </div>
 
-      {/* Aufrufe chart — only shown once view logs exist */}
+      {/* Überblick: Aufrufe vs. Ausgefüllt pro Tag (eine Linie) */}
+      <ViewsLeadsTrend data={trendData} title="Aufrufe vs. Ausgefüllt pro Tag" />
+
+      {/* Detail: einzelne Reihen mit Tages-Beschriftung */}
       {hasViews && (
         <DailyMonthChart
           data={dailyViews}
@@ -201,8 +211,6 @@ function ExpandedMonth({
           unit="Aufrufe"
         />
       )}
-
-      {/* Leads chart */}
       <DailyMonthChart
         data={dailyLeads}
         color="#10b981"
@@ -210,7 +218,6 @@ function ExpandedMonth({
         monthKey={m.month}
         unit="Leads"
       />
-
     </div>
   )
 }

@@ -485,9 +485,11 @@ const TABS: Array<{ key: 'alle' | LeadStatus; label: string }> = [
 export default function TenantLeadsTable({
   submissions,
   funnels,
+  initialStatus = 'alle',
 }: {
   submissions: TenantSubmission[]
   funnels: FunnelOption[]
+  initialStatus?: 'alle' | LeadStatus
 }) {
   const [rows, setRows]             = useState<TenantSubmission[]>(submissions)
   const [view, setView]             = useState<'list' | 'board'>('list')
@@ -498,7 +500,7 @@ export default function TenantLeadsTable({
   const [dateFrom, setDateFrom]     = useState('')
   const [dateTo, setDateTo]         = useState('')
   const [sortBy, setSortBy]         = useState('date_desc')
-  const [statusTab, setStatusTab]   = useState<'alle' | LeadStatus>('alle')
+  const [statusTab, setStatusTab]   = useState<'alle' | LeadStatus>(initialStatus)
   const [activeId, setActiveId]     = useState<string | null>(null)
   const justDragged = useRef(false)
 
