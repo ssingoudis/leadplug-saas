@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Zap, Menu, X, Settings, Power, ChevronLeft, ChevronRight, Moon, Sun, MoreHorizontal } from 'lucide-react'
+import { Zap, Menu, X, Settings, Power, ChevronLeft, ChevronRight, Moon, Sun, MoreHorizontal, ShieldCheck } from 'lucide-react'
 import ThemeToggle from '@/components/ui/ThemeToggle'
 import { NAV_ITEMS, isNavItemActive } from './navItems'
 
@@ -36,10 +36,12 @@ export function Sidebar({
   userName,
   userEmail,
   forceCollapsed = false,
+  isSuperadmin = false,
 }: {
   userName?: string
   userEmail?: string
   forceCollapsed?: boolean
+  isSuperadmin?: boolean
 }) {
   const pathname = usePathname()
   const [storedCollapsed, setStoredCollapsed] = useState(false)
@@ -117,6 +119,21 @@ export function Sidebar({
             </Link>
           )
         })}
+
+        {/* Superadmin-only: Plattform-Admin */}
+        {isSuperadmin && (
+          <Link
+            href="/admin"
+            onClick={(e) => guardedClick(e, '/admin')}
+            title={collapsed ? 'Admin' : undefined}
+            className={`mt-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors ${
+              collapsed ? 'justify-center' : ''
+            }`}
+          >
+            <ShieldCheck size={17} />
+            {!collapsed && <span className="truncate">Admin</span>}
+          </Link>
+        )}
       </nav>
 
       {/* Collapse-Toggle (nur außerhalb des Editors) */}
@@ -278,7 +295,7 @@ function SidebarFooter({
 
 // ─────────────────────────────── Mobile-Nav ───────────────────────────────
 
-export function MobileNav({ userName }: { userName?: string }) {
+export function MobileNav({ userName, isSuperadmin = false }: { userName?: string; isSuperadmin?: boolean }) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
 
@@ -336,6 +353,16 @@ export function MobileNav({ userName }: { userName?: string }) {
                 </Link>
               )
             })}
+            {isSuperadmin && (
+              <Link
+                href="/admin"
+                onClick={(e) => { guardedClick(e, '/admin'); setOpen(false) }}
+                className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors"
+              >
+                <ShieldCheck size={15} />
+                Admin
+              </Link>
+            )}
             <div className="mx-6 border-t border-gray-100 dark:border-gray-800" />
             <Link
               href="/dashboard/account"

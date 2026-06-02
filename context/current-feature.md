@@ -109,7 +109,25 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
-## Aktuell: Aufgabe 46 — Leads zu Mini-CRM + Kontakte-Merge + Billing-Box (2026-06-01)
+## Aktuell: Aufgabe 47 + 48 — Statistik-Feinschliff + Admin-Cockpit v1 (2026-06-02)
+
+**Status:** Branch `feature/aufgabe-47-cockpit-polish`. Type-Check grün. Visuell abgenommen. **Kein DB-Change.**
+
+**Aufgabe 47 — Cockpit-Feinschliff:**
+- **Linien-Chart-X-Achse = Balken-Chart-Mechanik** ([`ViewsLeadsTrend.tsx`](../app/dashboard/statistiken/ViewsLeadsTrend.tsx)): Punkte sitzen in Spalten-Mitten (`xPct=(i+0.5)/n`), Labels als `flex-1`-Felder darunter (statt absolut positioniert), Desktop Wochentag+Tag, Mobile jedes N-te. Wochentag kommt als optionales `sublabel` aus [`MonthlyTable.tsx`](../app/dashboard/statistiken/MonthlyTable.tsx) (`getWeekday`). Behebt das „Labels verzogen / nicht responsive"-Problem.
+- **Stripe-Entwicklungshinweis** (Webhook-Listen-Box) aus [`BillingClient.tsx`](../app/dashboard/billing/BillingClient.tsx) entfernt (unnötig, zeigte sich im Dev).
+
+**Aufgabe 48 — Admin-Cockpit v1 (read-only Plattform-Owner-Sicht):**
+- **Gating** [`lib/auth/superadmin.ts`](../lib/auth/superadmin.ts): `isSuperadmin(email)` über bestehende Env `SUPERADMIN_EMAIL` (komma-separiert, server-only). Kein neues Schema.
+- **Route-Group** `app/admin/*`: [`layout.tsx`](../app/admin/layout.tsx) gated hart (`notFound()` für Nicht-Superadmins, verrät Bereich nicht) + schlanke Chrome. [`page.tsx`](../app/admin/page.tsx) = Workspace-Liste (Totals + Tabelle: Name·Owner·#Funnels·#Leads·zuletzt aktiv·Billing; verwaiste Tenants „kein Owner", eigener „du"). [`[tenantId]/page.tsx`](../app/admin/%5BtenantId%5D/page.tsx) = read-only Drill-in (Tenant-Header, Stat-Kacheln, Funnel-Liste, Leads aufklappbar via natives `<details>` — kein Client-JS).
+- **Datenschicht** [`lib/admin/queries.ts`](../lib/admin/queries.ts): `getWorkspaces()` + `getWorkspaceDetail()` via Service-Key (`createAdminClient`), JS-Assembly (tenants + tenant_members + `auth.admin.listUsers/getUserById` für E-Mail+`last_sign_in_at` + funnels + submissions + view_logs). **Nur hinter dem Gate aufgerufen.**
+- **Entry-Point**: Superadmin-only „Admin"-Link (Shield, amber) in [`Sidebar.tsx`](../components/dashboard/Sidebar.tsx) (Desktop + Mobile), `isSuperadmin` via [`dashboard/layout.tsx`](../app/dashboard/layout.tsx) → `DashboardShell` → `Sidebar`.
+- **Read-only**, keine Aktionen (Billing einheitlich `free`). **Stufe 2 später:** Impersonation, Aktionen (sperren/löschen/Billing), Live-Presence, Such-/Sortier-UI, Cleanup der 6 verwaisten Test-Tenants.
+- **Live-Hinweis:** `SUPERADMIN_EMAIL` muss im Vercel-Env gesetzt sein, sonst /admin = 404 für alle (fail-safe).
+
+---
+
+## Aufgabe 46 — Leads zu Mini-CRM + Kontakte-Merge + Billing-Box (2026-06-01)
 
 **Status:** Code auf Branch `feature/aufgabe-46-leads-crm`. Migration `aufgabe_46_submissions_notes` **auf Produktion appliziert** (1 nullable Spalte, additiv, DOWN vorhanden). Type-Check grün. Tenant `Stavros` auf `billing_model='free'` gesetzt. Visuelle Abnahme offen. Teil 1 des Programms „Dashboard-Konsolidierung & Mini-CRM".
 

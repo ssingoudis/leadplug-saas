@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { Power } from 'lucide-react'
 import DashboardShell from '@/components/dashboard/DashboardShell'
+import { isSuperadmin } from '@/lib/auth/superadmin'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -84,6 +85,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <DashboardShell
         userName={tenant.company_name || user.email || ''}
         userEmail={user.email ?? ''}
+        isSuperadmin={isSuperadmin(user.email)}
       >
         {children}
       </DashboardShell>
