@@ -177,20 +177,6 @@ export default function BillingClient({
             </Button>
           </div>
         </div>
-      )}
-
-      {/* Info-Box: Webhook-Hinweis für Lokal-Entwicklung */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="text-xs text-gray-400 dark:text-gray-600 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-4">
-          <strong className="text-gray-500 dark:text-gray-500">Entwicklungsmodus:</strong>{' '}
-          Für Webhook-Tests lokal{' '}
-          <code className="font-mono bg-gray-100 dark:bg-gray-800 px-1 rounded">
-            stripe listen --forward-to localhost:3000/api/stripe/webhook
-          </code>{' '}
-          ausführen und <code className="font-mono bg-gray-100 dark:bg-gray-800 px-1 rounded">STRIPE_WEBHOOK_SECRET</code> in{' '}
-          <code className="font-mono bg-gray-100 dark:bg-gray-800 px-1 rounded">.env.local</code> eintragen.
-        </div>
-      )}
-    </div>
+      )}    </div>
   )
 }

@@ -16,10 +16,12 @@ function isEditorRoute(pathname: string): boolean {
 export default function DashboardShell({
   userName,
   userEmail,
+  isSuperadmin = false,
   children,
 }: {
   userName?: string
   userEmail?: string
+  isSuperadmin?: boolean
   children: React.ReactNode
 }) {
   const pathname = usePathname()
@@ -27,7 +29,7 @@ export default function DashboardShell({
   if (isEditorRoute(pathname)) {
     return (
       <>
-        <Sidebar userName={userName} userEmail={userEmail} forceCollapsed />
+        <Sidebar userName={userName} userEmail={userEmail} isSuperadmin={isSuperadmin} forceCollapsed />
         {children}
       </>
     )
@@ -35,9 +37,9 @@ export default function DashboardShell({
 
   return (
     <div className="lg:flex min-h-screen bg-gray-100 dark:bg-background">
-      <Sidebar userName={userName} userEmail={userEmail} />
+      <Sidebar userName={userName} userEmail={userEmail} isSuperadmin={isSuperadmin} />
       <div className="flex-1 min-w-0">
-        <MobileNav userName={userName} />
+        <MobileNav userName={userName} isSuperadmin={isSuperadmin} />
         <main>
           <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8">{children}</div>
         </main>
