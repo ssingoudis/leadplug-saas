@@ -3,10 +3,11 @@
 import { useState } from 'react'
 
 export type TrendPoint = {
-  label: string    // X-Achsen-Kurzlabel (z. B. "Jan" oder "5")
-  tooltip: string  // Hover-Volllabel (z. B. "Jan 2026" oder "5. Mai")
+  label: string      // X-Achsen-Kurzlabel (z. B. "Jan" oder "5")
+  sublabel?: string  // optionale 2. Zeile auf Desktop (z. B. Wochentag "Fr")
+  tooltip: string    // Hover-Volllabel (z. B. "Jan 2026" oder "5. Mai")
   views: number
-  count: number    // ausgefüllt / Leads
+  count: number      // ausgefüllt / Leads
 }
 
 const PAD = 6 // vertikale Luft in % oben/unten
@@ -25,7 +26,9 @@ export default function ViewsLeadsTrend({
   const totalViews = data.reduce((s, d) => s + d.views, 0)
   const totalLeads = data.reduce((s, d) => s + d.count, 0)
 
-  const xPct = (i: number) => (n <= 1 ? 50 : (i / (n - 1)) * 100)
+  // Punkte sitzen in der Mitte gleich breiter Spalten (wie die Balken-Charts) → die
+  // X-Achsen-Labels darunter (flex-1 pro Punkt) liegen exakt unter den Punkten.
+  const xPct = (i: number) => ((i + 0.5) / n) * 100
   const yPct = (v: number) => PAD + (1 - v / maxViews) * (100 - 2 * PAD)
 
   const viewsLine = data.map((d, i) => `${xPct(i)},${yPct(d.views)}`).join(' ')
@@ -34,9 +37,9 @@ export default function ViewsLeadsTrend({
 
   const h = data[hover ?? -1]
 
-  // Bis 31 Punkte (Tage eines Monats) jeden Tag beschriften; erst darüber ausdünnen.
-  const labelStep = n <= 31 ? 1 : Math.ceil(n / 12)
-  const showLabel = (i: number) => i % labelStep === 0 || i === n - 1
+  // Mobile: bei vielen Punkten (Tagen) nur jedes N-te Label zeigen — wie die Balken-Charts.
+  // Desktop zeigt alle (inkl. optionalem Wochentag).
+  const mobileStep = n <= 16 ? 1 : Math.ceil(n / 5)
 
   return (
     <div className="rounded-2xl bg-white px-6 pt-6 pb-5 shadow-sm dark:bg-gray-900">
@@ -139,22 +142,20 @@ export default function ViewsLeadsTrend({
             </div>
           </div>
 
-          {/* X-Achse — Labels exakt an den Punkten positioniert, bei vielen Punkten ausgedünnt */}
-          <div className="relative mt-1.5 h-3">
-            {data.map((d, i) =>
-              showLabel(i) ? (
-                <span
-                  key={i}
-                  className="absolute top-0 text-[10px] leading-tight text-gray-400 dark:text-gray-500"
-                  style={{
-                    left: `${xPct(i)}%`,
-                    transform: i === 0 ? 'translateX(0)' : i === n - 1 ? 'translateX(-100%)' : 'translateX(-50%)',
-                  }}
-                >
-                  {d.label}
-                </span>
-              ) : null,
-            )}
+          {/* X-Achse — flex-1 pro Punkt (wie die Balken-Charts): Desktop alle (Wochentag + Tag),
+              Mobile nur jedes N-te Label. */}
+          <div className="mt-1.5 flex">
+            {data.map((d, i) => (
+              <div key={i} className="flex flex-1 flex-col items-center leading-tight">
+                {d.sublabel && (
+                  <span className="hidden text-[9px] font-medium text-gray-500 dark:text-gray-400 sm:block">{d.sublabel}</span>
+                )}
+                <span className="hidden text-[9px] text-gray-400 dark:text-gray-500 sm:block">{d.label}</span>
+                {i % mobileStep === 0 && (
+                  <span className="text-[9px] text-gray-400 dark:text-gray-500 sm:hidden">{d.label}</span>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>

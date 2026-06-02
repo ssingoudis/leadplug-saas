@@ -170,6 +170,7 @@ function ExpandedMonth({
   // Überblick: beide Reihen zu einer Aufrufe-vs-Ausgefüllt-Linie zippen (tagweise gleich indexiert).
   const trendData: TrendPoint[] = dailyViews.map((dv, idx) => ({
     label: String(dv.day),
+    sublabel: getWeekday(dv.day, m.month),
     tooltip: fmtDate(dv.day, m.month),
     views: dv.count,
     count: dailyLeads[idx]?.count ?? 0,
