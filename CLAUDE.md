@@ -245,7 +245,7 @@ Enthält: Design-Token (Light + Dark Mode), Komponenten-API, Dark-Mode-Implement
 ### Zwei getrennte Design-Welten
 
 - **`components/ui/`** → Dashboard & Tenant-Portal (das obige System)
-- **`components/tenant-editor/v2/ui/Panel.tsx`** → **Editor-Design-System** (Aufgabe 45): geteilte Primitive `PanelShell · PanelHeader · Section · Field · FieldHint` für alle Editor-Tabs. **Neue Editor-Panels/Sektionen damit bauen, nicht lokal duplizieren.** Drei kanonische Layout-Templates: Canvas+Properties (Tab „Bearbeiten" — Inhalt+Design vereint mit Inspektor-Umschalter), Master-Detail (E-Mails, Webhooks), Einzelspalte-Config (Einbinden). Speichern-Modell: globaler Top-Save nur auf „Bearbeiten" (Dokument), Ressourcen-Tabs speichern pro Eintrag.
+- **`components/tenant-editor/v2/ui/Panel.tsx`** → **Editor-Design-System** (Aufgabe 45): geteilte Primitive `PanelShell · PanelHeader · Section · Field · FieldHint` für alle Editor-Tabs. **Neue Editor-Panels/Sektionen damit bauen, nicht lokal duplizieren.** Drei kanonische Layout-Templates: Canvas+Properties (Tab „Bearbeiten" — Inhalt+Design vereint mit Inspektor-Umschalter), Master-Detail (E-Mails, Webhooks), Einzelspalte-Config (Einbinden). Speichern-Modell: globaler Top-Save nur auf „Bearbeiten" (Dokument), Ressourcen-Tabs speichern pro Eintrag. **Aufgabe 49 erweitert:** `Panel.tsx` um `SectionCard` + `EmptyState`, neue `ui/Controls.tsx` (`EditorButton · TextInput · Textarea · Select · Toggle`) + `ui/EditorModal.tsx` (geteilte Modal-Chrome). Alle Ressourcen-Tabs (Webhooks/E-Mails/Einbinden) + Modals laufen jetzt auf diesem Vokabular. **Die Editor-Top-Komponente heißt seit Aufgabe 49 `EditorShell`** (vorher `EditorShellV2`; der Ordner `tenant-editor/v2/` + das `?v=2`-Routing-Flag bleiben bewusst). **Autosave-Pattern** für Namen/Settings projektweit: `lib/useSaveStatus.ts` + `components/ui/SaveStatus.tsx` (on-blur, sichtbarer Status, nie still) — angewendet auf Funnel-Name, Account-Profil, Lead-Notizen; Mehrfeld-Draft-Editoren + Funnel-Inhalt bleiben explizites Speichern.
 - **`components/funnel.tsx`** → Widget-UI (Farben aus DB, komplett eigenständig). **Nur in Absprache anfassen** — keine spontanen KI-Edits an dieser Datei. Erweiterungen oder Refactors (neue Feldtypen, Design-Updates, etc.) brauchen explizite Freigabe und einen klaren Grund. Default-Haltung: hands off, frag nach. **Stand seit Aufgabe 34 (2026-05-28):** Datei ist signifikant gewachsen (~1500 LOC) durch Typeform-Redesign, framer-motion-Slide, EditableText-Helper für WYSIWYG-Edit, SortableEditOption für Canvas-Drag, Partial-Submissions-Hook. Auslagerung in `components/funnel/*` ist Option für eine kommende Pause-Aufgabe wenn die Datei unhandhabbar wird.
 
 ---
@@ -326,6 +326,9 @@ Klare Trennung — keine Override-Hierarchien zwischen Tabellen:
 
 **Aufgabe 43 Schema-Erweiterung (2026-05-31):**
 - `aufgabe_43_funnel_tracking`: `funnels` + `meta_pixel_id text NULL` + `google_ads_conversion text NULL` (Turnkey-Conversion-Tracking, pro Funnel). Nullable, additiv, kein Backfill, kein CHECK (Format app-seitig validiert: `^[0-9]{5,20}$` / `^AW-[0-9]+(/[\w-]+)?$`). Direkt auf Produktion appliziert (mit User-Go — Branch-Test für 2 nullable Spalten unverhältnismäßig). DOWN-File vorhanden.
+
+**Aufgabe 49 Schema-Erweiterung (2026-06-03):**
+- `aufgabe_50_webhook_name`: `webhook_subscriptions` + `name text NULL` (Anzeigename pro Webhook, Konsistenz zu `email_subscriptions.name`). Backfill bestehender Rows aus dem URL-Host (`substring(url from '://([^/]+)')`). Additiv, direkt auf Produktion appliziert (mit User-Go). Rollback: `ALTER TABLE webhook_subscriptions DROP COLUMN name;`. (Migration-Name trägt aus History-Gründen `50`, gehört aber zum Aufgabe-49-Branch.)
 
 **Nächste DB-Arbeit:** keine geplant.
 

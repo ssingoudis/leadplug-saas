@@ -11,6 +11,8 @@ const MAX_CUSTOM_RECIPIENTS = 3;
 import { EmailEditor } from "./email/EmailEditor";
 import { renderEmail, type TemplateContext } from "@/lib/emailTemplates";
 import type { EditorState, TenantConfig, QuestionConfig } from "@/types";
+import { EmptyState } from "./ui/Panel";
+import { EditorButton, TextInput, Select, Toggle } from "./ui/Controls";
 
 // =============================================================================
 // DEMO-MODE: bei API-Fehler (z.B. Tabelle existiert nicht) fallen wir in einen
@@ -695,64 +697,64 @@ export function EmailsPanel({ funnelSlug, state }: Props) {
       >
         {/* LEFT: Liste */}
         <aside className="flex min-h-0 flex-col overflow-hidden border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-          <div className="border-b border-gray-200 dark:border-gray-800 px-4 py-3">
+          <div className="border-b border-gray-200 px-5 py-4 dark:border-gray-800">
             <h2 className="text-sm font-bold text-gray-900 dark:text-white">E-Mails</h2>
-            <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">Automatische Follow-up-Mails an deine Leads.</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-gray-500 dark:text-gray-400">Automatische Follow-up-Mails an deine Leads.</p>
           </div>
           <div className="flex-1 overflow-y-auto">
             {loading ? (
               <div className="p-4 text-center text-xs text-gray-400">Lade…</div>
             ) : subs.length === 0 ? (
-              <div className="p-6 text-center">
-                <Mail size={20} className="mx-auto mb-2 text-gray-300" />
-                <p className="text-xs text-gray-500 dark:text-gray-400">Noch keine E-Mail angelegt.</p>
+              <div className="px-4 py-8 text-center text-xs text-gray-400 dark:text-gray-500">
+                Noch keine E-Mail angelegt.
               </div>
             ) : (
-              <ul className="py-1">
-                {subs.map((sub) => (
-                  <li key={sub.id}>
-                    <button
-                      type="button"
-                      onClick={() => trySwitchTo(sub.id)}
-                      className={`w-full px-3 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 ${selectedId === sub.id ? "bg-primary/10 dark:bg-primary/20 border-l-2 border-primary" : "border-l-2 border-transparent"}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <p className="truncate text-xs font-medium text-gray-900 dark:text-white flex-1">{sub.name}</p>
-                        {!sub.is_active && (
-                          <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-gray-500 dark:text-gray-400">pause</span>
-                        )}
-                      </div>
-                      <div className="mt-1 flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400">
-                        <span className={`rounded px-1.5 py-0.5 ${
-                          sub.recipient_type === "customer"
-                            ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300"
-                            : sub.recipient_type === "tenant"
-                              ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"
-                              : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300"
-                        }`}>
-                          {sub.recipient_type === "customer"
-                            ? "an Lead"
-                            : sub.recipient_type === "tenant"
-                              ? "an dich"
-                              : `an ${sub.recipient_value ?? "—"}`}
-                        </span>
-                        <span>{formatDelay(sub.delay_minutes)}</span>
-                      </div>
-                    </button>
-                  </li>
-                ))}
+              <ul className="flex flex-col gap-1 p-2">
+                {subs.map((sub) => {
+                  const active = selectedId === sub.id;
+                  return (
+                    <li key={sub.id}>
+                      <button
+                        type="button"
+                        onClick={() => trySwitchTo(sub.id)}
+                        className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                          active
+                            ? "border-primary/40 bg-primary/5 dark:bg-primary/10"
+                            : "border-transparent hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${sub.is_active ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"}`} />
+                          <p className="flex-1 truncate text-xs font-medium text-gray-900 dark:text-white">{sub.name}</p>
+                        </div>
+                        <div className="mt-1 flex items-center gap-1.5 pl-3.5 text-[10px] text-gray-500 dark:text-gray-400">
+                          <span className={`rounded px-1.5 py-0.5 ${
+                            sub.recipient_type === "customer"
+                              ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                              : sub.recipient_type === "tenant"
+                                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                                : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                          }`}>
+                            {sub.recipient_type === "customer"
+                              ? "an Lead"
+                              : sub.recipient_type === "tenant"
+                                ? "an dich"
+                                : `an ${sub.recipient_value ?? "—"}`}
+                          </span>
+                          <span>{formatDelay(sub.delay_minutes)}</span>
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
-          <div className="border-t border-gray-200 dark:border-gray-800 p-3">
-            <button
-              onClick={handleAdd}
-              disabled={creating}
-              className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-60"
-            >
-              <Plus size={14} strokeWidth={2.5} />
+          <div className="border-t border-gray-200 p-3 dark:border-gray-800">
+            <EditorButton variant="primary" onClick={handleAdd} loading={creating} className="w-full">
+              <Plus size={15} strokeWidth={2.5} />
               {creating ? "Anlegen…" : "E-Mail hinzufügen"}
-            </button>
+            </EditorButton>
           </div>
         </aside>
 
@@ -773,12 +775,24 @@ export function EmailsPanel({ funnelSlug, state }: Props) {
               tenantNotificationEmail={state.notificationEmail}
             />
           ) : (
-            <div className="flex flex-1 items-center justify-center p-6">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {subs.length === 0
-                  ? "Lege links eine E-Mail an."
-                  : "Wähle links eine E-Mail aus."}
-              </p>
+            <div className="flex flex-1 items-center justify-center p-8">
+              <EmptyState
+                icon={<Mail size={22} />}
+                title={subs.length === 0 ? "Noch keine E-Mail" : "E-Mail auswählen"}
+                description={
+                  subs.length === 0
+                    ? "Lege links deine erste automatische Follow-up-Mail an."
+                    : "Wähle links eine E-Mail, um sie zu bearbeiten."
+                }
+                action={
+                  subs.length === 0 ? (
+                    <EditorButton variant="primary" onClick={handleAdd} loading={creating}>
+                      <Plus size={15} strokeWidth={2.5} />
+                      Erste E-Mail anlegen
+                    </EditorButton>
+                  ) : undefined
+                }
+              />
             </div>
           )}
         </section>
@@ -802,7 +816,7 @@ export function EmailsPanel({ funnelSlug, state }: Props) {
               <select
                 value={previewLeadId ?? ""}
                 onChange={(e) => setPreviewLeadId(e.target.value || null)}
-                className="rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-2 py-1 text-[11px] text-gray-700 dark:text-gray-200"
+                className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-[11px] text-gray-700 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
                 title="Datenquelle für die Vorschau"
               >
                 <option value="">Mock-Lead (Max Mustermann)</option>
@@ -934,6 +948,7 @@ function SelectedEditor({ subId, draft, onDraftChange, dirty, saving, onSave, on
   const [delayUnit,   setDelayUnit]   = useState<DelayUnit>(initialDelay.unit);
   const [logsOpen, setLogsOpen] = useState(false);
   const [testOpen, setTestOpen] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   function updateDelay(nextAmount: string, nextUnit: DelayUnit) {
     setDelayAmount(nextAmount);
@@ -951,6 +966,7 @@ function SelectedEditor({ subId, draft, onDraftChange, dirty, saving, onSave, on
           {/* Inline editierbarer Titel — sieht aus wie Header, ist aber Input mit Hover-/Focus-Cue */}
           <div className="group inline-flex items-center gap-1.5">
             <input
+              ref={nameInputRef}
               type="text"
               value={draft.name}
               onChange={(e) => onDraftChange({ name: e.target.value })}
@@ -960,7 +976,15 @@ function SelectedEditor({ subId, draft, onDraftChange, dirty, saving, onSave, on
               className="min-w-0 rounded border border-transparent bg-transparent px-1.5 py-0.5 text-base font-bold text-gray-900 dark:text-white outline-none transition-colors hover:border-gray-200 dark:hover:border-gray-700 focus:border-primary focus:bg-white dark:focus:bg-gray-950"
               style={{ width: `${nameWidth}ch` }}
             />
-            <Pencil size={12} className="text-gray-300 transition-colors group-hover:text-gray-500 dark:group-hover:text-gray-400 pointer-events-none" />
+            <button
+              type="button"
+              onClick={() => nameInputRef.current?.focus()}
+              title="Namen bearbeiten"
+              aria-label="Namen bearbeiten"
+              className="text-gray-300 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <Pencil size={12} />
+            </button>
           </div>
           <p className="mt-0.5 ml-1.5 text-[11px] text-gray-500 dark:text-gray-400">
             {formatDelay(draft.delay_minutes)} · {
@@ -972,22 +996,15 @@ function SelectedEditor({ subId, draft, onDraftChange, dirty, saving, onSave, on
             }
           </p>
         </div>
-        <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 cursor-pointer whitespace-nowrap">
-          <input
-            type="checkbox"
-            checked={draft.is_active}
-            onChange={(e) => onDraftChange({ is_active: e.target.checked })}
-            className="accent-primary"
-          />
-          aktiv
-        </label>
-        <button
-          onClick={onSave}
-          disabled={!dirty || saving}
-          className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-40 whitespace-nowrap"
-        >
-          {saving ? "Speichere…" : "Speichern"}
-        </button>
+        <div className="flex shrink-0 items-center gap-3">
+          <span className="inline-flex items-center gap-2 whitespace-nowrap text-xs text-gray-600 dark:text-gray-300">
+            aktiv
+            <Toggle checked={draft.is_active} onChange={(v) => onDraftChange({ is_active: v })} />
+          </span>
+          <EditorButton variant="primary" onClick={onSave} disabled={!dirty || saving}>
+            {saving ? "Speichere…" : "Speichern"}
+          </EditorButton>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 py-5">
@@ -1034,22 +1051,20 @@ function SelectedEditor({ subId, draft, onDraftChange, dirty, saving, onSave, on
             {!isImmediate && (
               <div className="mt-2 flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-3 py-2">
                 <span className="text-xs text-gray-500 whitespace-nowrap">Verzögerung:</span>
-                <input
+                <TextInput
                   type="number"
                   min={1}
                   value={delayAmount}
                   onChange={(e) => updateDelay(e.target.value, delayUnit)}
-                  className="w-20 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-2 py-1 text-sm text-gray-900 dark:text-gray-100"
+                  className="w-20"
                 />
-                <select
-                  value={delayUnit}
-                  onChange={(e) => updateDelay(delayAmount, e.target.value as DelayUnit)}
-                  className="flex-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-2 py-1 text-sm text-gray-900 dark:text-gray-100"
-                >
-                  <option value="minutes">Minuten</option>
-                  <option value="hours">Stunden</option>
-                  <option value="days">Tage</option>
-                </select>
+                <div className="flex-1">
+                  <Select value={delayUnit} onChange={(e) => updateDelay(delayAmount, e.target.value as DelayUnit)}>
+                    <option value="minutes">Minuten</option>
+                    <option value="hours">Stunden</option>
+                    <option value="days">Tage</option>
+                  </Select>
+                </div>
                 <span className="text-xs text-gray-500 whitespace-nowrap">nach Submit</span>
               </div>
             )}
@@ -1168,14 +1183,11 @@ function SelectedEditor({ subId, draft, onDraftChange, dirty, saving, onSave, on
           </div>
 
           {/* Delete */}
-          <div className="flex items-center justify-end pt-2">
-            <button
-              onClick={onDelete}
-              className="inline-flex items-center gap-1 text-xs font-medium text-red-600 hover:text-red-700"
-            >
-              <Trash2 size={12} />
+          <div className="flex items-center justify-end border-t border-gray-200 pt-4 dark:border-gray-800">
+            <EditorButton variant="danger" onClick={onDelete}>
+              <Trash2 size={13} />
               Diese E-Mail löschen
-            </button>
+            </EditorButton>
           </div>
         </div>
       </div>

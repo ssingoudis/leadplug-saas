@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, TriangleAlert } from "lucide-react";
+import { ArrowLeft, Pencil, Save, TriangleAlert } from "lucide-react";
 import type { EditorState, EditorQuestion, ContactFieldConfig, QuestionType } from "@/types";
 import { TopTabs, type TopTabKey } from "./TopTabs";
 import { StepList } from "./StepList";
@@ -20,6 +20,8 @@ import {
   makeDefaultWelcomePage,
 } from "@/components/tenant-editor/defaults";
 import { generateFieldKey, toKey } from "@/lib/editorUtils";
+import { useSaveStatus } from "@/lib/useSaveStatus";
+import { SaveStatus } from "@/components/ui/SaveStatus";
 
 interface Props {
   initialState: EditorState;
@@ -132,10 +134,12 @@ function defaultQuestion(type: QuestionType): EditorQuestion {
   };
 }
 
-export function EditorShellV2({ initialState, mode, originalSlug, companyName }: Props) {
+export function EditorShell({ initialState, mode, originalSlug, companyName }: Props) {
   const router = useRouter();
 
   const [state, setState] = useState<EditorState>(initialState);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const nameSave = useSaveStatus();
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isTestMode, setIsTestMode] = useState(false);
@@ -194,9 +198,13 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
     reloadWebhookCounts();
   }, [reloadWebhookCounts]);
 
+  // Baseline für Dirty-Tracking. Startet als initialState, wird bei Feld-Autosave (z.B.
+  // Funnel-Name on-blur) nachgezogen, damit ein bereits gespeichertes Feld das Dokument
+  // nicht „ungespeichert" hält.
+  const [savedSnapshot, setSavedSnapshot] = useState<EditorState>(initialState);
   const isDirty = useMemo(
-    () => JSON.stringify(state) !== JSON.stringify(initialState),
-    [state, initialState],
+    () => JSON.stringify(state) !== JSON.stringify(savedSnapshot),
+    [state, savedSnapshot],
   );
 
   // C.1c — Selection im Center-Canvas resetten wenn die Page wechselt (Step-Klick in der Sidebar).
@@ -685,6 +693,29 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
     router.push("/dashboard/funnels");
   }
 
+  // Aufgabe 50: Funnel-Name autosaved on-blur (nur Edit-Modus — im Create-Modus existiert der
+  // Funnel noch nicht, der Name geht im ersten Speichern mit). Leer → auf zuletzt gespeicherten
+  // Wert zurücksetzen (Name ist Pflicht). Unverändert → kein Request.
+  async function handleNameBlur() {
+    if (mode !== "edit" || !originalSlug) return;
+    const trimmed = state.funnelName.trim();
+    if (!trimmed) {
+      handlePatch({ funnelName: savedSnapshot.funnelName });
+      return;
+    }
+    if (trimmed !== state.funnelName) handlePatch({ funnelName: trimmed });
+    if (trimmed === savedSnapshot.funnelName) return;
+    await nameSave.run(async () => {
+      const res = await fetch(`/api/tenant/funnels/${originalSlug}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ funnelName: trimmed }),
+      });
+      if (!res.ok) throw new Error("save failed");
+      setSavedSnapshot((prev) => ({ ...prev, funnelName: trimmed }));
+    });
+  }
+
   const canSave = Boolean(state.funnelName);
 
   // Aufgabe 45: Speichern-Modell vereinheitlicht. „Dokument-Tabs" (Inhalt/Design) speichern
@@ -703,29 +734,53 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
       <div
         className="fixed inset-y-0 right-0 left-0 lg:left-16 flex flex-col bg-gray-50 dark:bg-[#0d1117]"
       >
-        {/* Top-Bar: Back + Title + Save + Status */}
-        <header className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-2 dark:border-gray-800 dark:bg-gray-900">
-          <div className="flex items-center gap-3">
+        {/* Top-Bar: 3 Zonen — links Back+Name · Mitte Tabs (zentriert) · rechts Status+Speichern */}
+        <header className="flex shrink-0 items-center gap-4 border-b border-gray-200 bg-white px-4 py-2.5 dark:border-gray-800 dark:bg-gray-900">
+          {/* Links */}
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             <button
               type="button"
               onClick={handleBack}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
               aria-label="Zurück zur Funnel-Liste"
               title="Zurück"
             >
               <ArrowLeft size={16} />
             </button>
-            <div className="flex flex-col">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                Funnel-Builder · Beta v2
-              </span>
-              <span className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-                {state.funnelName || "Neuer Funnel"}
-              </span>
+            <div className="group flex min-w-0 items-center gap-1">
+              <input
+                ref={nameInputRef}
+                type="text"
+                value={state.funnelName}
+                onChange={(e) => handlePatch({ funnelName: e.target.value })}
+                onBlur={handleNameBlur}
+                onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                placeholder="Neuer Funnel"
+                aria-label="Funnel-Name (zum Bearbeiten klicken)"
+                title="Klick zum Umbenennen"
+                className="min-w-0 rounded-md border border-transparent bg-transparent px-1.5 py-0.5 text-sm font-semibold text-gray-900 outline-none transition-colors hover:border-gray-200 focus:border-primary focus:bg-white dark:text-white dark:hover:border-gray-700 dark:focus:bg-gray-950"
+                style={{ width: `${Math.min(Math.max((state.funnelName || "Neuer Funnel").length, 8) + 2, 36)}ch` }}
+              />
+              <button
+                type="button"
+                onClick={() => nameInputRef.current?.focus()}
+                title="Funnel umbenennen"
+                aria-label="Funnel umbenennen"
+                className="shrink-0 text-gray-300 opacity-0 transition-opacity hover:text-gray-600 group-hover:opacity-100 dark:hover:text-gray-300"
+              >
+                <Pencil size={13} />
+              </button>
             </div>
+            <SaveStatus status={nameSave.status} className="shrink-0" />
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* Mitte: Tabs */}
+          <div className="shrink-0">
+            <TopTabs active={activeTab} onChange={setActiveTab} />
+          </div>
+
+          {/* Rechts: Status + Speichern */}
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
             {saveError && (
               <span className="hidden text-xs text-red-600 dark:text-red-400 md:inline">{saveError}</span>
             )}
@@ -747,9 +802,6 @@ export function EditorShellV2({ initialState, mode, originalSlug, companyName }:
             )}
           </div>
         </header>
-
-        {/* Tabs */}
-        <TopTabs active={activeTab} onChange={setActiveTab} />
 
         {/* Body — Layout je nach Tab.
             C.2: Design-Tab versteckt StepList (Theme ist funnel-weit, kein Step) und ersetzt

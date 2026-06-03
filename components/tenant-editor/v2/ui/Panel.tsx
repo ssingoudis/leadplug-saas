@@ -103,3 +103,77 @@ export function Field({ label, children }: { label: string; children: ReactNode 
 export function FieldHint({ children }: { children: ReactNode }) {
   return <span className="text-[11px] leading-relaxed text-gray-400 dark:text-gray-500">{children}</span>;
 }
+
+// Aufgabe 50: kanonische Inhalts-Card (rounded-2xl) mit optionalem Header (Titel + Beschreibung
+// + Right-Action). Ersetzt die lokal duplizierten rounded-xl-Sections (SharePanel/Webhooks/Emails).
+// `padded=false` für full-bleed-Inhalte (Code-Blöcke, Listen mit eigenem Padding).
+export function SectionCard({
+  title,
+  description,
+  right,
+  children,
+  padded = true,
+  className = "",
+}: {
+  title?: string;
+  description?: ReactNode;
+  right?: ReactNode;
+  children?: ReactNode;
+  padded?: boolean;
+  className?: string;
+}) {
+  const hasHeader = title != null || right != null;
+  return (
+    <section
+      className={`overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 ${className}`}
+    >
+      {hasHeader && (
+        <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-4">
+          <div className="min-w-0">
+            {title && <h3 className="text-sm font-bold text-gray-900 dark:text-white">{title}</h3>}
+            {description && (
+              <p className="mt-0.5 text-sm leading-relaxed text-gray-500 dark:text-gray-400">{description}</p>
+            )}
+          </div>
+          {right && <div className="shrink-0">{right}</div>}
+        </div>
+      )}
+      {children != null && <div className={padded ? (hasHeader ? "px-5 pb-5" : "p-5") : ""}>{children}</div>}
+    </section>
+  );
+}
+
+// Aufgabe 50: kanonischer Leer-Zustand — Icon + Headline + Beschreibung + optionaler CTA.
+// Für leere Ressourcen-Tabs (Webhooks/E-Mails) + „Funnel zuerst speichern"-Platzhalter.
+export function EmptyState({
+  icon,
+  title,
+  description,
+  action,
+  className = "",
+}: {
+  icon?: ReactNode;
+  title: string;
+  description?: ReactNode;
+  action?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`flex flex-col items-center justify-center gap-3 px-6 py-14 text-center ${className}`}>
+      {icon && (
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+          {icon}
+        </span>
+      )}
+      <div>
+        <p className="text-base font-semibold text-gray-900 dark:text-white">{title}</p>
+        {description && (
+          <p className="mx-auto mt-1 max-w-sm text-sm leading-relaxed text-gray-500 dark:text-gray-400">
+            {description}
+          </p>
+        )}
+      </div>
+      {action && <div className="mt-1">{action}</div>}
+    </div>
+  );
+}

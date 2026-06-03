@@ -1,9 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
-import { Eye, Edit3 } from "lucide-react";
-import Badge from "@/components/ui/Badge";
+import { Eye, Edit3, Copy, Check } from "lucide-react";
 import { DeleteFunnelButton } from "@/components/tenant-editor/DeleteFunnelButton";
 
 export interface FunnelItem {
@@ -15,72 +14,90 @@ export interface FunnelItem {
   leadCount: number;
 }
 
+function Stat({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="rounded-xl bg-gray-50 px-3 py-2 dark:bg-gray-800/50">
+      <p className="text-lg font-bold text-gray-900 dark:text-white">{value.toLocaleString("de-DE")}</p>
+      <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">{label}</p>
+    </div>
+  );
+}
+
 export function FunnelCard({ funnel }: { funnel: FunnelItem }) {
-  const router = useRouter();
+  const [copied, setCopied] = useState(false);
+  const editHref = `/dashboard/funnels/${funnel.slug}/edit`;
+
+  async function copyUrl() {
+    try {
+      await navigator.clipboard.writeText(`https://app.leadplug.de/${funnel.slug}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* ignore */
+    }
+  }
 
   return (
-    <div
-      onClick={() => router.push(`/dashboard/funnels/${funnel.slug}/edit`)}
-      className={`bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden flex flex-col cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 transition-all ${
-        funnel.isActive ? "" : "opacity-75 hover:opacity-100"
-      }`}
-    >
-      <div
-        className="h-1.5 w-full transition-opacity"
-        style={{
-          backgroundColor: funnel.primaryColor,
-          opacity: funnel.isActive ? 1 : 0.35,
-        }}
-      />
+    <div className="group flex flex-col rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:border-gray-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700">
+      {/* Status-Badge + (bei inaktiv) Löschen */}
+      <div className="flex items-center justify-between">
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+            funnel.isActive
+              ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+              : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+          }`}
+        >
+          <span className={`h-1.5 w-1.5 rounded-full ${funnel.isActive ? "bg-green-500" : "bg-gray-400"}`} />
+          {funnel.isActive ? "Aktiv" : "Inaktiv"}
+        </span>
+        {!funnel.isActive && (
+          <DeleteFunnelButton slug={funnel.slug} funnelName={funnel.funnelName} variant="icon" />
+        )}
+      </div>
 
-      <div className="p-5 flex flex-col flex-1">
-        <div className="flex items-start justify-between gap-2 mb-3">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-            {funnel.funnelName}
-          </h3>
-          <Badge variant={funnel.isActive ? "green" : "gray"}>
-            {funnel.isActive ? "Aktiv" : "Inaktiv"}
-          </Badge>
-        </div>
+      {/* Titel + öffentliche URL */}
+      <div className="mt-3 min-w-0">
+        <Link
+          href={editHref}
+          className="block truncate text-base font-bold text-gray-900 transition-colors hover:text-primary dark:text-white"
+        >
+          {funnel.funnelName}
+        </Link>
+        <button
+          type="button"
+          onClick={copyUrl}
+          title="Funnel-Link kopieren"
+          className="mt-1 inline-flex max-w-full items-center gap-1.5 text-xs text-gray-400 transition-colors hover:text-primary"
+        >
+          <span className="truncate font-mono">app.leadplug.de/{funnel.slug}</span>
+          {copied ? <Check size={12} className="shrink-0 text-green-500" /> : <Copy size={12} className="shrink-0" />}
+        </button>
+      </div>
 
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5 text-center">
-            <p className="text-lg font-bold text-gray-900 dark:text-white">{funnel.leadCount}</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500">Leads</p>
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5 text-center">
-            <p className="text-lg font-bold text-gray-900 dark:text-white">{funnel.totalViews}</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500">Aufrufe</p>
-          </div>
-        </div>
+      {/* Kennzahlen */}
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <Stat value={funnel.leadCount} label="Leads" />
+        <Stat value={funnel.totalViews} label="Aufrufe" />
+      </div>
 
-        <div className="flex gap-2 mt-auto" onClick={(e) => e.stopPropagation()}>
+      {/* Footer-Aktionen */}
+      <div className="mt-4 flex items-center gap-4 border-t border-gray-100 pt-3 dark:border-gray-800">
+        <Link href={editHref} className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
+          <Edit3 size={14} />
+          Bearbeiten
+        </Link>
+        {funnel.isActive && (
           <Link
-            href={`/dashboard/funnels/${funnel.slug}/edit`}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-primary hover:text-primary dark:hover:text-primary transition-colors"
+            href={`/${funnel.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 transition-colors hover:text-primary dark:text-gray-400"
           >
-            <Edit3 size={13} />
-            Bearbeiten
+            <Eye size={14} />
+            Öffnen
           </Link>
-          {funnel.isActive && (
-            <Link
-              href={`/${funnel.slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-primary hover:text-primary dark:hover:text-primary transition-colors"
-            >
-              <Eye size={13} />
-              Öffnen
-            </Link>
-          )}
-          {!funnel.isActive && (
-            <DeleteFunnelButton
-              slug={funnel.slug}
-              funnelName={funnel.funnelName}
-              variant="icon"
-            />
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

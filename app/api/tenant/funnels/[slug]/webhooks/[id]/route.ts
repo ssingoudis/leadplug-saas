@@ -15,6 +15,7 @@ import { createClient } from '@/lib/supabase/server'
 
 interface PatchBody {
   url?: string
+  name?: string
   is_active?: boolean
   trigger_type?: 'on_submit' | 'after_page'
   trigger_page_id?: string | null
@@ -42,7 +43,7 @@ async function loadSubscriptionWithFunnelCheck(
 
   const { data: sub } = await supabase
     .from('webhook_subscriptions')
-    .select('id, funnel_id, tenant_id, url, secret, event_types, trigger_type, trigger_page_id, is_active, created_at, updated_at')
+    .select('id, funnel_id, tenant_id, name, url, secret, event_types, trigger_type, trigger_page_id, is_active, created_at, updated_at')
     .eq('id', subId)
     .eq('funnel_id', funnel.id)
     .maybeSingle()
@@ -90,6 +91,9 @@ export async function PATCH(
     }
     patch.url = body.url.trim()
   }
+  if (typeof body.name === 'string' && body.name.trim()) {
+    patch.name = body.name.trim()
+  }
   if (typeof body.is_active === 'boolean') patch.is_active = body.is_active
   if (Array.isArray(body.event_types)) {
     patch.event_types = body.event_types.filter((s) => typeof s === 'string' && s.length > 0)
@@ -135,7 +139,7 @@ export async function PATCH(
     .from('webhook_subscriptions')
     .update(patch)
     .eq('id', id)
-    .select('id, url, secret, event_types, trigger_type, trigger_page_id, is_active, created_at, updated_at')
+    .select('id, name, url, secret, event_types, trigger_type, trigger_page_id, is_active, created_at, updated_at')
     .single()
 
   if (error || !data) {

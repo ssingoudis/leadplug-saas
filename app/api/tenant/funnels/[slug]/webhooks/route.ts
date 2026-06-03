@@ -19,6 +19,7 @@ import { generateWebhookSecret } from '@/lib/webhooks'
 
 interface CreateBody {
   url: string
+  name?: string
   trigger_type?: 'on_submit' | 'after_page'
   trigger_page_id?: string | null
   event_types?: string[]
@@ -26,6 +27,17 @@ interface CreateBody {
 }
 
 const URL_PATTERN = /^https?:\/\/[^\s]{6,}$/i
+
+// Aufgabe 50: Default-Name aus dem URL-Host ableiten (z.B. "webhook.site"), wenn der
+// Tenant keinen eigenen Namen angibt. So ist ein Webhook nie namenlos.
+function deriveWebhookName(url: string): string {
+  try {
+    const host = new URL(url).hostname
+    return host || 'Webhook'
+  } catch {
+    return 'Webhook'
+  }
+}
 
 export async function GET(
   _req: NextRequest,
@@ -46,7 +58,7 @@ export async function GET(
 
   const { data: subs, error } = await supabase
     .from('webhook_subscriptions')
-    .select('id, url, secret, event_types, trigger_type, trigger_page_id, is_active, created_at, updated_at')
+    .select('id, name, url, secret, event_types, trigger_type, trigger_page_id, is_active, created_at, updated_at')
     .eq('funnel_id', funnel.id)
     .order('created_at', { ascending: true })
 
@@ -113,6 +125,7 @@ export async function POST(
     .insert({
       funnel_id:       funnel.id,
       tenant_id:       funnel.tenant_id,
+      name:            (typeof body.name === 'string' && body.name.trim()) ? body.name.trim() : deriveWebhookName(body.url.trim()),
       url:             body.url.trim(),
       secret,
       event_types:     eventTypes,
@@ -120,7 +133,7 @@ export async function POST(
       trigger_page_id: triggerPageId,
       is_active:       body.is_active !== false,
     })
-    .select('id, url, secret, event_types, trigger_type, trigger_page_id, is_active, created_at, updated_at')
+    .select('id, name, url, secret, event_types, trigger_type, trigger_page_id, is_active, created_at, updated_at')
     .single()
 
   if (error || !data) {

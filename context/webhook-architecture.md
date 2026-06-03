@@ -148,7 +148,7 @@ leadplug-saas/
 │
 ├── components/tenant-editor/v2/
 │   ├── TopTabs.tsx                              ← erweitert: 'webhooks' Tab
-│   ├── EditorShellV2.tsx                        ← erweitert: routet auf WebhooksPanel,
+│   ├── EditorShell.tsx                        ← erweitert: routet auf WebhooksPanel,
 │   │                                              + lädt webhook_counts für StepPill-Badges
 │   ├── WebhooksPanel.tsx (~600 LOC)             ← NEU — Liste + Cards + Test + Logs +
 │   │                                              + Verify-Snippets + Secret-Rotation
@@ -170,7 +170,7 @@ Webhooks sind **kein** Bestandteil von `EditorState` / `state.questions`. Sie le
 in ihrer eigenen DB-Tabelle und werden per fetch direkt geladen, **nicht** über
 das normale Save-Flow von Funnels. Begründung: Webhook-Änderungen sollen unmittelbar
 wirken (kein „Speichern"-Klick im Funnel-Editor nötig). Die Anzeige der Step-Pill-Badges
-fragt die Webhooks separat ab (`reloadWebhookCounts()` in EditorShellV2).
+fragt die Webhooks separat ab (`reloadWebhookCounts()` in EditorShell).
 
 ---
 
@@ -539,7 +539,7 @@ Vercel Pro-Plan ist Voraussetzung (Hobby unterstützt nur 1× täglich).
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  EditorShellV2                                                    │
+│  EditorShell                                                    │
 │  ├─ activeTab state                                              │
 │  ├─ webhookCountsByPageId state (Aufgabe 40)                     │
 │  │     ↓ reloadWebhookCounts() lädt von                          │
@@ -573,7 +573,7 @@ Vercel Pro-Plan ist Voraussetzung (Hobby unterstützt nur 1× täglich).
 │      └─ Löschen-Button                                           │
 │                                                                   │
 │  Nach jeder Schreib-Op → loadSubs() + onSubsChanged()            │
-│       ↳ Letzteres triggert EditorShellV2.reloadWebhookCounts()   │
+│       ↳ Letzteres triggert EditorShell.reloadWebhookCounts()   │
 │       ↳ Step-Pill-Badges aktualisieren                           │
 └──────────────────────────────────────────────────────────────────┘
 ```

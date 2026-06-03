@@ -109,7 +109,37 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
-## Aktuell: Aufgabe 47 + 48 — Statistik-Feinschliff + Admin-Cockpit v1 (2026-06-02)
+## Aktuell: Aufgabe 49 — Editor-UX-Uplift + Autosave-Pattern + Funnel-Cards + Webhook-Namen (2026-06-03)
+
+**Status:** Branch `feature/aufgabe-49-funnel-cards`. Type-Check grün durchgehend. Visuell abgenommen. **1 additiver DB-Change** (`webhook_subscriptions.name`).
+
+**Editor-Design-System erweitert — alle /edit-Tabs auf ein Vokabular (Bearbeiten war seit Aufgabe 45 schon Benchmark, jetzt der Rest dazu):**
+- Kanonische Controls [`ui/Controls.tsx`](../components/tenant-editor/v2/ui/Controls.tsx): `EditorButton` (primary/secondary/ghost/danger + loading-Spinner), `TextInput`, `Textarea`, `Select`, `Toggle`. Verfeinert den bestehenden hellen Look, kein Stilbruch. (Lokale Controls in `FieldProperties.tsx` sind optisch identisch — bewusst nicht refactored, wäre rein DRY + riskant.)
+- [`ui/Panel.tsx`](../components/tenant-editor/v2/ui/Panel.tsx) ergänzt: `SectionCard` (rounded-2xl Card mit optionalem Header) + `EmptyState` (Icon-Kreis + Headline + CTA).
+- Geteilte Modal-Chrome [`ui/EditorModal.tsx`](../components/tenant-editor/v2/ui/EditorModal.tsx): Overlay+blur, Header (Scope+Titel+X), Scroll-Body, optionaler Footer, ESC + Klick-außen. [`AddElementModal`](../components/tenant-editor/v2/AddElementModal.tsx) + [`WebhookAddModal`](../components/tenant-editor/v2/WebhookAddModal.tsx) beide darauf gezogen.
+- **Webhooks** + **E-Mails** + **Einbinden** ([`SharePanel.tsx`](../components/tenant-editor/v2/SharePanel.tsx)) auf SectionCard/EmptyState/Controls re-skinnt (Logik 1:1). „Signatur verifizieren"-Code-Snippet-Sektion aus Webhooks entfernt (für Nutzer ohne Mehrwert). Einbinden-Breite `max-w-3xl`→`max-w-5xl`.
+- **Bearbeiten-Tab**: Canvas-Toolbar Desktop/Mobile-Umschalter auf TopTabs-Pill-Stil, Platzhalter (keine Frage / Submit übersprungen) auf `EmptyState` [`CenterCanvas.tsx`](../components/tenant-editor/v2/CenterCanvas.tsx).
+
+**Autosave-on-blur-Pattern (projektweit, neu):**
+- [`lib/useSaveStatus.ts`](../lib/useSaveStatus.ts) (Hook idle→saving→saved→idle / error) + [`components/ui/SaveStatus.tsx`](../components/ui/SaveStatus.tsx) (Indikator „Speichern…/Gespeichert ✓/Nicht gespeichert" — nie still, Kernprinzip „Daten gehen nicht verloren").
+- Angewendet: **Funnel-Name** (Top-Bar inline editierbar mit Hover-Stift; schlanker `PATCH /api/tenant/funnels/[slug]` nur Metadaten — **kein** voller Dokument-Save, bewegliche Dirty-Baseline) · **Account-Profil** (Anzeigename+Telefon on-blur, [`account/page.tsx`](../app/dashboard/account/page.tsx)) · **Lead-Notizen** (immer editierbar + Auto-Grow-Textarea statt Stift-Modus, [`TenantLeadsTable.tsx`](../app/dashboard/TenantLeadsTable.tsx)). **Bewusst NICHT:** Mehrfeld-Draft-Editoren (E-Mail/Webhook-Eintrag) + Funnel-Inhalt → bleiben Dokument-Save mit Verwerfen.
+
+**Webhook-Namen (DB-Change):**
+- Migration `aufgabe_50_webhook_name`: `webhook_subscriptions.name text NULL` + Backfill bestehender Rows aus URL-Host. Rollback: `DROP COLUMN name`. Additiv, direkt auf Prod (mit User-Go, Präzedenz Aufgabe 43).
+- POST leitet Default aus Host ab (`deriveWebhookName`), PATCH erlaubt `name`-Update, GET/Selects um `name` erweitert. UI: Liste zeigt **Name primär** + URL/Trigger, Detail-Header Name+Status, Name als Feld in der **Konfiguration** (mit dem Eintrag gespeichert), Anlegen-Modal optionales Name-Feld.
+
+**Funnel-Cards-Redesign** [`FunnelCard.tsx`](../components/dashboard/FunnelCard.tsx):
+- Bunter Per-Funnel-Akzentstreifen entfernt (war inkonsistent — jeder Funnel andere Farbe) → einheitliches **Status-Badge** (grün Aktiv / grau Inaktiv). Conversion-Chip raus. Kennzahlen als **Stat-Kacheln** (Leads + Aufrufe). Kompakter (`p-5`, Footer mit Trennlinie). Grid **3 Spalten** auf breiten Screens [`funnels/page.tsx`](../app/dashboard/funnels/page.tsx).
+
+**Editor-Rename + Top-Bar/Sidebar (Branch-Basis, vor dem Uplift):**
+- **`EditorShellV2` → `EditorShell`** (Symbol + Datei via `git mv` + alle Code-Refs + Doku-Sweep über alle `context/*`-Files; der Ordner `tenant-editor/v2/` + das `?v=2`-Routing-Flag bleiben bewusst unberührt).
+- 3-Zonen-Top-Bar (Name links editierbar · Pill-Tabs mittig · Speichern/Status rechts) [`EditorShell.tsx`](../components/tenant-editor/v2/EditorShell.tsx) + [`TopTabs.tsx`](../components/tenant-editor/v2/TopTabs.tsx). Sidebar Hover-Expand im Editor-Modus [`Sidebar.tsx`](../components/dashboard/Sidebar.tsx).
+
+> **Nächster + finaler Schritt vor Go-Live:** „Bearbeiten"-Tab perfektionieren (Funktionalität + Optik) — der Haupt-Arbeitsplatz des Users.
+
+---
+
+## Aufgabe 47 + 48 — Statistik-Feinschliff + Admin-Cockpit v1 (2026-06-02)
 
 **Status:** Branch `feature/aufgabe-47-cockpit-polish`. Type-Check grün. Visuell abgenommen. **Kein DB-Change.**
 
@@ -174,9 +204,9 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 **Umsetzung (phasiert, mit visuellen Checkpoints):**
 - **Geteilte Primitive** [`components/tenant-editor/v2/ui/Panel.tsx`](../components/tenant-editor/v2/ui/Panel.tsx): `PanelShell · PanelHeader · Section · Field · FieldHint` — kanonisiert aus dem bis dahin in jedem Panel duplizierten ThemePanel-Code. `ThemePanel` + `PropertiesPanel` laufen jetzt darauf (eine Quelle statt 2 Kopien).
-- **Ein Speichern-Modell** ([`EditorShellV2.tsx`](../components/tenant-editor/v2/EditorShellV2.tsx)): globaler Top-„Speichern" nur auf dem Dokument-Tab „Bearbeiten" (bzw. wenn ungesicherte Dokument-Änderungen bestehen). Ressourcen-Tabs (E-Mails/Webhooks/Einbinden) speichern pro Eintrag → kein doppeltes Speichern mehr.
+- **Ein Speichern-Modell** ([`EditorShell.tsx`](../components/tenant-editor/v2/EditorShell.tsx)): globaler Top-„Speichern" nur auf dem Dokument-Tab „Bearbeiten" (bzw. wenn ungesicherte Dokument-Änderungen bestehen). Ressourcen-Tabs (E-Mails/Webhooks/Einbinden) speichern pro Eintrag → kein doppeltes Speichern mehr.
 - **Webhooks → Master-Detail** ([`WebhooksPanel.tsx`](../components/tenant-editor/v2/WebhooksPanel.tsx)): von zentrierter Karten-Liste + Modal auf Liste·Detail umgebaut — gleiches Layout wie E-Mails (`SubscriptionCard`→`WebhookDetail`, `selectedId` statt expand). Logik (CRUD/Test/Logs/Secret) unverändert wiederverwendet. Add-Modal bleibt vorerst fürs Anlegen.
-- **Inhalt + Design zu einem Tab „Bearbeiten" zusammengelegt** ([`TopTabs.tsx`](../components/tenant-editor/v2/TopTabs.tsx) + `EditorShellV2`): 3-Pane (StepList · Canvas · Inspektor). Rechter Inspektor hat einen **Umschalter „Inhalt | Design"** (`inspectorMode`): Inhalt = Schritt-Eigenschaften (`PropertiesPanel`), Design = funnel-weites Theme (`ThemePanel`). Scope wird vom `PanelHeader` angesagt. Top-Tabs jetzt: Bearbeiten · Logik (bald) · E-Mails · Webhooks · Einbinden (6 → 5).
+- **Inhalt + Design zu einem Tab „Bearbeiten" zusammengelegt** ([`TopTabs.tsx`](../components/tenant-editor/v2/TopTabs.tsx) + `EditorShell`): 3-Pane (StepList · Canvas · Inspektor). Rechter Inspektor hat einen **Umschalter „Inhalt | Design"** (`inspectorMode`): Inhalt = Schritt-Eigenschaften (`PropertiesPanel`), Design = funnel-weites Theme (`ThemePanel`). Scope wird vom `PanelHeader` angesagt. Top-Tabs jetzt: Bearbeiten · Logik (bald) · E-Mails · Webhooks · Einbinden (6 → 5).
 
 **Konsens-Entscheidungen:**
 - Drei kanonische Templates: A Canvas+Properties (Bearbeiten), B Master-Detail (E-Mails, Webhooks), C Einzelspalte-Config (Einbinden).
@@ -195,7 +225,7 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 **Umsetzung:**
 - **Verwaltungs-Modus → linke Side-Nav** (Vercel-Stil, einklappbar): [`components/dashboard/Sidebar.tsx`](../components/dashboard/Sidebar.tsx) (Desktop-Rail `w-60`/`w-16` collapse + localStorage `lp_sidenav_collapsed`; Mobile = Top-Bar + Drawer als `MobileNav`-Export). Nav-Daten zentral in [`navItems.ts`](../components/dashboard/navItems.ts).
-- **Bau-Modus → Icon-Leiste bleibt (VS-Code-Muster, KEIN Takeover):** [`DashboardShell.tsx`](../components/dashboard/DashboardShell.tsx) schaltet per `usePathname()`: Editor-Routen → `<Sidebar forceCollapsed/>` (fixierte 64px-Icon-Leiste, links) + Editor daneben; sonst volle Side-Nav. [`EditorShellV2`](../components/tenant-editor/v2/EditorShellV2.tsx) Container `top:64px` → `inset-y-0 right-0 left-0 lg:left-16` (sitzt rechts neben der Leiste). Die Nav verschwindet nie.
+- **Bau-Modus → Icon-Leiste bleibt (VS-Code-Muster, KEIN Takeover):** [`DashboardShell.tsx`](../components/dashboard/DashboardShell.tsx) schaltet per `usePathname()`: Editor-Routen → `<Sidebar forceCollapsed/>` (fixierte 64px-Icon-Leiste, links) + Editor daneben; sonst volle Side-Nav. [`EditorShell`](../components/tenant-editor/v2/EditorShell.tsx) Container `top:64px` → `inset-y-0 right-0 left-0 lg:left-16` (sitzt rechts neben der Leiste). Die Nav verschwindet nie.
 - **Layout:** [`app/dashboard/layout.tsx`](../app/dashboard/layout.tsx) rendert `DashboardShell` statt `DashboardHeader`+Wrapper (Auth/Tenant-Logik unverändert).
 - **Footer = konsolidiertes User-Menü** (Vercel-Stil): Avatar + Name/Email + „…"-Trigger → Popover mit Account · Theme-Umschalter · Abmelden. Ersetzt den inkonsistenten nackten Theme-Icon. Theme-Init (dark-class on mount) lebt jetzt hier (Desktop) bzw. in `MobileNav`-`ThemeToggle` (Mobile).
 - **Collapse-Toggle** als ruhige Zeile unten („‹ Einklappen") statt floatendem Pfeil oben rechts.
@@ -219,7 +249,7 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 - **Config-Fluss:** `getTenantConfig` lädt die 2 Spalten → `TenantConfig.metaPixelId` / `.googleAdsConversion` ([`types/index.ts`](../types/index.ts)). `TenantFunnelClient` sendet sie **PII-frei** im `funnel-submit`-postMessage mit (`meta`/`google`).
 - **[`public/embed.js`](../public/embed.js):** `funnel-submit`-Handler erweitert — IDs aus der Message (Vorrang) oder Fallback data-Attribute. `fireMeta` (init+track, Basiscode-Injection wenn `fbq` fehlt) + `fireGoogle` (gtag-Injection wenn `gtag` fehlt). **Format-Whitelist** vor jeder Injection (`^[0-9]{5,20}$` / `^AW-[0-9]+(/[\w-]+)?$`) — XSS/Injection-Schutz.
 - **Save/Load:** [`app/api/tenant/funnels/[slug]/tracking/route.ts`](../app/api/tenant/funnels/%5Bslug%5D/tracking/route.ts) — `GET` (Prefill) + `PATCH` (speichern), user-client + RLS, serverseitige Format-Whitelist.
-- **UI — Editor-Reiter „Einbinden" (statt globaler Seite):** Nach Stavros-Feedback („zwei Einbinden-Reiter verwirren; Tracking ist pro Funnel") wurde der **deaktivierte Editor-Reiter `share` aktiviert** ([`TopTabs.tsx`](../components/tenant-editor/v2/TopTabs.tsx)) und ein **[`SharePanel`](../components/tenant-editor/v2/SharePanel.tsx)** gebaut (Snippet + `TrackingSettings` + `PlatformGuides` + GTM/Callback-Details), full-width wie Webhooks/E-Mails ([`EditorShellV2.tsx`](../components/tenant-editor/v2/EditorShellV2.tsx), mit „Funnel zuerst speichern"-Guard im Create-Modus).
+- **UI — Editor-Reiter „Einbinden" (statt globaler Seite):** Nach Stavros-Feedback („zwei Einbinden-Reiter verwirren; Tracking ist pro Funnel") wurde der **deaktivierte Editor-Reiter `share` aktiviert** ([`TopTabs.tsx`](../components/tenant-editor/v2/TopTabs.tsx)) und ein **[`SharePanel`](../components/tenant-editor/v2/SharePanel.tsx)** gebaut (Snippet + `TrackingSettings` + `PlatformGuides` + GTM/Callback-Details), full-width wie Webhooks/E-Mails ([`EditorShell.tsx`](../components/tenant-editor/v2/EditorShell.tsx), mit „Funnel zuerst speichern"-Guard im Create-Modus).
 - **Komponenten:** [`TrackingSettings.tsx`](../components/dashboard/TrackingSettings.tsx) (Eingabe + PATCH + DSGVO-Hinweis), [`PlatformGuides.tsx`](../components/dashboard/PlatformGuides.tsx) (WordPress/Wix/Squarespace/Webflow/Jimdo via `<details>`), [`CodeSnippet.tsx`](../components/dashboard/CodeSnippet.tsx) (CodeBlock+CopyBar, aus EmbedBlock extrahiert).
 - **Entfernt (Konsolidierung):** globale Menü-Seite `app/dashboard/embed/page.tsx` + `components/dashboard/EmbedBlock.tsx` + Nav-Eintrag in [`TabNav.tsx`](../app/dashboard/TabNav.tsx) + Icon in [`DashboardHeader.tsx`](../app/dashboard/DashboardHeader.tsx). Eine Agentur nutzt je Endkunde ein anderes Pixel → Tracking gehört pro Funnel, nicht global.
 
@@ -296,7 +326,7 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 - [`/api/submit/route.ts`](../app/api/submit/route.ts): hartkodierter `sendAllEmails`-Call raus, `triggerEmailsOnSubmit` + `aggregateEmailStatusForSubmission` via `after()`.
 - [`/api/track-progress/route.ts`](../app/api/track-progress/route.ts): kein E-Mail-Trigger (E-Mails haben kein after_page, das ist Webhook-Domain).
 - [`TopTabs.tsx`](../components/tenant-editor/v2/TopTabs.tsx): „E-Mails"-Tab aktiv (war disabled).
-- [`EditorShellV2.tsx`](../components/tenant-editor/v2/EditorShellV2.tsx): routet auf `EmailsPanel` (full-width, kein Canvas).
+- [`EditorShell.tsx`](../components/tenant-editor/v2/EditorShell.tsx): routet auf `EmailsPanel` (full-width, kein Canvas).
 
 **Cleanup:**
 - ❌ `lib/sendEmails.ts` gelöscht (hartkodiert)
@@ -441,7 +471,7 @@ Nach dem ersten Doku-Pass folgten mehrere Runden Iteration auf Stavros-Feedback.
   - `lib/editorUtils.ts`: buildContactFieldConfig + fieldRowToContactConfig Helper, CONTACT_TYPE_TO_FIELD_TYPE + OPTION_BASED_CONTACT_TYPES + fieldTypeToContactType-Switch erweitert
   - `lib/getTenantConfig.ts`: fieldTypeToContactType-Switch erweitert
   - `lib/validateContactField.ts`: Validation für multi_choice/slider/rating/scale
-  - `components/tenant-editor/v2/EditorShellV2.tsx`: labelByType-Record erweitert
+  - `components/tenant-editor/v2/EditorShell.tsx`: labelByType-Record erweitert
   - `components/tenant-editor/v2/properties/AddContactFieldPicker.tsx`: 4 neue Picker-Entries, RATING_PILL als 4. Kategorie-Farbe
   - `components/tenant-editor/v2/properties/FieldProperties.tsx`: ContactFieldProps mit isSlider/isRating/isScale-Branches + 3 neue Config-Sektionen
   - `components/tenant-editor/v2/PropertiesPanel.tsx`: SortableContactFieldRow iconByType + pillByType um 4 Types erweitert
@@ -469,13 +499,13 @@ Nach dem ersten Doku-Pass folgten mehrere Runden Iteration auf Stavros-Feedback.
   **Schwung 2 — UX-Bugs & Visual-Builder-Polish:**
   - **Welcome +Option-Bug:** Welcome-Screens hatten fälschlich „+ Option hinzufügen" gerendert (weil questionType-Fallback „single_choice" den Choice-Block triggerte). Fix: `!isWelcomeStep`-Guard im Widget-Render.
   - **Hidden-State im Canvas:** statt „Diese Frage ist ausgeblendet"-Placeholder rendert das Canvas die hidden-Page jetzt normal, aber mit 50% Opazität + Grau-Overlay + Eye-Off-Badge oben rechts („Ausgeblendet"). Tenant sieht den Inhalt weiter, weiß aber sofort dass sie im Live nicht erscheint. `buildQuestions` mit neuem `keepHidden`-Flag.
-  - **Custom-Karte leer im Canvas:** wenn `customFields.length === 0`, rendert das Widget jetzt einen großen dashed-Border-Button „+ Feld hinzufügen" in Brand-Tint statt leerem Bereich. Click öffnet einen Shell-Level-AddContactFieldPicker (neu in EditorShellV2). Picker im Properties-Panel bleibt unverändert — beide arbeiten unabhängig.
+  - **Custom-Karte leer im Canvas:** wenn `customFields.length === 0`, rendert das Widget jetzt einen großen dashed-Border-Button „+ Feld hinzufügen" in Brand-Tint statt leerem Bereich. Click öffnet einen Shell-Level-AddContactFieldPicker (neu in EditorShell). Picker im Properties-Panel bleibt unverändert — beide arbeiten unabhängig.
   - **Drag-Handle auf ganzem Pill:** StepPill nimmt den DnD-Listener jetzt am Outer-Container statt nur am Grip-Icon-Span. Komplettes Pill ist draggable, Click vs Drag wird von der `activationConstraint: { distance: 4 }` der PointerSensor automatisch unterschieden — kurzer Klick = onClick, Bewegung > 4px = Drag.
 
   **Files (Sammel-Liste):**
   - `types/index.ts`: ContactFieldConfig.type erweitert + optional `checkboxLabel`
   - `components/tenant-editor/defaults.ts`: makeDefaultCustomPage leer
-  - `components/tenant-editor/v2/EditorShellV2.tsx`: handleAddWelcome enforcement + defaultContactField labels + required=true + canvasFieldPickerOpen-State + Shell-Level AddContactFieldPicker-Render
+  - `components/tenant-editor/v2/EditorShell.tsx`: handleAddWelcome enforcement + defaultContactField labels + required=true + canvasFieldPickerOpen-State + Shell-Level AddContactFieldPicker-Render
   - `components/tenant-editor/v2/properties/FieldRow.tsx`: Eye-Toggle-Button + Opazitäts-Indicator
   - `components/tenant-editor/v2/properties/AddContactFieldPicker.tsx`: 5 neue Picker-Entries
   - `components/tenant-editor/v2/properties/FieldProperties.tsx`: ContactFieldProps mit hasOptions (radio+dropdown), Checkbox-Label-Field
@@ -491,7 +521,7 @@ Nach dem ersten Doku-Pass folgten mehrere Runden Iteration auf Stavros-Feedback.
   **Files:**
   - `types/index.ts`: ContactFieldConfig.type erweitert + optional `checkboxLabel`
   - `components/tenant-editor/defaults.ts`: makeDefaultCustomPage leer
-  - `components/tenant-editor/v2/EditorShellV2.tsx`: handleAddWelcome enforcement + defaultContactField labels + required=true
+  - `components/tenant-editor/v2/EditorShell.tsx`: handleAddWelcome enforcement + defaultContactField labels + required=true
   - `components/tenant-editor/v2/properties/FieldRow.tsx`: Eye-Toggle-Button + Opazitäts-Indicator
   - `components/tenant-editor/v2/properties/AddContactFieldPicker.tsx`: 5 neue Picker-Entries
   - `components/tenant-editor/v2/properties/FieldProperties.tsx`: ContactFieldProps mit hasOptions (radio+dropdown), Checkbox-Label-Field
@@ -542,7 +572,7 @@ Nach dem ersten Doku-Pass folgten mehrere Runden Iteration auf Stavros-Feedback.
   - `components/tenant-editor/v2/fieldMeta.ts`: QUESTION_META erweitert um rating/scale/statement (yellow + gray pills), WELCOME_META export (indigo)
   - `components/tenant-editor/v2/AddElementModal.tsx`: komplett refactored — Vorlagen weg, neue Top-Section mit 3 Karten (Custom/Adresse/Welcome), Einzelne-Felder-Grid mit den neuen Types automatisch über QUESTION_TYPE_OPTIONS
   - `components/tenant-editor/v2/StepList.tsx`: kind-basierte Meta-Selection (welcome → WELCOME_META), onAddAddressCard + onAddWelcome Props
-  - `components/tenant-editor/v2/EditorShellV2.tsx`: handleAddVorlage entfernt, handleAddAddressCard + handleAddWelcome hinzu, Imports + Wiring
+  - `components/tenant-editor/v2/EditorShell.tsx`: handleAddVorlage entfernt, handleAddAddressCard + handleAddWelcome hinzu, Imports + Wiring
   - `components/tenant-editor/v2/PropertiesPanel.tsx`: neue WelcomeProps-Section (kind="welcome"), SuccessProps erweitert um Redirect-Mode-Toggle + URL-Input
   - `components/tenant-editor/v2/properties/FieldProperties.tsx`: neue Properties-Blocks für rating (max stars) + scale (min/max/labels) + statement (Hinweistext), required-Toggle für statement ausgeblendet
 
@@ -584,7 +614,7 @@ Nach dem ersten Doku-Pass folgten mehrere Runden Iteration auf Stavros-Feedback.
   - `AddElementModal.tsx` — neuer Top-Section „Karte mit mehreren Feldern" (über Vorlagen + Einzelfeldern), 1 Klick legt Custom-Page an
   - `StepList.tsx` — Custom-Pages nutzen CUSTOM_META statt questionMeta für StepPill-Rendering
   - `PropertiesPanel.tsx` — neue `CustomPageProps` Section: Title + Subtitle + Sichtbarkeit + Drag-Reorder der Custom-Fields + AddContactFieldPicker-Reuse + Lösch-Button (anders als Kontaktformular ist Custom-Page löschbar)
-  - `EditorShellV2.tsx` — 5 neue Handler: `handleAddCustomPage`, `handlePatchCustomField`, `handleAddCustomField`, `handleDeleteCustomField`, `handleReorderCustomFields`
+  - `EditorShell.tsx` — 5 neue Handler: `handleAddCustomPage`, `handlePatchCustomField`, `handleAddCustomField`, `handleDeleteCustomField`, `handleReorderCustomFields`
 
   **Mapping (`lib/editorUtils.ts` + `lib/getTenantConfig.ts`):**
   - Read-Pfad: `pages` mit `page_type === "custom"` interleaved sortiert mit question-Pages, jeweils zur `EditorQuestion` mit `kind: "custom"` + customFields rekonstruiert
@@ -611,7 +641,7 @@ Nach dem ersten Doku-Pass folgten mehrere Runden Iteration auf Stavros-Feedback.
   - `components/tenant-editor/v2/AddElementModal.tsx`: neue Top-Section + onSelectCustomPage-Prop
   - `components/tenant-editor/v2/StepList.tsx`: kind-basierte Meta-Selection für Pill-Render + onAddCustomPage-Prop
   - `components/tenant-editor/v2/PropertiesPanel.tsx`: neue CustomPageProps-Komponente + 4 neue Handler-Props
-  - `components/tenant-editor/v2/EditorShellV2.tsx`: 5 neue Handler + makeDefaultCustomPage-Import + Prop-Wiring
+  - `components/tenant-editor/v2/EditorShell.tsx`: 5 neue Handler + makeDefaultCustomPage-Import + Prop-Wiring
   - `components/funnel.tsx`: isCustomStep + visibleCustomFields + isCustomStepValid + Custom-Render-Block + Auto-Advance-Guard
 
 - **C.2 — Theme-Panel (Brand-Farbe, Schrift, Layout) ✅ (2026-05-28)**
@@ -630,7 +660,7 @@ Nach dem ersten Doku-Pass folgten mehrere Runden Iteration auf Stavros-Feedback.
   **Files:**
   - `components/tenant-editor/v2/ThemePanel.tsx` neu (~220 LOC): ColorField mit `<input type="color">` + Hex-Text-Input + optionalem Transparent-Toggle, Select-Wrapper mit inline-SVG-Chevron, Range-Slider auf Radius-Index, Section/Field/Header-Building-Blocks
   - `components/tenant-editor/v2/TopTabs.tsx`: „Design"-Tab `disabled: false` (war als geplant aber tot eingebaut)
-  - `components/tenant-editor/v2/EditorShellV2.tsx`: Body rendert konditional — bei `activeTab === "design"` 2-Spalten-Layout (Canvas + ThemePanel), sonst 3-Pane wie gehabt
+  - `components/tenant-editor/v2/EditorShell.tsx`: Body rendert konditional — bei `activeTab === "design"` 2-Spalten-Layout (Canvas + ThemePanel), sonst 3-Pane wie gehabt
 
   **Wie testen:**
   1. Editor öffnen, „Design"-Tab klicken → StepList weg, ThemePanel rechts
@@ -743,13 +773,13 @@ Nach dem ersten Doku-Pass folgten mehrere Runden Iteration auf Stavros-Feedback.
   - **CSS-Bug-Fix**: `var(--color-primary)` → `var(--funnel-primary)` in `hl()`/`hlEdge()` (Highlight-Outline war seit Anfang unsichtbar)
   - Inline-Edit via `contentEditable` für 8 Stellen (question_title/subtitle, option-labels, contact_form_title/subtitle, submit_button, success_message, response_message). EditableText-Helper: uncontrolled, suppressContentEditableWarning, blur-commit, Esc-revert via skipNextCommit-Ref, Enter=commit (Tag), Plain-Text-Paste via `execCommand("insertText")`.
   - `cursor: text` (I-Beam) in editMode-Branch — override Parent-`cursor: pointer`
-  - `parseFieldRef`-Router in `EditorShellV2.handleTextChange` mapped Field-Identifier → State-Patches via diskriminerte Branches
+  - `parseFieldRef`-Router in `EditorShell.handleTextChange` mapped Field-Identifier → State-Patches via diskriminerte Branches
   - Bidirektionaler Sync: PropertiesPanel-FieldRow-Klick auf Submit-Page setzt `selectedFieldRef = "contact_field_<key>"` → blauer Outline auf entsprechendem Center-Element
   - `editMode`-Short-Circuit in `handleSelect/handleNext/handleBack/handleToggleMultiple` (kein Step-Advance bei Edit-Klick)
   - Option-Wrapper switcht `<button>` → `<div role="button" tabIndex={-1}>` in editMode (Button schluckt contentEditable-Klicks)
   - Submit-Button-`type` switcht `"submit"` → `"button"` in editMode (kein Form-Submit bei Test-Klick)
   - `handlePreviewClick` (in onClickCapture auf Funnel-Root): in editMode KEIN `stopPropagation`/`preventDefault` (sonst feuern Canvas-Buttons wie Duplicate/Delete nicht). Live-Mode behält beide.
-  - Esc-Listener in EditorShellV2 deselected
+  - Esc-Listener in EditorShell deselected
   - Click-into-empty (Canvas-Background) deselected via `e.target === e.currentTarget`-Check
 
   **Widget-Redesign Typeform-Stil (Live + Builder-Preview, dieselbe Funnel-Komponente):**
@@ -782,7 +812,7 @@ Nach dem ersten Doku-Pass folgten mehrere Runden Iteration auf Stavros-Feedback.
   - DndContext + SortableContext um Choice-Options in editMode → Drag-Reorder per `@dnd-kit/sortable` (auf Hover sichtbare GripVertical-Handle links)
   - Duplicate + Delete-Buttons rechts pro Option (auf Hover sichtbar). Delete schützt vor letzter Option.
   - "+ Option hinzufügen"-Link direkt unter Optionen in editMode
-  - 4 neue Handler in `EditorShellV2`: `handleAddOption`, `handleReorderOptions`, `handleDuplicateOption`, `handleDeleteOption` — alle über `selected.questionIndex`
+  - 4 neue Handler in `EditorShell`: `handleAddOption`, `handleReorderOptions`, `handleDuplicateOption`, `handleDeleteOption` — alle über `selected.questionIndex`
   - `buildQuestions` in `lib/editorUtils.ts`: neue Option `{ keepEmpty?: boolean }`. CenterCanvas ruft mit `keepEmpty: true` (außer in TestMode) → leere Optionen erscheinen sofort im Canvas mit Placeholder-Rendering. Live-Widget unverändert (`keepEmpty` default false).
   - Wert-Eindeutigkeit in `buildQuestions`: bei Duplicate kollidierende Values werden mit `_2`, `_3` etc. suffixed → keine React-Key-Collision
 
@@ -891,7 +921,7 @@ Nach dem ersten Doku-Pass folgten mehrere Runden Iteration auf Stavros-Feedback.
   - 3 initiale Vorlagen: **Kontakt** (Name short_text + E-Mail + Telefon, 3 Steps), **Adresse** (Straße + PLZ als short_text mit maxLength=5 + Stadt + Land als dropdown mit DE/AT/CH, 4 Steps), **Ja-Nein** (single_choice mit 2 Options, 1 Step).
   - `AddElementModal.tsx` zweisektionig: oben "Vorlagen" als Icon-Kachel-Grid mit Beschreibung, unten "Einzelne Felder" gruppiert in Text-Eingabe / Auswahl / Numerisch & Datum.
   - Zwei Modal-Callbacks: `onSelectType(QuestionType)` (Einzelfeld → 1 Page) + `onSelectVorlage(Vorlage)` (Vorlage → N Pages).
-  - `StepList`-Prop neu: `onAddVorlage`. `EditorShellV2.handleAddVorlage(vorlage)` ruft `vorlage.build()` und appended an `state.questions[]`, selektiert die erste neue Frage.
+  - `StepList`-Prop neu: `onAddVorlage`. `EditorShell.handleAddVorlage(vorlage)` ruft `vorlage.build()` und appended an `state.questions[]`, selektiert die erste neue Frage.
 
   **Field-Level-Properties (Question + Submit gemeinsamer Pattern):**
   - `components/tenant-editor/v2/properties/FieldRow.tsx` neu (107 LOC) — gemeinsame expandierbare Field-Zeile. Props: icon, pillClass, label, typeLabel, expandable (toggelbar), expanded, onToggle, optional dragHandleProps, optional onDelete, children (= FieldProperties wenn expanded).
@@ -911,7 +941,7 @@ Nach dem ersten Doku-Pass folgten mehrere Runden Iteration auf Stavros-Feedback.
   **Submit-Page Multi-Field-UI:**
   - `contactFields[]` jetzt als FieldRow-Liste mit @dnd-kit/sortable Drag-Reorder rendert. Reorder-Handler synchronisiert `sort_order` zur neuen Array-Position.
   - `components/tenant-editor/v2/properties/AddContactFieldPicker.tsx` neu (115 LOC) — kleines Modal mit den 5 erlaubten Submit-Types (text/email/tel/plz/radio), NICHT der vollen Question-Type-Palette (Submit hat eigenes Type-Schema).
-  - `EditorShellV2` neue Handler: `handlePatchContactField(key, patch)`, `handleAddContactField(type)`, `handleDeleteContactField(key)`, `handleReorderContactFields(next)`. Plus `defaultContactField(type, existingFields)`-Helper: generiert eindeutigen `custom_<base36>_<rand>`-Key, befüllt label/required/visible/sort_order + Default-Options bei radio.
+  - `EditorShell` neue Handler: `handlePatchContactField(key, patch)`, `handleAddContactField(type)`, `handleDeleteContactField(key)`, `handleReorderContactFields(next)`. Plus `defaultContactField(type, existingFields)`-Helper: generiert eindeutigen `custom_<base36>_<rand>`-Key, befüllt label/required/visible/sort_order + Default-Options bei radio.
   - Delete pro Feld erlaubt — kein System-Field-Schutz, identisch zum v1-Verhalten in SectionKontakt.
 
   **PropertiesPanel.tsx refactor (315 LOC → 411 + 200 ≈ 600 LOC):**
@@ -970,7 +1000,7 @@ Nach dem ersten Doku-Pass folgten mehrere Runden Iteration auf Stavros-Feedback.
   - NamePrompt-Modal und Exit-Modal analog v1 reimplementiert (kein Code-Sharing weil parallel-Build).
 
   **Neue Files (alle unter `components/tenant-editor/v2/`):**
-  - `EditorShellV2.tsx` (444 LOC) — Top-Level, State-Mgmt, Save, Exit-Guard, Modals
+  - `EditorShell.tsx` (444 LOC) — Top-Level, State-Mgmt, Save, Exit-Guard, Modals
   - `TopTabs.tsx` (71) — Tab-Leiste mit Stubs
   - `StepList.tsx` (164) — DndContext + SortableContext + Fragen + Abschluss-Sektion
   - `StepPill.tsx` (80) — einzelner Listen-Eintrag (sortable + non-sortable)

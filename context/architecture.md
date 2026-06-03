@@ -74,7 +74,7 @@ leadplug-saas/
 │   │   │   ├── new/                # Neuer Funnel
 │   │   │   └── [slug]/edit/        # Funnel-EDITOR
 │   │   │       ├── page.tsx        # Server: lädt funnel + pages + fields → EditorState
-│   │   │       └── FunnelEditorClient.tsx  # Client-Wrapper für EditorShellV2
+│   │   │       └── FunnelEditorClient.tsx  # Client-Wrapper für EditorShell
 │   │   ├── leads/                  # Lead-Inbox (3 Tabs: Completed / Abgebrochen-mit-Email / Abgebrochen-ohne)
 │   │   ├── kontakte/               # Aggregierte Contact-View
 │   │   ├── statistiken/            # Monatliche Conversion-Charts
@@ -183,7 +183,7 @@ text  email  tel  plz  radio  long_text  number  date  checkbox  dropdown
 ### 6.1 Komponenten-Übersicht
 
 ```
-EditorShellV2.tsx (~750 LOC)              ← der Hauptcontainer
+EditorShell.tsx (~750 LOC)              ← der Hauptcontainer
 ├── TopTabs.tsx                            ← „Bearbeiten / Logik / E-Mails / Webhooks / Einbinden" (Inhalt+Design = ein Tab mit Inspektor-Umschalter)
 ├── ui/Panel.tsx                           ← geteilte Editor-Primitive (PanelShell/PanelHeader/Section/Field)
 ├── StepList.tsx                           ← linke Sidebar (Page-Liste, drag-reorder, +Button)
@@ -321,7 +321,7 @@ Render-Pipeline pro Step:
 3. **Type-Block** branchet auf `currentQuestion.kind` und `questionType`:
    - Welcome → kein input, nur Bottom-Action-Bar mit welcomeButtonLabel
    - Custom + customFields.length > 0 → vertikaler Multi-Field-Stack
-   - Custom + customFields.length === 0 + editMode → „+ Feld hinzufügen"-Button (bubble nach EditorShellV2)
+   - Custom + customFields.length === 0 + editMode → „+ Feld hinzufügen"-Button (bubble nach EditorShell)
    - Statement → kein Input, OK-Button advances
    - single_choice/multi_choice → Letter-Chip + Label vertikal
    - slider → großer Number-Readout + Range
@@ -523,7 +523,7 @@ DB (pages + fields)
 - [`components/tenant-editor/v2/TopTabs.tsx`](../components/tenant-editor/v2/TopTabs.tsx) erweitert: neuer Tab „Webhooks".
 - [`components/tenant-editor/v2/WebhooksPanel.tsx`](../components/tenant-editor/v2/WebhooksPanel.tsx) ~600 LOC — Container + Liste + collapsible Cards (Config, Test, Logs, Secret-Rotation, Verify-Snippet Node/Python/PHP).
 - [`components/tenant-editor/v2/WebhookAddModal.tsx`](../components/tenant-editor/v2/WebhookAddModal.tsx) — Add-Modal mit Trigger-Auswahl (on_submit / after_page) + Event-Multi-Select.
-- [`components/tenant-editor/v2/EditorShellV2.tsx`](../components/tenant-editor/v2/EditorShellV2.tsx) routet `activeTab === "webhooks"` auf WebhooksPanel (full-width) + lädt webhook-trigger_page_id Map für StepPill-Badges.
+- [`components/tenant-editor/v2/EditorShell.tsx`](../components/tenant-editor/v2/EditorShell.tsx) routet `activeTab === "webhooks"` auf WebhooksPanel (full-width) + lädt webhook-trigger_page_id Map für StepPill-Badges.
 - [`components/tenant-editor/v2/StepPill.tsx`](../components/tenant-editor/v2/StepPill.tsx) + [`StepList.tsx`](../components/tenant-editor/v2/StepList.tsx) erweitert um violettes Webhook-Badge mit Count. Click → springt in Webhooks-Tab.
 
 **Payload-Format Webhook (final):**

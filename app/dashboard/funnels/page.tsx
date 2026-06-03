@@ -124,12 +124,21 @@ export default async function FunnelsPage() {
         </Card>
       )}
 
-      {/* Funnel-Grid */}
+      {/* Funnel-Grid — 2 pro Zeile (Desktop) + „Neuer Funnel"-Karte als letztes Feld */}
       {funnels.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {funnels.map((funnel) => (
             <FunnelCard key={funnel.slug} funnel={funnel} />
           ))}
+          <Link
+            href="/dashboard/funnels/new"
+            className="group flex min-h-44 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-gray-200 text-gray-400 transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary dark:border-gray-700"
+          >
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-gray-100 transition-colors group-hover:bg-primary/10 dark:bg-gray-800">
+              <Plus size={20} />
+            </span>
+            <span className="text-sm font-semibold">Neuen Funnel anlegen</span>
+          </Link>
         </div>
       )}
     </div>
