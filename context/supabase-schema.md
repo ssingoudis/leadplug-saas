@@ -566,6 +566,7 @@ View-Tracking pro Funnel-Render. Aktuell 277 Zeilen.
 | `id` | uuid | NO | `gen_random_uuid()` | PK |
 | `tenant_id` | uuid | NO | — | FK → `tenants.id` ON DELETE CASCADE. Bleibt für RLS-Performance (vermeidet Join via funnels) |
 | `funnel_id` | uuid | **NO** | — | **Aufgabe 40.** FK → `funnels.id` ON DELETE CASCADE. App-Code muss tenant_id == funnel.tenant_id sicherstellen. |
+| `name` | text | YES | — | **Aufgabe 49.** Anzeigename (z.B. „Pipedrive CRM"). Beim Insert aus URL-Host abgeleitet wenn leer (`deriveWebhookName`). Backfill bestehender Rows mit Host. |
 | `url` | text | NO | — | CHECK: `LIKE 'http%' AND length(url) >= 10`. HTTPS empfohlen, http nur für lokale Tests. |
 | `secret` | text | NO | — | CHECK: `length(secret) >= 16`. HMAC-Signing-Secret, app-generated. Format `whsec_<64-hex>`. |
 | `event_types` | text[] | NO | `'{}'` | z.B. `{"submission.completed","submission.abandoned"}` für on_submit oder `{"step.advanced"}` für after_page. |

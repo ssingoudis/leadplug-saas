@@ -6,6 +6,7 @@ import { buildScriptEmbed, buildEmbedSnippet } from "@/lib/embedSnippet";
 import { CodeBlock, CopyBar } from "@/components/dashboard/CodeSnippet";
 import TrackingSettings from "@/components/dashboard/TrackingSettings";
 import PlatformGuides from "@/components/dashboard/PlatformGuides";
+import { SectionCard } from "./ui/Panel";
 
 // =============================================================================
 // Aufgabe 43 — „Einbinden"-Tab im Funnel-Editor (pro Funnel).
@@ -63,17 +64,15 @@ export function SharePanel({ funnelSlug, funnelName }: Props) {
 
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-background">
-      <div className="mx-auto flex max-w-3xl flex-col gap-6 p-6">
+      <div className="mx-auto flex max-w-5xl flex-col gap-6 p-6">
         {/* Embed-Code */}
-        <section className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
-          <div className="px-5 py-4">
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-1">Funnel einbetten</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-              Kopiere diese zwei Zeilen und füge sie auf deiner Website dort ein, wo der Funnel erscheinen soll. Das Script lädt sich von uns — Updates kommen automatisch, du musst nie neu kopieren.
-            </p>
-          </div>
-          <div className="px-4 pb-1">
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+        <SectionCard
+          title="Funnel einbetten"
+          description="Kopiere diese zwei Zeilen und füge sie auf deiner Website dort ein, wo der Funnel erscheinen soll. Das Script lädt sich von uns — Updates kommen automatisch, du musst nie neu kopieren."
+          padded={false}
+        >
+          <div className="px-5 pb-2 pt-1">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
               Empfohlen · mit Conversion-Tracking
             </span>
           </div>
@@ -82,7 +81,7 @@ export function SharePanel({ funnelSlug, funnelName }: Props) {
 
           <button
             onClick={() => setShowFallback((s) => !s)}
-            className="w-full flex items-center justify-between px-4 py-2.5 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
+            className="flex w-full cursor-pointer items-center justify-between border-t border-gray-100 px-4 py-2.5 text-xs text-gray-500 transition-colors hover:bg-gray-50 dark:border-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/50"
           >
             <span>Klassische iFrame-Einbettung (ohne Tracking)</span>
             {showFallback ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
@@ -93,10 +92,10 @@ export function SharePanel({ funnelSlug, funnelName }: Props) {
               <CodeBlock code={iframeSnippet} />
             </>
           )}
-        </section>
+        </SectionCard>
 
         {/* Conversion-Tracking */}
-        <section className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
+        <SectionCard padded={false}>
           {loading ? (
             <div className="flex items-center gap-2 px-5 py-6 text-sm text-gray-400">
               <Loader2 size={15} className="animate-spin" /> Lade Tracking-Einstellungen…
@@ -108,10 +107,10 @@ export function SharePanel({ funnelSlug, funnelName }: Props) {
               initialGoogleAdsConversion={google}
             />
           )}
-        </section>
+        </SectionCard>
 
         {/* Erweitert: GTM / Callback */}
-        <details className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
+        <details className="group overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
           <summary className="flex items-center justify-between px-5 py-3.5 cursor-pointer list-none text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50">
             <span>Für Entwickler & Google Tag Manager (optional)</span>
             <span className="text-gray-400 text-[10px] transition-transform group-open:rotate-90">▶</span>

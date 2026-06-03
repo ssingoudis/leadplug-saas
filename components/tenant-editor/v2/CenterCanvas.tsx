@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Monitor, Smartphone, Play, Pencil, EyeOff } from "lucide-react";
+import { Monitor, Smartphone, Play, Pencil, EyeOff, ListPlus } from "lucide-react";
 import { Funnel } from "@/components/funnel";
 import { buildTheme, buildFunnelConfig, buildQuestions } from "@/lib/editorUtils";
 import type { EditorState } from "@/types";
 import type { SelectedStep } from "./types";
+import { EmptyState } from "./ui/Panel";
 
 interface Props {
   state: EditorState;
@@ -22,7 +23,7 @@ interface Props {
   onReorderOptions: (fromIdx: number, toIdx: number) => void;
   onDuplicateOption: (idx: number) => void;
   onDeleteOption: (idx: number) => void;
-  // Polish: leere Custom-Karte zeigt Inline-"+"-Button → bubble nach EditorShellV2
+  // Polish: leere Custom-Karte zeigt Inline-"+"-Button → bubble nach EditorShell
   onAddCustomFieldRequest?: () => void;
 }
 
@@ -113,7 +114,7 @@ export function CenterCanvas({
           {isTestMode ? "Zurück zum Editor" : "Funnel testen"}
         </button>
 
-        <div className="inline-flex items-center rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-0.5">
+        <div className="inline-flex items-center gap-1 rounded-xl bg-gray-100 p-1 dark:bg-gray-800">
           <button
             type="button"
             onClick={() => setIsMobile(false)}
@@ -121,8 +122,8 @@ export function CenterCanvas({
             aria-label="Desktop-Ansicht"
             className={
               !isMobile
-                ? "flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white transition-colors"
-                : "flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 transition-colors hover:text-gray-900 dark:hover:text-white"
+                ? "flex h-8 w-8 items-center justify-center rounded-lg bg-white text-gray-900 shadow-sm transition-colors dark:bg-gray-900 dark:text-white"
+                : "flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
             }
           >
             <Monitor size={14} />
@@ -134,8 +135,8 @@ export function CenterCanvas({
             aria-label="Mobile-Ansicht"
             className={
               isMobile
-                ? "flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white transition-colors"
-                : "flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 transition-colors hover:text-gray-900 dark:hover:text-white"
+                ? "flex h-8 w-8 items-center justify-center rounded-lg bg-white text-gray-900 shadow-sm transition-colors dark:bg-gray-900 dark:text-white"
+                : "flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
             }
           >
             <Smartphone size={14} />
@@ -213,22 +214,24 @@ export function CenterCanvas({
 
 function NoQuestionsPlaceholder() {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 bg-white px-6 py-16 text-center dark:border-gray-700 dark:bg-gray-900">
-      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Noch keine Frage konfiguriert</p>
-      <p className="text-xs text-gray-500 dark:text-gray-400">Füge links eine Frage hinzu, um die Vorschau zu sehen.</p>
+    <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+      <EmptyState
+        icon={<ListPlus size={22} />}
+        title="Noch keine Frage konfiguriert"
+        description="Füge links eine Frage hinzu, um die Vorschau zu sehen."
+      />
     </div>
   );
 }
 
 function SubmitSkippedPlaceholder() {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 bg-white px-6 py-16 text-center dark:border-gray-700 dark:bg-gray-900">
-      <EyeOff size={20} className="text-gray-400 dark:text-gray-500" />
-      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Submit-Schritt ist deaktiviert</p>
-      <p className="max-w-md text-xs text-gray-500 dark:text-gray-400">
-        Der Funnel endet nach der letzten Frage und springt direkt zur Erfolgsseite.
-        Aktiviere rechts den Toggle, um das Kontaktformular wiederherzustellen.
-      </p>
+    <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+      <EmptyState
+        icon={<EyeOff size={22} />}
+        title="Submit-Schritt ist deaktiviert"
+        description="Der Funnel endet nach der letzten Frage und springt direkt zur Erfolgsseite. Aktiviere rechts den Toggle, um das Kontaktformular wiederherzustellen."
+      />
     </div>
   );
 }

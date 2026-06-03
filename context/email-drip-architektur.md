@@ -593,7 +593,7 @@ DOWN-Migrationen: `supabase/migrations/*_DOWN.sql` (DROP TABLE CASCADE bzw. Cons
 - [`components/tenant-editor/v2/email/MagicSectionNode.ts`](../components/tenant-editor/v2/email/MagicSectionNode.ts) — Custom Block-Atom mit X-Button
 - [`components/tenant-editor/v2/email/CtaButtonNode.ts`](../components/tenant-editor/v2/email/CtaButtonNode.ts) — Custom Block-Atom mit Inline-Label-/URL-Editing + X-Button
 - [`components/tenant-editor/v2/TopTabs.tsx`](../components/tenant-editor/v2/TopTabs.tsx) — E-Mails-Tab aktiv
-- [`components/tenant-editor/v2/EditorShellV2.tsx`](../components/tenant-editor/v2/EditorShellV2.tsx) — Tab-Routing
+- [`components/tenant-editor/v2/EditorShell.tsx`](../components/tenant-editor/v2/EditorShell.tsx) — Tab-Routing
 
 **Migration:**
 - [`supabase/migrations/20260531120000_aufgabe_41_email_subscriptions.sql`](../supabase/migrations/20260531120000_aufgabe_41_email_subscriptions.sql)

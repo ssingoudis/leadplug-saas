@@ -45,6 +45,9 @@ export function Sidebar({
 }) {
   const pathname = usePathname()
   const [storedCollapsed, setStoredCollapsed] = useState(false)
+  // Editor-Modus (forceCollapsed): schmale Icon-Leiste, die beim Hovern als Flyout
+  // aufklappt — der User muss nicht raten, was hinter jedem Symbol steckt.
+  const [hovered, setHovered] = useState(false)
 
   useEffect(() => {
     try {
@@ -54,7 +57,7 @@ export function Sidebar({
     }
   }, [])
 
-  const collapsed = forceCollapsed || storedCollapsed
+  const collapsed = forceCollapsed ? !hovered : storedCollapsed
 
   function toggleCollapsed() {
     setStoredCollapsed((c) => {
@@ -69,12 +72,14 @@ export function Sidebar({
   }
 
   const positionClass = forceCollapsed
-    ? 'fixed left-0 top-0 h-screen w-16 z-30'
+    ? `fixed left-0 top-0 h-screen z-40 ${hovered ? 'w-60 shadow-2xl' : 'w-16'}`
     : `sticky top-0 h-screen ${collapsed ? 'w-16' : 'w-60'}`
 
   return (
     <aside
-      className={`hidden lg:flex flex-col shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 transition-[width] duration-200 ${positionClass}`}
+      onMouseEnter={forceCollapsed ? () => setHovered(true) : undefined}
+      onMouseLeave={forceCollapsed ? () => setHovered(false) : undefined}
+      className={`hidden lg:flex flex-col shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 transition-all duration-200 ease-in-out ${positionClass}`}
     >
       {/* Logo */}
       <div className={`flex items-center h-16 shrink-0 ${collapsed ? 'justify-center' : 'px-4'}`}>

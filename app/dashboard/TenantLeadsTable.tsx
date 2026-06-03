@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronDown, ChevronUp, Search, Check, Pencil, Plus, List, Columns3, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Search, Check, List, Columns3, X } from 'lucide-react'
 import {
   DndContext,
   DragOverlay,
@@ -16,6 +16,8 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core'
 import { Select } from '@/components/ui/Input'
+import { useSaveStatus } from '@/lib/useSaveStatus'
+import { SaveStatus } from '@/components/ui/SaveStatus'
 
 // ─── Status-Modell (Aufgabe 46) ───────────────────────────────────────────────
 // DB-Werte bleiben offen/kontaktiert/abgeschlossen; das UI labelt sie neu.
@@ -131,7 +133,7 @@ function StatusMenu({ value, onChange }: { value: LeadStatus; onChange: (s: Lead
   )
 }
 
-// ─── Notiz-Editor (gesperrt bis Klick) ────────────────────────────────────────
+// ─── Notiz-Editor (immer editierbar, Autosave on-blur) ────────────────────────
 
 function NotesEditor({
   submissionId,
@@ -142,97 +144,55 @@ function NotesEditor({
   value: string | null
   onSaved: (notes: string | null) => void
 }) {
-  const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(value ?? '')
-  const [saving, setSaving] = useState(false)
+  const notesSave = useSaveStatus()
+  const taRef = useRef<HTMLTextAreaElement>(null)
 
-  // Beim Wechsel auf einen anderen Lead zurück in den Anzeige-Modus.
+  // Bei Lead-Wechsel den Draft auf den gespeicherten Wert zurücksetzen.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { setEditing(false); setDraft(value ?? '') }, [submissionId])
+  useEffect(() => { setDraft(value ?? '') }, [submissionId])
 
-  async function save() {
-    setSaving(true)
-    try {
+  // Auto-Grow: Höhe an den Inhalt anpassen, statt horizontal aus dem Feld zu laufen.
+  useEffect(() => {
+    const ta = taRef.current
+    if (!ta) return
+    ta.style.height = 'auto'
+    ta.style.height = `${ta.scrollHeight}px`
+  }, [draft])
+
+  // Aufgabe 50: Autosave on-blur. Speichert nur bei echter Änderung; bei Fehler bleibt der Text
+  // im Feld erhalten und der Indikator zeigt „Nicht gespeichert" (kein stiller Verlust).
+  async function commit() {
+    const trimmed = draft.trim()
+    if (trimmed === (value ?? '').trim()) { if (trimmed !== draft) setDraft(trimmed); return }
+    const savedVal = trimmed.length > 0 ? trimmed : null
+    await notesSave.run(async () => {
       const res = await fetch(`/api/leads/${submissionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: draft }),
       })
       if (!res.ok) throw new Error('save failed')
-      const saved = draft.trim().length > 0 ? draft.trim() : null
-      onSaved(saved)
-      setDraft(saved ?? '')
-      setEditing(false)
-    } catch {
-      // bei Fehler im Bearbeiten-Modus bleiben
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  function cancel() {
-    setDraft(value ?? '')
-    setEditing(false)
+      onSaved(savedVal)
+      setDraft(savedVal ?? '')
+    })
   }
 
   return (
     <div>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Notiz</p>
-      {!editing ? (
-        value ? (
-          // Anzeige-Modus: Notiz steht da, Bearbeiten erst nach Stift-Klick (nicht permanent editierbar).
-          <div className="relative rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-800/50">
-            <p className="whitespace-pre-wrap pr-8 text-sm text-gray-700 dark:text-gray-200">{value}</p>
-            <button
-              type="button"
-              onClick={() => { setDraft(value); setEditing(true) }}
-              aria-label="Notiz bearbeiten"
-              title="Notiz bearbeiten"
-              className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-            >
-              <Pencil size={12} />
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => { setDraft(''); setEditing(true) }}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 transition-colors hover:border-primary/50 hover:text-primary dark:border-gray-600 dark:text-gray-400"
-          >
-            <Plus size={14} />
-            Notiz hinzufügen
-          </button>
-        )
-      ) : (
-        <div>
-          <textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            autoFocus
-            placeholder="Interne Notiz zu diesem Lead… (z. B. Rückruf vereinbart, kein Interesse)"
-            rows={4}
-            className="w-full resize-y rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder-gray-300 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:placeholder-gray-600"
-          />
-          <div className="mt-2 flex justify-end gap-1.5">
-            <button
-              type="button"
-              onClick={cancel}
-              disabled={saving}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-            >
-              Abbrechen
-            </button>
-            <button
-              type="button"
-              onClick={save}
-              disabled={saving}
-              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
-            >
-              {saving ? 'Speichert…' : 'Speichern'}
-            </button>
-          </div>
-        </div>
-      )}
+      <div className="mb-2 flex items-center gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Notiz</p>
+        <SaveStatus status={notesSave.status} />
+      </div>
+      <textarea
+        ref={taRef}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        placeholder="Interne Notiz zu diesem Lead… (z. B. Rückruf vereinbart, kein Interesse)"
+        rows={2}
+        className="w-full resize-none overflow-hidden rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 placeholder-gray-300 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:placeholder-gray-600"
+      />
     </div>
   )
 }

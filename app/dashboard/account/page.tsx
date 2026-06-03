@@ -4,13 +4,16 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Card from '@/components/ui/Card'
+import { useSaveStatus } from '@/lib/useSaveStatus'
+import { SaveStatus } from '@/components/ui/SaveStatus'
 
 function Field({
-  label, value, onChange, type = 'text', placeholder, readOnly,
+  label, value, onChange, onBlur, type = 'text', placeholder, readOnly,
 }: {
   label:        string
   value:        string
   onChange?:    (v: string) => void
+  onBlur?:      () => void
   type?:        string
   placeholder?: string
   readOnly?:    boolean
@@ -22,6 +25,8 @@ function Field({
         type={type}
         value={value}
         onChange={onChange ? (e) => onChange(e.target.value) : undefined}
+        onBlur={onBlur}
+        onKeyDown={onBlur ? (e) => { if (e.key === 'Enter') e.currentTarget.blur() } : undefined}
         placeholder={placeholder}
         readOnly={readOnly}
         className={`w-full rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 outline-none placeholder-gray-300 dark:placeholder-gray-600 transition ${
@@ -54,9 +59,9 @@ export default function AccountPage() {
   const [displayName, setDisplayName]   = useState('')
   const [tenantId, setTenantId]         = useState<string | null>(null)
   const [phone, setPhone]               = useState('')
-  const [saving, setSaving]             = useState(false)
-  const [saved, setSaved]               = useState(false)
-  const [infoError, setInfoError]       = useState<string | null>(null)
+  const [savedName, setSavedName]       = useState('')
+  const [savedPhone, setSavedPhone]     = useState('')
+  const profileSave                     = useSaveStatus()
 
   const [pw, setPw]                     = useState('')
   const [pw2, setPw2]                   = useState('')
@@ -77,6 +82,7 @@ export default function AccountPage() {
       if (!user) return
       setEmail(user.email ?? '')
       setPhone(user.user_metadata?.phone ?? '')
+      setSavedPhone(user.user_metadata?.phone ?? '')
       // Anzeigename = tenants.company_name (der Name, der in der Navigation angezeigt wird).
       // RLS (tenants_select) liefert nur den eigenen Tenant.
       const { data: tenant } = await supabase
@@ -86,40 +92,35 @@ export default function AccountPage() {
       if (tenant) {
         setTenantId(tenant.id)
         setDisplayName(tenant.company_name ?? '')
+        setSavedName(tenant.company_name ?? '')
       }
       setLoaded(true)
     })()
   }, [])
 
-  async function handleProfileSave(e: React.SyntheticEvent) {
-    e.preventDefault()
-    setSaving(true)
-    setInfoError(null)
-    setSaved(false)
-
-    let ok = true
-    // Anzeigename → tenants.company_name (RLS: tenants_update für owner/admin).
-    const trimmed = displayName.trim()
-    if (tenantId) {
-      const { error } = await supabase
-        .from('tenants')
-        .update({ company_name: trimmed || null })
-        .eq('id', tenantId)
-      if (error) ok = false
-    }
-    // Telefon bleibt in den Auth-Metadaten.
-    const { error: metaErr } = await supabase.auth.updateUser({ data: { phone } })
-    if (metaErr) ok = false
-
-    setSaving(false)
-    if (!ok) {
-      setInfoError('Fehler beim Speichern.')
-    } else {
-      setSaved(true)
+  // Aufgabe 50: Profil-Felder speichern on-blur (Autosave-Pattern). Nur wenn sich vs. zuletzt
+  // gespeichert etwas geändert hat. Anzeigename → tenants.company_name (RLS: tenants_update),
+  // Telefon → Auth-Metadaten. Fehler bleiben als „Nicht gespeichert" sichtbar (kein stiller Verlust).
+  async function saveProfile() {
+    const trimmedName = displayName.trim()
+    if (trimmedName === savedName && phone === savedPhone) return
+    await profileSave.run(async () => {
+      if (tenantId && trimmedName !== savedName) {
+        const { error } = await supabase
+          .from('tenants')
+          .update({ company_name: trimmedName || null })
+          .eq('id', tenantId)
+        if (error) throw error
+      }
+      if (phone !== savedPhone) {
+        const { error } = await supabase.auth.updateUser({ data: { phone } })
+        if (error) throw error
+      }
+      setSavedName(trimmedName)
+      setSavedPhone(phone)
       // Server-Layout (Sidebar-Footer liest tenant.company_name) neu laden.
       router.refresh()
-      setTimeout(() => setSaved(false), 3000)
-    }
+    })
   }
 
   async function handlePasswordSave(e: React.SyntheticEvent) {
@@ -172,25 +173,26 @@ export default function AccountPage() {
     <div className="flex flex-col gap-6 max-w-2xl">
 
       <Card title="Mein Account">
-        <form onSubmit={handleProfileSave} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4">
           <Field label="E-Mail" value={email} readOnly />
           <Field
             label="Anzeigename (in der Navigation sichtbar)"
             value={displayName}
             onChange={setDisplayName}
+            onBlur={saveProfile}
             placeholder="z. B. Deine Agentur"
           />
           <Field
             label="Telefon (optional)"
             value={phone}
             onChange={setPhone}
+            onBlur={saveProfile}
             placeholder="+49 ..."
           />
-          {infoError && <p className="text-sm text-red-500">{infoError}</p>}
-          <div className="flex justify-end">
-            <SaveButton loading={saving} saved={saved} />
+          <div className="flex h-5 items-center justify-end">
+            <SaveStatus status={profileSave.status} />
           </div>
-        </form>
+        </div>
       </Card>
 
       <Card title="Passwort ändern">

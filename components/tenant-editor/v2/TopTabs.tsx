@@ -30,7 +30,8 @@ interface Props {
 
 export function TopTabs({ active, onChange }: Props) {
   return (
-    <nav className="flex items-center gap-1 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4">
+    // Segmented-Control: zentrierbar in der Editor-Top-Bar, aktiver Tab als weiße Pille.
+    <nav className="inline-flex items-center gap-1 rounded-xl bg-gray-100 p-1 dark:bg-gray-800">
       {TABS.map((tab) => (
         <TabButton
           key={tab.key}
@@ -41,7 +42,7 @@ export function TopTabs({ active, onChange }: Props) {
         >
           {tab.label}
           {tab.badge && (
-            <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+            <span className="ml-1.5 inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
               {tab.badge}
             </span>
           )}
@@ -61,12 +62,12 @@ interface TabButtonProps {
 
 function TabButton({ children, active, disabled, onClick, title }: TabButtonProps) {
   const base =
-    "relative inline-flex items-center px-4 py-3 text-sm font-medium transition-colors -mb-px border-b-2";
+    "relative inline-flex items-center whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition-colors";
   const state = active
-    ? "border-primary text-gray-900 dark:text-white"
+    ? "bg-white text-gray-900 shadow-sm dark:bg-gray-900 dark:text-white"
     : disabled
-      ? "border-transparent text-gray-400 dark:text-gray-600 cursor-not-allowed"
-      : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white cursor-pointer";
+      ? "text-gray-400 dark:text-gray-600 cursor-not-allowed"
+      : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white cursor-pointer";
   return (
     <button type="button" onClick={onClick} disabled={disabled} title={title} className={`${base} ${state}`}>
       {children}

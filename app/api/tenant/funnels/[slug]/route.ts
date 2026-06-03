@@ -129,6 +129,53 @@ export async function PUT(
   return NextResponse.json({ slug: oldSlug });
 }
 
+// PATCH /api/tenant/funnels/[slug] — leichtgewichtiges Metadaten-Update (Autosave).
+// Bewusst NICHT der volle Dokument-Save (PUT): rührt pages/fields nicht an, damit z.B.
+// eine Umbenennung kein Speichern des ganzen Builders auslöst. Erweiterbar um weitere
+// Metadaten-Felder (Toggles etc.) nach demselben Whitelist-Muster.
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ slug: string }> },
+) {
+  const { slug } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body = await req.json().catch(() => null);
+  const patch: Record<string, unknown> = {};
+
+  if (body && typeof body.funnelName === "string") {
+    const trimmed = body.funnelName.trim();
+    if (!trimmed) {
+      return NextResponse.json({ error: "Funnel-Name darf nicht leer sein." }, { status: 400 });
+    }
+    if (trimmed.length > 120) {
+      return NextResponse.json({ error: "Funnel-Name ist zu lang (max. 120 Zeichen)." }, { status: 400 });
+    }
+    patch.funnel_name = trimmed;
+  }
+
+  if (Object.keys(patch).length === 0) {
+    return NextResponse.json({ error: "Keine gültigen Felder zum Aktualisieren." }, { status: 400 });
+  }
+
+  // RLS stellt sicher, dass nur eigene Funnels aktualisiert werden.
+  const { data: updated, error } = await supabase
+    .from("funnels")
+    .update(patch)
+    .eq("slug", slug)
+    .select("id")
+    .maybeSingle();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!updated) return NextResponse.json({ error: "Funnel nicht gefunden" }, { status: 404 });
+
+  return NextResponse.json({ success: true });
+}
+
 // DELETE /api/tenant/funnels/[slug] — Funnel unwiderruflich löschen (nur wenn inaktiv)
 export async function DELETE(
   _req: NextRequest,
