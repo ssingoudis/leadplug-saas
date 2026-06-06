@@ -240,3 +240,51 @@
   border: none;
   border-radius: 0.5rem;
 }
+
+/* Aufgabe 53: Editor-Baustein-Inputs (CTA-Button-Text/-URL, Antworten-Box-Überschrift).
+   Rohe DOM-Inputs aus den TipTap-NodeViews — brauchen klare Input-Affordance (sichtbarer
+   Rahmen + kontrastierender Hintergrund) in Hell UND Dunkel, sonst verschwimmen sie mit der Box. */
+.lp-node-input {
+  background: #ffffff;
+  color: #111827;
+  border: 1px solid #d1d5db;
+}
+.lp-node-input::placeholder { color: #9ca3af; }
+.lp-node-input:focus {
+  outline: none;
+  border-color: rgb(70 72 212 / 0.7);
+  box-shadow: 0 0 0 2px rgb(70 72 212 / 0.15);
+}
+.dark .lp-node-input {
+  background: #1f2937;       /* heller als die dunkle Baustein-Box → klar als Feld erkennbar */
+  color: #f3f4f6;
+  border-color: #4b5563;
+}
+.dark .lp-node-input::placeholder { color: #6b7280; }
+
+/* Aufgabe 53: Scrollbars im Dark-Mode — Track gedimmt dunkel (nicht weiß/transparent), Thumb grau.
+   Greift nur unter .dark; das öffentliche Widget nutzt keine .dark-Klasse und bleibt unberührt.
+   Selektoren decken die Wurzel (html.dark) UND alle Nachfahren ab. */
+.dark, .dark * {
+  scrollbar-color: #4b5563 #1f2937;
+}
+.dark::-webkit-scrollbar,
+.dark ::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+.dark::-webkit-scrollbar-track,
+.dark ::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+.dark::-webkit-scrollbar-thumb,
+.dark ::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
+  border-radius: 6px;
+  border: 2px solid #1f2937;
+  background-clip: padding-box;
+}
+.dark::-webkit-scrollbar-thumb:hover,
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: #6b7280;
+}

@@ -639,7 +639,7 @@ function Toggle({
         <span
           className={
             enabled
-              ? "inline-block h-4 w-4 translate-x-4 transform rounded-full bg-white shadow transition"
+              ? "inline-block h-4 w-4 translate-x-4.5 transform rounded-full bg-white shadow transition"
               : "inline-block h-4 w-4 translate-x-0.5 transform rounded-full bg-white shadow transition"
           }
         />

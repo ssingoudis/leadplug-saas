@@ -45,6 +45,15 @@ export const VariableNode = Node.create({
   selectable: true,
   draggable: true,
 
+  // Aufgabe 53: token → Label-Map für dynamische Feld-Variablen (answer.<key>).
+  // Der EmailEditor reicht die Funnel-Feld-Labels pro Instanz via .configure({ extraLabels }) rein,
+  // damit Chips wie "answer.vorname" als "Vorname" statt roh angezeigt werden.
+  addOptions() {
+    return {
+      extraLabels: {} as Record<string, string>,
+    }
+  },
+
   addAttributes() {
     return {
       name: {
@@ -68,6 +77,7 @@ export const VariableNode = Node.create({
   },
 
   addNodeView() {
+    const extraLabels = (this.options.extraLabels ?? {}) as Record<string, string>
     return ({ node }) => {
       const attrs = node.attrs as VariableAttrs
       const dom = document.createElement('span')
@@ -84,7 +94,7 @@ export const VariableNode = Node.create({
       dom.style.userSelect = 'none'
       dom.style.cursor = 'grab'
       dom.title = 'Ziehen zum Verschieben, klicken + Backspace zum Löschen'
-      dom.textContent = humanLabel(attrs.name)
+      dom.textContent = extraLabels[attrs.name] ?? humanLabel(attrs.name)
       return { dom }
     }
   },
