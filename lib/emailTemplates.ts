@@ -118,18 +118,8 @@ function resolveVar(name: string, ctx: TemplateContext): string {
   if (name.startsWith('contact.')) {
     return ctx.contact[name.slice('contact.'.length)] ?? ''
   }
-  if (name.startsWith('funnel.')) {
-    const key = name.slice('funnel.'.length)
-    switch (key) {
-      case 'name':              return ctx.tenantConfig.companyName ?? ''
-      case 'email':             return ctx.tenantConfig.publicEmail ?? ''
-      case 'phone':             return ctx.tenantConfig.phone ?? ''
-      case 'success_message':   return ctx.tenantConfig.funnel.successMessage ?? ''
-      case 'response_message':  return ctx.tenantConfig.funnel.responseMessage ?? ''
-      case 'slug':              return ctx.tenantConfig.slug ?? ''
-      default:                  return ''
-    }
-  }
+  // Aufgabe 52: funnel.*-Variablen (Firmenname/E-Mail/Telefon etc.) entfernt — Mails nutzen nur
+  // Lead-Daten. {{funnel.*}} degradiert sauber zu '' (fällt durch zum return '' am Ende).
   if (name.startsWith('answer.')) {
     return ctx.answers[name.slice('answer.'.length)] ?? ''
   }
@@ -274,13 +264,7 @@ export const AVAILABLE_TOKENS = {
     { token: 'contact.email',   label: 'Lead-E-Mail',  description: 'E-Mail-Adresse des Leads' },
     { token: 'contact.telefon', label: 'Lead-Telefon', description: 'Telefonnummer des Leads' },
   ],
-  funnel: [
-    { token: 'funnel.name',             label: 'Firmenname',     description: 'Firmenname des Funnels' },
-    { token: 'funnel.email',            label: 'Firmen-E-Mail',  description: 'Public E-Mail des Funnels' },
-    { token: 'funnel.phone',            label: 'Firmen-Telefon', description: 'Telefon des Funnels' },
-    { token: 'funnel.success_message',  label: 'Dankestext',     description: 'Dankestext nach Submit' },
-    { token: 'funnel.response_message', label: 'Antworttext',    description: 'Antwort-Text "Wir melden uns binnen..."' },
-  ],
+  // Aufgabe 52: funnel-Gruppe (Firmen-Variablen) entfernt — Mails nutzen nur Lead-Daten + Zeit.
   meta: [
     { token: 'submitted_at', label: 'Zeitstempel', description: 'Datum/Uhrzeit des Submits' },
   ],

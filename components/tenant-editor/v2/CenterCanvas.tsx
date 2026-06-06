@@ -51,10 +51,6 @@ export function CenterCanvas({
   const theme = buildTheme(state);
   const funnel = buildFunnelConfig(state);
 
-  const resolvedCompanyName = state.footerCompanyName || companyName || "Muster GmbH";
-  const resolvedEmail = state.footerEmail || "info@muster.de";
-  const resolvedPhone = state.footerPhone || "+49 123 456789";
-
   // initialStep berechnen — mapped die Selection auf den Widget-Step.
   // Widget-Steps: 0..visibleCount-1 = Fragen, visibleCount = Kontakt, danach intern Success.
   const visibleCount = questions.length;
@@ -191,9 +187,6 @@ export function CenterCanvas({
                   funnel={funnel}
                   questions={questions}
                   contactFields={state.contactFields}
-                  companyName={resolvedCompanyName}
-                  publicEmail={resolvedEmail}
-                  publicPhone={resolvedPhone}
                   initialStep={initialStep}
                   initialSubmitted={initialSubmitted}
                   previewHighlight={isTestMode ? "" : selectedFieldRef}

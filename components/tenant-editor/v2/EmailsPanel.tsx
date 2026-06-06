@@ -36,13 +36,13 @@ function makeDemoSubs(): SubscriptionRow[] {
       recipient_type: "customer",
       recipient_value: null,
       delay_minutes: 0,
-      subject: 'Ihre Anfrage bei <span data-variable="funnel.name">{{funnel.name}}</span>',
+      subject: 'Ihre Anfrage ist eingegangen',
       body_html:
         '<p>Vielen Dank, <span data-variable="contact.name">{{contact.name}}</span>!</p>' +
         '<p>Wir haben Ihre Anfrage erhalten und melden uns binnen 24 Stunden bei Ihnen zurück.</p>' +
         '<div data-magic-section="answers_overview"></div>' +
-        '<p>Bei Rückfragen erreichen Sie uns unter <span data-variable="funnel.email">{{funnel.email}}</span>.</p>' +
-        '<p>Beste Grüße<br><span data-variable="funnel.name">{{funnel.name}}</span></p>',
+        '<p>Bei Rückfragen antworten Sie einfach auf diese E-Mail.</p>' +
+        '<p>Beste Grüße</p>',
       from_local: null,
       is_active: true,
       created_at: now,
@@ -54,12 +54,12 @@ function makeDemoSubs(): SubscriptionRow[] {
       recipient_type: "customer",
       recipient_value: null,
       delay_minutes: 4320,
-      subject: 'Erinnerung: Ihre Anfrage bei <span data-variable="funnel.name">{{funnel.name}}</span>',
+      subject: 'Erinnerung: Ihre Anfrage',
       body_html:
         '<p>Hallo <span data-variable="contact.name">{{contact.name}}</span>,</p>' +
         '<p>vor ein paar Tagen haben Sie eine Anfrage bei uns gestellt. Sind noch Fragen offen?</p>' +
         '<p>Wir helfen gerne weiter — antworten Sie einfach auf diese E-Mail oder rufen Sie uns an.</p>' +
-        '<p>Beste Grüße<br><span data-variable="funnel.name">{{funnel.name}}</span></p>',
+        '<p>Beste Grüße</p>',
       from_local: null,
       is_active: true,
       created_at: now,
@@ -355,9 +355,7 @@ function buildPreviewConfig(state: EditorState, funnelSlug: string): TenantConfi
     funnelId:          undefined,
     slug:              funnelSlug,
     companyName:       state.funnelName || "Beispiel-Firma",
-    publicEmail:       state.footerEmail || "info@example.com",
     notificationEmail: state.notificationEmail || "inbox@example.com",
-    phone:             state.footerPhone || "",
     theme: {
       primaryColor:        state.primaryColor || "#4F46E5",
       textColor:           state.textColor,
@@ -377,7 +375,6 @@ function buildPreviewConfig(state: EditorState, funnelSlug: string): TenantConfi
       privacyPolicyUrl:     state.privacyPolicyUrl || undefined,
       answersOverviewLabel: state.answersOverviewLabel || "Angaben im Überblick",
       showAnswersOverview:  state.showAnswersOverview,
-      footerText:           state.footerText,
     },
     billingModel:    "per_month",
     leadPrice:       0,
@@ -410,14 +407,13 @@ function buildMockAnswers(questions: QuestionConfig[]): Record<string, string> {
 // Default-Werte für neue Subscription
 // ---------------------------------------------------------------------------
 
-const DEFAULT_NEW_SUBJECT =
-  '<span data-variable="funnel.name">{{funnel.name}}</span> — wir haben Ihre Anfrage erhalten';
+const DEFAULT_NEW_SUBJECT = 'Wir haben Ihre Anfrage erhalten';
 
 const DEFAULT_NEW_BODY =
   '<p>Hallo <span data-variable="contact.name">{{contact.name}}</span>,</p>' +
   '<p>vielen Dank für Ihre Anfrage! Wir melden uns zeitnah bei Ihnen zurück.</p>' +
   '<p>Bei Rückfragen erreichen Sie uns unter <span data-variable="funnel.email">{{funnel.email}}</span>.</p>' +
-  '<p>Beste Grüße<br><span data-variable="funnel.name">{{funnel.name}}</span></p>';
+  '<p>Beste Grüße</p>';
 
 // ---------------------------------------------------------------------------
 // Main Component
