@@ -161,8 +161,6 @@ export function TenantFunnelClient({ config }: Props) {
       theme={config.theme}
       funnel={config.funnel}
       questions={config.questions}
-      contactFields={config.contactFields}
-      skipSubmitStep={config.skipSubmitStep}
       redirectUrl={config.redirectUrl}
       onSubmit={handleSubmit}
       onAnswersChange={handleAnswersChange}

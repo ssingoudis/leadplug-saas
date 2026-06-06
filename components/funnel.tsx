@@ -195,7 +195,6 @@ interface FunnelProps {
   theme?: Partial<FunnelTheme>;
   funnel: FunnelConfig;
   questions: QuestionConfig[];
-  contactFields: ContactFieldConfig[];
   initialSubmitted?: boolean;
   initialStep?: number;
   previewHighlight?: string; // Editor-only: hebt das gerade bearbeitete Element hervor
@@ -211,7 +210,8 @@ interface FunnelProps {
   onReorderOptions?: (fromIdx: number, toIdx: number) => void;
   onDuplicateOption?: (idx: number) => void;
   onDeleteOption?: (idx: number) => void;
-  // Partial-Submissions: feuert (debounced) wenn answers oder contactData sich ändern.
+  // Partial-Submissions: feuert (debounced) wenn answers sich ändern (contact ist seit
+  // Aufgabe 52D immer {} — Lead-Daten kommen aus den Karten-Antworten).
   // Live-Mode: TenantFunnelClient POSTet das an /api/track-progress.
   // Editor-Mode: undefined → kein Tracking.
   onAnswersChange?: (data: { answers: Record<string, string>; contact: Record<string, string> }) => void;
@@ -226,8 +226,6 @@ interface FunnelProps {
     contact: Record<string, string>;
     honeypot: string;
   }) => void;
-  // Aufgabe 35: wenn true, kein Submit-Schritt — Funnel feuert /api/submit direkt nach letzter Frage.
-  skipSubmitStep?: boolean;
   // Aufgabe 39: End-Screen-Redirect-Modus. Wenn gesetzt, Widget redirected nach Submit auf diese URL.
   redirectUrl?: string;
   // Polish: Custom-Karte leer → Builder rendert inline "+ Feld hinzufügen"-Button im Canvas, bubble up
@@ -238,7 +236,6 @@ export function Funnel({
   theme: themeOverrides,
   funnel,
   questions,
-  contactFields,
   initialSubmitted,
   initialStep,
   previewHighlight,
@@ -254,7 +251,6 @@ export function Funnel({
   onAnswersChange,
   onPageAdvanced,
   onSubmit,
-  skipSubmitStep = false,
   redirectUrl,
   onAddCustomFieldRequest,
 }: FunnelProps) {
@@ -330,15 +326,6 @@ export function Funnel({
   };
 
   // ---------------------------------------------------------------------------
-  // Derived contact field config
-  // Nur sichtbare Felder, sortiert nach sort_order.
-  // ---------------------------------------------------------------------------
-
-  const visibleContactFields = contactFields
-    .filter((f) => f.visible)
-    .sort((a, b) => a.sort_order - b.sort_order);
-
-  // ---------------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------------
 
@@ -355,38 +342,26 @@ export function Funnel({
 
   const [answers, setAnswers] = useState<Record<string, string>>(initialAnswers ?? {});
 
-  // Kontaktdaten als freies Record — Keys entsprechen ContactFieldConfig.key.
-  const [contactData, setContactData] = useState<Record<string, string>>({});
-
-  const [isSubmitted,    setIsSubmitted]    = useState(initialSubmitted ?? false);
-  const [errors,         setErrors]         = useState<Record<string, string>>({});
-  const [honeypot,       setHoneypot]       = useState("");
-  const [hasTriedSubmit, setHasTriedSubmit] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(initialSubmitted ?? false);
+  const [honeypot,    setHoneypot]    = useState("");
 
   // ---------------------------------------------------------------------------
   // Derived state
   // ---------------------------------------------------------------------------
 
-  // Aufgabe 35: im Skip-Mode entfällt der Kontakt-Step — totalSteps = nur Fragen.
-  const totalSteps      = visibleQuestions.length + (skipSubmitStep ? 0 : 1);
-  const isContactStep   = !skipSubmitStep && currentStep === visibleQuestions.length;
+  const totalSteps      = visibleQuestions.length;
   const progress        = ((currentStep + 1) / Math.max(totalSteps, 1)) * 100;
   const currentQuestion = visibleQuestions[currentStep];
   const isLastQuestion  = currentStep === visibleQuestions.length - 1;
 
-  // Alle sichtbaren Pflichtfelder müssen einen gültigen Wert haben.
-  const isValid = visibleContactFields
-    .filter((f) => f.required)
-    .every((f) => !validateContactField(f, contactData[f.key] ?? ""));
-
   // Aufgabe 38: Custom-Multi-Field-Page (kind="custom") wird wie ein Multi-Field-Step behandelt.
-  const isCustomStep     = !isContactStep && currentQuestion?.kind === "custom";
+  const isCustomStep     = currentQuestion?.kind === "custom";
   // Aufgabe 39: Welcome-Page = Intro mit Button, Statement = Info ohne Input.
-  const isWelcomeStep    = !isContactStep && currentQuestion?.kind === "welcome";
-  const isStatementStep  = !isContactStep && currentQuestion?.questionType === "statement";
+  const isWelcomeStep    = currentQuestion?.kind === "welcome";
+  const isStatementStep  = currentQuestion?.questionType === "statement";
   // single_choice auto-advances on click; all other types (incl. custom/welcome/rating/scale/statement) need an explicit Weiter button.
-  const isChoiceType     = !isContactStep && !isCustomStep && !isWelcomeStep && currentQuestion?.questionType === "single_choice";
-  const showWeiterButton = !isContactStep && !isChoiceType;
+  const isChoiceType     = !isCustomStep && !isWelcomeStep && currentQuestion?.questionType === "single_choice";
+  const showWeiterButton = !isChoiceType;
 
   const currentAnswer      = currentQuestion ? (answers[currentQuestion.id] ?? "") : "";
   const isQuestionRequired = (currentQuestion?.config as TextConfig)?.required !== false;
@@ -476,9 +451,9 @@ export function Funnel({
         ? { ...answers, [extraAnswer.questionId]: extraAnswer.value }
         : answers;
       setIsSubmitted(true);
-      onSubmit?.({ answers: finalAnswers, contact: contactData, honeypot });
+      onSubmit?.({ answers: finalAnswers, contact: {}, honeypot });
     },
-    [answers, contactData, honeypot, onSubmit],
+    [answers, honeypot, onSubmit],
   );
 
   // Single-choice: sets answer, then advances after 250ms so the selected color
@@ -491,7 +466,7 @@ export function Funnel({
       if (editMode) return;
       setAnswers((prev) => ({ ...prev, [questionId]: value }));
       setTimeout(() => {
-        if (skipSubmitStep && isLastQuestion) {
+        if (isLastQuestion) {
           autoFinish({ questionId, value });
           return;
         }
@@ -500,13 +475,13 @@ export function Funnel({
           setSlideDirection(1);
           setCurrentStep((prev) => prev + 1);
           if (advancingPageId) {
-            const snapshot = { answers: { ...answers, [questionId]: value }, contact: contactData };
+            const snapshot = { answers: { ...answers, [questionId]: value }, contact: {} };
             onPageAdvanced?.(advancingPageId, snapshot);
           }
         }
       }, 250);
     },
-    [currentStep, visibleQuestions.length, editMode, skipSubmitStep, isLastQuestion, autoFinish, currentQuestion, onPageAdvanced],
+    [currentStep, visibleQuestions.length, editMode, isLastQuestion, autoFinish, currentQuestion, onPageAdvanced],
   );
 
   // Goes back one step. The zurück button is disabled at step 0.
@@ -523,7 +498,7 @@ export function Funnel({
   // Aufgabe 40 Polish: nach Step-Advance feuert onPageAdvanced(pageId) — triggert after_page-Webhooks.
   const handleNext = useCallback(() => {
     if (editMode) return;
-    if (skipSubmitStep && isLastQuestion) {
+    if (isLastQuestion) {
       autoFinish();
       return;
     }
@@ -531,9 +506,9 @@ export function Funnel({
     setSlideDirection(1);
     setCurrentStep((prev) => prev + 1);
     if (advancingPageId) {
-      onPageAdvanced?.(advancingPageId, { answers, contact: contactData });
+      onPageAdvanced?.(advancingPageId, { answers, contact: {} });
     }
-  }, [editMode, skipSubmitStep, isLastQuestion, autoFinish, currentQuestion, onPageAdvanced, answers, contactData]);
+  }, [editMode, isLastQuestion, autoFinish, currentQuestion, onPageAdvanced, answers]);
 
   // Multiple-choice: toggles `value` in/out of the comma-separated answer string for `questionId`.
   const handleToggleMultiple = useCallback(
@@ -549,33 +524,6 @@ export function Funnel({
     },
     [editMode],
   );
-
-  // Setzt den Wert eines Kontaktfelds und löscht seinen Fehler.
-  const handleContactChange = useCallback((key: string, value: string) => {
-    setContactData((prev) => ({ ...prev, [key]: value }));
-    setErrors((prev) => ({ ...prev, [key]: "" }));
-  }, []);
-
-  // Contact form submit: validates all visible fields, sets error state, calls handleSubmit on success.
-  const handleFormSubmit = (e: { preventDefault(): void }) => {
-    e.preventDefault();
-    setHasTriedSubmit(true);
-    const newErrors: Record<string, string> = {};
-    visibleContactFields.forEach((f) => {
-      const err = validateContactField(f, contactData[f.key] ?? "");
-      if (err) newErrors[f.key] = err;
-    });
-    setErrors(newErrors);
-    if (Object.keys(newErrors).length === 0) {
-      handleSubmit();
-    }
-  };
-
-  // Fires the onSubmit prop with current answers + contact data, then shows the success screen.
-  const handleSubmit = () => {
-    setIsSubmitted(true);
-    onSubmit?.({ answers, contact: contactData, honeypot });
-  };
 
   // Aufgabe 39: End-Screen-Redirect-Modus. Wenn redirectUrl gesetzt UND wir gerade
   // submitted haben → kurze Success-Anzeige (~1500ms damit Tracking-Pixel feuern können),
@@ -609,22 +557,20 @@ export function Funnel({
     if (!onStepChange) return;
     if (isSubmitted) {
       onStepChange("success", 0);
-    } else if (isContactStep) {
-      onStepChange("contact", 0);
     } else {
       onStepChange("question", currentStep);
     }
-  }, [currentStep, isContactStep, isSubmitted, onStepChange]);
+  }, [currentStep, isSubmitted, onStepChange]);
 
   // Partial-Submissions: feuere debounced 600ms nach jeder Antwort-Änderung den onAnswersChange-Callback.
   // In editMode oder ohne Callback: No-Op. Submitted-State auch No-Op (dort wird /api/submit aufgerufen).
   useEffect(() => {
     if (!onAnswersChange || editMode || isSubmitted) return;
     const timer = window.setTimeout(() => {
-      onAnswersChange({ answers, contact: contactData });
+      onAnswersChange({ answers, contact: {} });
     }, 600);
     return () => window.clearTimeout(timer);
-  }, [answers, contactData, onAnswersChange, editMode, isSubmitted]);
+  }, [answers, onAnswersChange, editMode, isSubmitted]);
 
   // Sends the widget height to the parent frame after every layout change via postMessage.
   // The ResizeObserver re-fires automatically on step transitions and after fonts load.
@@ -803,9 +749,22 @@ export function Funnel({
         {/* Floating-Nav existiert nicht mehr (siehe BackButton-Bar am Content-Ende),
             also gleichmäßiges Padding ohne übergroßen Bottom-Buffer. */}
         <div className="p-4 @md:p-8 overflow-hidden">
+          {/* Honeypot — invisible to humans, filled by bots → rejected server-side.
+              Aufgabe 52D: lebt jetzt am Widget-Root (immer gerendert), seit das
+              Kontaktformular abgeschafft ist. honeypot-State + onSubmit-Check bleiben. */}
+          <input
+            type="text"
+            name="website"
+            value={honeypot}
+            onChange={(e) => setHoneypot(e.target.value)}
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 0, height: 0 }}
+          />
           <AnimatePresence mode="wait" custom={slideDirection} initial={false}>
             <motion.div
-              key={`${isContactStep ? "contact" : "q"}-${currentStep}`}
+              key={`q-${currentStep}`}
               custom={slideDirection}
               variants={STEP_SLIDE_VARIANTS}
               initial="enter"
@@ -815,9 +774,8 @@ export function Funnel({
             >
 
             {/* --------------------------------------------------------------
-                Question step
+                Question step (Kontaktformular-Zweig in Aufgabe 52D entfernt)
             -------------------------------------------------------------- */}
-            {!isContactStep ? (
               <div>
                 {/* Aufgabe 39: Welcome-Step hat keinen Step-Counter (Intro-Step vor dem eigentlichen Flow) */}
                 {!isWelcomeStep && (
@@ -1675,476 +1633,11 @@ export function Funnel({
                 })()}
               </div>
 
-            ) : (
-
-              /* --------------------------------------------------------------
-                  Contact form (last step) — dynamisch aus contactFields, Typeform-Style
-              -------------------------------------------------------------- */
-              <form onSubmit={handleFormSubmit}>
-                {/* Step-Counter für den letzten Schritt (ohne Pfeil) */}
-                <div className="mb-3 flex items-center gap-2 font-mono text-xs" style={{ color: theme.primaryColor }}>
-                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded px-1.5 text-[11px] font-semibold" style={{ backgroundColor: theme.primaryColor, color: "#ffffff" }}>
-                    {visibleQuestions.length + 1}
-                  </span>
-                </div>
-                <EditableText
-                  as="h1"
-                  editMode={editMode}
-                  fieldRef="contact_form_title"
-                  initial={funnel.title}
-                  placeholder="Überschrift Kontaktformular…"
-                  onCommit={onTextChange}
-                  className="text-2xl @md:text-3xl @lg:text-[2rem] font-light mb-2 leading-snug text-left"
-                  style={{ color: theme.textColor, ...editCursor, ...hl("contact_form_title") }}
-                />
-                <EditableText
-                  as="p"
-                  editMode={editMode}
-                  fieldRef="contact_form_subtitle"
-                  initial={funnel.contactFormSubtitle}
-                  placeholder="Untertitel Kontaktformular…"
-                  onCommit={onTextChange}
-                  className="text-sm @md:text-base font-light mb-6 leading-relaxed text-left"
-                  style={{ color: theme.textColorMuted, ...editCursor, ...hl("contact_form_subtitle") }}
-                />
-
-                {/* Honeypot — invisible to humans, filled by bots → rejected server-side */}
-                <input
-                  type="text"
-                  name="website"
-                  value={honeypot}
-                  onChange={(e) => setHoneypot(e.target.value)}
-                  tabIndex={-1}
-                  autoComplete="off"
-                  aria-hidden="true"
-                  style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 0, height: 0 }}
-                />
-
-                {/* Dynamische Felder aus contact_fields DB-Config */}
-                <div className="space-y-4 mb-4">
-                  {visibleContactFields.map((field) => {
-
-                    // --- Radio (z.B. Anrede) ---
-                    if (field.type === "radio" && field.options) {
-                      return (
-                        <div
-                          key={field.key}
-                          data-edit-field={`contact_field_${field.key}`}
-                          style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}
-                        >
-                          <div className="flex gap-5">
-                            {field.options.map((option) => (
-                              <label key={option} className="flex items-center gap-2 cursor-pointer min-h-11">
-                                <div
-                                  className="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors"
-                                  style={{ borderColor: contactData[field.key] === option ? theme.primaryColor : theme.borderColor }}
-                                >
-                                  {contactData[field.key] === option && (
-                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: theme.primaryColor }} />
-                                  )}
-                                </div>
-                                <span style={{ color: theme.textColor }}>{option}</span>
-                                <input
-                                  type="radio"
-                                  name={field.key}
-                                  value={option}
-                                  checked={contactData[field.key] === option}
-                                  onChange={(e) => handleContactChange(field.key, e.target.value)}
-                                  className="sr-only"
-                                />
-                              </label>
-                            ))}
-                          </div>
-                          {errors[field.key] && (
-                            <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors[field.key]}</p>
-                          )}
-                        </div>
-                      );
-                    }
-
-                    // Polish-Runde 2 — Multi-Choice
-                    if (field.type === "multi_choice" && field.options) {
-                      const selectedVals = (contactData[field.key] ?? "").split(",").map((s) => s.trim()).filter(Boolean);
-                      return (
-                        <div key={field.key} data-edit-field={`contact_field_${field.key}`} style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}>
-                          <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
-                            {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
-                          </label>
-                          <div className="flex flex-col gap-2">
-                            {field.options.map((opt) => {
-                              const isChecked = selectedVals.includes(opt);
-                              return (
-                                <label
-                                  key={opt}
-                                  className="flex items-center gap-3 cursor-pointer px-3 py-2 border transition-colors"
-                                  style={{
-                                    borderColor: isChecked ? theme.primaryColor : theme.tintColor,
-                                    backgroundColor: isChecked
-                                      ? `color-mix(in srgb, ${theme.primaryColor} 12%, transparent)`
-                                      : theme.tintColor,
-                                    borderRadius: theme.borderRadius,
-                                  }}
-                                >
-                                  <span
-                                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border"
-                                    style={{
-                                      borderColor: isChecked ? theme.primaryColor : theme.borderColor,
-                                      backgroundColor: isChecked ? theme.primaryColor : theme.backgroundColor,
-                                    }}
-                                  >
-                                    {isChecked && <Check size={12} strokeWidth={3} color="#ffffff" />}
-                                  </span>
-                                  <input
-                                    type="checkbox"
-                                    checked={isChecked}
-                                    onChange={() => {
-                                      const next = isChecked
-                                        ? selectedVals.filter((s) => s !== opt)
-                                        : [...selectedVals, opt];
-                                      handleContactChange(field.key, next.join(","));
-                                    }}
-                                    className="sr-only"
-                                  />
-                                  <span className="text-sm font-light" style={{ color: theme.textColor }}>{opt}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                          {errors[field.key] && <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors[field.key]}</p>}
-                        </div>
-                      );
-                    }
-
-                    // Polish-Runde 2 — Slider
-                    if (field.type === "slider") {
-                      const min = field.sliderMin ?? 0;
-                      const max = field.sliderMax ?? 100;
-                      const step = field.sliderStep ?? 1;
-                      const fallback = field.sliderDefault ?? Math.floor((min + max) / 2);
-                      const raw = contactData[field.key];
-                      const current = raw ? Number(raw) : fallback;
-                      return (
-                        <div key={field.key} data-edit-field={`contact_field_${field.key}`} style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}>
-                          <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
-                            {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
-                          </label>
-                          <p className="text-2xl font-bold font-mono mb-2 leading-none" style={{ color: theme.primaryColor }}>
-                            {current.toLocaleString("de-DE")}{" "}
-                            {field.sliderUnit && (
-                              <span className="text-lg font-light opacity-80">{field.sliderUnit}</span>
-                            )}
-                          </p>
-                          <input
-                            type="range"
-                            min={min}
-                            max={max}
-                            step={step}
-                            value={current}
-                            onChange={(e) => handleContactChange(field.key, e.target.value)}
-                            className="w-full cursor-pointer"
-                            style={{ accentColor: theme.primaryColor }}
-                          />
-                          <div className="mt-1 flex justify-between text-[11px] font-light" style={{ color: theme.textColorMuted }}>
-                            <span>{min}{field.sliderUnit ? ` ${field.sliderUnit}` : ""}</span>
-                            <span>{max}{field.sliderUnit ? ` ${field.sliderUnit}` : ""}</span>
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    // Polish-Runde 2 — Rating
-                    if (field.type === "rating") {
-                      const maxStars = Math.max(1, Math.min(10, field.ratingMaxStars ?? 5));
-                      const currentVal = Number(contactData[field.key]) || 0;
-                      return (
-                        <div key={field.key} data-edit-field={`contact_field_${field.key}`} style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}>
-                          <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
-                            {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
-                          </label>
-                          <RatingStars
-                            maxStars={maxStars}
-                            value={currentVal}
-                            onChange={(v) => handleContactChange(field.key, String(v))}
-                            primaryColor={theme.primaryColor}
-                            mutedColor={theme.textColorMuted}
-                          />
-                          {errors[field.key] && <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors[field.key]}</p>}
-                        </div>
-                      );
-                    }
-
-                    // Polish-Runde 2 — Scale
-                    if (field.type === "scale") {
-                      const min = field.scaleMin ?? 0;
-                      const max = field.scaleMax ?? 10;
-                      return (
-                        <div key={field.key} data-edit-field={`contact_field_${field.key}`} style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}>
-                          <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
-                            {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
-                          </label>
-                          <ScaleButtons
-                            min={min}
-                            max={max}
-                            value={contactData[field.key] ?? ""}
-                            onChange={(v) => handleContactChange(field.key, v)}
-                            labelLeft={field.scaleLabelLeft}
-                            labelRight={field.scaleLabelRight}
-                            primaryColor={theme.primaryColor}
-                            tintColor={theme.tintColor}
-                            tintColorHover={theme.tintColorHover}
-                            textColor={theme.textColor}
-                            mutedColor={theme.textColorMuted}
-                            borderRadius={theme.borderRadius}
-                          />
-                          {errors[field.key] && <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors[field.key]}</p>}
-                        </div>
-                      );
-                    }
-
-                    // Aufgabe 39 Polish — Long-Text
-                    if (field.type === "long_text") {
-                      return (
-                        <div key={field.key} data-edit-field={`contact_field_${field.key}`} style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}>
-                          <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
-                            {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
-                          </label>
-                          <textarea
-                            placeholder={field.placeholder ?? ""}
-                            value={contactData[field.key] ?? ""}
-                            rows={3}
-                            onChange={(e) => handleContactChange(field.key, e.target.value)}
-                            className="w-full bg-transparent border-b text-base @md:text-lg py-2 outline-none transition-colors resize-none font-light"
-                            style={{ borderColor: errors[field.key] ? "#ef4444" : theme.underlineColor, color: theme.textColor }}
-                            onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
-                            onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
-                          />
-                          {errors[field.key] && <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors[field.key]}</p>}
-                        </div>
-                      );
-                    }
-
-                    // Aufgabe 39 Polish — Number
-                    if (field.type === "number") {
-                      return (
-                        <div key={field.key} data-edit-field={`contact_field_${field.key}`} style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}>
-                          <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
-                            {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
-                          </label>
-                          <input
-                            type="number"
-                            placeholder={field.placeholder ?? ""}
-                            value={contactData[field.key] ?? ""}
-                            onChange={(e) => handleContactChange(field.key, e.target.value)}
-                            className="w-full bg-transparent border-b text-base @md:text-lg py-2 outline-none transition-colors font-light"
-                            style={{ borderColor: errors[field.key] ? "#ef4444" : theme.underlineColor, color: theme.textColor }}
-                            onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
-                            onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
-                          />
-                          {errors[field.key] && <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors[field.key]}</p>}
-                        </div>
-                      );
-                    }
-
-                    // Aufgabe 39 Polish — Date
-                    if (field.type === "date") {
-                      return (
-                        <div key={field.key} data-edit-field={`contact_field_${field.key}`} style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}>
-                          <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
-                            {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
-                          </label>
-                          <DateInlinePicker
-                            value={contactData[field.key] ?? ""}
-                            onChange={(iso) => handleContactChange(field.key, iso)}
-                            primaryColor={theme.primaryColor}
-                            textColor={theme.textColor}
-                            borderRadius={theme.borderRadius}
-                          />
-                          {errors[field.key] && <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors[field.key]}</p>}
-                        </div>
-                      );
-                    }
-
-                    // Aufgabe 39 Polish — Checkbox
-                    if (field.type === "checkbox") {
-                      const isChecked = contactData[field.key] === "true";
-                      return (
-                        <div key={field.key} data-edit-field={`contact_field_${field.key}`} style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}>
-                          <label
-                            className="flex items-center gap-3 cursor-pointer px-3 py-3 border transition-colors"
-                            style={{
-                              borderColor: isChecked ? theme.primaryColor : theme.borderColor,
-                              backgroundColor: isChecked ? `color-mix(in srgb, ${theme.primaryColor} 12%, transparent)` : theme.inputBgColor,
-                              borderRadius: theme.borderRadius,
-                            }}
-                          >
-                            <span
-                              className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors"
-                              style={{
-                                borderColor: isChecked ? theme.primaryColor : theme.borderColor,
-                                backgroundColor: isChecked ? theme.primaryColor : theme.backgroundColor,
-                              }}
-                            >
-                              {isChecked && <Check size={12} strokeWidth={3} color="#ffffff" />}
-                            </span>
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={(e) => handleContactChange(field.key, e.target.checked ? "true" : "false")}
-                              className="sr-only"
-                            />
-                            <span className="text-sm @md:text-base leading-snug font-light" style={{ color: theme.textColor }}>
-                              {renderLabelWithLinks(field.checkboxLabel || field.label, theme.primaryColor)}
-                            </span>
-                          </label>
-                          {errors[field.key] && <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors[field.key]}</p>}
-                        </div>
-                      );
-                    }
-
-                    // Aufgabe 39 Polish — Dropdown
-                    if (field.type === "dropdown" && field.options) {
-                      return (
-                        <div key={field.key} data-edit-field={`contact_field_${field.key}`} style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}>
-                          <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
-                            {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
-                          </label>
-                          <select
-                            value={contactData[field.key] ?? ""}
-                            onChange={(e) => handleContactChange(field.key, e.target.value)}
-                            className="w-full bg-transparent border-b text-base @md:text-lg py-2 outline-none transition-colors font-light"
-                            style={{ borderColor: errors[field.key] ? "#ef4444" : theme.underlineColor, color: theme.textColor }}
-                            onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
-                            onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
-                          >
-                            <option value="">Bitte wählen…</option>
-                            {field.options.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}
-                          </select>
-                          {errors[field.key] && <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors[field.key]}</p>}
-                        </div>
-                      );
-                    }
-
-                    // --- Text / Email / Tel / PLZ / Name (Default-Fallback) ---
-                    // Aufgabe 40 Polish: first_name/last_name/full_name werden wie text gerendert
-                    // mit sensible default-Platzhaltern.
-                    const submitInputType =
-                      field.type === "email" ? "email" :
-                      field.type === "tel"   ? "tel"   :
-                      "text";
-                    const submitDefaultPlaceholder =
-                      field.type === "first_name" ? "Vorname" :
-                      field.type === "last_name"  ? "Nachname" :
-                      field.type === "full_name"  ? "Voller Name" :
-                      "";
-                    return (
-                      <div
-                        key={field.key}
-                        data-edit-field={`contact_field_${field.key}`}
-                        style={{ ...editCursor, ...hl(`contact_field_${field.key}`) }}
-                      >
-                        <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
-                          {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
-                        </label>
-                        <input
-                          type={submitInputType}
-                          placeholder={field.placeholder || submitDefaultPlaceholder}
-                          value={contactData[field.key] ?? ""}
-                          onChange={(e) => handleContactChange(field.key, e.target.value)}
-                          className="w-full bg-transparent border-b text-base @md:text-lg py-2 outline-none transition-colors font-light"
-                          style={{
-                            borderColor:     errors[field.key] ? "#ef4444" : theme.underlineColor,
-                            color:           theme.textColor,
-                          }}
-                          onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
-                          onBlur={(e) => {
-                            if (hasTriedSubmit) {
-                              const err = validateContactField(field, e.currentTarget.value);
-                              setErrors((prev) => ({ ...prev, [field.key]: err }));
-                              e.currentTarget.style.borderColor = err ? "#ef4444" : theme.underlineColor;
-                            } else {
-                              e.currentTarget.style.borderColor = theme.underlineColor;
-                            }
-                          }}
-                        />
-                        {errors[field.key] && (
-                          <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors[field.key]}</p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Privacy notice */}
-                <p
-                  className="text-xs mb-4 leading-relaxed"
-                  data-edit-field="privacy_text"
-                  style={{ color: theme.textColorMuted, ...editCursor, ...hl("privacy_text") }}
-                >
-                  {funnel.privacyText}
-                  {funnel.privacyPolicyUrl ? (
-                    <>
-                      {" "}(siehe{" "}
-                      <a
-                        href={
-                          funnel.privacyPolicyUrl.startsWith("http")
-                            ? funnel.privacyPolicyUrl
-                            : `https://${funnel.privacyPolicyUrl}`
-                        }
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: theme.primaryColor }}
-                        className="underline"
-                      >
-                        Datenschutzhinweise
-                      </a>
-                      )
-                    </>
-                  ) : null}
-                  . Widerruf jederzeit möglich.
-                </p>
-
-                {/* Bottom-Action-Bar: Back + Submit als Einheit (Typeform-Pattern). */}
-                <div className="flex items-center gap-2">
-                  {currentStep > 0 && (
-                    <BackButton onClick={handleBack} theme={theme} editMode={editMode} />
-                  )}
-                  <button
-                    type={editMode ? "button" : "submit"}
-                    data-edit-field="submit_button"
-                    className="inline-flex items-center px-5 py-2 text-sm font-medium text-white shadow-sm transition-colors"
-                    style={{
-                      backgroundColor: theme.primaryColor,
-                      borderRadius:    theme.borderRadius,
-                      cursor:          isValid ? "pointer" : "not-allowed",
-                      opacity:         isValid ? 1 : 0.65,
-                      ...hl("submit_button"),
-                    }}
-                    onMouseEnter={(e) => {
-                      if (isValid) e.currentTarget.style.backgroundColor = theme.primaryColorHover;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = theme.primaryColor;
-                    }}
-                  >
-                    <EditableText
-                      as="span"
-                      editMode={editMode}
-                      fieldRef="submit_button"
-                      initial={funnel.submitButtonLabel}
-                      placeholder="Button-Text…"
-                      onCommit={onTextChange}
-                      className="text-sm @md:text-base"
-                    />
-                  </button>
-                </div>
-              </form>
-            )}
-
             {/* Bottom-Action-Bar: NUR wenn OK gezeigt wird (Pairing-Pattern).
                 Single-Choice (auto-advance) zeigt unten keinen Solo-Back-Button mehr —
                 der wirkte "verloren". Stattdessen rendert oben ein Text-Link „← Zurück".
                 So bleibt Navigation universal, ohne orphan-Buttons. */}
-            {!isContactStep && showWeiterButton && (
+            {showWeiterButton && (
               <div className="mt-6 flex items-center gap-2">
                 {currentStep > 0 && (
                   <BackButton onClick={handleBack} theme={theme} editMode={editMode} />
@@ -2160,7 +1653,7 @@ export function Funnel({
                 >
                   {isWelcomeStep
                     ? (currentQuestion?.config as { buttonLabel?: string })?.buttonLabel || "Los geht's →"
-                    : skipSubmitStep && isLastQuestion ? "Absenden" : "OK"}
+                    : isLastQuestion ? "Absenden" : "OK"}
                 </button>
               </div>
             )}

@@ -6,9 +6,14 @@
 > Für architektonisches Verständnis und Zweck der Tabellen: siehe [`project-overview.md`](project-overview.md) §4.
 > Bei jeder neuen Migration: dieses File neu regenerieren.
 
-- **Stand:** 2026-06-01 (nach Aufgabe 46 — submissions.notes)
-- **Letzte Migration:** `aufgabe_46_submissions_notes`
+- **Stand:** 2026-06-06 (nach Aufgabe 52D — Submit-Page/Kontaktformular-Cleanup)
+- **Letzte angewendete Migration:** `aufgabe_52d_delete_orphaned_submit_pages` (gestaged, NOCH NICHT angewendet: `aufgabe_52d_drop_skip_submit_step`)
 - **Tabellen:** 12 in `public` (alle mit RLS aktiviert)
+
+> **Aufgabe 52 Migrationen (2026-06-06):**
+> - `aufgabe_52_drop_footer_columns` (52B): `funnels.footer_company_name/email/phone/text` GEDROPPT (Footer abgeschafft).
+> - `aufgabe_52d_delete_orphaned_submit_pages` (52D): `DELETE FROM pages WHERE page_type='submit'` — 12 orphaned Submit-Pages + 52 Fields (via `fields.page_id` ON DELETE CASCADE). Reines Data-Cleanup; Kontaktformular abgeschafft, der Code ignoriert submit-Pages.
+> - `aufgabe_52d_drop_skip_submit_step` (52D): `ALTER TABLE funnels DROP COLUMN skip_submit_step` — **vorbereitet, NOCH NICHT angewendet** (erst nach dem Code-Deploy anwenden, sonst 500 im alten `getTenantConfig`-SELECT). UP+DOWN im Repo.
 
 > **Aufgabe 46 Migration `aufgabe_46_submissions_notes` (2026-06-01):** `submissions.notes text NULL` — freie interne CRM-Notiz pro Lead. Additiv, kein Backfill, kein CHECK (Längen-Cap app-seitig). Status-Workflow (`submissions.status`) unverändert, nur UI-Relabel auf Neu/Kontaktiert/Erledigt.
 > _(Hinweis: Header-Migrationsliste in §5 ist nicht lückenlos nachgepflegt — `aufgabe_43_funnel_tracking` + dieses 46 sind in den Tabellen-Sektionen erfasst.)_
@@ -69,9 +74,9 @@ Verwendung: `tenants.billing_model`.
 
 ### `page_type`
 ```
-'question' | 'submit' | 'success'
+'question' | 'submit' | 'success' | 'custom' | 'welcome'
 ```
-Verwendung: `pages.page_type`. Eingeführt mit Migration `aufgabe_30a_pages_fields_add`.
+Verwendung: `pages.page_type`. Eingeführt mit `aufgabe_30a_pages_fields_add`; `custom` (Aufgabe 38) + `welcome` (Aufgabe 39) ergänzt. **`'submit'` ist seit Aufgabe 52D deprecated** — es werden keine Submit-Pages mehr erzeugt, bestehende wurden per Migration gelöscht. Der Enum-Wert selbst bleibt erhalten (kein Enum-Value-Drop).
 
 ### `field_type`
 ```
@@ -308,10 +313,10 @@ Das Widget pro Tenant. Ein Tenant kann mehrere haben. Aktuell 12 Zeilen.
 | `answers_overview_label` | text | YES | — |
 | `privacy_text` | text | YES | — |
 | `privacy_policy_url` | text | YES | — |
-| `footer_text` | text | YES | — |
-| `footer_company_name` | text | YES | — |
-| `footer_email` | text | YES | — |
-| `footer_phone` | text | YES | — |
+| `show_answers_overview` | bool | NO | `false` (Aufgabe 51) |
+| `redirect_url` | text | YES | — (Aufgabe 39: Redirect nach Submit statt Success-Page) |
+| `meta_pixel_id` | text | YES | — (Aufgabe 43: Conversion-Tracking) |
+| `google_ads_conversion` | text | YES | — (Aufgabe 43: Conversion-Tracking) |
 | `notification_email` | text | NO | — |
 | `email_sender_local` | text | YES | — |
 | `primary_color` | text | YES | — |
@@ -354,7 +359,7 @@ Das Widget pro Tenant. Ein Tenant kann mehrere haben. Aktuell 12 Zeilen.
 
 ### 3.4 `pages`
 
-Page-Hierarchie pro Funnel. Eingeführt mit Migration `aufgabe_30a_pages_fields_add` (Phase B.5). Pro Funnel: N × question-Pages + 1 × submit-Page + 1 × success-Page. Aktuell 82 Zeilen (12 Funnels × (~5 Fragen + submit + success)).
+Page-Hierarchie pro Funnel. Eingeführt mit Migration `aufgabe_30a_pages_fields_add` (Phase B.5). Pro Funnel (seit Aufgabe 52D): N × question/custom/welcome-Pages + 1 × success-Page — **keine submit-Page mehr** (Kontaktformular abgeschafft; orphaned Submit-Pages in 52D per Migration gelöscht). Aktuell 75 Zeilen.
 
 **Columns:**
 
@@ -362,8 +367,8 @@ Page-Hierarchie pro Funnel. Eingeführt mit Migration `aufgabe_30a_pages_fields_
 |---|---|---|---|---|
 | `id` | uuid | NO | `gen_random_uuid()` | PK |
 | `funnel_id` | uuid | NO | — | FK → `funnels.id` ON DELETE CASCADE |
-| `page_type` | `page_type` | NO | — | question / submit / success |
-| `sort_order` | int4 | NO | — | CHECK >= 0. Question-Pages 0..N-1, Submit-Page N, Success-Page N+1 |
+| `page_type` | `page_type` | NO | — | question / custom / welcome / success (`submit` deprecated seit 52D) |
+| `sort_order` | int4 | NO | — | CHECK >= 0. Step-Pages (question/custom/welcome) 0..N-1, Success-Page N |
 | `config` | jsonb | NO | `'{}'::jsonb` | Page-spezifische Config. B.5: leer (Texte bleiben auf funnels-Tabelle). Future-use für Per-Page-Overrides |
 | `created_at` | timestamptz | NO | `now()` | |
 | `updated_at` | timestamptz | NO | `now()` | via Trigger |

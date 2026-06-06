@@ -109,16 +109,23 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
-## Aktuell: Aufgabe 52 — Firmen-/Footer-Cleanup (A–C fertig, Teil D offen) (2026-06-06)
+## Aufgabe 52 — Firmen-/Footer-Cleanup + Submit-Page-Rip-out (A–D komplett) (2026-06-06)
 
-**Status:** A–C committed + auf `main` gemergt (Merge-Commit `d46aee3`). Type-Check + Build grün. **Teil D (Submit-Page komplett rausreißen) ist OFFEN** — bewusst auf eine frische Session vertagt (große, geld-pfad-nahe OP). Detaillierter chirurgischer Plan: `~/.claude/plans/a-es-soll-misty-whisper.md` (Handoff-Block oben). Memory-Pointer: `project_aufgabe52_teild`.
+**Status:** A–C gemergt (Merge-Commit `d46aee3`). **Teil D fertig** — Submit-Page/Kontaktformular restlos aus Code **und DB** entfernt. Type-Check + Production-Build grün, Widget-Smoke-Test bestanden (Honeypot am Root + persistiert über Step-Wechsel, 0 `<form>`, Karten/A-B-C-D rendern, keine Console-Errors).
 
 **Erledigt (A–C):**
 - **A — Firmen-E-Mail-Variablen raus:** `{{funnel.name/email/phone}}` aus `AVAILABLE_TOKENS` + `resolveVar` + Default-Templates ([emailTemplates.ts](../lib/emailTemplates.ts), [EmailsPanel.tsx](../components/tenant-editor/v2/EmailsPanel.tsx)). Mails nutzen nur Lead-Daten (`{{contact.*}}`/`{{answer.*}}`).
-- **B — Footer-Daten weg:** tote Code-Kette (`resolveFooterText`, Widget-Props `companyName/publicEmail/publicPhone`, CenterCanvas-Platzhalter, `footer*` aus types/editorUtils/defaults/EmailsPanel). **DB-Spalten `funnels.footer_company_name/email/phone/text` GEDROPPT** (`aufgabe_52_drop_footer_columns`, Inhalt war nur Test-/Demo-Daten). `companyName` bleibt (aus `tenant.company_name` — E-Mail-Absender/Webhook/Page-Title).
-- **C — Render-Fallbacks:** `footerText`-Fallback weg, `answersOverviewLabel` → Editor-Default; `successMessage` behält bewusst „never-bare"-Default.
+- **B — Footer-Daten weg:** tote Code-Kette + **DB-Spalten `funnels.footer_company_name/email/phone/text` GEDROPPT** (`aufgabe_52_drop_footer_columns`). `companyName` bleibt (aus `tenant.company_name`).
+- **C — Render-Fallbacks:** `footerText`-Fallback weg, `answersOverviewLabel` → Editor-Default; `successMessage` behält „never-bare"-Default.
 
-**Offen — Teil D (siehe Plan-File):** Kontaktformular restlos rausreißen: Widget-Kontakt-Render-Zweig + `isContactStep` + `contactData`, Honeypot an Widget-Root relocaten, SubmitProps + Submit-Pill + `SelectedStep.submit`, `contactFields` aus dem gesamten Geld-Pfad (verhaltens-neutral, da für skip-mode bereits inert; `deriveContactFromAnswers` aus Karten-Antworten bleibt). `skip_submit_step`-Spalte bleibt (vestigial).
+**Erledigt (D — Submit-Page-Rip-out):** Das inerte Kontaktformular-Gerüst ist restlos entfernt (kein `contactFields` mehr im Code).
+- **Widget** ([funnel.tsx](../components/funnel.tsx)): Kontaktformular-Zweig (~465 Zeilen `<form>`) + `isContactStep` + `contactData`/`errors`/`hasTriedSubmit` + `handleContactChange/handleFormSubmit/handleSubmit` + `isValid` + `visibleContactFields` raus. **Honeypot an den Widget-Root relocatet** (immer gerendert, persistiert über Step-Wechsel — Bot-Schutz bleibt). Submit jetzt für ALLE Funnels am Funnel-Ende (`autoFinish`); `skipSubmitStep`-Prop + `contactFields`-Prop entfernt.
+- **Geld-Pfad:** `enrichContact` gelöscht ([tracking.ts](../lib/tracking.ts)); `/api/submit` + `/api/track-progress` leiten contact nur noch aus `deriveContactFromAnswers` (Karten-Antworten) ab, Card-Backstop-Validierung bleibt. `resolveAnswerEntries` (webhooks) + `collectFieldMetas` (tracking) ohne contactFields-Loop (Custom-Karten-Pfad `pushContactFieldEntry` bleibt). `contactFields` aus `getTenantConfig` + `TenantConfig`/`EditorState`.
+- **Editor:** `SubmitProps` + Submit-Pill + `SelectedStep.submit` + Submit-Branch in CenterCanvas + Contact-Field-Handler in EditorShell + `SUBMIT_META` raus; Submit-Page-Erzeugung aus `editorStateToPagesAndFields` entfernt; `dbToEditorState` liest keine Submit-Page mehr.
+- **E-Mails:** `contact_summary`-Magic-Section ersatzlos entfernt (renderContactSummary + Token + Block-Picker-Eintrag + Default-Template). Gespeicherte contact_summary-Blöcke in Alt-Mails degradieren sauber zu `''`. Der reale Funnel (`leadplug`) nutzt `answers_overview` → unberührt.
+- **DB-Cleanup (auf User-Wunsch nachgezogen):** orphaned Submit-Pages **gelöscht** — Migration `aufgabe_52d_delete_orphaned_submit_pages` (`DELETE FROM pages WHERE page_type='submit'`, 12 Pages + 52 Fields via `ON DELETE CASCADE`). Vorher geprüft: 0 Webhooks zeigen darauf, `submissions` haben keinen FK auf `pages` → leadplugs 28 Leads unberührt (verifiziert). Rollback: `..._DOWN.sql` (exakte Re-INSERTs) + tägliches Backup. **DSGVO-Bonus:** die Alt-Demo-Submit-Felder (Name/E-Mail/Telefon-Defs, keine echten Leads) sind damit auch weg.
+- **`skip_submit_step` voll abgebaut (User-Wunsch):** alle `skipSubmitStep`/`skip_submit_step`-Code-Referenzen raus (Typen, `getTenantConfig` SELECT+Return, `editorStateToFunnelRow`, `dbToEditorState`, `DEFAULT_EDITOR_STATE`, `EmailsPanel`-Preview). **Spalten-DROP als Migration `aufgabe_52d_drop_skip_submit_step` vorbereitet, aber NOCH NICHT angewendet** — Deploy-Reihenfolge: erst 52D mergen+deployen (sonst liest der alte Prod-Code eine gedroppte Spalte → 500), DANN den DROP anwenden. UP+DOWN liegen im Repo.
+- **Bewusst gelassen:** Die 11 Alt-Demo/Test-Funnels (0 echte Leads) verlieren ihr Kontaktformular — **pre-launch freigegeben** (User-Entscheidung 2026-06-06).
 
 ---
 

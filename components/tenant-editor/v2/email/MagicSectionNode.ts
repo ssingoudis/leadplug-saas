@@ -7,8 +7,8 @@ import { AVAILABLE_TOKENS } from '@/lib/emailTemplates'
 //
 // Block-Atom für strukturierte Inhalts-Bausteine:
 //   • answers_overview — Antworten-Box (mit optional anpassbarem Heading)
-//   • contact_summary  — Kontakt-Box   (mit optional anpassbarem Heading)
 //   • dashboard_button — Legacy, wird über den anpassbaren CtaButtonNode abgelöst.
+//   (Aufgabe 52D: contact_summary entfernt — Submit-Page/Kontaktformular abgeschafft.)
 //                        Rendert weiter für Backwards-Compat (Backfill-Mails).
 //
 // X-Button zum Entfernen. draggable=true → Tenant kann den Block via Drag im
@@ -42,10 +42,9 @@ const LABEL_MAP: Record<string, { label: string; description: string }> = (() =>
 
 const DEFAULT_HEADING_PLACEHOLDER: Record<string, string> = {
   answers_overview: 'Standard: "Ihre Angaben im Überblick"',
-  contact_summary:  'Standard: "Kontaktdaten"',
 }
 
-const SUPPORTS_HEADING = new Set(['answers_overview', 'contact_summary'])
+const SUPPORTS_HEADING = new Set(['answers_overview'])
 
 export const MagicSectionNode = Node.create({
   name: 'magicSection',
@@ -124,7 +123,7 @@ export const MagicSectionNode = Node.create({
         dom.appendChild(desc)
       }
 
-      // Heading-Input (nur für answers_overview + contact_summary)
+      // Heading-Input (nur für answers_overview)
       let headingInput: HTMLInputElement | null = null
       if (supportsHeading) {
         const headingRow = document.createElement('div')

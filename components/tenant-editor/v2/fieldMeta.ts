@@ -21,8 +21,6 @@ const DROPDOWN_PILL =
   "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800";
 const NUMERIC_PILL =
   "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800";
-const SUBMIT_PILL =
-  "bg-pink-100 text-pink-700 border-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-800";
 const SUCCESS_PILL =
   "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800";
 const CUSTOM_PILL =
@@ -65,12 +63,7 @@ export const QUESTION_TYPE_OPTIONS: { value: QuestionType; label: string }[] = (
   Object.keys(QUESTION_META) as QuestionType[]
 ).map((t) => ({ value: t, label: QUESTION_META[t].label }));
 
-export const SUBMIT_META: FieldMeta = {
-  label: "Kontaktformular",
-  category: "submit",
-  pillClass: SUBMIT_PILL,
-  icon: "▦",
-};
+// Aufgabe 52D: SUBMIT_META entfernt (Submit-Page/Kontaktformular abgeschafft).
 
 export const SUCCESS_META: FieldMeta = {
   label: "Erfolgsseite",

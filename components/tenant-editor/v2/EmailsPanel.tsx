@@ -75,7 +75,6 @@ function makeDemoSubs(): SubscriptionRow[] {
       body_html:
         '<p><strong>Neue Anfrage eingegangen!</strong></p>' +
         '<p>Eingegangen: <span data-variable="submitted_at">{{submitted_at}}</span></p>' +
-        '<div data-magic-section="contact_summary"></div>' +
         '<div data-magic-section="answers_overview"></div>' +
         '<div data-magic-section="dashboard_button"></div>',
       from_local: null,
@@ -379,8 +378,6 @@ function buildPreviewConfig(state: EditorState, funnelSlug: string): TenantConfi
     billingModel:    "per_month",
     leadPrice:       0,
     questions,
-    contactFields:   state.contactFields,
-    skipSubmitStep:  state.skipSubmitStep,
   };
 }
 
@@ -1204,28 +1201,16 @@ function PreviewPane({
     let completedAt: string | null;
 
     if (previewLead) {
-      // ECHTE Lead-Daten: nehme contact + answers aus der Submission.
-      // Fülle fehlende ContactField-Keys mit "—" auf damit contact_summary nicht
-      // leere Zeilen rendert.
+      // ECHTE Lead-Daten: contact + answers aus der Submission.
+      // Aufgabe 52D: kein contactFields-Fill mehr (Submit-Page abgeschafft).
       effectiveContact = { ...previewLead.contact };
-      for (const f of previewConfig.contactFields) {
-        if (!effectiveContact[f.key]) effectiveContact[f.key] = "—";
-      }
       effectiveAnswers = previewLead.answers;
       createdAt   = previewLead.created_at;
       completedAt = previewLead.completed_at;
       submittedAt = new Date(previewLead.completed_at ?? previewLead.created_at);
     } else {
-      // MOCK-Daten
-      const mockContact: Record<string, string> = { ...MOCK_CONTACT };
-      for (const f of previewConfig.contactFields) {
-        if (mockContact[f.key]) continue;
-        if (f.type === "email") mockContact[f.key] = "max.mustermann@example.com";
-        else if (f.type === "tel") mockContact[f.key] = "+49 170 1234567";
-        else if (f.type === "plz") mockContact[f.key] = "10115";
-        else mockContact[f.key] = "Beispiel";
-      }
-      effectiveContact = mockContact;
+      // MOCK-Daten (Aufgabe 52D: contact = MOCK_CONTACT; Lead-Felder kommen aus den Karten-Antworten)
+      effectiveContact = { ...MOCK_CONTACT };
       effectiveAnswers = buildMockAnswers(previewConfig.questions);
       const now = new Date();
       createdAt   = now.toISOString();

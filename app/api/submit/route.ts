@@ -6,7 +6,6 @@ import {
   isRateLimited,
   logHoneypot,
   deriveContactFromAnswers,
-  enrichContact,
 } from '@/lib/tracking'
 import { validateContactField } from '@/lib/validateContactField'
 import { triggerOnSubmit, type SubmissionSnapshot } from '@/lib/webhooks'
@@ -72,7 +71,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
   }
 
-  const { tenant, answers, contact } = body
+  const { tenant, answers } = body
   const sourceUrl = typeof body.sourceUrl === 'string' ? body.sourceUrl : ''
   const userAgent = typeof body.userAgent === 'string' ? body.userAgent : ''
   // sessionId vom Widget — falls keine kommt (legacy clients), generieren wir eine,
@@ -88,42 +87,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Tenant not found' }, { status: 404 })
   }
 
-  // Aufgabe 35: Skip-Mode → keine Submit-Page-Validation (Submit-Page wird vom Widget gar nicht gerendert).
-  // Stattdessen contact aus answers synthetisieren (Pattern-Match auf Email/Telefon/Name), damit
-  // Pricing-Logik (contact->>'email') + Mail-Versand weiter funktionieren.
-  // Aufgabe 40 Polish: contact-Anreicherung läuft IMMER über beide Wege.
-  // deriveContactFromAnswers extrahiert Name/Email/Telefon aus answers
-  // (= Question-Pages + Custom-Karten-Felder).
-  // enrichContact extrahiert dieselben aus dem Submit-Page-contact.
-  // Submit-Mode wie Skip-Mode profitieren so von Custom-Karte mit Name-Fields.
-  const skipMode = tenantConfig.skipSubmitStep ?? false
-  const fromAnswers = deriveContactFromAnswers(answers, tenantConfig)
-  const fromContact = enrichContact(contact, tenantConfig)
-  const effectiveContact = { ...fromAnswers, ...fromContact }
+  // Aufgabe 52D: Submit-Page/Kontaktformular abgeschafft. contact wird ausschließlich aus den
+  // Karten-Antworten abgeleitet (deriveContactFromAnswers extrahiert Name/Email/Telefon aus
+  // answers — Question-Pages + Custom-Karten-Felder). Pricing-Logik (contact->>'email') +
+  // Mail-Versand funktionieren damit weiter.
+  const effectiveContact = deriveContactFromAnswers(answers, tenantConfig)
 
-  // 5. Dynamische Feldvalidierung
-  if (!skipMode) {
-    // Submit-Page-Modus (Alt-Funnels): Pflicht-Felder der Submit-Page prüfen.
-    const visibleRequired = tenantConfig.contactFields.filter((f) => f.visible && f.required)
-    for (const field of visibleRequired) {
-      const err = validateContactField(field, effectiveContact[field.key] ?? '')
+  // 5. Card-Backstop-Validierung: Pflicht-Felder der Kontaktdaten-Karten serverseitig prüfen —
+  // zweites Schloss gegen Direct-POST. Das Widget erzwingt dieselben Regeln, echte Leads
+  // passieren also immer (kein Geld-Verlust).
+  for (const q of tenantConfig.questions) {
+    if (q.kind !== 'custom' || !q.customFields) continue
+    for (const field of q.customFields) {
+      if (!field.visible || !field.required) continue
+      const err = validateContactField(field, answers[field.key] ?? '')
       if (err) {
         return NextResponse.json({ error: `Validation failed: ${field.key}` }, { status: 400 })
-      }
-    }
-  } else {
-    // Aufgabe 51 Backstop: im skip-mode (kein Kontaktformular) kommen die Lead-Daten aus den
-    // Card-Feldern (answers, keyed by field_key). Pflicht-Card-Felder serverseitig prüfen —
-    // zweites Schloss gegen Direct-POST. Das Widget erzwingt dieselben Regeln, echte Leads
-    // passieren also immer (kein Geld-Verlust).
-    for (const q of tenantConfig.questions) {
-      if (q.kind !== 'custom' || !q.customFields) continue
-      for (const field of q.customFields) {
-        if (!field.visible || !field.required) continue
-        const err = validateContactField(field, answers[field.key] ?? '')
-        if (err) {
-          return NextResponse.json({ error: `Validation failed: ${field.key}` }, { status: 400 })
-        }
       }
     }
   }

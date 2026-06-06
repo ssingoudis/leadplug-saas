@@ -1,65 +1,7 @@
-import type { ContactFieldConfig, EditorState, EditorQuestion } from "@/types";
+import type { EditorState, EditorQuestion } from "@/types";
 
-export const DEFAULT_CONTACT_FIELDS: ContactFieldConfig[] = [
-  // Aufgabe 40 Polish: alle Default-Felder als "touched" markiert — Keys sind
-  // bewusst kanonisch ("name", "email", "telefon", "plz", "anrede") und sollen
-  // nicht durch Label-Edit überschrieben werden.
-  {
-    _clientId: "default_anrede",
-    key: "anrede",
-    type: "radio",
-    label: "Anrede",
-    options: ["Herr", "Frau"],
-    required: false,
-    visible: false,
-    sort_order: 0,
-    _keyTouched: true,
-  },
-  {
-    _clientId: "default_name",
-    key: "name",
-    type: "text",
-    label: "Vor- und Nachname",
-    placeholder: "Max Mustermann",
-    required: true,
-    visible: true,
-    sort_order: 1,
-    _keyTouched: true,
-  },
-  {
-    _clientId: "default_email",
-    key: "email",
-    type: "email",
-    label: "E-Mail-Adresse",
-    placeholder: "max@beispiel.de",
-    required: true,
-    visible: true,
-    sort_order: 2,
-    _keyTouched: true,
-  },
-  {
-    _clientId: "default_telefon",
-    key: "telefon",
-    type: "tel",
-    label: "Telefonnummer",
-    placeholder: "+49 123 456789",
-    required: false,
-    visible: true,
-    sort_order: 3,
-    _keyTouched: true,
-  },
-  {
-    _clientId: "default_plz",
-    key: "plz",
-    type: "plz",
-    label: "Postleitzahl",
-    placeholder: "12345",
-    required: false,
-    visible: false,
-    sort_order: 4,
-    _keyTouched: true,
-  },
-];
+// Aufgabe 52D: DEFAULT_CONTACT_FIELDS entfernt (Submit-Page/Kontaktformular abgeschafft).
+// Lead-Erfassung läuft über Kontaktdaten-Karten (siehe makeContactCard).
 
 // Aufgabe 38: Factory für neue Custom-Multi-Field-Pages.
 // Aufgabe 39: Welcome-Screen-Factory. Optionaler Intro-Step am Anfang des Funnels.
@@ -250,10 +192,6 @@ export const DEFAULT_EDITOR_STATE: EditorState = {
   notificationEmail: "",
   emailSenderLocal: "",
   isActive: true,
-  // Aufgabe 51: Kontaktformular abgeschafft — neue Funnels laufen im skip-mode (Submit am
-  // Funnel-Ende, Lead-Erfassung via Kontaktdaten-Card). Keine Submit-Page-Felder mehr.
-  skipSubmitStep: true,
   redirectUrl: "",
   questions: [DEFAULT_QUESTION],
-  contactFields: [],
 };

@@ -167,7 +167,6 @@ export function buildSignatureHeader(bodyJson: string, secret: string, now = Dat
 function resolveAnswerEntries(
   rawAnswers: Record<string, string>,
   questions: QuestionConfig[],
-  contactFields: ContactFieldConfig[],
 ): {
   array: Array<{
     key: string
@@ -223,17 +222,9 @@ function resolveAnswerEntries(
     }
   }
 
-  // Submit-Page Contact-Fields — bei /api/submit landen die in submissions.contact,
-  // NICHT in answers. Wir mergen sie für Konsistenz in das Payload-Format.
-  // Wenn ein Funnel skip_submit_step=true hat, sind die Contact-Felder leer und
-  // werden bereits aus answers via deriveContactFromAnswers synthetisiert (siehe
-  // /api/submit) — der Caller liefert uns dann effectiveContact als contact.
-  for (const f of contactFields) {
-    if (!f.visible) continue
-    const raw = rawAnswers[f.key]  // contactFields werden NICHT in answers gespeichert,
-    if (raw === undefined || raw === '') continue  // aber wenn doch (Custom-Page) → mit-übernehmen
-    pushContactFieldEntry(f, raw, array, flat)
-  }
+  // Aufgabe 52D: Submit-Page-contactFields-Loop entfernt (Kontaktformular abgeschafft).
+  // Die Lead-Felder kommen aus den Karten-Antworten (Custom-Pages, oben via
+  // pushContactFieldEntry). pushContactFieldEntry bleibt — Karten nutzen es.
 
   return { array, flat }
 }
@@ -282,7 +273,7 @@ export function buildPayload(
   const rawContact = submission.contact ?? {}
   const rawAnswers = submission.answers ?? {}
   const effectiveContact = { ...deriveContactFromAnswers(rawAnswers), ...rawContact }
-  const { array, flat } = resolveAnswerEntries(rawAnswers, tenantConfig.questions, tenantConfig.contactFields)
+  const { array, flat } = resolveAnswerEntries(rawAnswers, tenantConfig.questions)
 
   return {
     event: eventType,

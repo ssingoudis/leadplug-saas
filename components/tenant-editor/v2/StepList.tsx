@@ -21,7 +21,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import type { EditorState, EditorQuestion, QuestionType, ContactFieldConfig } from "@/types";
 import { StepPill } from "./StepPill";
-import { questionMeta, SUBMIT_META, SUCCESS_META, CUSTOM_META, WELCOME_META } from "./fieldMeta";
+import { questionMeta, SUCCESS_META, CUSTOM_META, WELCOME_META } from "./fieldMeta";
 import type { SelectedStep } from "./types";
 import { isSameStep } from "./types";
 import { AddElementModal } from "./AddElementModal";
@@ -167,17 +167,8 @@ export function StepList({
       <div className="flex flex-col gap-1.5 border-t border-gray-200 px-3 py-4 dark:border-gray-800">
         <SectionHeading>Abschluss</SectionHeading>
 
-        {/* Aufgabe 51: Kontaktformular-Pill nur noch bei Alt-Funnels (skip=false). Neue Funnels
-            erfassen Leads via Kontaktdaten-Card; „Abschluss" = nur noch der End-Screen. */}
-        {!state.skipSubmitStep && (
-          <StepPill
-            number={null}
-            title={state.funnelTitle || "Kontaktformular"}
-            meta={SUBMIT_META}
-            selected={selected.kind === "submit"}
-            onClick={() => onSelect({ kind: "submit" })}
-          />
-        )}
+        {/* Aufgabe 52D: Kontaktformular-Pill entfernt (Submit-Page abgeschafft).
+            „Abschluss" = nur noch der End-Screen. Lead-Erfassung via Kontaktdaten-Card. */}
         <StepPill
           number={null}
           title={state.successMessage || "Erfolgsseite"}
