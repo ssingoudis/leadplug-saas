@@ -109,7 +109,20 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
-## Aktuell: Aufgabe 51 — Kontaktformular abgeschafft + Success-Seite + Nummerierung (2026-06-06)
+## Aktuell: Aufgabe 52 — Firmen-/Footer-Cleanup (A–C fertig, Teil D offen) (2026-06-06)
+
+**Status:** A–C committed + auf `main` gemergt (Merge-Commit `d46aee3`). Type-Check + Build grün. **Teil D (Submit-Page komplett rausreißen) ist OFFEN** — bewusst auf eine frische Session vertagt (große, geld-pfad-nahe OP). Detaillierter chirurgischer Plan: `~/.claude/plans/a-es-soll-misty-whisper.md` (Handoff-Block oben). Memory-Pointer: `project_aufgabe52_teild`.
+
+**Erledigt (A–C):**
+- **A — Firmen-E-Mail-Variablen raus:** `{{funnel.name/email/phone}}` aus `AVAILABLE_TOKENS` + `resolveVar` + Default-Templates ([emailTemplates.ts](../lib/emailTemplates.ts), [EmailsPanel.tsx](../components/tenant-editor/v2/EmailsPanel.tsx)). Mails nutzen nur Lead-Daten (`{{contact.*}}`/`{{answer.*}}`).
+- **B — Footer-Daten weg:** tote Code-Kette (`resolveFooterText`, Widget-Props `companyName/publicEmail/publicPhone`, CenterCanvas-Platzhalter, `footer*` aus types/editorUtils/defaults/EmailsPanel). **DB-Spalten `funnels.footer_company_name/email/phone/text` GEDROPPT** (`aufgabe_52_drop_footer_columns`, Inhalt war nur Test-/Demo-Daten). `companyName` bleibt (aus `tenant.company_name` — E-Mail-Absender/Webhook/Page-Title).
+- **C — Render-Fallbacks:** `footerText`-Fallback weg, `answersOverviewLabel` → Editor-Default; `successMessage` behält bewusst „never-bare"-Default.
+
+**Offen — Teil D (siehe Plan-File):** Kontaktformular restlos rausreißen: Widget-Kontakt-Render-Zweig + `isContactStep` + `contactData`, Honeypot an Widget-Root relocaten, SubmitProps + Submit-Pill + `SelectedStep.submit`, `contactFields` aus dem gesamten Geld-Pfad (verhaltens-neutral, da für skip-mode bereits inert; `deriveContactFromAnswers` aus Karten-Antworten bleibt). `skip_submit_step`-Spalte bleibt (vestigial).
+
+---
+
+## Aufgabe 51 — Kontaktformular abgeschafft + Success-Seite + Nummerierung (2026-06-06)
 
 **Status:** Branch `feature/aufgabe-51-kontaktformular-abschaffen`. Type-Check durchgehend grün, Production-Build erfolgreich. Iterativ mit Stavros abgenommen. **1 additiver DB-Change** (`funnels.show_answers_overview`, direkt auf Prod mit User-Go). **Alte Funnels dürfen brechen (pre-launch) → keine Migration.**
 
