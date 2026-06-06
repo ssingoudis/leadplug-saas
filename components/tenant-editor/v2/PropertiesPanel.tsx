@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Trash2, ChevronDown, Plus } from "lucide-react";
 import {
   DndContext,
@@ -23,7 +23,6 @@ import type { EditorState, EditorQuestion, ContactFieldConfig, QuestionType } fr
 import type { SelectedStep } from "./types";
 import {
   questionMeta,
-  SUBMIT_META,
   SUCCESS_META,
   CUSTOM_META,
   WELCOME_META,
@@ -42,19 +41,11 @@ interface Props {
   onPatch: (patch: Partial<EditorState>) => void;
   onPatchQuestion: (index: number, patch: Partial<EditorQuestion>) => void;
   onDeleteQuestion: (index: number) => void;
-  // Submit-Page contact field operations — Aufgabe 40 Polish: clientId statt key als Identifier
-  onPatchContactField: (clientId: string, patch: Partial<ContactFieldConfig>) => void;
-  onAddContactField: (type: ContactFieldConfig["type"]) => void;
-  onDeleteContactField: (clientId: string) => void;
-  onReorderContactFields: (next: ContactFieldConfig[]) => void;
   // Aufgabe 38: Custom-Multi-Field-Page Field-Operationen (pro page index + clientId)
   onPatchCustomField: (pageIndex: number, clientId: string, patch: Partial<ContactFieldConfig>) => void;
   onAddCustomField: (pageIndex: number, type: ContactFieldConfig["type"]) => void;
   onDeleteCustomField: (pageIndex: number, clientId: string) => void;
   onReorderCustomFields: (pageIndex: number, next: ContactFieldConfig[]) => void;
-  // C.1c WYSIWYG-Edit: bidirektionaler Sync mit CenterCanvas-Selektion
-  selectedFieldRef: string;
-  onSelectFieldRef: (ref: string) => void;
 }
 
 export function PropertiesPanel({
@@ -63,16 +54,10 @@ export function PropertiesPanel({
   onPatch,
   onPatchQuestion,
   onDeleteQuestion,
-  onPatchContactField,
-  onAddContactField,
-  onDeleteContactField,
-  onReorderContactFields,
   onPatchCustomField,
   onAddCustomField,
   onDeleteCustomField,
   onReorderCustomFields,
-  selectedFieldRef,
-  onSelectFieldRef,
 }: Props) {
   // Aufgabe 38 + 39: Step-Kind aus state.questions[].kind ableiten
   const currentStep = selected.kind === "question" ? state.questions[selected.questionIndex] : null;
@@ -105,17 +90,6 @@ export function PropertiesPanel({
           index={selected.questionIndex}
           onPatchQuestion={onPatchQuestion}
           onDelete={() => onDeleteQuestion(selected.questionIndex)}
-        />
-      ) : selected.kind === "submit" ? (
-        <SubmitProps
-          state={state}
-          onPatch={onPatch}
-          onPatchContactField={onPatchContactField}
-          onAddContactField={onAddContactField}
-          onDeleteContactField={onDeleteContactField}
-          onReorderContactFields={onReorderContactFields}
-          selectedFieldRef={selectedFieldRef}
-          onSelectFieldRef={onSelectFieldRef}
         />
       ) : (
         <SuccessProps state={state} onPatch={onPatch} />
@@ -203,158 +177,6 @@ function QuestionProps({ state, index, onPatchQuestion, onDelete }: QuestionProp
         title="Frage löschen?"
         message="Diese Aktion kann nur durch Verwerfen ungespeicherter Änderungen rückgängig gemacht werden."
       />
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   Submit (Kontaktformular) — Page-Level + Multi-Field-Liste
-   ───────────────────────────────────────────────────────────────────────────── */
-
-function SubmitProps({
-  state,
-  onPatch,
-  onPatchContactField,
-  onAddContactField,
-  onDeleteContactField,
-  onReorderContactFields,
-  selectedFieldRef,
-  onSelectFieldRef,
-}: {
-  state: EditorState;
-  onPatch: (patch: Partial<EditorState>) => void;
-  onPatchContactField: (clientId: string, patch: Partial<ContactFieldConfig>) => void;
-  onAddContactField: (type: ContactFieldConfig["type"]) => void;
-  onDeleteContactField: (clientId: string) => void;
-  onReorderContactFields: (next: ContactFieldConfig[]) => void;
-  selectedFieldRef: string;
-  onSelectFieldRef: (ref: string) => void;
-}) {
-  // Welcher Kontakt-Feld-Key ist momentan expandiert? Abgeleitet aus selectedFieldRef.
-  // Sync mit CenterCanvas: Klick auf "contact_field_<key>" im Center → expand passende Row.
-  // Hinweis: Das hier basiert weiter auf field.key (CenterCanvas kennt nur field.key),
-  // NICHT auf _clientId — daher manuelle Aktualisierung wenn der user den key editiert.
-  const expandedKey = selectedFieldRef.startsWith("contact_field_")
-    ? selectedFieldRef.slice("contact_field_".length)
-    : null;
-  const [showAddPicker, setShowAddPicker] = useState(false);
-
-  // Wenn das expandierte Field gelöscht wurde, Selektion clearen.
-  useEffect(() => {
-    if (expandedKey && !state.contactFields.some((f) => f.key === expandedKey)) {
-      onSelectFieldRef("");
-    }
-  }, [expandedKey, state.contactFields, onSelectFieldRef]);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
-
-  function handleDragEnd(e: DragEndEvent) {
-    const { active, over } = e;
-    if (!over || active.id === over.id) return;
-    // Aufgabe 40 Polish: drag-IDs sind _clientId (stable), nicht field.key (kann sich ändern)
-    const oldIdx = state.contactFields.findIndex((f) => f._clientId === active.id);
-    const newIdx = state.contactFields.findIndex((f) => f._clientId === over.id);
-    if (oldIdx < 0 || newIdx < 0) return;
-    onReorderContactFields(arrayMove(state.contactFields, oldIdx, newIdx));
-  }
-
-  const submitActive = !state.skipSubmitStep;
-
-  return (
-    <div className="flex flex-col">
-      <Header kindLabel={SUBMIT_META.label} kindIcon={SUBMIT_META.icon} pillClass={SUBMIT_META.pillClass} />
-
-      <Section title="Submit-Schritt">
-        <Toggle
-          label="Submit-Schritt aktiviert"
-          enabled={submitActive}
-          onToggle={(next) => onPatch({ skipSubmitStep: !next })}
-        />
-        {!submitActive && (
-          <p className="px-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-            Der Funnel endet nach der letzten Frage und springt direkt zur Erfolgsseite.
-            Lead-Daten (Email, Name, …) musst du als reguläre Fragen einbauen, wenn du sie brauchst.
-            Die Felder unten bleiben gespeichert für später.
-          </p>
-        )}
-      </Section>
-
-      <Section title="Seite">
-        <Field label="Überschrift">
-          <TextInput
-            value={state.funnelTitle}
-            onChange={(v) => onPatch({ funnelTitle: v })}
-            placeholder="z. B. Letzter Schritt!"
-            disabled={!submitActive}
-          />
-        </Field>
-        <Field label="Untertitel">
-          <TextInput
-            value={state.contactFormSubtitle}
-            onChange={(v) => onPatch({ contactFormSubtitle: v })}
-            placeholder="z. B. Wir melden uns innerhalb von 24h."
-            disabled={!submitActive}
-          />
-        </Field>
-        <Field label="Button-Text">
-          <TextInput
-            value={state.submitButtonLabel}
-            onChange={(v) => onPatch({ submitButtonLabel: v })}
-            placeholder="z. B. Jetzt anfragen"
-            disabled={!submitActive}
-          />
-        </Field>
-      </Section>
-
-      <Section title="Felder dieser Seite">
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext
-            items={state.contactFields.map((f) => f._clientId ?? f.key)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="flex flex-col gap-1.5">
-              {state.contactFields.map((f) => (
-                <SortableContactFieldRow
-                  // Aufgabe 40 Polish: stabile _clientId als React + Sortable-ID, NICHT field.key
-                  // (sonst remount bei jeder Key-Änderung während Live-Sync).
-                  key={f._clientId ?? f.key}
-                  field={f}
-                  expanded={expandedKey === f.key}
-                  onToggle={() =>
-                    onSelectFieldRef(expandedKey === f.key ? "" : `contact_field_${f.key}`)
-                  }
-                  onPatch={(patch) => onPatchContactField(f._clientId ?? f.key, patch)}
-                  onDelete={() => onDeleteContactField(f._clientId ?? f.key)}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
-
-        <button
-          type="button"
-          onClick={() => setShowAddPicker(true)}
-          className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:border-primary hover:text-primary dark:border-gray-700 dark:text-gray-400"
-        >
-          <Plus size={14} />
-          Feld hinzufügen
-        </button>
-
-        <AddContactFieldPicker
-          open={showAddPicker}
-          onClose={() => setShowAddPicker(false)}
-          onSelect={(type) => onAddContactField(type)}
-        />
-      </Section>
-
-      <Section>
-        <p className="px-1 text-xs text-gray-400 dark:text-gray-500">
-          Das Kontaktformular ist Pflicht und kann nicht gelöscht werden.
-        </p>
-      </Section>
     </div>
   );
 }

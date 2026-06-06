@@ -214,8 +214,7 @@ export interface TenantConfig {
   billingPrice?: number
 
   questions: QuestionConfig[]
-  contactFields: ContactFieldConfig[]
-  skipSubmitStep: boolean      // Aufgabe 35: wenn true, kein Submit-Schritt — Funnel endet nach letzter Frage direkt auf Success-Page
+  // Aufgabe 52D: contactFields + skipSubmitStep entfernt (Submit-Page/Kontaktformular abgeschafft).
   redirectUrl?: string         // Aufgabe 39: wenn gesetzt, Widget redirected nach Submit auf diese URL statt Success-Page
   metaPixelId?: string         // Aufgabe 43: Meta-Pixel-ID — embed.js feuert fbq('track','Lead') beim Submit
   googleAdsConversion?: string // Aufgabe 43: Google-Ads-Conversion send_to (AW-XXX/Label) — embed.js feuert gtag conversion
@@ -318,12 +317,11 @@ export interface EditorState {
   emailSenderLocal: string    // Lokalteil der Absender-Adresse, z.B. "anfragen"
   // Status
   isActive: boolean
-  // Submit-Schritt
-  skipSubmitStep: boolean      // Aufgabe 35: wenn true, Submit-Page wird übersprungen
+  // Aufgabe 52D: skipSubmitStep entfernt (Submit-Page abgeschafft).
   // Aufgabe 39: End-Screen-Redirect-Modus. Leer = Content-Modus (Success-Page wird gerendert).
   // Wert = window.location.replace nach Submit (Widget zeigt Success-Page kurz und redirected danach).
   redirectUrl: string
   // Inhalte
+  // Aufgabe 52D: contactFields entfernt (Submit-Page/Kontaktformular abgeschafft).
   questions: EditorQuestion[]
-  contactFields: ContactFieldConfig[]
 }

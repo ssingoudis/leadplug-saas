@@ -52,11 +52,10 @@ export function CenterCanvas({
   const funnel = buildFunnelConfig(state);
 
   // initialStep berechnen — mapped die Selection auf den Widget-Step.
-  // Widget-Steps: 0..visibleCount-1 = Fragen, visibleCount = Kontakt, danach intern Success.
-  const visibleCount = questions.length;
+  // Widget-Steps: 0..N-1 = Fragen/Karten, danach intern Success (Submit am Funnel-Ende).
   let initialStep = 0;
   let initialSubmitted = false;
-  let placeholder: "no_questions" | "submit_skipped" | null = null;
+  let placeholder: "no_questions" | null = null;
   // Polish: hidden-Page wird nicht mehr als Placeholder gerendert. Stattdessen rendert das
   // Widget die Karte normal und CenterCanvas wraps mit Opacity + Eye-Off-Badge-Overlay.
   let isCurrentStepHidden = false;
@@ -78,15 +77,6 @@ export function CenterCanvas({
             return Math.max(0, vIdx);
           })()
         : selected.questionIndex;
-    }
-  } else if (selected.kind === "submit") {
-    if (state.skipSubmitStep && !isTestMode) {
-      placeholder = "submit_skipped";
-    } else if (visibleCount === 0 && state.questions.length === 0) {
-      // ohne Fragen springt das Widget intern direkt zu Kontakt — Step 0 ist OK
-      initialStep = 0;
-    } else {
-      initialStep = visibleCount;
     }
   } else if (selected.kind === "success") {
     initialSubmitted = true;
@@ -160,8 +150,6 @@ export function CenterCanvas({
         >
           {placeholder === "no_questions" ? (
             <NoQuestionsPlaceholder />
-          ) : placeholder === "submit_skipped" ? (
-            <SubmitSkippedPlaceholder />
           ) : (
             <div className="relative">
               {/* Polish: Hidden-Page wird normal gerendert, aber ausgegraut + Eye-Off-Badge oben rechts.
@@ -186,7 +174,6 @@ export function CenterCanvas({
                   theme={theme}
                   funnel={funnel}
                   questions={questions}
-                  contactFields={state.contactFields}
                   initialStep={initialStep}
                   initialSubmitted={initialSubmitted}
                   previewHighlight={isTestMode ? "" : selectedFieldRef}
@@ -221,14 +208,3 @@ function NoQuestionsPlaceholder() {
   );
 }
 
-function SubmitSkippedPlaceholder() {
-  return (
-    <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
-      <EmptyState
-        icon={<EyeOff size={22} />}
-        title="Submit-Schritt ist deaktiviert"
-        description="Der Funnel endet nach der letzten Frage und springt direkt zur Erfolgsseite. Aktiviere rechts den Toggle, um das Kontaktformular wiederherzustellen."
-      />
-    </div>
-  );
-}

@@ -5,7 +5,6 @@ import {
   upsertSubmissionProgress,
   logHoneypot,
   deriveContactFromAnswers,
-  enrichContact,
 } from '@/lib/tracking'
 import { triggerOnPageAdvance, type SubmissionSnapshot } from '@/lib/webhooks'
 
@@ -73,7 +72,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
   }
 
-  const { sessionId, tenant, answers, contact } = body
+  const { sessionId, tenant, answers } = body
   const sourceUrl = typeof body.sourceUrl === 'string' ? body.sourceUrl : ''
   const userAgent = typeof body.userAgent === 'string' ? body.userAgent : ''
   // Aufgabe 40 Polish: optionaler Page-Advance-Trigger.
@@ -93,14 +92,9 @@ export async function POST(req: Request) {
   const leadPrice =
     tenantConfig.billingModel === 'per_lead' ? tenantConfig.leadPrice : 0
 
-  // Aufgabe 35: im Skip-Mode (kein Submit-Schritt) bleibt contact aus dem Widget leer.
-  // Damit Pricing-Logik (contact->>'email') auch für Abbrecher trifft, synthetisieren
-  // wir contact aus den answers per Pattern-Match.
-  // Aufgabe 40 Polish: identisch zu /api/submit — Anreicherung läuft über beide Wege
-  // (answers für Custom-Karten-Felder, contact für Submit-Page-Felder).
-  const fromAnswers = deriveContactFromAnswers(answers, tenantConfig)
-  const fromContact = enrichContact(contact, tenantConfig)
-  const effectiveContact = { ...fromAnswers, ...fromContact }
+  // Aufgabe 52D: contact wird aus den Karten-Antworten abgeleitet (Submit-Page abgeschafft).
+  // Damit trifft die Pricing-Logik (contact->>'email') auch für Abbrecher.
+  const effectiveContact = deriveContactFromAnswers(answers, tenantConfig)
 
   const submissionId = await upsertSubmissionProgress({
     sessionId,

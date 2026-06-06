@@ -14,14 +14,9 @@ const TEXT_DEFAULTS = {
   footerText:            '{{company_name}} · {{public_email}}',
 }
 
-const DEFAULT_CONTACT_FIELDS: ContactFieldConfig[] = [
-  { key: 'anrede',  type: 'radio',  label: 'Anrede',           options: ['Herr', 'Frau'], required: true,  visible: true, sort_order: 0 },
-  { key: 'name',    type: 'text',   label: 'Vor- und Nachname', placeholder: 'Vor- und Nachname', required: true,  visible: true, sort_order: 1 },
-  { key: 'telefon', type: 'tel',    label: 'Telefonnummer',     placeholder: 'Telefonnummer',     required: true,  visible: true, sort_order: 2 },
-  { key: 'email',   type: 'email',  label: 'E-Mail',            placeholder: 'E-Mail',            required: true,  visible: true, sort_order: 3 },
-]
+// Aufgabe 52D: DEFAULT_CONTACT_FIELDS entfernt (Submit-Page/Kontaktformular abgeschafft).
 
-// Rückmapping für Submit-Page-Fields → ContactFieldConfig.type (Widget-API stabil halten).
+// Rückmapping field_type → ContactFieldConfig.type — weiter genutzt für Karten-Felder (custom pages).
 function fieldTypeToContactType(ft: string): ContactFieldConfig['type'] {
   switch (ft) {
     case 'short_text':   return 'text'
@@ -196,24 +191,8 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
     }
   })
 
-  // Submit-Page → contactFields[]
-  const submitPage = pages.find((p) => p.page_type === 'submit')
-  const contactFields: ContactFieldConfig[] = submitPage && Array.isArray(submitPage.fields) && submitPage.fields.length > 0
-    ? [...submitPage.fields]
-        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-        .map((f) => ({
-          key:         f.field_key,
-          type:        fieldTypeToContactType(f.field_type),
-          label:       f.label,
-          placeholder: f.placeholder ?? undefined,
-          required:    f.required ?? false,
-          visible:     f.visible ?? true,
-          sort_order:  f.sort_order ?? 0,
-          options:     f.field_type === 'radio' && Array.isArray(f.options)
-            ? (f.options as string[])
-            : undefined,
-        }))
-    : DEFAULT_CONTACT_FIELDS
+  // Aufgabe 52D: Submit-Page → contactFields entfernt. Orphaned Submit-Pages bei Alt-Funnels
+  // werden ignoriert; Lead-Daten kommen aus den Karten-Antworten (deriveContactFromAnswers).
 
   return {
     id:                tenant.id,
@@ -245,9 +224,7 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
     billingModel:         tenant.billing_model,
     leadPrice:    Number(tenant.lead_price ?? 0),
     billingPrice: tenant.billing_price != null ? Number(tenant.billing_price) : undefined,
-    contactFields,
     questions,
-    skipSubmitStep: row.skip_submit_step ?? false,
     redirectUrl: row.redirect_url ?? undefined,
     metaPixelId: row.meta_pixel_id ?? undefined,
     googleAdsConversion: row.google_ads_conversion ?? undefined,
@@ -280,7 +257,7 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
       response_message, contact_form_subtitle, privacy_policy_url,
       privacy_text, answers_overview_label, show_answers_overview,
       email_sender_local, notification_email,
-      skip_submit_step, redirect_url,
+      redirect_url,
       meta_pixel_id, google_ads_conversion,
       primary_color, text_color, background_color, page_background_color,
       font, border_radius, max_width,

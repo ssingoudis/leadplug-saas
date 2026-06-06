@@ -80,29 +80,8 @@ function renderAnswersOverview(ctx: TemplateContext, customHeading?: string | nu
   return `<div style="background:#f9fafb;padding:16px 20px;border-radius:4px;border-left:4px solid ${primary};margin:16px 0;"><h3 style="font-size:15px;font-weight:bold;margin:0 0 10px;color:#1f2937;">${heading}</h3>${rows}</div>`
 }
 
-function renderContactSummary(ctx: TemplateContext, customHeading?: string | null): string {
-  const primary = ctx.tenantConfig.theme.primaryColor
-  const visibleContactFields = [...ctx.tenantConfig.contactFields]
-    .filter((f) => f.visible)
-    .sort((a, b) => a.sort_order - b.sort_order)
-  const rows = visibleContactFields
-    .map((field) => {
-      const raw = ctx.contact[field.key]
-      if (!raw) return null
-      const label = htmlEscape(field.label)
-      const value = htmlEscape(raw)
-      const linked =
-        field.type === 'email' ? `<a href="mailto:${value}" style="color:${primary};">${value}</a>`
-        : field.type === 'tel' ? `<a href="tel:${value}" style="color:${primary};">${value}</a>`
-        : `<strong>${value}</strong>`
-      return `<p style="font-size:13px;color:#374151;margin:0 0 4px;line-height:20px;"><span style="color:#6b7280;">${label}:</span> ${linked}</p>`
-    })
-    .filter(Boolean)
-    .join('')
-  if (!rows) return ''
-  const heading = htmlEscape(customHeading?.trim() || 'Kontaktdaten')
-  return `<div style="background:#f9fafb;padding:14px 18px;border-radius:6px;margin:0 0 16px;border-left:4px solid ${primary};"><h3 style="font-size:13px;font-weight:bold;margin:0 0 10px;color:#1f2937;">${heading}</h3>${rows}</div>`
-}
+// Aufgabe 52D: renderContactSummary entfernt — die contact_summary-Magic-Section nutzte
+// tenantConfig.contactFields (Submit-Page, abgeschafft). answers_overview zeigt die Karten-Antworten.
 
 function renderDashboardButton(ctx: TemplateContext): string {
   const primary = ctx.tenantConfig.theme.primaryColor
@@ -161,7 +140,7 @@ function expandBody(html: string, ctx: TemplateContext): string {
     const headingMatch = ATTR_HEADING_RE.exec(match)
     const heading = headingMatch?.[1] ?? null
     if (name === 'answers_overview')  return renderAnswersOverview(ctx, heading)
-    if (name === 'contact_summary')   return renderContactSummary(ctx, heading)
+    // Aufgabe 52D: contact_summary entfernt — gespeicherte Blöcke (Alt-Mails) degradieren sauber zu ''.
     if (name === 'dashboard_button')  return renderDashboardButton(ctx)  // Legacy
     return ''
   })
@@ -270,7 +249,7 @@ export const AVAILABLE_TOKENS = {
   ],
   magic: [
     { token: 'answers_overview', label: 'Antworten-Box', description: 'Box mit allen sichtbaren Antworten' },
-    { token: 'contact_summary',  label: 'Kontakt-Box',   description: 'Box mit allen sichtbaren Kontaktfeldern' },
+    // Aufgabe 52D: contact_summary entfernt (Submit-Page abgeschafft) — answers_overview deckt die Lead-Antworten ab.
     // dashboard_button: aus dem Picker entfernt — wird durch den anpassbaren
     // Link-Button-Baustein (CtaButtonNode) abgelöst. resolveMagicSection unten
     // unterstützt 'dashboard_button' weiterhin für Backwards-Compat mit

@@ -7,7 +7,6 @@ import type {
   FunnelTheme,
   ContactFieldConfig,
 } from "@/types";
-import { DEFAULT_CONTACT_FIELDS } from "@/components/tenant-editor/defaults";
 
 // =============================================================================
 // STRING HELPERS
@@ -348,7 +347,6 @@ export function editorStateToFunnelRow(
     border_radius: state.borderRadius || null,
     max_width: state.maxWidth || null,
     is_active: state.isActive,
-    skip_submit_step: state.skipSubmitStep,
     redirect_url: state.redirectUrl?.trim() || null,
   };
 }
@@ -466,8 +464,8 @@ export interface FieldInsertRow {
 }
 
 // Baut die Insert-Payload für pages + fields aus dem EditorState.
-// Struktur pro Funnel: N × question-Pages (1 Field je Page) → 1 × submit-Page
-// (alle contactFields als Fields) → 1 × success-Page (leer).
+// Struktur pro Funnel (Aufgabe 52D): N × question/custom/welcome-Pages → 1 × success-Page (leer).
+// Submit-Page wird nicht mehr erzeugt (Kontaktformular abgeschafft).
 export function editorStateToPagesAndFields(
   state: EditorState,
   funnelId: string,
@@ -596,48 +594,16 @@ export function editorStateToPagesAndFields(
     });
   });
 
-  // Aufgabe 51: Submit-Page (Kontaktformular) nur noch für Alt-Funnels (skip=false) erzeugen.
-  // Neue Funnels (skip=true) erfassen Leads via Cards; der Submit passiert am Funnel-Ende.
-  if (!state.skipSubmitStep) {
-    const submitPageId = newPageId();
-    pages.push({
-      id: submitPageId,
-      funnel_id: funnelId,
-      page_type: "submit",
-      sort_order: state.questions.length,
-      config: {},
-    });
+  // Aufgabe 52D: Submit-Page (Kontaktformular) wird nicht mehr erzeugt — komplett abgeschafft.
+  // Lead-Erfassung läuft über Kontaktdaten-Karten (custom pages). buildContactFieldConfig /
+  // CONTACT_TYPE_TO_FIELD_TYPE bleiben — die Karten-Felder nutzen sie weiter.
 
-    // Aufgabe 40 Polish: Existing keys behalten, nur leere generieren. Konflikt-Resolution pro Submit-Page.
-    const usedKeysInSubmitPage = new Set<string>();
-    state.contactFields.forEach((cf) => {
-      const rawCKey = cf.key?.trim() ?? "";
-      const baseCKey = rawCKey || generateFieldKey(cf.type, cf.label, usedKeysInSubmitPage);
-      const finalCKey = ensureUniqueKey(baseCKey, usedKeysInSubmitPage);
-      usedKeysInSubmitPage.add(finalCKey);
-
-      fields.push({
-        page_id: submitPageId,
-        field_key: finalCKey,
-        field_type: CONTACT_TYPE_TO_FIELD_TYPE[cf.type],
-        label: cf.label,
-        subtitle: null,
-        placeholder: cf.placeholder ?? null,
-        visible: cf.visible,
-        required: cf.required,
-        sort_order: cf.sort_order,
-        options: OPTION_BASED_CONTACT_TYPES.has(cf.type) ? cf.options ?? [] : [],
-        config: buildContactFieldConfig(cf),
-      });
-    });
-  }
-
-  // Success-Page (leer, nur Marker) — direkt nach den Fragen (+1 nur wenn es noch eine Submit-Page gibt)
+  // Success-Page (leer, nur Marker) — direkt nach den Fragen.
   pages.push({
     id: newPageId(),
     funnel_id: funnelId,
     page_type: "success",
-    sort_order: state.questions.length + (state.skipSubmitStep ? 0 : 1),
+    sort_order: state.questions.length,
     config: {},
   });
 
@@ -820,7 +786,8 @@ export function dbToEditorState(
   const stepPages = pages
     .filter((p) => p.page_type === "question" || p.page_type === "custom" || p.page_type === "welcome")
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-  const submitPage = pages.find((p) => p.page_type === "submit");
+  // Aufgabe 52D: Submit-Page wird ignoriert (contactFields abgeschafft). Orphaned Submit-Pages
+  // bei Alt-Funnels bleiben in der DB, werden aber nicht mehr in den Editor-State gelesen.
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pageConfigById = new Map<string, Record<string, any>>();
@@ -931,15 +898,6 @@ export function dbToEditorState(
     };
   });
 
-  // ContactFields aus Submit-Page-Fields bauen
-  const contactFields: ContactFieldConfig[] = submitPage
-    ? (fieldsByPage.get(submitPage.id) ?? []).map((f) => ({
-        ...fieldRowToContactConfig(f),
-        _keyTouched: true, // existing key aus DB
-        _clientId: `cf_load_${f.id ?? uid()}`,
-      }))
-    : DEFAULT_CONTACT_FIELDS;
-
   return {
     funnelName: funnelRow.funnel_name ?? "",
     funnelTitle: funnelRow.contact_form_title ?? "",
@@ -961,9 +919,7 @@ export function dbToEditorState(
     notificationEmail: funnelRow.notification_email ?? "",
     emailSenderLocal: funnelRow.email_sender_local ?? "",
     isActive: funnelRow.is_active ?? true,
-    skipSubmitStep: funnelRow.skip_submit_step ?? false,
     redirectUrl: funnelRow.redirect_url ?? "",
     questions,
-    contactFields,
   };
 }

@@ -501,52 +501,8 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
     [state.questions.length],
   );
 
-  /* ─── Contact-Field-Handler (Submit-Page Multi-Field) ─── */
-
-  const handlePatchContactField = useCallback(
-    (clientId: string, patch: Partial<ContactFieldConfig>) => {
-      setState((prev) => ({
-        ...prev,
-        contactFields: prev.contactFields.map((f) => {
-          if (f._clientId !== clientId) return f;
-          const merged: ContactFieldConfig = { ...f, ...patch };
-          // Aufgabe 40 Polish: gleiche Auto-Sync-Logik wie bei Custom-Fields.
-          if (Object.prototype.hasOwnProperty.call(patch, "key")) {
-            merged._keyTouched = true;
-          } else if (
-            Object.prototype.hasOwnProperty.call(patch, "label") &&
-            !f._keyTouched
-          ) {
-            merged.key = toKey(merged.label) || f.key;
-          }
-          return merged;
-        }),
-      }));
-    },
-    [],
-  );
-
-  const handleAddContactField = useCallback((type: ContactFieldConfig["type"]) => {
-    setState((prev) => {
-      const newField = defaultContactField(type, prev.contactFields);
-      return { ...prev, contactFields: [...prev.contactFields, newField] };
-    });
-  }, []);
-
-  const handleDeleteContactField = useCallback((clientId: string) => {
-    setState((prev) => ({
-      ...prev,
-      contactFields: prev.contactFields.filter((f) => f._clientId !== clientId),
-    }));
-  }, []);
-
-  const handleReorderContactFields = useCallback((nextFields: ContactFieldConfig[]) => {
-    // sort_order synchron zur neuen Array-Reihenfolge
-    setState((prev) => ({
-      ...prev,
-      contactFields: nextFields.map((f, idx) => ({ ...f, sort_order: idx })),
-    }));
-  }, []);
+  /* ─── Aufgabe 52D: Contact-Field-Handler entfernt (Submit-Page/Kontaktformular abgeschafft).
+         Lead-Erfassung läuft über Kontaktdaten-Karten → handlePatchCustomField etc. ─── */
 
   /* ─── C.1c Canvas-Option-Aktionen (Add/Reorder/Duplicate/Delete) ─── */
 
@@ -661,19 +617,8 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
         }
       }
 
-      // Submit-Page Felder
-      if (fieldRef === "contact_form_title") {
-        handlePatch({ funnelTitle: newText });
-        return;
-      }
-      if (fieldRef === "contact_form_subtitle") {
-        handlePatch({ contactFormSubtitle: newText });
-        return;
-      }
-      if (fieldRef === "submit_button") {
-        handlePatch({ submitButtonLabel: newText });
-        return;
-      }
+      // Aufgabe 52D: Submit-Page-Canvas-Edit-Felder (contact_form_title/subtitle, submit_button)
+      // entfernt — das Kontaktformular wird nicht mehr gerendert.
 
       // Success-Page Felder
       if (fieldRef === "success_message") {
@@ -1018,16 +963,10 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
                     onPatch={handlePatch}
                     onPatchQuestion={handlePatchQuestion}
                     onDeleteQuestion={handleDeleteQuestion}
-                    onPatchContactField={handlePatchContactField}
-                    onAddContactField={handleAddContactField}
-                    onDeleteContactField={handleDeleteContactField}
-                    onReorderContactFields={handleReorderContactFields}
                     onPatchCustomField={handlePatchCustomField}
                     onAddCustomField={handleAddCustomField}
                     onDeleteCustomField={handleDeleteCustomField}
                     onReorderCustomFields={handleReorderCustomFields}
-                    selectedFieldRef={selectedFieldRef}
-                    onSelectFieldRef={setSelectedFieldRef}
                   />
                 ) : (
                   <ThemePanel state={state} onPatch={handlePatch} />

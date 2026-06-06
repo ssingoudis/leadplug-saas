@@ -2,14 +2,13 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { ContactData, TenantConfig } from '@/types'
 
 /**
- * Aufgabe 35: Skip-Mode-Backstop. Wenn der Funnel keine Submit-Page hat
- * (skip_submit_step=true), kommen die Lead-Daten aus den answers (Tenant
- * baut Email/Telefon/Name als reguläre Question-Pages ein).
+ * Lead-Daten aus den answers ableiten. Seit Aufgabe 52D (Submit-Page abgeschafft)
+ * der einzige Weg: der Tenant baut Email/Telefon/Name als Karten-/Question-Felder ein.
  *
  * Aufgabe 40 Polish: Wenn `tenantConfig` mit-übergeben wird, nutzt die
  * Funktion die Field-Types (`email`, `tel`, `first_name`, `last_name`,
  * `full_name`) für robustes Mapping. Fallback bleibt der Regex-Pattern-
- * Match (für Skip-Mode-Funnels die `short_text` für Name nutzen).
+ * Match (für Funnels die `short_text` für Name nutzen).
  */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PHONE_RE = /^[+]?[\d\s\-()]{6,}$/
@@ -29,9 +28,8 @@ function collectFieldMetas(config: TenantConfig): FieldMeta[] {
       out.push({ key: q.id, type: q.questionType })
     }
   }
-  for (const f of config.contactFields) {
-    out.push({ key: f.key, type: f.type })
-  }
+  // Aufgabe 52D: contactFields-Loop entfernt (Submit-Page abgeschafft) — Karten-Felder
+  // (q.customFields, oben) liefern die Lead-Metas für deriveContactFromAnswers.
   return out
 }
 
@@ -79,37 +77,8 @@ export function deriveContactFromAnswers(
   return out
 }
 
-/**
- * Aufgabe 40 Polish: Enricht den vom Widget gelieferten contact (Submit-Mode-Pfad)
- * um aggregierte firstName/lastName/name Felder, basierend auf den Field-Type-
- * Definitionen der Submit-Page. Heißt: wenn Tenant ein Feld type=`first_name`
- * mit key=`vorname` baut, landet contact[vorname] zusätzlich als contact.firstName.
- *
- * Wenn first_name + last_name beide vorhanden + kein full_name → contact.name
- * = `firstName + " " + lastName`. So sieht Tenant in Zapier sowohl die separaten
- * Felder als auch das aggregierte Display-Name.
- */
-export function enrichContact(
-  contact: ContactData,
-  tenantConfig: TenantConfig,
-): ContactData {
-  const out: ContactData = { ...contact }
-  for (const f of tenantConfig.contactFields) {
-    const val = (out[f.key] ?? '').trim()
-    if (!val) continue
-    switch (f.type) {
-      case 'first_name': if (!out.firstName) out.firstName = val; break
-      case 'last_name':  if (!out.lastName)  out.lastName  = val; break
-      case 'full_name':  if (!out.name)      out.name      = val; break
-      case 'email':      if (!out.email)     out.email     = val; break
-      case 'tel':        if (!out.telefon)   out.telefon   = val; break
-    }
-  }
-  if (!out.name && (out.firstName || out.lastName)) {
-    out.name = [out.firstName, out.lastName].filter(Boolean).join(' ')
-  }
-  return out
-}
+// Aufgabe 52D: enrichContact entfernt — war die Submit-Page-Contact-Anreicherung.
+// Lead-Daten kommen jetzt ausschließlich aus deriveContactFromAnswers (Karten-Antworten).
 
 let cachedClient: SupabaseClient | null = null
 
