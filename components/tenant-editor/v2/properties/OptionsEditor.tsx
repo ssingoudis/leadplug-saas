@@ -124,11 +124,13 @@ function SortableOptionRow({
         <GripVertical size={14} />
       </span>
 
-      {/* A/B/C/D-Letter-Index als visuelle Position-Anzeige (matched den Letter den Endkunden im Widget sehen). */}
+      {/* A/B/C/D-Letter-Index als Position-Anzeige. Aufgabe 50: zusätzlich zum Griff als
+          Drag-Handle (größerer Greifbereich, konsistent zum Canvas). */}
       <span
+        {...listeners}
         aria-hidden="true"
-        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-gray-100 font-mono text-[11px] font-semibold text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-        title={`Option ${String.fromCharCode(65 + index)}`}
+        className="inline-flex h-6 w-6 shrink-0 cursor-grab items-center justify-center rounded-md bg-gray-100 font-mono text-[11px] font-semibold text-gray-500 transition-colors active:cursor-grabbing dark:bg-gray-800 dark:text-gray-400"
+        title="Reihenfolge ändern"
       >
         {String.fromCharCode(65 + index)}
       </span>

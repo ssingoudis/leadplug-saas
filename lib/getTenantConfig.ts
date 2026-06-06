@@ -174,6 +174,8 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
       }
     }
     const opts = Array.isArray(f.options) ? f.options : []
+    // Aufgabe 50: Marker-Stil (A/B/C · 1/2/3 · keiner) aus config; Default 'letters'.
+    const fcfg = (f.config ?? {}) as Record<string, unknown>
     return {
       id: f.field_key,
       // Aufgabe 40 Polish: echte page-uuid für after_page-Webhook-Trigger
@@ -182,6 +184,8 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
       subtitle: f.subtitle ?? undefined,
       questionType: fieldTypeToQuestionType(f.field_type),
       visible: f.visible ?? true,
+      optionMarker:
+        fcfg.optionMarker === 'numbers' || fcfg.optionMarker === 'none' ? fcfg.optionMarker : 'letters',
       config: f.config ?? {},
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       options: opts.map((o: Record<string, any>) => ({

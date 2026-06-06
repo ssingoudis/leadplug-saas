@@ -223,3 +223,20 @@
   animation: editor-field-flash 1.2s ease-out;
   border-radius: 0.75rem;
 }
+
+/* Editor: nativer Color-Picker als sauberer Chip (Aufgabe 50) — der Swatch füllt die
+   gerundete Box, kein „Viereck im runden Container" mehr. */
+.lp-color-chip {
+  padding: 0;
+}
+.lp-color-chip::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+.lp-color-chip::-webkit-color-swatch {
+  border: none;
+  border-radius: 0.5rem;
+}
+.lp-color-chip::-moz-color-swatch {
+  border: none;
+  border-radius: 0.5rem;
+}

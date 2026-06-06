@@ -29,6 +29,10 @@ export type QuestionType =
   // Aufgabe 40 Polish: Name-Field-Types — Skip-Mode-Funnels brauchen das für robustes contact-Mapping.
   | 'first_name' | 'last_name' | 'full_name'
 
+// Aufgabe 50: Marker-Stil der Antwort-Optionen bei single_choice/multi_choice/dropdown.
+// 'letters' = A/B/C/D (Default), 'numbers' = 1/2/3, 'none' = kein Chip.
+export type OptionMarker = 'letters' | 'numbers' | 'none'
+
 export interface Option {
   label: string
   value: string
@@ -102,6 +106,8 @@ export interface QuestionConfig {
   subtitle?: string
   questionType: QuestionType
   options: Option[]
+  // Aufgabe 50: Marker-Stil der Optionen (A/B/C · 1/2/3 · keiner). Default 'letters'.
+  optionMarker?: OptionMarker
   config:
     | TextConfig | SliderConfig | DateConfig | NumberConfig | CheckboxConfig
     | RatingConfig | ScaleConfig | StatementConfig | WelcomeConfig
@@ -249,6 +255,8 @@ export interface EditorQuestion {
   sliderDefault: string
   // choice + dropdown:
   options: EditorOption[]
+  // Aufgabe 50: Marker-Stil der Optionen (A/B/C · 1/2/3 · keiner). Default 'letters'.
+  optionMarker?: OptionMarker
   // date (alle ISO YYYY-MM-DD):
   dateMin: string
   dateMax: string

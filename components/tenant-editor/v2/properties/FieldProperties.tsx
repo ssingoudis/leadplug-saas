@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Trash2, Plus, Eye, EyeOff, Pencil, AlertTriangle, Lock } from "lucide-react";
-import type { EditorQuestion, EditorOption, ContactFieldConfig } from "@/types";
+import type { EditorQuestion, EditorOption, ContactFieldConfig, OptionMarker } from "@/types";
 import { OptionsEditor } from "./OptionsEditor";
 import { validateFieldKey, toKey } from "@/lib/editorUtils";
 
@@ -79,12 +79,20 @@ function QuestionFieldProps({
       )}
 
       {isOptionBased && (
-        <Field label="Antwortoptionen">
-          <OptionsEditor
-            value={question.options}
-            onChange={(next: EditorOption[]) => onPatch({ options: next })}
-          />
-        </Field>
+        <>
+          <Field label="Antwortoptionen">
+            <OptionsEditor
+              value={question.options}
+              onChange={(next: EditorOption[]) => onPatch({ options: next })}
+            />
+          </Field>
+          <Field label="Nummerierung der Optionen">
+            <MarkerStyleControl
+              value={question.optionMarker ?? "letters"}
+              onChange={(m) => onPatch({ optionMarker: m })}
+            />
+          </Field>
+        </>
       )}
 
       {isSlider && (
@@ -459,6 +467,40 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{label}</span>
       {children}
     </label>
+  );
+}
+
+/* Aufgabe 50: Segmented-Control für den Marker-Stil der Optionen (A/B/C · 1/2/3 · keiner). */
+function MarkerStyleControl({
+  value,
+  onChange,
+}: {
+  value: OptionMarker;
+  onChange: (m: OptionMarker) => void;
+}) {
+  const opts: { key: OptionMarker; label: string; title: string }[] = [
+    { key: "letters", label: "A B C", title: "Buchstaben" },
+    { key: "numbers", label: "1 2 3", title: "Zahlen" },
+    { key: "none", label: "ohne", title: "Kein Marker" },
+  ];
+  return (
+    <div className="flex gap-1.5">
+      {opts.map((o) => (
+        <button
+          key={o.key}
+          type="button"
+          onClick={() => onChange(o.key)}
+          title={o.title}
+          className={
+            value === o.key
+              ? "flex-1 rounded-lg border border-primary bg-primary/10 px-3 py-2 text-sm font-semibold text-primary"
+              : "flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:border-primary dark:border-gray-700 dark:text-gray-400"
+          }
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
   );
 }
 

@@ -11,7 +11,7 @@ const MAX_CUSTOM_RECIPIENTS = 3;
 import { EmailEditor } from "./email/EmailEditor";
 import { renderEmail, type TemplateContext } from "@/lib/emailTemplates";
 import type { EditorState, TenantConfig, QuestionConfig } from "@/types";
-import { EmptyState } from "./ui/Panel";
+import { EmptyState, EDITOR_LEFT_COL, PanelListHeader } from "./ui/Panel";
 import { EditorButton, TextInput, Select, Toggle } from "./ui/Controls";
 
 // =============================================================================
@@ -693,14 +693,11 @@ export function EmailsPanel({ funnelSlug, state }: Props) {
       )}
       <div
         className="grid min-h-0 flex-1 bg-gray-50 dark:bg-background"
-        style={{ gridTemplateColumns: `280px minmax(0, 1fr) 6px ${rightWidth}px` }}
+        style={{ gridTemplateColumns: `${EDITOR_LEFT_COL} minmax(0, 1fr) 6px ${rightWidth}px` }}
       >
         {/* LEFT: Liste */}
         <aside className="flex min-h-0 flex-col overflow-hidden border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-          <div className="border-b border-gray-200 px-5 py-4 dark:border-gray-800">
-            <h2 className="text-sm font-bold text-gray-900 dark:text-white">E-Mails</h2>
-            <p className="mt-0.5 text-xs leading-relaxed text-gray-500 dark:text-gray-400">Automatische Follow-up-Mails an deine Leads.</p>
-          </div>
+          <PanelListHeader title="E-Mails" />
           <div className="flex-1 overflow-y-auto">
             {loading ? (
               <div className="p-4 text-center text-xs text-gray-400">Lade…</div>
@@ -810,13 +807,13 @@ export function EmailsPanel({ funnelSlug, state }: Props) {
 
         {/* RIGHT: Live-Vorschau */}
         <aside className="flex min-h-0 flex-col overflow-hidden bg-white dark:bg-gray-900">
-          <div className="border-b border-gray-200 dark:border-gray-800 px-4 py-3">
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="text-sm font-bold text-gray-900 dark:text-white">Vorschau</h2>
+          <PanelListHeader
+            title="Vorschau"
+            right={
               <select
                 value={previewLeadId ?? ""}
                 onChange={(e) => setPreviewLeadId(e.target.value || null)}
-                className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-[11px] text-gray-700 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                className="max-w-[60%] rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-[11px] text-gray-700 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
                 title="Datenquelle für die Vorschau"
               >
                 <option value="">Mock-Lead (Max Mustermann)</option>
@@ -826,15 +823,8 @@ export function EmailsPanel({ funnelSlug, state }: Props) {
                   </option>
                 ))}
               </select>
-            </div>
-            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-              {previewLead
-                ? `Echter Lead vom ${new Date(previewLead.completed_at ?? previewLead.created_at).toLocaleString("de-DE")}.`
-                : previewLeads.length > 0
-                  ? "Wechsel oben rechts zwischen Mock und echten Leads."
-                  : "Mock-Daten — echte Leads erscheinen hier nach dem ersten Submit."}
-            </p>
-          </div>
+            }
+          />
           <div className="flex-1 overflow-y-auto bg-gray-100 dark:bg-gray-950 p-4">
             {selected && draft ? (
               <PreviewPane
@@ -961,7 +951,7 @@ function SelectedEditor({ subId, draft, onDraftChange, dirty, saving, onSave, on
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-5 py-3">
+      <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-5">
         <div className="min-w-0 flex-1">
           {/* Inline editierbarer Titel — sieht aus wie Header, ist aber Input mit Hover-/Focus-Cue */}
           <div className="group inline-flex items-center gap-1.5">
@@ -973,7 +963,7 @@ function SelectedEditor({ subId, draft, onDraftChange, dirty, saving, onSave, on
               placeholder="ohne Namen"
               aria-label="Name dieser E-Mail (zum Bearbeiten klicken)"
               title="Klick zum Umbenennen"
-              className="min-w-0 rounded border border-transparent bg-transparent px-1.5 py-0.5 text-base font-bold text-gray-900 dark:text-white outline-none transition-colors hover:border-gray-200 dark:hover:border-gray-700 focus:border-primary focus:bg-white dark:focus:bg-gray-950"
+              className="min-w-0 rounded border border-transparent bg-transparent px-1.5 py-0.5 text-sm font-bold text-gray-900 dark:text-white outline-none transition-colors hover:border-gray-200 dark:hover:border-gray-700 focus:border-primary focus:bg-white dark:focus:bg-gray-950"
               style={{ width: `${nameWidth}ch` }}
             />
             <button
@@ -986,15 +976,6 @@ function SelectedEditor({ subId, draft, onDraftChange, dirty, saving, onSave, on
               <Pencil size={12} />
             </button>
           </div>
-          <p className="mt-0.5 ml-1.5 text-[11px] text-gray-500 dark:text-gray-400">
-            {formatDelay(draft.delay_minutes)} · {
-              draft.recipient_type === "customer"
-                ? "an Lead"
-                : draft.recipient_type === "tenant"
-                  ? "an dich"
-                  : `an ${draft.recipient_value ?? "—"}`
-            }
-          </p>
         </div>
         <div className="flex shrink-0 items-center gap-3">
           <span className="inline-flex items-center gap-2 whitespace-nowrap text-xs text-gray-600 dark:text-gray-300">

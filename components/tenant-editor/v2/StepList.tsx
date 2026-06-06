@@ -19,12 +19,13 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { EditorState, EditorQuestion, QuestionType } from "@/types";
+import type { EditorState, EditorQuestion, QuestionType, ContactFieldConfig } from "@/types";
 import { StepPill } from "./StepPill";
 import { questionMeta, SUBMIT_META, SUCCESS_META, CUSTOM_META, WELCOME_META } from "./fieldMeta";
 import type { SelectedStep } from "./types";
 import { isSameStep } from "./types";
 import { AddElementModal } from "./AddElementModal";
+import { EditorButton } from "./ui/Controls";
 
 interface Props {
   state: EditorState;
@@ -32,10 +33,14 @@ interface Props {
   onSelect: (step: SelectedStep) => void;
   onReorder: (nextQuestions: EditorQuestion[]) => void;
   onAddQuestion: (type: QuestionType, atIndex?: number) => void;
+  // Aufgabe 50: einfaches Feld → in die gewählte Karte (allowIntoSelected) oder neue Karte an atIndex.
+  onAddCardField: (type: ContactFieldConfig["type"], atIndex: number, allowIntoSelected: boolean) => void;
   // Aufgabe 38: Karte mit mehreren Feldern
   onAddCustomPage: (atIndex?: number) => void;
   // Aufgabe 39: Adresse-Quick-Card + Welcome-Screen
   onAddAddressCard: (atIndex?: number) => void;
+  // Aufgabe 50: Kontaktdaten-Quick-Card
+  onAddContactCard: (atIndex?: number) => void;
   onAddWelcome: (atIndex?: number) => void;
   // Aufgabe 40: Webhook-Badges auf Step-Pills
   webhookCountsByPageId?: Record<string, number>;
@@ -48,15 +53,18 @@ export function StepList({
   onSelect,
   onReorder,
   onAddQuestion,
+  onAddCardField,
   onAddCustomPage,
   onAddAddressCard,
+  onAddContactCard,
   onAddWelcome,
   webhookCountsByPageId = {},
   onSwitchToWebhooksTab,
 }: Props) {
-  // null = Modal zu, number = Modal offen und neue Frage wird an dieser Position eingefügt.
-  // questions.length = an's Ende anfügen (= aktuelles Default-Verhalten).
-  const [insertIndex, setInsertIndex] = useState<number | null>(null);
+  // Aufgabe 50: Add-Ziel. `index` = Einfüge-Position. `allowIntoSelected` = darf ein Karten-Feld
+  // in die aktuell gewählte Karte wandern (true beim Footer-„Hinzufügen", false bei Insert-Edges,
+  // die explizit einen neuen Schritt an einer Position meinen).
+  const [addTarget, setAddTarget] = useState<{ index: number; allowIntoSelected: boolean } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -72,21 +80,44 @@ export function StepList({
     onReorder(arrayMove(state.questions, oldIndex, newIndex));
   }
 
-  const questionIds = state.questions.map((q) => q._id);
+  // Aufgabe 50: Welcome-Step bekommt eine eigene „Start"-Sektion (symmetrisch zum „Abschluss").
+  // Bleibt im Datenmodell an Index 0 — hier nur visuell aus dem „Fragen"-Flow herausgelöst und
+  // aus dem Drag-Reorder ausgeschlossen (Welcome muss immer zuerst stehen).
+  const welcomeIndex = state.questions.findIndex((q) => q.kind === "welcome");
+  const hasWelcome = welcomeIndex >= 0;
+  const flowQuestions = state.questions
+    .map((q, idx) => ({ q, idx }))
+    .filter(({ q }) => q.kind !== "welcome");
+  const flowIds = flowQuestions.map(({ q }) => q._id);
 
   return (
-    <aside className="flex h-full w-full flex-col overflow-y-auto border-r border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-[#0a0e14]">
+    <aside className="flex h-full w-full flex-col overflow-hidden border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+      {/* Aufgabe 50: Liste + Footer-Add. Kein eigener Titel-Header (die Sektionen labeln schon). */}
+      <div className="flex-1 overflow-y-auto">
+      {hasWelcome && (
+        <div className="flex flex-col gap-1.5 px-3 pt-4">
+          <SectionHeading>Start</SectionHeading>
+          <StepPill
+            number={welcomeIndex + 1}
+            title={state.questions[welcomeIndex].title || "Welcome-Screen"}
+            meta={WELCOME_META}
+            selected={isSameStep(selected, { kind: "question", questionIndex: welcomeIndex })}
+            hidden={state.questions[welcomeIndex].visible === false}
+            onClick={() => onSelect({ kind: "question", questionIndex: welcomeIndex })}
+          />
+        </div>
+      )}
       <div className="flex flex-col gap-1.5 px-3 py-4">
         <SectionHeading>Fragen</SectionHeading>
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={questionIds} strategy={verticalListSortingStrategy}>
+          <SortableContext items={flowIds} strategy={verticalListSortingStrategy}>
             <div className="flex flex-col">
-              {/* Edge oberhalb der ersten Frage — Einfügen an Position 0 */}
-              {state.questions.length > 0 && (
-                <InsertEdge onClick={() => setInsertIndex(0)} />
+              {/* Edge oberhalb der ersten Frage — fügt nach einem evtl. Welcome ein (nie davor) */}
+              {flowQuestions.length > 0 && (
+                <InsertEdge onClick={() => setAddTarget({ index: flowQuestions[0].idx, allowIntoSelected: false })} />
               )}
-              {state.questions.map((q, idx) => {
+              {flowQuestions.map(({ q, idx }, pos) => {
                 const step: SelectedStep = { kind: "question", questionIndex: idx };
                 const webhookCount = q.dbId ? (webhookCountsByPageId[q.dbId] ?? 0) : 0;
                 return (
@@ -99,45 +130,41 @@ export function StepList({
                       webhookCount={webhookCount}
                       onWebhookBadgeClick={onSwitchToWebhooksTab}
                     />
-                    {/* Edge nach jeder Frage (außer der letzten — da übernimmt der Add-Button unten) */}
-                    {idx < state.questions.length - 1 && (
-                      <InsertEdge onClick={() => setInsertIndex(idx + 1)} />
-                    )}
+                    {/* Edge nach jeder Frage — inkl. der letzten (fügt dann ans Ende der Fragen ein) */}
+                    <InsertEdge onClick={() => setAddTarget({ index: idx + 1, allowIntoSelected: false })} />
                   </div>
                 );
               })}
             </div>
           </SortableContext>
         </DndContext>
-
-        <button
-          type="button"
-          onClick={() => setInsertIndex(state.questions.length)}
-          className="mt-2 inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:border-primary hover:text-primary dark:border-gray-700 dark:text-gray-400"
-        >
-          <Plus size={14} />
-          Frage hinzufügen
-        </button>
       </div>
 
       <AddElementModal
-        open={insertIndex !== null}
-        onClose={() => setInsertIndex(null)}
+        open={addTarget !== null}
+        onClose={() => setAddTarget(null)}
+        hideWelcome={hasWelcome}
         onSelectType={(type) => {
-          if (insertIndex !== null) onAddQuestion(type, insertIndex);
+          if (addTarget) onAddQuestion(type, addTarget.index);
+        }}
+        onSelectCardField={(type) => {
+          if (addTarget) onAddCardField(type, addTarget.index, addTarget.allowIntoSelected);
         }}
         onSelectCustomPage={() => {
-          if (insertIndex !== null) onAddCustomPage(insertIndex);
+          if (addTarget) onAddCustomPage(addTarget.index);
         }}
         onSelectAddressCard={() => {
-          if (insertIndex !== null) onAddAddressCard(insertIndex);
+          if (addTarget) onAddAddressCard(addTarget.index);
+        }}
+        onSelectContactCard={() => {
+          if (addTarget) onAddContactCard(addTarget.index);
         }}
         onSelectWelcome={() => {
-          if (insertIndex !== null) onAddWelcome(insertIndex);
+          if (addTarget) onAddWelcome(addTarget.index);
         }}
       />
 
-      <div className="mt-2 flex flex-col gap-1.5 border-t border-gray-200 px-3 py-4 dark:border-gray-800">
+      <div className="flex flex-col gap-1.5 border-t border-gray-200 px-3 py-4 dark:border-gray-800">
         <SectionHeading>Abschluss</SectionHeading>
 
         <StepPill
@@ -159,6 +186,19 @@ export function StepList({
           selected={selected.kind === "success"}
           onClick={() => onSelect({ kind: "success" })}
         />
+      </div>
+      </div>
+
+      {/* Footer-Add — gleiches Muster wie E-Mails/Webhooks (Aufgabe 50) */}
+      <div className="border-t border-gray-200 p-3 dark:border-gray-800">
+        <EditorButton
+          variant="primary"
+          onClick={() => setAddTarget({ index: state.questions.length, allowIntoSelected: true })}
+          className="w-full"
+        >
+          <Plus size={15} strokeWidth={2.5} />
+          Frage hinzufügen
+        </EditorButton>
       </div>
     </aside>
   );

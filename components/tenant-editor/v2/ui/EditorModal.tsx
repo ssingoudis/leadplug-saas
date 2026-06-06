@@ -19,6 +19,7 @@ export function EditorModal({
   children,
   footer,
   maxWidth = "max-w-lg",
+  dismissible = true,
 }: {
   open: boolean;
   onClose: () => void;
@@ -27,22 +28,24 @@ export function EditorModal({
   children: ReactNode;
   footer?: ReactNode;
   maxWidth?: string;
+  /** false = Außenklick + ESC schließen NICHT (für blockierende Dialoge wie Pflicht-Eingaben). */
+  dismissible?: boolean;
 }) {
   useEffect(() => {
-    if (!open) return;
+    if (!open || !dismissible) return;
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, dismissible]);
 
   if (!open) return null;
 
   return (
     <div
       className="fixed inset-0 z-80 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-      onClick={onClose}
+      onClick={dismissible ? onClose : undefined}
     >
       <div
         className={`flex max-h-[85vh] w-full ${maxWidth} flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900`}
