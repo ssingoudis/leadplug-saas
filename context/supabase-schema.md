@@ -7,13 +7,13 @@
 > Bei jeder neuen Migration: dieses File neu regenerieren.
 
 - **Stand:** 2026-06-06 (nach Aufgabe 52D — Submit-Page/Kontaktformular-Cleanup)
-- **Letzte angewendete Migration:** `aufgabe_52d_delete_orphaned_submit_pages` (gestaged, NOCH NICHT angewendet: `aufgabe_52d_drop_skip_submit_step`)
+- **Letzte angewendete Migration:** `aufgabe_52d_drop_skip_submit_step` (2026-06-06, nach Deploy)
 - **Tabellen:** 12 in `public` (alle mit RLS aktiviert)
 
 > **Aufgabe 52 Migrationen (2026-06-06):**
 > - `aufgabe_52_drop_footer_columns` (52B): `funnels.footer_company_name/email/phone/text` GEDROPPT (Footer abgeschafft).
 > - `aufgabe_52d_delete_orphaned_submit_pages` (52D): `DELETE FROM pages WHERE page_type='submit'` — 12 orphaned Submit-Pages + 52 Fields (via `fields.page_id` ON DELETE CASCADE). Reines Data-Cleanup; Kontaktformular abgeschafft, der Code ignoriert submit-Pages.
-> - `aufgabe_52d_drop_skip_submit_step` (52D): `ALTER TABLE funnels DROP COLUMN skip_submit_step` — **vorbereitet, NOCH NICHT angewendet** (erst nach dem Code-Deploy anwenden, sonst 500 im alten `getTenantConfig`-SELECT). UP+DOWN im Repo.
+> - `aufgabe_52d_drop_skip_submit_step` (52D): `ALTER TABLE funnels DROP COLUMN skip_submit_step` — **angewendet 2026-06-06 nach dem Code-Deploy** (verifiziert: Spalte weg, Widget lädt auf Prod sauber). UP+DOWN im Repo.
 
 > **Aufgabe 46 Migration `aufgabe_46_submissions_notes` (2026-06-01):** `submissions.notes text NULL` — freie interne CRM-Notiz pro Lead. Additiv, kein Backfill, kein CHECK (Längen-Cap app-seitig). Status-Workflow (`submissions.status`) unverändert, nur UI-Relabel auf Neu/Kontaktiert/Erledigt.
 > _(Hinweis: Header-Migrationsliste in §5 ist nicht lückenlos nachgepflegt — `aufgabe_43_funnel_tracking` + dieses 46 sind in den Tabellen-Sektionen erfasst.)_
