@@ -236,12 +236,13 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
     funnel: {
       title:               row.contact_form_title      ?? TEXT_DEFAULTS.funnelTitle,
       submitButtonLabel:   row.submit_button_label    ?? TEXT_DEFAULTS.submitButtonLabel,
-      successMessage:      row.success_message        ?? TEXT_DEFAULTS.successMessage,
-      responseMessage:     row.response_message       ?? TEXT_DEFAULTS.responseMessage,
+      successMessage:      row.success_message        || 'Vielen Dank für Ihre Anfrage!',  // Aufgabe 51: Titel nie leer (nacktes Häkchen reicht nicht). Sauberer Editor-Default → Plan.
+      responseMessage:     row.response_message       ?? '',  // Aufgabe 51: optional — leer = ausgeblendet (kein Default-Fallback)
       contactFormSubtitle: row.contact_form_subtitle  ?? TEXT_DEFAULTS.contactFormSubtitle,
       privacyPolicyUrl:    row.privacy_policy_url     ?? undefined,
       privacyText:         row.privacy_text           ?? TEXT_DEFAULTS.privacyText,
       answersOverviewLabel: row.answers_overview_label ?? TEXT_DEFAULTS.answersOverviewLabel,
+      showAnswersOverview: row.show_answers_overview ?? false,
       footerText:          row.footer_text            ?? TEXT_DEFAULTS.footerText,
     },
     billingModel:         tenant.billing_model,
@@ -280,7 +281,7 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
       id, slug, is_active,
       contact_form_title, submit_button_label, success_message,
       response_message, contact_form_subtitle, privacy_policy_url,
-      privacy_text, answers_overview_label, footer_text,
+      privacy_text, answers_overview_label, show_answers_overview, footer_text,
       footer_company_name, footer_email, footer_phone,
       email_sender_local, notification_email,
       skip_submit_step, redirect_url,

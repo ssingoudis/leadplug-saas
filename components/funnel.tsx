@@ -50,6 +50,34 @@ function optionMarkerFor(marker: OptionMarker | undefined, idx: number): string 
   return String.fromCharCode(65 + idx); // 'letters' (Default)
 }
 
+// Aufgabe 51: einfacher Markdown-Link-Parser für Consent-Texte. `[Text](https://…)` wird zu einem
+// klickbaren <a> in Brand-Farbe. stopPropagation, damit der Link-Klick nicht die umgebende Checkbox togglet.
+function renderLabelWithLinks(text: string, linkColor: string): React.ReactNode {
+  const re = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let key = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > lastIndex) parts.push(text.slice(lastIndex, m.index));
+    parts.push(
+      <a
+        key={key++}
+        href={m[2]}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        style={{ color: linkColor, textDecoration: "underline" }}
+      >
+        {m[1]}
+      </a>,
+    );
+    lastIndex = m.index + m[0].length;
+  }
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+  return parts.length > 0 ? parts : text;
+}
+
 // =============================================================================
 // CONSTANTS
 // =============================================================================
@@ -693,23 +721,17 @@ export function Funnel({
             ...hlEdge("primary_color", "text_color", "background_color", "font", "border_radius", "max_width"),
           }}
         >
-          {/* Header banner */}
-          <div
-            className="px-8 py-5"
-            data-edit-field="header_banner"
-            style={{ backgroundColor: theme.primaryColor, ...editCursor, ...hlEdge("header_banner", "footer_company") }}
-          >
-            <p className="text-white font-bold text-base m-0">{companyName}</p>
-          </div>
-
+          {/* Aufgabe 51: kein Top-Streifen + kein Footer mehr. Die Markenfarbe lebt zentriert im
+              gefüllten Häkchen-Kreis (weißer Haken) — passt zum mittigen Success-Layout und ist das
+              klassische „erledigt"-Pattern, ohne Fremdkörper-Streifen oder asymmetrischen Seitenrand. */}
           {/* Checkmark + success message */}
           <div className="p-8 text-center">
             <div
-              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5"
-              style={{ backgroundColor: `${theme.primaryColor}20` }}
+              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5 shadow-sm"
+              style={{ backgroundColor: theme.primaryColor }}
             >
-              <svg className="w-8 h-8" fill="none" stroke={theme.primaryColor} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <svg className="w-8 h-8" fill="none" stroke="#ffffff" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
               </svg>
             </div>
 
@@ -723,18 +745,22 @@ export function Funnel({
               className="text-2xl font-bold mb-2 leading-snug"
               style={{ color: theme.textColor, ...editCursor, ...hl("success_message") }}
             />
-            <EditableText
-              as="p"
-              editMode={editMode}
-              fieldRef="response_message"
-              initial={funnel.responseMessage}
-              placeholder="Antwort-Text eingeben…"
-              onCommit={onTextChange}
-              className="text-sm mb-6"
-              style={{ color: theme.textColorMuted, ...editCursor, ...hl("response_message") }}
-            />
+            {/* Aufgabe 51: Antwort-Text ist optional (Toggle in SuccessProps). Leer = nicht rendern. */}
+            {funnel.responseMessage && (
+              <EditableText
+                as="p"
+                editMode={editMode}
+                fieldRef="response_message"
+                initial={funnel.responseMessage}
+                placeholder="Antwort-Text eingeben…"
+                onCommit={onTextChange}
+                className="text-sm mb-6"
+                style={{ color: theme.textColorMuted, ...editCursor, ...hl("response_message") }}
+              />
+            )}
 
-            {/* Summary of answers */}
+            {/* Summary of answers — Aufgabe 51: nur wenn aktiviert (Default aus = cleaner Dank) */}
+            {funnel.showAnswersOverview && (
             <div
               className="rounded-lg text-left text-sm p-4"
               style={{ backgroundColor: theme.inputBgColor, borderLeft: `4px solid ${theme.primaryColor}` }}
@@ -757,15 +783,7 @@ export function Funnel({
                 );
               })}
             </div>
-          </div>
-
-          {/* Footer */}
-          <div
-            className="px-8 py-4 border-t text-xs"
-            data-edit-field="footer"
-            style={{ backgroundColor: theme.inputBgColor, borderColor: theme.borderColor, color: theme.textColorMuted, ...editCursor, ...hlEdge("footer", "footer_company", "footer_email", "footer_phone") }}
-          >
-            <p className="m-0">{resolvedFooter}</p>
+            )}
           </div>
         </div>
       </div>
@@ -853,7 +871,8 @@ export function Funnel({
                       </button>
                     )}
                     <span className="inline-flex h-5 min-w-5 items-center justify-center rounded px-1.5 text-[11px] font-semibold" style={{ backgroundColor: theme.primaryColor, color: "#ffffff" }}>
-                      {currentStep + 1}
+                      {/* Aufgabe 51: nur Fragen/Cards zählen — Welcome-Step nicht mitnummerieren (1. Frage = 1) */}
+                      {visibleQuestions.slice(0, currentStep + 1).filter((q) => q.kind !== "welcome").length}
                     </span>
                   </div>
                 )}
@@ -1180,7 +1199,7 @@ export function Funnel({
                               className="sr-only"
                             />
                             <span className="text-sm @md:text-base leading-snug font-light" style={{ color: theme.textColor }}>
-                              {field.checkboxLabel || field.label}
+                              {renderLabelWithLinks(field.checkboxLabel || field.label, theme.primaryColor)}
                             </span>
                           </label>
                         );
@@ -2004,7 +2023,7 @@ export function Funnel({
                               className="sr-only"
                             />
                             <span className="text-sm @md:text-base leading-snug font-light" style={{ color: theme.textColor }}>
-                              {field.checkboxLabel || field.label}
+                              {renderLabelWithLinks(field.checkboxLabel || field.label, theme.primaryColor)}
                             </span>
                           </label>
                           {errors[field.key] && <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{errors[field.key]}</p>}

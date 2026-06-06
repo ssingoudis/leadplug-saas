@@ -185,12 +185,13 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
   // Properties-Panel hat seinen eigenen Picker — beide funktionieren unabhängig.
   const [canvasFieldPickerOpen, setCanvasFieldPickerOpen] = useState(false);
 
-  // Default-Selection: erste Frage falls vorhanden, sonst submit.
+  // Default-Selection: erste Frage falls vorhanden, sonst der End-Screen (existiert immer).
+  // Aufgabe 51: nicht mehr auf "submit" zurückfallen — die Submit-Page ist bei neuen Funnels weg.
   const [selected, setSelected] = useState<SelectedStep>(() => {
     if (initialState.questions.length > 0) {
       return { kind: "question", questionIndex: 0 };
     }
-    return { kind: "submit" };
+    return { kind: "success" };
   });
 
   // Aufgabe 40: Map page_id → Anzahl after_page-Webhooks die auf diese Page zeigen.
@@ -489,11 +490,11 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
         next.splice(index, 1);
         return { ...prev, questions: next };
       });
-      // Nach Delete: Selektion auf vorherige Frage, oder submit wenn keine mehr da
+      // Nach Delete: Selektion auf vorherige Frage, oder End-Screen wenn keine mehr da.
       setSelected((prev) => {
         if (prev.kind !== "question") return prev;
         const remaining = state.questions.length - 1;
-        if (remaining <= 0) return { kind: "submit" };
+        if (remaining <= 0) return { kind: "success" };
         return { kind: "question", questionIndex: Math.min(index, remaining - 1) };
       });
     },

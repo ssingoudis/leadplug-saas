@@ -109,7 +109,33 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
-## Aktuell: Aufgabe 50 — Editor-Uplift: Bearbeiten-Tab + Karten-Model + Konsistenz (go-live-reif) (2026-06-06)
+## Aktuell: Aufgabe 51 — Kontaktformular abgeschafft + Success-Seite + Nummerierung (2026-06-06)
+
+**Status:** Branch `feature/aufgabe-51-kontaktformular-abschaffen`. Type-Check durchgehend grün, Production-Build erfolgreich. Iterativ mit Stavros abgenommen. **1 additiver DB-Change** (`funnels.show_answers_overview`, direkt auf Prod mit User-Go). **Alte Funnels dürfen brechen (pre-launch) → keine Migration.**
+
+Das hartkodierte **Kontaktformular** (`page_type='submit'`) ist abgeschafft — Lead-Erfassung läuft als normale Card (Kontaktdaten-Preset), Submit am Funnel-Ende. Tiefenanalyse vorab ergab: der Backend-Pfad war **schon submit-page-agnostisch** (`skip_submit_step` + `deriveContactFromAnswers` + „Absenden"-Button existierten) → reine Editor-/Widget-Änderung, kein Backend-Umbau.
+
+**Kontaktformular raus (für neue Funnels):**
+- [`defaults.ts`](../components/tenant-editor/defaults.ts) `DEFAULT_EDITOR_STATE`: `skipSubmitStep: true`, `contactFields: []`.
+- [`StepList.tsx`](../components/tenant-editor/v2/StepList.tsx): Submit-Pill nur noch bei Alt-Funnels (`!skipSubmitStep`); „Abschluss" = nur End-Screen.
+- [`editorUtils.ts`](../lib/editorUtils.ts) `editorStateToPagesAndFields`: keine Submit-Page mehr im skip-mode. Default-/Delete-Selektion ([`EditorShell.tsx`](../components/tenant-editor/v2/EditorShell.tsx)) fällt auf `success` statt den versteckten `submit`.
+- **Server-Backstop** ([`/api/submit`](../app/api/submit/route.ts)): im skip-mode werden Pflicht-Card-Felder serverseitig validiert (gegen Direct-POST; lenient).
+
+**Consent = Checkbox mit Link:** [`funnel.tsx`](../components/funnel.tsx) parst `[Text](https://…)` im Checkbox-Label → klickbarer `<a>` (`renderLabelWithLinks`). Editor-Hint an beiden Checkbox-Feldern ([`FieldProperties.tsx`](../components/tenant-editor/v2/properties/FieldProperties.tsx)).
+
+**Success-/End-Screen ([`funnel.tsx`](../components/funnel.tsx) + [`PropertiesPanel.tsx`](../components/tenant-editor/v2/PropertiesPanel.tsx)):**
+- **Header-Banner (Firmenname) + Footer (Kontakt) entfernt** — zogen den Agentur-Account-Namen + Platzhalter, nicht editierbar, inkonsistent. Stattdessen: **gefüllter Marken-Häkchen-Kreis** (weißer Haken) als zentrierter Akzent.
+- **Antworten-Übersicht optional** (Default AUS) — neue Spalte `funnels.show_answers_overview`, Widget-gated, Toggle in SuccessProps.
+- **Titel** nie leer (interim Default-Fallback „Vielen Dank für Ihre Anfrage!"). **Antwort-Text** optional (leer = zweite Zeile ausgeblendet).
+- **Architektur-Prinzip (Stavros, 2026-06-06):** „wenn null → Default einfügen" am Render ist ein Relikt. Defaults gehören **vorausgefüllt in den Editor** (`DEFAULT_EDITOR_STATE`), das Widget zeigt was da ist. Für `responseMessage` umgesetzt (Render-Fallbacks raus). **Offen für den Cleanup:** dasselbe für die restlichen `TEXT_DEFAULTS`-Texte.
+
+**Nummerierung:** nur Fragen/Cards zählen. `StepPill.number` optional → Welcome + Abschluss-Steps ohne Nummer; Fragen via Flow-Position (`pos+1`) → 1. Frage = „1". Im Widget zählt das Badge nur Nicht-Welcome-Steps.
+
+**Offen / nächster Task (eigener Plan):** (1) Firmen-E-Mail-Variablen `{{funnel.name/email/phone}}` raus (E-Mails nutzen nur Lead-Daten) + Default-Templates bereinigen. (2) Orphaned `footer_*`-Spalten + die `companyName/publicEmail/phone`-Kette aus DB + Code. (3) Render-Fallbacks (`TEXT_DEFAULTS`) → Editor-Defaults.
+
+---
+
+## Aufgabe 50 — Editor-Uplift: Bearbeiten-Tab + Karten-Model + Konsistenz (go-live-reif) (2026-06-06)
 
 **Status:** Branch `feature/aufgabe-50-bearbeiten-tab-uplift`. Type-Check durchgehend grün, Production-Build erfolgreich. Iterativ visuell mit Stavros abgenommen. **Kein DB-Change** (Marker-Stil nutzt die bestehende `fields.config`-jsonb-Spalte).
 

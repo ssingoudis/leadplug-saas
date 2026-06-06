@@ -309,27 +309,6 @@ function SubmitProps({
         </Field>
       </Section>
 
-      <Section title="Datenschutz">
-        <Field label="Einwilligungs-Text">
-          <textarea
-            value={state.privacyText}
-            onChange={(e) => onPatch({ privacyText: e.target.value })}
-            placeholder="z. B. Mit dem Absenden stimme ich zu, per E-Mail und Telefon kontaktiert zu werden."
-            rows={3}
-            disabled={!submitActive}
-            className="w-full resize-y rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
-          />
-        </Field>
-        <Field label="Link zur Datenschutzerklärung (optional)">
-          <TextInput
-            value={state.privacyPolicyUrl}
-            onChange={(v) => onPatch({ privacyPolicyUrl: v })}
-            placeholder="https://deine-seite.de/datenschutz"
-            disabled={!submitActive}
-          />
-        </Field>
-      </Section>
-
       <Section title="Felder dieser Seite">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext
@@ -729,20 +708,38 @@ function SuccessProps({
             placeholder="z. B. Vielen Dank für deine Anfrage!"
           />
         </Field>
-        <Field label="Antwort-Text">
+        {/* Aufgabe 51: Antwort-Text ist optional. Standard ist vorausgefüllt; leer lassen =
+            zweite Zeile wird im Widget nicht angezeigt (kein erzwungener Default beim Rendern). */}
+        <Field label="Antwort-Text (optional)">
           <TextInput
             value={state.responseMessage}
             onChange={(v) => onPatch({ responseMessage: v })}
             placeholder="z. B. Wir melden uns in den nächsten 24 Stunden."
           />
         </Field>
-        <Field label='Label "Antwort-Übersicht"'>
-          <TextInput
-            value={state.answersOverviewLabel}
-            onChange={(v) => onPatch({ answersOverviewLabel: v })}
-            placeholder="z. B. Deine Angaben"
-          />
-        </Field>
+        <p className="px-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+          Leer lassen, wenn du keine zweite Zeile willst — dann wird sie nicht angezeigt.
+        </p>
+      </Section>
+
+      <Section title="Antworten-Übersicht">
+        <Toggle
+          label="Antworten-Übersicht zeigen"
+          enabled={state.showAnswersOverview}
+          onToggle={(next) => onPatch({ showAnswersOverview: next })}
+        />
+        {state.showAnswersOverview && (
+          <Field label="Überschrift">
+            <TextInput
+              value={state.answersOverviewLabel}
+              onChange={(v) => onPatch({ answersOverviewLabel: v })}
+              placeholder="z. B. Deine Angaben im Überblick:"
+            />
+          </Field>
+        )}
+        <p className="px-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+          Aus = cleaner Dank-Screen ohne Antworten. An = der Lead sieht seine Angaben nochmal.
+        </p>
       </Section>
 
       <Section>

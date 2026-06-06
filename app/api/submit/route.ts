@@ -101,13 +101,29 @@ export async function POST(req: Request) {
   const fromContact = enrichContact(contact, tenantConfig)
   const effectiveContact = { ...fromAnswers, ...fromContact }
 
-  // 5. Dynamische Feldvalidierung — nur wenn Submit-Page aktiv ist
+  // 5. Dynamische Feldvalidierung
   if (!skipMode) {
+    // Submit-Page-Modus (Alt-Funnels): Pflicht-Felder der Submit-Page prüfen.
     const visibleRequired = tenantConfig.contactFields.filter((f) => f.visible && f.required)
     for (const field of visibleRequired) {
       const err = validateContactField(field, effectiveContact[field.key] ?? '')
       if (err) {
         return NextResponse.json({ error: `Validation failed: ${field.key}` }, { status: 400 })
+      }
+    }
+  } else {
+    // Aufgabe 51 Backstop: im skip-mode (kein Kontaktformular) kommen die Lead-Daten aus den
+    // Card-Feldern (answers, keyed by field_key). Pflicht-Card-Felder serverseitig prüfen —
+    // zweites Schloss gegen Direct-POST. Das Widget erzwingt dieselben Regeln, echte Leads
+    // passieren also immer (kein Geld-Verlust).
+    for (const q of tenantConfig.questions) {
+      if (q.kind !== 'custom' || !q.customFields) continue
+      for (const field of q.customFields) {
+        if (!field.visible || !field.required) continue
+        const err = validateContactField(field, answers[field.key] ?? '')
+        if (err) {
+          return NextResponse.json({ error: `Validation failed: ${field.key}` }, { status: 400 })
+        }
       }
     }
   }
