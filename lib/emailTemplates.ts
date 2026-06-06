@@ -1,5 +1,10 @@
 import { resolveAnswer } from '@/lib/resolveAnswer'
-import type { TenantConfig, ContactData } from '@/types'
+import type { TenantConfig, ContactData, ContactFieldConfig } from '@/types'
+
+// Aufgabe 53: Marker für „Mein Postfach" in custom-Empfänger-Listen. Löst beim Versand auf die
+// Funnel-Benachrichtigungs-Adresse (TenantConfig.notificationEmail) auf — folgt also automatisch
+// der Account-Adresse. Geteilt zwischen Editor-UI (EmailsPanel) und Sender (lib/emails.ts).
+export const RECIPIENT_ME = '@me'
 
 // =============================================================================
 // Aufgabe 41 — E-Mail-Template-Rendering (TipTap-HTML-Modell)
@@ -99,13 +104,49 @@ function resolveVar(name: string, ctx: TemplateContext): string {
   }
   // Aufgabe 52: funnel.*-Variablen (Firmenname/E-Mail/Telefon etc.) entfernt — Mails nutzen nur
   // Lead-Daten. {{funnel.*}} degradiert sauber zu '' (fällt durch zum return '' am Ende).
+  // Aufgabe 53: answer.<feld-key> löst auf den Anzeige-Wert auf (Choice→Label, checkbox→Ja/Nein, …).
   if (name.startsWith('answer.')) {
-    return ctx.answers[name.slice('answer.'.length)] ?? ''
+    return resolveAnswerVar(name.slice('answer.'.length), ctx)
   }
   if (name === 'submitted_at') {
     return dateTimeFormat.format(ctx.submittedAt ?? new Date())
   }
   return ''
+}
+
+// Aufgabe 53: Löst eine answer.<key>-Variable in ihren Anzeige-Wert auf. Findet das Feld in der
+// TenantConfig (Question-Page-Field ODER Custom-Karten-Feld) und mappt Choice-Werte auf Labels —
+// sonst stünde der Options-Slug (z.B. "zu_wenig") statt des Labels ("Zu wenig Kundenanfragen").
+function resolveAnswerVar(key: string, ctx: TemplateContext): string {
+  // 1. Question-Page-Field: QuestionConfig.id === field_key
+  for (const q of ctx.tenantConfig.questions) {
+    if (q.kind === 'custom' || q.kind === 'welcome') continue
+    if (q.id === key) return resolveAnswer(q, ctx.answers) ?? ''
+  }
+  // 2. Custom-Karten-Feld: q.customFields[].key === field_key
+  for (const q of ctx.tenantConfig.questions) {
+    if (q.kind !== 'custom' || !q.customFields) continue
+    const f = q.customFields.find((cf) => cf.key === key)
+    if (f) return resolveCustomFieldDisplay(f, ctx.answers[key])
+  }
+  // 3. Fallback: Rohwert (z.B. Feld nachträglich gelöscht)
+  return ctx.answers[key] ?? ''
+}
+
+// Custom-Karten-Felder speichern bei Choice-Typen bereits den Label-String als Wert
+// (Optionen sind plain strings) — nur checkbox + date brauchen Aufbereitung.
+function resolveCustomFieldDisplay(f: ContactFieldConfig, raw: string | undefined): string {
+  if (raw == null) return ''
+  const val = raw.trim()
+  if (!val) return ''
+  if (f.type === 'checkbox') return val === 'true' ? 'Ja' : val === 'false' ? 'Nein' : val
+  if (f.type === 'date') {
+    const d = new Date(val)
+    return isNaN(d.getTime())
+      ? val
+      : d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  }
+  return val
 }
 
 // ---------------------------------------------------------------------------
@@ -192,7 +233,7 @@ function inlineGenericTagStyles(html: string, primaryColor: string): string {
       hasStyleAttr(attrs) ? m : `<li${attrs ?? ''} style="margin:0 0 4px;">`,
     )
     .replace(/<a(\s[^>]*)?>/gi, (m, attrs) =>
-      hasStyleAttr(attrs) ? m : `<a${attrs ?? ''} style="color:${primaryColor};">`,
+      hasStyleAttr(attrs) ? m : `<a${attrs ?? ''} style="color:${primaryColor};text-decoration:underline;">`,
     )
     .replace(/<hr(\s[^>]*)?\/?>/gi, (m, attrs) =>
       hasStyleAttr(attrs) ? m : `<hr style="border:0;border-top:1px solid #e5e7eb;margin:16px 0;" />`,

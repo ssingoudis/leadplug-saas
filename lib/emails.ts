@@ -1,6 +1,6 @@
 import { Resend } from 'resend'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { renderEmail, type TemplateContext } from '@/lib/emailTemplates'
+import { renderEmail, RECIPIENT_ME, type TemplateContext } from '@/lib/emailTemplates'
 import { DynamicEmail } from '@/emails/DynamicEmail'
 import type { TenantConfig } from '@/types'
 import type { SubmissionSnapshot } from '@/lib/webhooks'
@@ -128,21 +128,44 @@ function resolveRecipient(
     if (!email) return { addresses: [], reason: 'Funnel hat keine notification_email' }
     return { addresses: [email], reason: null }
   }
-  // custom — recipient_value ist kommagetrennt (1-3 Adressen). DB-CHECK garantiert
-  // mindestens 1 nicht-leeren String.
-  const list = (sub.recipient_value ?? '')
+  // custom — recipient_value ist kommagetrennt. Aufgabe 53: der Marker '@me' löst auf die
+  // Funnel-Benachrichtigungs-Adresse auf (folgt der Account-Adresse), der Rest sind feste Adressen.
+  const raw = (sub.recipient_value ?? '')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)
-  if (list.length === 0) return { addresses: [], reason: 'Custom-Empfänger leer (sollte nie passieren wegen DB-CHECK)' }
-  return { addresses: list, reason: null }
+  const out: string[] = []
+  let inboxMissing = false
+  for (const entry of raw) {
+    if (entry === RECIPIENT_ME) {
+      const inbox = tenantConfig.notificationEmail?.trim()
+      if (inbox) { if (!out.includes(inbox)) out.push(inbox) }
+      else inboxMissing = true
+    } else if (!out.includes(entry)) {
+      out.push(entry)
+    }
+  }
+  if (out.length === 0) {
+    return { addresses: [], reason: inboxMissing ? 'Funnel hat keine notification_email (für „Mein Postfach")' : 'Custom-Empfänger leer' }
+  }
+  return { addresses: out, reason: null }
+}
+
+// Aufgabe 53: „intern" = geht (auch) an dein eigenes Postfach → reply-to = Lead + Platform-Absender.
+// Trifft auf recipient_type='tenant' (legacy) und custom-Listen mit dem '@me'-Marker zu.
+function isInternalRecipient(sub: SubscriptionRow): boolean {
+  if (sub.recipient_type === 'tenant') return true
+  if (sub.recipient_type === 'custom') {
+    return (sub.recipient_value ?? '').split(',').map((s) => s.trim()).includes(RECIPIENT_ME)
+  }
+  return false
 }
 
 function buildFromAddress(sub: SubscriptionRow, tenantConfig: TenantConfig): string {
   const emailDomain         = process.env.EMAIL_DOMAIN
   const emailDomainPlatform = process.env.EMAIL_DOMAIN_PLATFORM
 
-  if (sub.recipient_type === 'tenant' && emailDomainPlatform) {
+  if (isInternalRecipient(sub) && emailDomainPlatform) {
     return `LeadPlug <anfrage@${emailDomainPlatform}>`
   }
   const local = sub.from_local?.trim() || tenantConfig.emailSenderLocal?.trim()
@@ -300,7 +323,7 @@ async function processAttempt(
   }
   const { subject, bodyHtml } = renderEmail(sub.subject, sub.body_html, ctx)
   const from    = buildFromAddress(sub, tenantConfig)
-  const replyTo = sub.recipient_type === 'tenant' && ctx.contact.email ? ctx.contact.email : null
+  const replyTo = isInternalRecipient(sub) && ctx.contact.email ? ctx.contact.email : null
 
   // 4. Senden. recipient_address kann bei custom-recipient comma-separated sein
   // (1-3 Adressen) — wir splitten + passen Resend ein Array. Bei customer/tenant
@@ -485,7 +508,7 @@ export async function aggregateEmailStatusForSubmission(
     .from('email_delivery_attempts')
     .select(`
       status,
-      email_subscriptions!email_delivery_attempts_subscription_id_fkey ( recipient_type )
+      email_subscriptions!email_delivery_attempts_subscription_id_fkey ( recipient_type, recipient_value )
     `)
     .eq('submission_id', submissionId)
 
@@ -499,9 +522,12 @@ export async function aggregateEmailStatusForSubmission(
   for (const row of data ?? []) {
     if (row.status !== 'success') continue
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rt = (row as any).email_subscriptions?.recipient_type
+    const es = (row as any).email_subscriptions
+    const rt = es?.recipient_type
     if (rt === 'customer') customerOk = true
-    if (rt === 'tenant')   tenantOk = true
+    // Aufgabe 53: 'tenant' (legacy) ODER custom-Liste mit '@me' = „du wurdest benachrichtigt".
+    if (rt === 'tenant') tenantOk = true
+    else if (rt === 'custom' && (es?.recipient_value ?? '').split(',').map((s: string) => s.trim()).includes(RECIPIENT_ME)) tenantOk = true
   }
 
   await supabase.from('submissions')
@@ -590,19 +616,13 @@ export async function sendTestEmail(
   let targetAddress: string | string[]
   if (options.customRecipient) {
     targetAddress = options.customRecipient
-  } else if (effectiveRecType === 'customer') {
-    targetAddress = mockContact.email
-  } else if (effectiveRecType === 'tenant') {
-    targetAddress = tenantConfig.notificationEmail ?? ''
   } else {
-    const list = (effectiveRecValue ?? '').split(',').map((s) => s.trim()).filter(Boolean)
-    if (list.length === 0) {
-      return { ok: false, error: 'Custom-Empfänger leer' }
+    // Aufgabe 53: dieselbe Auflösung wie der echte Versand (inkl. '@me' → notification_email).
+    const { addresses, reason } = resolveRecipient(effectiveSub, tenantConfig, mockContact)
+    if (addresses.length === 0) {
+      return { ok: false, error: reason ?? 'Empfänger-Adresse fehlt' }
     }
-    targetAddress = list.length === 1 ? list[0] : list
-  }
-  if (!targetAddress || (Array.isArray(targetAddress) && targetAddress.length === 0)) {
-    return { ok: false, error: 'Empfänger-Adresse fehlt (TenantConfig.notificationEmail leer?)' }
+    targetAddress = addresses.length === 1 ? addresses[0] : addresses
   }
 
   const ctx: TemplateContext = {
@@ -620,7 +640,7 @@ export async function sendTestEmail(
   }
   const { subject, bodyHtml } = renderEmail(effectiveSubject, effectiveBody, ctx)
   const from    = buildFromAddress(effectiveSub, tenantConfig)
-  const replyTo = effectiveRecType === 'tenant' ? mockContact.email : null
+  const replyTo = isInternalRecipient(effectiveSub) ? mockContact.email : null
 
   const result = await sendOne(
     targetAddress, from, subject, bodyHtml, subject,

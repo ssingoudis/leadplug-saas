@@ -109,6 +109,33 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
+## Aufgabe 53 — E-Mail-Editor-Überhaul: dynamische Variablen, Empfänger, Link, Dark-Mode (2026-06-06)
+
+**Status:** Fertig + gemergt. Build durchgehend grün, vom User live im Editor (Hell + Dunkel) verifiziert + abgenommen. Branch `feature/aufgabe-53-mail-variablen-dynamisch`.
+
+**1. Dynamische Mail-Variablen** (vorher nur statische 3er-Liste Lead-Name/-E-Mail/-Telefon):
+- Picker baut sich dynamisch aus den Funnel-Feldern ([funnelVariables.ts](../components/tenant-editor/v2/email/funnelVariables.ts) `buildFunnelVariables`): **„Lead-Kontakt"** (Name/E-Mail/Telefon, gefiltert auf das, was der Funnel erfasst) · **„Weitere Felder"** (alle übrigen, per Feld-Label, dedupliziert — E-Mail/Telefon/voller Name nicht doppelt; Beispiel-Werte rechts; `unbenannt`-Marker bei fehlendem Label) · **„Datum/Zeit"**. Auch im **Betreff**.
+- `resolveVar` ([emailTemplates.ts](../lib/emailTemplates.ts)) löst `answer.<field-key>` auf den Anzeige-Wert auf (`resolveAnswerVar` + `resolveCustomFieldDisplay`): Choice → Label (nicht Slug), checkbox → Ja/Nein, date → lokalisiert.
+- `VariableNode` ([VariableNode.ts](../components/tenant-editor/v2/email/VariableNode.ts)): dynamische Chip-Labels via `extraLabels`-Option. `buildPreviewConfig` keyt Fragen jetzt nach `field_key` (vorher dbId) — sonst trifft die Vorschau die `answer.<key>`-Variablen nicht.
+
+**2. Tote `funnel.*`-Chips aufgeräumt:** Migration `aufgabe_53_strip_funnel_var_chips` (Dry-Run-verifiziert, UP+DOWN im Repo, angewendet + geprüft: 0 funnel.*-Reste, contact.*/Magic-Sections intakt) strippte die toten Chips aus 15 `email_subscriptions` (body_html + subject). Safe für jede Code-Version. Code-Default `DEFAULT_NEW_BODY`: `funnel.email`-Chip raus.
+
+**3. Link-Setzer:** 3× `window.prompt()` → **Inline-Popover** (`LinkButton` in [EmailEditor.tsx](../components/tenant-editor/v2/email/EmailEditor.tsx), URL + optional Text + Anwenden/Entfernen, URL-Normalisierung, Enter/Esc). Links im Editor sichtbar (blau + unterstrichen via Link-Extension-Klasse); Versand-Mail-Links unterstrichen.
+
+**4. Empfänger-Modell** (vorher single-select customer/tenant/custom, kein Multi bei „an dich") — **KEIN DB-Change, deploy-sicher:**
+- **2 Modi:** „An den Lead" (customer) | „An feste Adresse(n)" = Chip-basierte Multi-Adress-Liste (bis 5) + dynamischer **„Mein Postfach"-Marker** `RECIPIENT_ME = '@me'` ([emailTemplates.ts](../lib/emailTemplates.ts)).
+- **Sender** ([emails.ts](../lib/emails.ts)): `resolveRecipient` löst `@me` → `notification_email` auf (folgt der Account-Adresse); `isInternalRecipient` (tenant ODER custom-mit-@me) steuert From-Adresse + reply-to=Lead; Test-Versand nutzt jetzt `resolveRecipient` (DRY, @me-aware); Status-Aggregation zählt custom-mit-@me als „Tenant benachrichtigt".
+- `recipient_type` bleibt {customer,tenant,custom}; `@me` sieht alter Prod-Code nie → Bestandsmails verschicken 1:1 wie bisher.
+- UI: `FixedRecipients` (ersetzt `CustomRecipientList`/`serializeRecipients`) — Mein-Postfach-Box + lila Adress-Chips (×) + „Adresse hinzufügen" (Reveal-Feld, Enter → Chip).
+
+**5. UI-Polish (auf User-Feedback):**
+- **Toggle-Knopf-Bug** app-weit gefixt (3× dupliziert: Controls/PropertiesPanel/FieldProperties): An-Zustand sitzt symmetrisch ganz rechts (`translate-x-4.5` statt `-4`). Label dynamisch „aktiv"/„inaktiv".
+- **Dark-Mode-Inputs:** rohe DOM-Inputs (CTA-Button, Antworten-Box) → `.lp-node-input`-Klasse ([globals.css](../app/globals.css)) mit klarer Affordance (Rahmen + kontrastierender Hintergrund) in Hell + Dunkel.
+- **Dark-Mode-Scrollbars:** Track gedimmt dunkel statt weiß ([globals.css](../app/globals.css), nur unter `.dark`; Widget unberührt).
+- **Verzögerungs-Feld:** Layout-Bug (TextInput-`w-full` überschrieb `w-20`) → feste Wrapper-Breiten (Zahl schmal, Einheit-Select breit).
+
+---
+
 ## Aufgabe 52 — Firmen-/Footer-Cleanup + Submit-Page-Rip-out (A–D komplett) (2026-06-06)
 
 **Status:** A–C gemergt (Merge-Commit `d46aee3`). **Teil D fertig** — Submit-Page/Kontaktformular restlos aus Code **und DB** entfernt. Type-Check + Production-Build grün, Widget-Smoke-Test bestanden (Honeypot am Root + persistiert über Step-Wechsel, 0 `<form>`, Karten/A-B-C-D rendern, keine Console-Errors).

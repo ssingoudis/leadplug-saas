@@ -14,6 +14,7 @@ import { VariableNode } from "./VariableNode";
 import { MagicSectionNode } from "./MagicSectionNode";
 import { CtaButtonNode } from "./CtaButtonNode";
 import { AVAILABLE_TOKENS } from "@/lib/emailTemplates";
+import type { FunnelVariables, VarGroup } from "./funnelVariables";
 
 // =============================================================================
 // Aufgabe 41 — TipTap-basierter E-Mail-Editor
@@ -31,9 +32,20 @@ interface Props {
   onChange: (html: string) => void;
   singleLine?: boolean;
   placeholder?: string;
+  // Aufgabe 53: dynamische Funnel-Variablen (Picker-Gruppen + Chip-Labels). Fehlt sie, fällt
+  // der Editor auf die statischen Lead-Kontakt-/Zeit-Tokens zurück.
+  variables?: FunnelVariables;
 }
 
-export function EmailEditor({ value, onChange, singleLine = false, placeholder }: Props) {
+// Aufgabe 53: Fallback-Gruppen, falls keine Funnel-Variablen übergeben werden.
+const FALLBACK_GROUPS: VarGroup[] = [
+  { title: "Lead-Kontakt", items: AVAILABLE_TOKENS.contact.map((t) => ({ token: t.token, label: t.label, sample: "" })) },
+  { title: "Datum / Zeit", items: AVAILABLE_TOKENS.meta.map((t) => ({ token: t.token, label: t.label, sample: "" })) },
+];
+
+export function EmailEditor({ value, onChange, singleLine = false, placeholder, variables }: Props) {
+  const variableLabels = variables?.labels ?? {};
+  const variableGroups = variables?.groups ?? FALLBACK_GROUPS;
   const editor = useEditor({
     extensions: singleLine
       ? [
@@ -47,7 +59,7 @@ export function EmailEditor({ value, onChange, singleLine = false, placeholder }
             horizontalRule: false,
           }),
           Placeholder.configure({ placeholder: placeholder ?? "" }),
-          VariableNode,
+          VariableNode.configure({ extraLabels: variableLabels }),
         ]
       : [
           StarterKit.configure({
@@ -56,10 +68,11 @@ export function EmailEditor({ value, onChange, singleLine = false, placeholder }
           Link.configure({
             openOnClick: false,
             autolink: true,
-            HTMLAttributes: { rel: "noopener noreferrer", target: "_blank" },
+            // Aufgabe 53: Links im Editor sichtbar machen (blau + unterstrichen, Link-Standard).
+            HTMLAttributes: { rel: "noopener noreferrer", target: "_blank", class: "text-primary underline" },
           }),
           Placeholder.configure({ placeholder: placeholder ?? "" }),
-          VariableNode,
+          VariableNode.configure({ extraLabels: variableLabels }),
           MagicSectionNode,
           CtaButtonNode,
         ],
@@ -99,11 +112,12 @@ export function EmailEditor({ value, onChange, singleLine = false, placeholder }
   }
 
   if (singleLine) {
-    // Subject: kein Variable-Dropdown — Betreffzeile bleibt bewusst simpel
-    // (existierende {{vars}} aus Backfill werden weiterhin als Chips gerendert,
-    // aber neu einfügen geht nur im Body).
+    // Aufgabe 53: Betreff bekommt jetzt auch einen Variablen-Picker (z.B. „Hallo {{Vorname}}").
     return (
       <div className="rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 overflow-hidden">
+        <div className="flex items-center border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 px-2 py-1">
+          <InsertVariableDropdown editor={editor} groups={variableGroups} />
+        </div>
         <EditorContent editor={editor} />
       </div>
     );
@@ -111,7 +125,7 @@ export function EmailEditor({ value, onChange, singleLine = false, placeholder }
 
   return (
     <div className="rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 overflow-visible">
-      <BodyToolbar editor={editor} />
+      <BodyToolbar editor={editor} groups={variableGroups} />
       <EditorContent editor={editor} />
     </div>
   );
@@ -121,7 +135,7 @@ export function EmailEditor({ value, onChange, singleLine = false, placeholder }
 // Body-Toolbar (Markup + Variable + Baustein)
 // ===========================================================================
 
-function BodyToolbar({ editor }: { editor: Editor }) {
+function BodyToolbar({ editor, groups }: { editor: Editor; groups: VarGroup[] }) {
   return (
     <div className="flex flex-wrap items-center gap-1 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 px-2 py-1.5">
       <ToolButton active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()} title="Fett">
@@ -145,52 +159,9 @@ function BodyToolbar({ editor }: { editor: Editor }) {
         <ListOrdered size={14} />
       </ToolButton>
       <Divider />
-      <ToolButton
-        active={editor.isActive("link")}
-        onClick={() => {
-          const isActive = editor.isActive("link");
-          const { from, to, empty } = editor.state.selection;
-          const previousUrl = editor.getAttributes("link").href ?? "";
-
-          if (isActive) {
-            // Existierenden Link editieren oder entfernen
-            const url = window.prompt("Link-URL bearbeiten (leer = Link entfernen)", previousUrl);
-            if (url === null) return;
-            if (url === "") {
-              editor.chain().focus().extendMarkRange("link").unsetLink().run();
-            } else {
-              editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
-            }
-            return;
-          }
-
-          if (empty) {
-            // Keine Selection → Text + URL abfragen und einfügen
-            const text = window.prompt("Link-Text (z.B. \"Hier klicken\"):", "");
-            if (text === null || !text.trim()) return;
-            const url = window.prompt("Link-URL (https://…):", "https://");
-            if (url === null || !url.trim()) return;
-            editor
-              .chain()
-              .focus()
-              .insertContentAt(from, [
-                { type: "text", text: text.trim(), marks: [{ type: "link", attrs: { href: url.trim() } }] },
-              ])
-              .run();
-            return;
-          }
-
-          // Selection vorhanden → URL abfragen und auf den selektierten Text als Link anwenden
-          const url = window.prompt("Link-URL für markierten Text (https://…):", "https://");
-          if (url === null || !url.trim()) return;
-          editor.chain().focus().setTextSelection({ from, to }).setLink({ href: url.trim() }).run();
-        }}
-        title="Link (markierten Text verlinken oder neuen Link einfügen)"
-      >
-        <LinkIcon size={14} />
-      </ToolButton>
+      <LinkButton editor={editor} />
       <Divider />
-      <InsertVariableDropdown editor={editor} />
+      <InsertVariableDropdown editor={editor} groups={groups} />
       <InsertMagicSectionDropdown editor={editor} />
     </div>
   );
@@ -291,21 +262,130 @@ function PortalDropdown({
 }
 
 // ===========================================================================
+// Link-Popover — Aufgabe 53: ersetzt die drei window.prompt()-Dialoge durch ein
+// gestyltes Inline-Popover (URL-Feld + optional Link-Text + Anwenden/Entfernen).
+// ===========================================================================
+
+function LinkButton({ editor }: { editor: Editor }) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const urlRef = useRef<HTMLInputElement>(null);
+  const [url, setUrl] = useState("");
+  const [text, setText] = useState("");
+  // Beim Öffnen festgehalten: editieren wir einen bestehenden Link? Gab es eine Textauswahl?
+  const [editing, setEditing] = useState(false);
+  const [hadSelection, setHadSelection] = useState(false);
+  const isActive = editor.isActive("link");
+
+  function openPopover() {
+    setEditing(editor.isActive("link"));
+    setHadSelection(!editor.state.selection.empty);
+    setUrl(editor.getAttributes("link").href ?? "");
+    setText("");
+    setOpen(true);
+    requestAnimationFrame(() => urlRef.current?.focus());
+  }
+
+  function normalizeUrl(raw: string): string | null {
+    const v = raw.trim();
+    if (!v) return null;
+    if (/^(https?:\/\/|mailto:|tel:)/i.test(v)) return v;
+    return `https://${v}`;
+  }
+
+  function apply() {
+    const href = normalizeUrl(url);
+    if (!href) return;
+    if (editing) {
+      editor.chain().focus().extendMarkRange("link").setLink({ href }).run();
+    } else if (hadSelection) {
+      editor.chain().focus().setLink({ href }).run();
+    } else {
+      const label = text.trim() || href;
+      editor.chain().focus().insertContent({ type: "text", text: label, marks: [{ type: "link", attrs: { href } }] }).run();
+    }
+    setOpen(false);
+  }
+
+  function remove() {
+    editor.chain().focus().extendMarkRange("link").unsetLink().run();
+    setOpen(false);
+  }
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={openPopover}
+        title="Link einfügen / bearbeiten"
+        className={`inline-flex h-7 w-7 items-center justify-center rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 ${isActive ? "bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white" : ""}`}
+      >
+        <LinkIcon size={14} />
+      </button>
+      <PortalDropdown open={open} triggerRef={triggerRef} onClose={() => setOpen(false)} width={300}>
+        <div className="space-y-2.5 p-3">
+          <div className="space-y-1">
+            <label className="block text-[10px] font-semibold uppercase tracking-wide text-gray-500">Link-Adresse</label>
+            <input
+              ref={urlRef}
+              type="text"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); apply(); }
+                if (e.key === "Escape") { e.preventDefault(); setOpen(false); }
+              }}
+              placeholder="example.com oder https://…"
+              className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-2 py-1.5 text-xs text-gray-900 dark:text-gray-100 focus:border-primary focus:outline-none"
+            />
+          </div>
+          {!editing && !hadSelection && (
+            <div className="space-y-1">
+              <label className="block text-[10px] font-semibold uppercase tracking-wide text-gray-500">Link-Text</label>
+              <input
+                type="text"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); apply(); } }}
+                placeholder="z.B. Hier klicken (leer = URL)"
+                className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-2 py-1.5 text-xs text-gray-900 dark:text-gray-100 focus:border-primary focus:outline-none"
+              />
+            </div>
+          )}
+          <div className="flex items-center gap-2 pt-0.5">
+            <button
+              type="button"
+              onClick={apply}
+              disabled={!url.trim()}
+              className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-hover disabled:opacity-40"
+            >
+              {editing ? "Aktualisieren" : "Einfügen"}
+            </button>
+            {editing && (
+              <button
+                type="button"
+                onClick={remove}
+                className="rounded px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
+              >
+                Entfernen
+              </button>
+            )}
+          </div>
+        </div>
+      </PortalDropdown>
+    </>
+  );
+}
+
+// ===========================================================================
 // Variable-Dropdown
 // ===========================================================================
 
-function InsertVariableDropdown({ editor }: { editor: Editor }) {
+function InsertVariableDropdown({ editor, groups }: { editor: Editor; groups: VarGroup[] }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
-
-  // Bewusst nur Lead-Daten + Zeitstempel im Picker. Funnel-Daten (Firmenname, Firmen-Email,
-  // etc.) sind nicht dynamisch — der Tenant kann die direkt in den Text tippen. Variablen
-  // sollen für Daten reserviert sein, die *pro Lead* anders aussehen.
-  // (resolveVar() versteht weiterhin {{funnel.*}} damit Backfill-Mails funktionieren.)
-  const groups: Array<[string, ReadonlyArray<{ token: string; label: string }>]> = [
-    ["Daten vom Lead", AVAILABLE_TOKENS.contact],
-    ["Datum / Zeit", AVAILABLE_TOKENS.meta],
-  ];
 
   return (
     <>
@@ -320,12 +400,12 @@ function InsertVariableDropdown({ editor }: { editor: Editor }) {
         Variable
         <ChevronDown size={12} />
       </button>
-      <PortalDropdown open={open} triggerRef={triggerRef} onClose={() => setOpen(false)} align="right">
-        <div className="p-2 space-y-2">
-          {groups.map(([title, items]) => (
-            <div key={title}>
-              <p className="px-2 pt-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">{title}</p>
-              {items.map(({ token, label }) => (
+      <PortalDropdown open={open} triggerRef={triggerRef} onClose={() => setOpen(false)} align="right" width={360}>
+        <div className="max-h-80 overflow-y-auto p-2 space-y-2">
+          {groups.map((group) => (
+            <div key={group.title}>
+              <p className="px-2 pt-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">{group.title}</p>
+              {group.items.map(({ token, label, sample, unlabeled }) => (
                 <button
                   key={token}
                   type="button"
@@ -334,9 +414,13 @@ function InsertVariableDropdown({ editor }: { editor: Editor }) {
                     editor.chain().focus().insertVariable(token).run();
                     setOpen(false);
                   }}
-                  className="block w-full rounded px-2 py-1.5 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="flex w-full items-baseline justify-between gap-3 rounded px-2 py-1.5 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
-                  <span className="font-medium text-gray-900 dark:text-white">{label}</span>
+                  <span className="min-w-0 truncate font-medium text-gray-900 dark:text-white">
+                    {label}
+                    {unlabeled && <span className="ml-1 font-normal text-amber-600 dark:text-amber-500">· unbenannt</span>}
+                  </span>
+                  {sample && <span className="shrink-0 truncate text-[11px] text-gray-400 dark:text-gray-500">{sample}</span>}
                 </button>
               ))}
             </div>

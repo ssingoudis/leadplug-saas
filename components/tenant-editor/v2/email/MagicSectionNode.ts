@@ -140,12 +140,11 @@ export const MagicSectionNode = Node.create({
         input.type = 'text'
         input.value = initial.heading ?? ''
         input.placeholder = DEFAULT_HEADING_PLACEHOLDER[initial.section] ?? 'Eigene Überschrift (optional)'
+        input.className = 'lp-node-input'
         input.style.flex = '1'
         input.style.padding = '4px 8px'
-        input.style.border = '1px solid rgb(229 231 235)'
         input.style.borderRadius = '4px'
         input.style.fontSize = '0.85em'
-        input.style.background = '#fff'
         input.style.cursor = 'text'
         input.addEventListener('input', () => {
           setAttr('heading', input.value.trim() ? input.value : null)

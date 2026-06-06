@@ -120,12 +120,11 @@ export const CtaButtonNode = Node.create({
       labelInput.type = 'text'
       labelInput.value = initial.label
       labelInput.placeholder = DEFAULT_LABEL
+      labelInput.className = 'lp-node-input'
       labelInput.style.flex = '1'
       labelInput.style.padding = '4px 8px'
-      labelInput.style.border = '1px solid rgb(229 231 235)'
       labelInput.style.borderRadius = '4px'
       labelInput.style.fontSize = '0.85em'
-      labelInput.style.background = '#fff'
       labelInput.addEventListener('input', () => {
         setAttr('label', labelInput.value)
       })
@@ -147,12 +146,11 @@ export const CtaButtonNode = Node.create({
       urlInput.type = 'url'
       urlInput.value = initial.url
       urlInput.placeholder = 'https://…'
+      urlInput.className = 'lp-node-input'
       urlInput.style.flex = '1'
       urlInput.style.padding = '4px 8px'
-      urlInput.style.border = '1px solid rgb(229 231 235)'
       urlInput.style.borderRadius = '4px'
       urlInput.style.fontSize = '0.85em'
-      urlInput.style.background = '#fff'
       urlInput.addEventListener('input', () => {
         setAttr('url', urlInput.value)
       })

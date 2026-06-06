@@ -7,9 +7,10 @@ import {
 } from "lucide-react";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MAX_CUSTOM_RECIPIENTS = 3;
+const MAX_CUSTOM_RECIPIENTS = 5;
 import { EmailEditor } from "./email/EmailEditor";
-import { renderEmail, type TemplateContext } from "@/lib/emailTemplates";
+import { buildFunnelVariables, type FunnelVariables } from "./email/funnelVariables";
+import { renderEmail, RECIPIENT_ME, type TemplateContext } from "@/lib/emailTemplates";
 import type { EditorState, TenantConfig, QuestionConfig } from "@/types";
 import { EmptyState, EDITOR_LEFT_COL, PanelListHeader } from "./ui/Panel";
 import { EditorButton, TextInput, Select, Toggle } from "./ui/Controls";
@@ -208,115 +209,171 @@ export function parseRecipients(value: string | null | undefined): string[] {
   return value.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
-/** Wandelt Liste zurück zu comma-separated DB-String — leeres Array = null. */
-function serializeRecipients(list: string[]): string | null {
-  const cleaned = list.map((s) => s.trim()).filter(Boolean);
-  return cleaned.length === 0 ? null : cleaned.join(", ");
-}
-
-function CustomRecipientList({
-  value,
+// Aufgabe 53: Empfänger-Editor für den „feste Adresse(n)"-Modus. Verwaltet eine Liste aus
+// E-Mail-Adressen + optional dem Marker „Mein Postfach" (RECIPIENT_ME → notification_email).
+// Mappt zurück auf das DB-Modell: nur [@me] → recipient_type 'tenant'; sonst 'custom' mit Liste.
+function FixedRecipients({
+  recipientType,
+  recipientValue,
+  tenantInbox,
   onChange,
 }: {
-  value: string | null;
-  onChange: (next: string | null) => void;
+  recipientType: "tenant" | "custom";
+  recipientValue: string | null;
+  tenantInbox: string;
+  onChange: (patch: { recipient_type: RecipientType; recipient_value: string | null }) => void;
 }) {
-  // Lokaler State erlaubt leere Slots (für "+ weitere Adresse" Button).
-  // `onChange` reicht nur den serialisierten (= ohne leere) Wert an den Parent,
-  // damit die Drift zwischen UI-Slots und DB-Wert sauber bleibt.
-  const [list, setList] = useState<string[]>(() => {
-    const parsed = parseRecipients(value);
-    return parsed.length === 0 ? [""] : parsed;
-  });
+  // entries: committete Empfänger (RECIPIENT_ME-Marker ODER E-Mail). Keine leeren Slots —
+  // neue Adressen kommen über das Inline-Feld (inputDraft) und werden per Enter zu Chips.
+  const derive = useCallback((): string[] => {
+    if (recipientType === "tenant") return [RECIPIENT_ME];
+    return parseRecipients(recipientValue);
+  }, [recipientType, recipientValue]);
 
-  // External-Reset: wenn der Parent value von außen ändert (z.B. nach Subscription-Wechsel
-  // oder bei recipient_type-Switch), syncen wir. Beim eigenen onChange-Call ist value
-  // schon der serializeRecipients(list)-Wert — also kein Reset nötig.
-  const lastEmittedRef = useRef(serializeRecipients(list));
+  const [entries, setEntries] = useState<string[]>(derive);
+  const [inputDraft, setInputDraft] = useState("");
+  const [inputError, setInputError] = useState<string | null>(null);
+  const [addingEmail, setAddingEmail] = useState(false);
+
+  // External-Reset bei Subscription-Wechsel / Änderung von außen (eigene Emits werden geguarded).
+  const keyOf = (t: string, v: string | null) => `${t}|${v ?? ""}`;
+  const lastKeyRef = useRef(keyOf(recipientType, recipientValue));
   useEffect(() => {
-    if (value === lastEmittedRef.current) return;
-    const parsed = parseRecipients(value);
-    setList(parsed.length === 0 ? [""] : parsed);
-    lastEmittedRef.current = value ?? null;
-  }, [value]);
+    const k = keyOf(recipientType, recipientValue);
+    if (k === lastKeyRef.current) return;
+    lastKeyRef.current = k;
+    setEntries(derive());
+    setInputDraft("");
+    setInputError(null);
+    setAddingEmail(false);
+  }, [recipientType, recipientValue, derive]);
 
-  function commit(next: string[]) {
-    setList(next);
-    const serialized = serializeRecipients(next);
-    lastEmittedRef.current = serialized;
-    onChange(serialized);
-  }
-
-  function updateAt(idx: number, v: string) {
-    const next = [...list];
-    next[idx] = v;
-    commit(next);
-  }
-  function removeAt(idx: number) {
-    const next = list.filter((_, i) => i !== idx);
-    commit(next.length === 0 ? [""] : next);
-  }
-  function addOne() {
-    if (list.length >= MAX_CUSTOM_RECIPIENTS) return;
-    // Nur lokaler State — leerer Slot ändert die DB-Repräsentation nicht.
-    setList([...list, ""]);
+  function commitEntries(next: string[]) {
+    setEntries(next);
+    let patch: { recipient_type: RecipientType; recipient_value: string | null };
+    if (next.length === 1 && next[0] === RECIPIENT_ME) {
+      patch = { recipient_type: "tenant", recipient_value: null };
+    } else if (next.length > 0) {
+      patch = { recipient_type: "custom", recipient_value: next.join(", ") };
+    } else {
+      patch = { recipient_type: "custom", recipient_value: null };
+    }
+    lastKeyRef.current = keyOf(patch.recipient_type, patch.recipient_value);
+    onChange(patch);
   }
 
-  const canAdd = list.length < MAX_CUSTOM_RECIPIENTS;
+  const hasMe = entries.includes(RECIPIENT_ME);
+  const emailCount = entries.filter((e) => e !== RECIPIENT_ME).length;
+  const canAddEmail = emailCount < MAX_CUSTOM_RECIPIENTS;
+
+  function removeAt(idx: number) { commitEntries(entries.filter((_, i) => i !== idx)); }
+  function tryAddEmail(): boolean {
+    const v = inputDraft.trim().replace(/,$/, "").trim();
+    if (!v) { setInputError(null); return false; }
+    if (!EMAIL_RE.test(v)) { setInputError("Keine gültige E-Mail-Adresse."); return false; }
+    if (entries.includes(v)) { setInputDraft(""); setInputError(null); return true; }
+    if (!canAddEmail) { setInputError(`Maximal ${MAX_CUSTOM_RECIPIENTS} Adressen.`); return false; }
+    commitEntries([...entries, v]);
+    setInputDraft("");
+    setInputError(null);
+    return true;
+  }
 
   return (
-    <div className="mt-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-3 py-2 space-y-2">
-      {list.map((addr, idx) => {
-        const trimmed = addr.trim();
-        const isInvalid = trimmed.length > 0 && !EMAIL_RE.test(trimmed);
-        return (
-          <div key={idx}>
-            <div className="flex items-center gap-2">
-              <AtSign size={14} className="text-gray-400 shrink-0" />
-              <input
-                type="email"
-                value={addr}
-                onChange={(e) => updateAt(idx, e.target.value)}
-                placeholder={idx === 0 ? "empfaenger@deine-firma.de" : "weitere@adresse.de"}
-                className={`flex-1 rounded border bg-white dark:bg-gray-950 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 ${
-                  isInvalid ? "border-red-300 dark:border-red-700" : "border-gray-200 dark:border-gray-700"
-                }`}
-              />
-              {list.length > 1 && (
+    <div className="mt-2 space-y-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 dark:border-gray-700 dark:bg-gray-900">
+      {/* Mein-Postfach-Box (eigenständig, zeigt die Account-Adresse) */}
+      {hasMe && (
+        <div className="flex items-center gap-2 rounded-md border border-primary/40 bg-primary/5 px-2.5 py-1.5 dark:border-primary/30 dark:bg-primary/10">
+          <Inbox size={14} className="shrink-0 text-primary" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-gray-900 dark:text-white">Mein Postfach</p>
+            <p className="truncate text-[11px] text-gray-500" title={tenantInbox || "noch nicht konfiguriert"}>
+              {tenantInbox || <span className="text-amber-600 dark:text-amber-400">noch keine Benachrichtigungs-Adresse hinterlegt</span>}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => removeAt(entries.indexOf(RECIPIENT_ME))}
+            className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+            title="Mein Postfach entfernen"
+            aria-label="Mein Postfach entfernen"
+          >
+            <X size={13} />
+          </button>
+        </div>
+      )}
+
+      {/* Adress-Chips */}
+      {emailCount > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {entries.map((entry, idx) =>
+            entry === RECIPIENT_ME ? null : (
+              <span
+                key={idx}
+                className="inline-flex max-w-full items-center gap-1 rounded-md border border-primary/30 bg-primary/10 py-1 pl-2 pr-1 text-xs text-primary"
+              >
+                <span className="truncate" title={entry}>{entry}</span>
                 <button
                   type="button"
                   onClick={() => removeAt(idx)}
-                  className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
-                  title="Diese Adresse entfernen"
-                  aria-label="Empfänger entfernen"
+                  className="shrink-0 rounded p-0.5 hover:bg-primary/20"
+                  title="Adresse entfernen"
+                  aria-label={`${entry} entfernen`}
                 >
-                  <X size={13} />
+                  <X size={12} />
                 </button>
-              )}
-            </div>
-            {isInvalid && (
-              <p className="mt-1 ml-6 text-[11px] text-red-600 dark:text-red-400">Keine gültige E-Mail-Adresse.</p>
-            )}
-          </div>
-        );
-      })}
+              </span>
+            ),
+          )}
+        </div>
+      )}
 
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={addOne}
-          disabled={!canAdd}
-          className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
-        >
-          <Plus size={11} strokeWidth={2.5} />
-          {canAdd ? "Weitere Adresse" : `Maximum ${MAX_CUSTOM_RECIPIENTS} erreicht`}
-        </button>
-        <span className="text-[10px] text-gray-400">
-          {list.filter((a) => a.trim()).length}/{MAX_CUSTOM_RECIPIENTS}
-        </span>
+      {/* Inline-Feld zum Hinzufügen — erscheint per „+ Weitere Adresse" (tippen + Enter → Chip) */}
+      {canAddEmail && addingEmail && (
+        <div>
+          <div className="flex items-center gap-2">
+            <AtSign size={14} className="shrink-0 text-gray-400" />
+            <input
+              type="email"
+              autoFocus
+              value={inputDraft}
+              onChange={(e) => { setInputDraft(e.target.value); if (inputError) setInputError(null); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === ",") { e.preventDefault(); tryAddEmail(); }
+                else if (e.key === "Escape") { e.preventDefault(); setInputDraft(""); setInputError(null); setAddingEmail(false); }
+              }}
+              onBlur={() => {
+                if (!inputDraft.trim()) { setInputError(null); setAddingEmail(false); }
+                else if (tryAddEmail()) setAddingEmail(false);
+              }}
+              placeholder="E-Mail eingeben und Enter drücken…"
+              className={`flex-1 rounded border bg-white px-2 py-1 text-sm text-gray-900 dark:bg-gray-950 dark:text-gray-100 ${
+                inputError ? "border-red-300 dark:border-red-700" : "border-gray-200 dark:border-gray-700"
+              }`}
+            />
+          </div>
+          {inputError && <p className="mt-1 ml-6 text-[11px] text-red-600 dark:text-red-400">{inputError}</p>}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {canAddEmail && !addingEmail && (
+          <button type="button" onClick={() => setAddingEmail(true)} className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline">
+            <Plus size={11} strokeWidth={2.5} /> Adresse hinzufügen
+          </button>
+        )}
+        {!canAddEmail && (
+          <span className="text-[10px] text-gray-400">Maximum {MAX_CUSTOM_RECIPIENTS} Adressen erreicht</span>
+        )}
       </div>
 
-      <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
+      {entries.length === 0 && (
+        <p className="text-[11px] text-amber-600 dark:text-amber-400">
+          ⚠️ Noch kein Empfänger — füge „Mein Postfach" oder eine Adresse hinzu, sonst kann die Mail nicht zugestellt werden.
+        </p>
+      )}
+
+      <p className="text-[11px] leading-snug text-gray-500 dark:text-gray-400">
         ⚠️ Stelle sicher, dass alle Empfänger zugestimmt haben (DSGVO). Du bist als Tenant für die Rechtmäßigkeit verantwortlich.
       </p>
     </div>
@@ -339,7 +396,9 @@ function buildPreviewConfig(state: EditorState, funnelSlug: string): TenantConfi
   const questions: QuestionConfig[] = state.questions
     .filter((q) => q.visible)
     .map((q) => ({
-      id:           q.dbId ?? q._id,
+      // Aufgabe 53: Token-Key = field_key (questionKey), damit answer.<key>-Variablen in der
+      // Vorschau dieselben Keys treffen wie im echten Versand.
+      id:           q.questionKey || q._id,
       title:        q.title || "Beispielfrage",
       subtitle:     q.subtitle,
       questionType: q.questionType,
@@ -409,7 +468,6 @@ const DEFAULT_NEW_SUBJECT = 'Wir haben Ihre Anfrage erhalten';
 const DEFAULT_NEW_BODY =
   '<p>Hallo <span data-variable="contact.name">{{contact.name}}</span>,</p>' +
   '<p>vielen Dank für Ihre Anfrage! Wir melden uns zeitnah bei Ihnen zurück.</p>' +
-  '<p>Bei Rückfragen erreichen Sie uns unter <span data-variable="funnel.email">{{funnel.email}}</span>.</p>' +
   '<p>Beste Grüße</p>';
 
 // ---------------------------------------------------------------------------
@@ -417,6 +475,8 @@ const DEFAULT_NEW_BODY =
 // ---------------------------------------------------------------------------
 
 export function EmailsPanel({ funnelSlug, state }: Props) {
+  // Aufgabe 53: dynamische Mail-Variablen aus den Funnel-Feldern (Picker-Gruppen + Chip-Labels).
+  const mailVariables = useMemo(() => buildFunnelVariables(state.questions), [state.questions]);
   const [subs, setSubs] = useState<SubscriptionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [demoMode, setDemoMode] = useState(false);
@@ -764,6 +824,7 @@ export function EmailsPanel({ funnelSlug, state }: Props) {
               funnelSlug={funnelSlug}
               demoMode={demoMode}
               tenantNotificationEmail={state.notificationEmail}
+              variables={mailVariables}
             />
           ) : (
             <div className="flex flex-1 items-center justify-center p-8">
@@ -920,9 +981,10 @@ interface SelectedEditorProps {
   funnelSlug: string;
   demoMode: boolean;
   tenantNotificationEmail: string;
+  variables: FunnelVariables;
 }
 
-function SelectedEditor({ subId, draft, onDraftChange, dirty, saving, onSave, onDelete, funnelSlug, demoMode, tenantNotificationEmail }: SelectedEditorProps) {
+function SelectedEditor({ subId, draft, onDraftChange, dirty, saving, onSave, onDelete, funnelSlug, demoMode, tenantNotificationEmail, variables }: SelectedEditorProps) {
   const initialDelay = minutesToDelay(draft.delay_minutes);
   // Lokale UI-State NUR für die geteilte Delay-Eingabe (amount + unit). Source of
   // truth bleibt draft.delay_minutes — beim Switch auf andere Subscription wird
@@ -973,7 +1035,7 @@ function SelectedEditor({ subId, draft, onDraftChange, dirty, saving, onSave, on
         </div>
         <div className="flex shrink-0 items-center gap-3">
           <span className="inline-flex items-center gap-2 whitespace-nowrap text-xs text-gray-600 dark:text-gray-300">
-            aktiv
+            {draft.is_active ? "aktiv" : "inaktiv"}
             <Toggle checked={draft.is_active} onChange={(v) => onDraftChange({ is_active: v })} />
           </span>
           <EditorButton variant="primary" onClick={onSave} disabled={!dirty || saving}>
@@ -1026,14 +1088,15 @@ function SelectedEditor({ subId, draft, onDraftChange, dirty, saving, onSave, on
             {!isImmediate && (
               <div className="mt-2 flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-3 py-2">
                 <span className="text-xs text-gray-500 whitespace-nowrap">Verzögerung:</span>
-                <TextInput
-                  type="number"
-                  min={1}
-                  value={delayAmount}
-                  onChange={(e) => updateDelay(e.target.value, delayUnit)}
-                  className="w-20"
-                />
-                <div className="flex-1">
+                <div className="w-20 shrink-0">
+                  <TextInput
+                    type="number"
+                    min={1}
+                    value={delayAmount}
+                    onChange={(e) => updateDelay(e.target.value, delayUnit)}
+                  />
+                </div>
+                <div className="w-32 shrink-0">
                   <Select value={delayUnit} onChange={(e) => updateDelay(delayAmount, e.target.value as DelayUnit)}>
                     <option value="minutes">Minuten</option>
                     <option value="hours">Stunden</option>
@@ -1045,10 +1108,10 @@ function SelectedEditor({ subId, draft, onDraftChange, dirty, saving, onSave, on
             )}
           </div>
 
-          {/* Empfänger — 3-Karten-Toggle: Lead / Tenant / Custom */}
+          {/* Empfänger — Aufgabe 53: 2 Modi (Lead | feste Adressen mit Multi + „Mein Postfach") */}
           <div>
             <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Empfänger</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => onDraftChange({ recipient_type: "customer", recipient_value: null })}
@@ -1066,46 +1129,26 @@ function SelectedEditor({ subId, draft, onDraftChange, dirty, saving, onSave, on
               </button>
               <button
                 type="button"
-                onClick={() => onDraftChange({ recipient_type: "tenant", recipient_value: null })}
+                onClick={() => { if (draft.recipient_type === "customer") onDraftChange({ recipient_type: "tenant", recipient_value: null }); }}
                 className={`flex items-start gap-2 rounded-lg border p-3 text-left transition-colors ${
-                  draft.recipient_type === "tenant"
+                  draft.recipient_type !== "customer"
                     ? "border-primary bg-primary/5 dark:bg-primary/10"
                     : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                 }`}
               >
-                <Inbox size={16} className={draft.recipient_type === "tenant" ? "text-primary mt-0.5 shrink-0" : "text-gray-400 mt-0.5 shrink-0"} />
+                <Inbox size={16} className={draft.recipient_type !== "customer" ? "text-primary mt-0.5 shrink-0" : "text-gray-400 mt-0.5 shrink-0"} />
                 <div className="min-w-0">
-                  <p className={`text-sm font-medium ${draft.recipient_type === "tenant" ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-300"}`}>An dich</p>
-                  <p className="text-[11px] text-gray-500 truncate" title={tenantNotificationEmail || "noch nicht konfiguriert"}>
-                    {tenantNotificationEmail || <span className="text-amber-600 dark:text-amber-400">leer</span>}
-                  </p>
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => onDraftChange({ recipient_type: "custom", recipient_value: draft.recipient_value ?? "" })}
-                className={`flex items-start gap-2 rounded-lg border p-3 text-left transition-colors ${
-                  draft.recipient_type === "custom"
-                    ? "border-primary bg-primary/5 dark:bg-primary/10"
-                    : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                }`}
-              >
-                <AtSign size={16} className={draft.recipient_type === "custom" ? "text-primary mt-0.5 shrink-0" : "text-gray-400 mt-0.5 shrink-0"} />
-                <div className="min-w-0">
-                  <p className={`text-sm font-medium ${draft.recipient_type === "custom" ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-300"}`}>Eigene Adresse</p>
-                  <p className="text-[11px] text-gray-500 truncate">z.B. Vertrieb, CC</p>
+                  <p className={`text-sm font-medium ${draft.recipient_type !== "customer" ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-300"}`}>An feste Adresse(n)</p>
+                  <p className="text-[11px] text-gray-500 truncate">dein Postfach, Kollegen, Vertrieb …</p>
                 </div>
               </button>
             </div>
-            {draft.recipient_type === "tenant" && !tenantNotificationEmail && (
-              <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">
-                ⚠️ Die Funnel-Benachrichtigungs-Adresse ist leer — die Mail kann so nicht zugestellt werden. Bitte im „Inhalt"-Tab → Submit-Page → Funnel-Einstellungen eintragen.
-              </p>
-            )}
-            {draft.recipient_type === "custom" && (
-              <CustomRecipientList
-                value={draft.recipient_value}
-                onChange={(v) => onDraftChange({ recipient_value: v })}
+            {draft.recipient_type !== "customer" && (
+              <FixedRecipients
+                recipientType={draft.recipient_type}
+                recipientValue={draft.recipient_value}
+                tenantInbox={tenantNotificationEmail}
+                onChange={(patch) => onDraftChange(patch)}
               />
             )}
           </div>
@@ -1118,6 +1161,7 @@ function SelectedEditor({ subId, draft, onDraftChange, dirty, saving, onSave, on
               onChange={(v) => onDraftChange({ subject: v })}
               singleLine
               placeholder="Betreff der E-Mail"
+              variables={variables}
             />
           </div>
 
@@ -1128,6 +1172,7 @@ function SelectedEditor({ subId, draft, onDraftChange, dirty, saving, onSave, on
               value={draft.body_html}
               onChange={(v) => onDraftChange({ body_html: v })}
               placeholder="Schreibe deine Mail. Variablen + Bausteine über die Toolbar einfügen."
+              variables={variables}
             />
           </div>
 
