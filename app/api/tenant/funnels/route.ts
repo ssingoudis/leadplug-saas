@@ -103,8 +103,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: funnelErr?.message ?? "Insert failed" }, { status: 500 });
   }
 
-  // Pages + Fields anlegen (immer mindestens 1 submit-Page + 1 success-Page,
-  // auch wenn der Funnel keine Question-Pages hat).
+  // Pages + Fields anlegen. Aufgabe 51: bei skip-mode (neuer Default) wird KEINE submit-Page
+  // erzeugt — nur Question/Custom/Welcome + 1 success-Page. Submit-Page nur noch bei Alt-Funnels.
   const { pages, fields } = editorStateToPagesAndFields(state, insertedFunnel.id);
 
   const { error: pagesErr } = await supabase.from("pages").insert(pages);

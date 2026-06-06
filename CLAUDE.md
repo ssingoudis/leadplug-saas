@@ -109,7 +109,8 @@ LeadPlug ist „eine Art Typeform-Klon". **Alle Output-Mechanismen sind dynamisc
 - **Logic-Jumps** (C.4) folgen demselben Action-Element-Pattern (eigener „Logik"-Tab).
 - **Bei neuen Output-Mechanismen** (Slack, Discord, etc.): folge dem Action-Modell — eigener Tab oder Plugin-System, NIE als hartkodierter Trigger in der Submit-Pipeline.
 - **Wichtig — Webhooks ≠ E-Mails im Trigger-Modell:** Webhooks pushen Events (Timing matched dem Event: `on_submit`, `after_page`, abandoned-Cron). E-Mails sind Sequenzen (Timing relativ zum Submit via `delay_minutes`). Bei zukünftigen Actions: passendes Modell pro Use-Case wählen, nicht zwanghaft 1:1-Klon.
-- **Submit-Page-Abschaffung geplant**: heute hartkodiertes Element bleibt für Übergang (toggleable via `skip_submit_step`). Backend-Trigger (`/api/submit`) ist Submit-Page-agnostisch — wenn die Page aus dem Editor verschwindet, ändert sich am Webhook-/E-Mail-Sender nichts.
+- **Submit-Page abgeschafft (Aufgabe 51, 2026-06-06)**: `skipSubmitStep` ist jetzt **Default true** für neue Funnels — kein hartkodiertes Kontaktformular mehr. Lead-Erfassung = normale Card (Kontaktdaten-Preset), Submit am Funnel-Ende (`autoFinish`), Consent = Checkbox-Feld mit Markdown-Link (`[Text](url)`). Das Submit-Page-Gerüst bleibt **inert im Code** (für Alt-Funnels mit `skip_submit_step=false`, dürfen pre-launch brechen) — Cleanup später. Der Backend-Pfad (`/api/submit` + `deriveContactFromAnswers`) war schon submit-page-agnostisch; im skip-mode validiert `/api/submit` die Pflicht-Card-Felder serverseitig als Backstop.
+- **Architektur-Prinzip „keine Render-Fallbacks" (Aufgabe 51):** Defaults für Funnel-Texte gehören **vorausgefüllt in `DEFAULT_EDITOR_STATE`**, NICHT als `?? TEXT_DEFAULTS.X`-Fallback in `getTenantConfig`/`buildFunnelConfig`. Das Widget zeigt was gespeichert ist (leer = aus). Für `successMessage`/`responseMessage` umgesetzt (Titel hat interim einen Default-Fallback weil ein nacktes Häkchen nicht reicht; sauber → Cleanup). Rest der `TEXT_DEFAULTS` folgt im Cleanup.
 
 **Conversion-Tracking** ✅ live (Aufgaben 42 + 43 / D.2, 2026-05-31) — **kein** Action-Element, sondern Embed-Mechanik: das Widget meldet den Submit PII-frei per `postMessage` an die einbettende Seite, der zentral ausgelieferte `embed.js`-Script-Loader feuert daraufhin Conversions (GTM-`dataLayer`-Push `leadplug_lead` + Meta/Google-Auto-Fire + `window.LeadPlug.onLead`-Callback).
 - **Aufgabe 42** = event-basiertes Fundament + `embed.js`-Loader (Upgrade des bestehenden `public/embed.js`, abwärtskompatibel zu `data-funnel-slug`/`data-slug`).
@@ -330,7 +331,10 @@ Klare Trennung — keine Override-Hierarchien zwischen Tabellen:
 **Aufgabe 49 Schema-Erweiterung (2026-06-03):**
 - `aufgabe_50_webhook_name`: `webhook_subscriptions` + `name text NULL` (Anzeigename pro Webhook, Konsistenz zu `email_subscriptions.name`). Backfill bestehender Rows aus dem URL-Host (`substring(url from '://([^/]+)')`). Additiv, direkt auf Produktion appliziert (mit User-Go). Rollback: `ALTER TABLE webhook_subscriptions DROP COLUMN name;`. (Migration-Name trägt aus History-Gründen `50`, gehört aber zum Aufgabe-49-Branch.)
 
-**Nächste DB-Arbeit:** keine geplant.
+**Aufgabe 51 Schema-Erweiterung (2026-06-06):**
+- `aufgabe_51_funnel_show_answers_overview`: `funnels` + `show_answers_overview boolean NOT NULL DEFAULT false` (End-Screen-Antworten-Übersicht optional, Default aus = cleaner Dank). Additiv, kein Backfill-Risiko (Default false), direkt auf Produktion appliziert (mit User-Go). Rollback: `ALTER TABLE funnels DROP COLUMN show_answers_overview;`.
+
+**Nächste DB-Arbeit (eigener Cleanup-Task):** orphaned `funnels.footer_company_name/footer_email/footer_phone/footer_text` droppen (Footer + Header-Banner aus dem Widget entfernt; die Felder fütterten nur noch die abgeschafften E-Mail-Variablen `{{funnel.name/email/phone}}`). Erst Code entkoppeln, dann DROP.
 
 ---
 

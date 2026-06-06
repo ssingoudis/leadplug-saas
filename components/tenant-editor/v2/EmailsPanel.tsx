@@ -376,6 +376,7 @@ function buildPreviewConfig(state: EditorState, funnelSlug: string): TenantConfi
       privacyText:          state.privacyText,
       privacyPolicyUrl:     state.privacyPolicyUrl || undefined,
       answersOverviewLabel: state.answersOverviewLabel || "Angaben im Überblick",
+      showAnswersOverview:  state.showAnswersOverview,
       footerText:           state.footerText,
     },
     billingModel:    "per_month",

@@ -98,7 +98,7 @@ export function StepList({
         <div className="flex flex-col gap-1.5 px-3 pt-4">
           <SectionHeading>Start</SectionHeading>
           <StepPill
-            number={welcomeIndex + 1}
+            number={null}
             title={state.questions[welcomeIndex].title || "Welcome-Screen"}
             meta={WELCOME_META}
             selected={isSameStep(selected, { kind: "question", questionIndex: welcomeIndex })}
@@ -124,7 +124,7 @@ export function StepList({
                   <div key={q._id} className="flex flex-col">
                     <SortableQuestionItem
                       question={q}
-                      number={idx + 1}
+                      number={pos + 1}
                       selected={isSameStep(selected, step)}
                       onClick={() => onSelect(step)}
                       webhookCount={webhookCount}
@@ -167,20 +167,19 @@ export function StepList({
       <div className="flex flex-col gap-1.5 border-t border-gray-200 px-3 py-4 dark:border-gray-800">
         <SectionHeading>Abschluss</SectionHeading>
 
+        {/* Aufgabe 51: Kontaktformular-Pill nur noch bei Alt-Funnels (skip=false). Neue Funnels
+            erfassen Leads via Kontaktdaten-Card; „Abschluss" = nur noch der End-Screen. */}
+        {!state.skipSubmitStep && (
+          <StepPill
+            number={null}
+            title={state.funnelTitle || "Kontaktformular"}
+            meta={SUBMIT_META}
+            selected={selected.kind === "submit"}
+            onClick={() => onSelect({ kind: "submit" })}
+          />
+        )}
         <StepPill
-          number={state.questions.length + 1}
-          title={
-            state.skipSubmitStep
-              ? `${state.funnelTitle || "Kontaktformular"} (übersprungen)`
-              : state.funnelTitle || "Kontaktformular"
-          }
-          meta={SUBMIT_META}
-          selected={selected.kind === "submit"}
-          hidden={state.skipSubmitStep}
-          onClick={() => onSelect({ kind: "submit" })}
-        />
-        <StepPill
-          number={state.questions.length + 2}
+          number={null}
           title={state.successMessage || "Erfolgsseite"}
           meta={SUCCESS_META}
           selected={selected.kind === "success"}

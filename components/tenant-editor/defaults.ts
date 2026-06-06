@@ -240,21 +240,24 @@ export const DEFAULT_EDITOR_STATE: EditorState = {
   maxWidth: "720px",
   contactFormSubtitle: "Wer soll das Angebot erhalten?",
   submitButtonLabel: "Anfrage absenden",
-  successMessage: "Vielen Dank! Wir melden uns in Kürze bei Ihnen.",
-  responseMessage: "Wir melden uns innerhalb von 24 Stunden bei Ihnen.",
+  successMessage: "Vielen Dank für Ihre Anfrage!",
+  responseMessage: "Wir melden uns in Kürze bei Ihnen.",
   privacyText:
     "Mit dem Absenden stimme ich zu, per E-Mail und Telefon zu meiner Anfrage kontaktiert zu werden.",
   privacyPolicyUrl: "",
   footerText: "{{company_name}} · {{public_email}} · {{public_phone}}",
   answersOverviewLabel: "Ihre Angaben im Überblick:",
+  showAnswersOverview: false,
   footerCompanyName: "",
   footerEmail: "",
   footerPhone: "",
   notificationEmail: "",
   emailSenderLocal: "",
   isActive: true,
-  skipSubmitStep: false,
+  // Aufgabe 51: Kontaktformular abgeschafft — neue Funnels laufen im skip-mode (Submit am
+  // Funnel-Ende, Lead-Erfassung via Kontaktdaten-Card). Keine Submit-Page-Felder mehr.
+  skipSubmitStep: true,
   redirectUrl: "",
   questions: [DEFAULT_QUESTION],
-  contactFields: DEFAULT_CONTACT_FIELDS,
+  contactFields: [],
 };

@@ -173,6 +173,7 @@ export interface FunnelConfig {
   privacyPolicyUrl?: string
   privacyText: string          // Einwilligungstext vor dem Datenschutz-Link
   answersOverviewLabel: string // Überschrift der Antworten-Zusammenfassung
+  showAnswersOverview: boolean  // Aufgabe 51: Antworten-Übersicht im End-Screen zeigen (default false = cleaner Dank)
   footerText: string           // Footer-Template mit {{company_name}}, {{public_email}}, {{public_phone}}
 }
 
@@ -311,6 +312,8 @@ export interface EditorState {
   privacyPolicyUrl: string
   footerText: string
   answersOverviewLabel: string
+  // Aufgabe 51: Antworten-Übersicht im End-Screen zeigen (default false = cleaner Dank ohne Antworten)
+  showAnswersOverview: boolean
   // Footer-Kontaktdaten (pro Funnel)
   footerCompanyName: string
   footerEmail: string

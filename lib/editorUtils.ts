@@ -146,11 +146,10 @@ export function buildFunnelConfig(state: EditorState): FunnelConfig {
   return {
     title: state.funnelTitle || "Jetzt kostenloses Angebot anfordern",
     submitButtonLabel: state.submitButtonLabel || "Anfrage absenden",
-    successMessage:
-      state.successMessage || "Vielen Dank! Wir melden uns in Kürze bei Ihnen.",
-    responseMessage:
-      state.responseMessage ||
-      "Wir melden uns so schnell wie möglich bei Ihnen.",
+    // Aufgabe 51: Titel nie leer (nacktes Häkchen reicht nicht) — interim Default-Fallback.
+    // Antwort-Text bleibt optional: leer = zweite Zeile wird nicht angezeigt. (Sauberer Editor-Default → Plan.)
+    successMessage: state.successMessage || "Vielen Dank für Ihre Anfrage!",
+    responseMessage: state.responseMessage,
     contactFormSubtitle:
       state.contactFormSubtitle || "Wer soll das Angebot erhalten?",
     privacyPolicyUrl: state.privacyPolicyUrl || "#",
@@ -159,6 +158,7 @@ export function buildFunnelConfig(state: EditorState): FunnelConfig {
       "Mit dem Absenden stimme ich zu, per E-Mail und Telefon kontaktiert zu werden.",
     answersOverviewLabel:
       state.answersOverviewLabel || "Ihre Angaben im Überblick:",
+    showAnswersOverview: state.showAnswersOverview,
     footerText:
       state.footerText || "{{company_name}} · {{public_email}}",
   };
@@ -339,6 +339,7 @@ export function editorStateToFunnelRow(
     privacy_policy_url: state.privacyPolicyUrl || null,
     privacy_text: state.privacyText || null,
     answers_overview_label: state.answersOverviewLabel || null,
+    show_answers_overview: state.showAnswersOverview,
     footer_text: state.footerText || null,
     footer_company_name: state.footerCompanyName || null,
     footer_email: state.footerEmail || null,
@@ -601,45 +602,48 @@ export function editorStateToPagesAndFields(
     });
   });
 
-  // Submit-Page mit allen ContactFields
-  const submitPageId = newPageId();
-  pages.push({
-    id: submitPageId,
-    funnel_id: funnelId,
-    page_type: "submit",
-    sort_order: state.questions.length,
-    config: {},
-  });
-
-  // Aufgabe 40 Polish: Existing keys behalten, nur leere generieren. Konflikt-Resolution pro Submit-Page.
-  const usedKeysInSubmitPage = new Set<string>();
-  state.contactFields.forEach((cf) => {
-    const rawCKey = cf.key?.trim() ?? "";
-    const baseCKey = rawCKey || generateFieldKey(cf.type, cf.label, usedKeysInSubmitPage);
-    const finalCKey = ensureUniqueKey(baseCKey, usedKeysInSubmitPage);
-    usedKeysInSubmitPage.add(finalCKey);
-
-    fields.push({
-      page_id: submitPageId,
-      field_key: finalCKey,
-      field_type: CONTACT_TYPE_TO_FIELD_TYPE[cf.type],
-      label: cf.label,
-      subtitle: null,
-      placeholder: cf.placeholder ?? null,
-      visible: cf.visible,
-      required: cf.required,
-      sort_order: cf.sort_order,
-      options: OPTION_BASED_CONTACT_TYPES.has(cf.type) ? cf.options ?? [] : [],
-      config: buildContactFieldConfig(cf),
+  // Aufgabe 51: Submit-Page (Kontaktformular) nur noch für Alt-Funnels (skip=false) erzeugen.
+  // Neue Funnels (skip=true) erfassen Leads via Cards; der Submit passiert am Funnel-Ende.
+  if (!state.skipSubmitStep) {
+    const submitPageId = newPageId();
+    pages.push({
+      id: submitPageId,
+      funnel_id: funnelId,
+      page_type: "submit",
+      sort_order: state.questions.length,
+      config: {},
     });
-  });
 
-  // Success-Page (leer, nur Marker)
+    // Aufgabe 40 Polish: Existing keys behalten, nur leere generieren. Konflikt-Resolution pro Submit-Page.
+    const usedKeysInSubmitPage = new Set<string>();
+    state.contactFields.forEach((cf) => {
+      const rawCKey = cf.key?.trim() ?? "";
+      const baseCKey = rawCKey || generateFieldKey(cf.type, cf.label, usedKeysInSubmitPage);
+      const finalCKey = ensureUniqueKey(baseCKey, usedKeysInSubmitPage);
+      usedKeysInSubmitPage.add(finalCKey);
+
+      fields.push({
+        page_id: submitPageId,
+        field_key: finalCKey,
+        field_type: CONTACT_TYPE_TO_FIELD_TYPE[cf.type],
+        label: cf.label,
+        subtitle: null,
+        placeholder: cf.placeholder ?? null,
+        visible: cf.visible,
+        required: cf.required,
+        sort_order: cf.sort_order,
+        options: OPTION_BASED_CONTACT_TYPES.has(cf.type) ? cf.options ?? [] : [],
+        config: buildContactFieldConfig(cf),
+      });
+    });
+  }
+
+  // Success-Page (leer, nur Marker) — direkt nach den Fragen (+1 nur wenn es noch eine Submit-Page gibt)
   pages.push({
     id: newPageId(),
     funnel_id: funnelId,
     page_type: "success",
-    sort_order: state.questions.length + 1,
+    sort_order: state.questions.length + (state.skipSubmitStep ? 0 : 1),
     config: {},
   });
 
@@ -960,6 +964,7 @@ export function dbToEditorState(
     privacyPolicyUrl: funnelRow.privacy_policy_url ?? "",
     footerText: funnelRow.footer_text ?? "",
     answersOverviewLabel: funnelRow.answers_overview_label ?? "",
+    showAnswersOverview: funnelRow.show_answers_overview ?? false,
     footerCompanyName: funnelRow.footer_company_name ?? "",
     footerEmail: funnelRow.footer_email ?? "",
     footerPhone: funnelRow.footer_phone ?? "",

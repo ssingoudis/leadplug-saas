@@ -4,7 +4,8 @@ import { GripVertical, EyeOff, Webhook } from "lucide-react";
 import type { FieldMeta } from "./fieldMeta";
 
 interface Props {
-  number: number;
+  /** Aufgabe 51: nur Fragen/Cards werden nummeriert. Welcome + Abschluss-Steps: null = keine Nummer. */
+  number?: number | null;
   title: string;
   meta: FieldMeta;
   selected: boolean;
@@ -66,7 +67,7 @@ export function StepPill({
         </span>
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-            {number} · {meta.label}
+            {number != null ? `${number} · ${meta.label}` : meta.label}
           </span>
           <span
             className={`truncate text-sm ${

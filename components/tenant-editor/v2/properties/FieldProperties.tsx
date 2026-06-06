@@ -160,8 +160,11 @@ function QuestionFieldProps({
           <TextInput
             value={question.checkboxLabel}
             onChange={(v) => onPatch({ checkboxLabel: v })}
-            placeholder="z. B. Ja, ich stimme der Datenschutzerklärung zu"
+            placeholder="z. B. Ich stimme der [Datenschutzerklärung](https://…) zu"
           />
+          <span className="mt-1 block text-[10px] leading-snug text-gray-400 dark:text-gray-500">
+            Link einfügen mit <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">[Text](https://…)</code> — z. B. für die Datenschutzerklärung.
+          </span>
         </Field>
       )}
 
@@ -295,8 +298,11 @@ function ContactFieldProps({
           <TextInput
             value={f.checkboxLabel ?? ""}
             onChange={(v) => onPatch({ checkboxLabel: v })}
-            placeholder="z. B. Ja, ich stimme zu"
+            placeholder="z. B. Ich stimme der [Datenschutzerklärung](https://…) zu"
           />
+          <span className="mt-1 block text-[10px] leading-snug text-gray-400 dark:text-gray-500">
+            Link einfügen mit <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">[Text](https://…)</code> — z. B. für die Datenschutzerklärung.
+          </span>
         </Field>
       )}
 
