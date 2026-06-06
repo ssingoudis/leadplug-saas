@@ -244,6 +244,8 @@ export function buildQuestions(
         questionType: q.questionType,
         visible: q.visible,
         options: mapped,
+        // Aufgabe 50: Marker-Stil (A/B/C · 1/2/3 · keiner) ins Widget durchreichen.
+        optionMarker: q.optionMarker,
         config: buildQuestionConfig(q),
         kind: "question" as const,
       };
@@ -591,7 +593,11 @@ export function editorStateToPagesAndFields(
               sort_order: oidx,
             }))
         : [],
-      config: buildQuestionConfig(q),
+      // Aufgabe 50: Marker-Stil im config-jsonb persistieren (nur wenn non-default, hält config schlank).
+      config:
+        OPTION_BASED_TYPES.has(q.questionType) && q.optionMarker && q.optionMarker !== "letters"
+          ? { ...buildQuestionConfig(q), optionMarker: q.optionMarker }
+          : buildQuestionConfig(q),
     });
   });
 
@@ -919,6 +925,9 @@ export function dbToEditorState(
       scaleMax: questionType === "scale" && cfg.max != null ? String(cfg.max) : "10",
       scaleLabelLeft: questionType === "scale" && typeof cfg.labelLeft === "string" ? cfg.labelLeft : "",
       scaleLabelRight: questionType === "scale" && typeof cfg.labelRight === "string" ? cfg.labelRight : "",
+      // Aufgabe 50: Marker-Stil aus config (Default 'letters' wenn nicht gesetzt).
+      optionMarker:
+        cfg.optionMarker === "numbers" || cfg.optionMarker === "none" ? cfg.optionMarker : "letters",
       // Aufgabe 40 Polish: existing key aus DB → kein Auto-Sync mehr (Stabilität)
       _keyTouched: true,
     };

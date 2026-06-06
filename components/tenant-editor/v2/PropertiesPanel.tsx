@@ -34,6 +34,7 @@ import { FieldRow } from "./properties/FieldRow";
 import { FieldProperties } from "./properties/FieldProperties";
 import { AddContactFieldPicker } from "./properties/AddContactFieldPicker";
 import { PanelShell, PanelHeader, Section, Field } from "./ui/Panel";
+import { ConfirmModal } from "./ui/ConfirmModal";
 
 interface Props {
   state: EditorState;
@@ -135,6 +136,7 @@ interface QuestionPropsArgs {
 }
 
 function QuestionProps({ state, index, onPatchQuestion, onDelete }: QuestionPropsArgs) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const q = state.questions[index];
   if (!q) {
     return <div className="p-6 text-sm text-gray-500 dark:text-gray-400">Keine Frage ausgewählt.</div>;
@@ -173,42 +175,34 @@ function QuestionProps({ state, index, onPatchQuestion, onDelete }: QuestionProp
         />
       </Section>
 
-      <Section title="Feld dieser Seite">
-        <FieldRow
-          icon={meta.icon}
-          pillClass={meta.pillClass}
-          label="Frage"
-          typeLabel={meta.label}
-          expandable={false}
-          expanded={true}
-          onToggle={() => {}}
-        >
-          <FieldProperties
-            kind="question"
-            question={q}
-            onPatch={(patch) => onPatchQuestion(index, patch)}
-          />
-        </FieldRow>
+      {/* Aufgabe 50: flacher — kein „Feld dieser Seite"-Wrapper mehr. Eine Frage-Seite hat genau
+          ein Feld, die Verschachtelung war unnötig. Field-Properties direkt unter einer flachen Section. */}
+      <Section title="Frage">
+        <FieldProperties
+          kind="question"
+          question={q}
+          onPatch={(patch) => onPatchQuestion(index, patch)}
+        />
       </Section>
 
       <Section>
         <button
           type="button"
-          onClick={() => {
-            if (
-              confirm(
-                "Diese Frage wirklich löschen? Diese Aktion kann nur durch Verwerfen ungespeicherter Änderungen rückgängig gemacht werden.",
-              )
-            ) {
-              onDelete();
-            }
-          }}
-          className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-900/20"
+          onClick={() => setConfirmDelete(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-900/20"
         >
           <Trash2 size={14} />
           Seite löschen
         </button>
       </Section>
+
+      <ConfirmModal
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={onDelete}
+        title="Frage löschen?"
+        message="Diese Aktion kann nur durch Verwerfen ungespeicherter Änderungen rückgängig gemacht werden."
+      />
     </div>
   );
 }
@@ -315,6 +309,27 @@ function SubmitProps({
         </Field>
       </Section>
 
+      <Section title="Datenschutz">
+        <Field label="Einwilligungs-Text">
+          <textarea
+            value={state.privacyText}
+            onChange={(e) => onPatch({ privacyText: e.target.value })}
+            placeholder="z. B. Mit dem Absenden stimme ich zu, per E-Mail und Telefon kontaktiert zu werden."
+            rows={3}
+            disabled={!submitActive}
+            className="w-full resize-y rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+          />
+        </Field>
+        <Field label="Link zur Datenschutzerklärung (optional)">
+          <TextInput
+            value={state.privacyPolicyUrl}
+            onChange={(v) => onPatch({ privacyPolicyUrl: v })}
+            placeholder="https://deine-seite.de/datenschutz"
+            disabled={!submitActive}
+          />
+        </Field>
+      </Section>
+
       <Section title="Felder dieser Seite">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext
@@ -393,6 +408,7 @@ function CustomPageProps({
 }) {
   const page = state.questions[index];
   const [showAddPicker, setShowAddPicker] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   // Aufgabe 40 Polish: expanded-State trackt jetzt _clientId statt key (stabil bei key-Edit).
   const [expandedClientId, setExpandedClientId] = useState<string | null>(null);
 
@@ -490,21 +506,21 @@ function CustomPageProps({
       <Section>
         <button
           type="button"
-          onClick={() => {
-            if (
-              confirm(
-                "Diese Karte wirklich löschen? Diese Aktion kann nur durch Verwerfen ungespeicherter Änderungen rückgängig gemacht werden.",
-              )
-            ) {
-              onDelete();
-            }
-          }}
-          className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-900/20"
+          onClick={() => setConfirmDelete(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-900/20"
         >
           <Trash2 size={14} />
           Karte löschen
         </button>
       </Section>
+
+      <ConfirmModal
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={onDelete}
+        title="Karte löschen?"
+        message="Diese Aktion kann nur durch Verwerfen ungespeicherter Änderungen rückgängig gemacht werden."
+      />
     </div>
   );
 }
@@ -606,6 +622,7 @@ function WelcomeProps({
   onPatchQuestion: (index: number, patch: Partial<EditorQuestion>) => void;
   onDelete: () => void;
 }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const page = state.questions[index];
   if (!page || page.kind !== "welcome") {
     return <div className="p-6 text-sm text-gray-500 dark:text-gray-400">Kein Welcome-Step ausgewählt.</div>;
@@ -636,20 +653,31 @@ function WelcomeProps({
             placeholder="z. B. Los geht's →"
           />
         </Field>
+        <Toggle
+          label="Sichtbar im Funnel"
+          enabled={page.visible !== false}
+          onToggle={(next) => onPatchQuestion(index, { visible: next })}
+        />
       </Section>
 
       <Section>
         <button
           type="button"
-          onClick={() => {
-            if (confirm("Welcome-Screen wirklich löschen?")) onDelete();
-          }}
-          className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-900/20"
+          onClick={() => setConfirmDelete(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-900/20"
         >
           <Trash2 size={14} />
           Welcome-Screen löschen
         </button>
       </Section>
+
+      <ConfirmModal
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={onDelete}
+        title="Welcome-Screen löschen?"
+        message="Der Intro-Screen wird entfernt. Diese Aktion kann nur durch Verwerfen ungespeicherter Änderungen rückgängig gemacht werden."
+      />
     </div>
   );
 }

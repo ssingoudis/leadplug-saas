@@ -48,6 +48,17 @@ export function Sidebar({
   // Editor-Modus (forceCollapsed): schmale Icon-Leiste, die beim Hovern als Flyout
   // aufklappt — der User muss nicht raten, was hinter jedem Symbol steckt.
   const [hovered, setHovered] = useState(false)
+  // Aufgabe 50: kleine Grace-Verzögerung beim Zuklappen — verhindert das hektische Sofort-
+  // Wegschnappen, wenn die Maus die Flyout-Kante nur kurz verlässt.
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  function handleHoverEnter() {
+    if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null }
+    setHovered(true)
+  }
+  function handleHoverLeave() {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current)
+    hoverTimer.current = setTimeout(() => setHovered(false), 130)
+  }
 
   useEffect(() => {
     try {
@@ -56,6 +67,8 @@ export function Sidebar({
       /* ignore */
     }
   }, [])
+
+  useEffect(() => () => { if (hoverTimer.current) clearTimeout(hoverTimer.current) }, [])
 
   const collapsed = forceCollapsed ? !hovered : storedCollapsed
 
@@ -77,9 +90,9 @@ export function Sidebar({
 
   return (
     <aside
-      onMouseEnter={forceCollapsed ? () => setHovered(true) : undefined}
-      onMouseLeave={forceCollapsed ? () => setHovered(false) : undefined}
-      className={`hidden lg:flex flex-col shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 transition-all duration-200 ease-in-out ${positionClass}`}
+      onMouseEnter={forceCollapsed ? handleHoverEnter : undefined}
+      onMouseLeave={forceCollapsed ? handleHoverLeave : undefined}
+      className={`hidden lg:flex flex-col shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 transition-all duration-300 ease-in-out ${positionClass}`}
     >
       {/* Logo */}
       <div className={`flex items-center h-16 shrink-0 ${collapsed ? 'justify-center' : 'px-4'}`}>

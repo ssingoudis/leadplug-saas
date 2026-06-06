@@ -11,6 +11,25 @@ import type { ReactNode } from "react";
 const DEFAULT_BADGE_CLASS =
   "border-violet-200 bg-violet-100 text-violet-700 dark:border-violet-800 dark:bg-violet-900/30 dark:text-violet-300";
 
+// Aufgabe 50: einheitliche Breite der linken Listen-Spalte über ALLE Editor-Tabs
+// (Bearbeiten · E-Mails · Webhooks) — verhindert das Springen der linken Kante beim Tab-Wechsel.
+// Als CSS-Wert für gridTemplateColumns gedacht.
+export const EDITOR_LEFT_COL = "clamp(280px, 20vw, 340px)";
+
+// Aufgabe 50: einheitliche Höhe für ALLE Pane-Kopfzeilen (Liste/Vorschau/Detail) über alle Tabs.
+// h-14 fasst auch einen rechten Button/Select und matcht die Haupt-Top-Bar. Gegen Header-Drift.
+export const PANEL_HEADER_H = "flex h-14 shrink-0 items-center gap-3 border-b border-gray-200 px-5 dark:border-gray-800";
+
+// Geteilte Listen-/Pane-Kopfzeile: einzeiliger Titel (text-sm font-bold) + optionales rechtes Element.
+export function PanelListHeader({ title, right }: { title: string; right?: ReactNode }) {
+  return (
+    <div className={`${PANEL_HEADER_H} justify-between`}>
+      <h2 className="truncate text-sm font-bold text-gray-900 dark:text-white">{title}</h2>
+      {right ?? null}
+    </div>
+  );
+}
+
 // Spalten-Container für ein Properties-/Master-Detail-Panel. `side` bestimmt die Trennlinie.
 export function PanelShell({
   children,

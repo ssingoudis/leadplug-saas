@@ -1,7 +1,7 @@
 "use client";
 
 import type { EditorState, FunnelFont } from "@/types";
-import { PanelShell, PanelHeader, Section, Field, FieldHint } from "./ui/Panel";
+import { PanelShell, Section, Field, FieldHint } from "./ui/Panel";
 
 interface Props {
   state: EditorState;
@@ -33,8 +33,6 @@ export function ThemePanel({ state, onPatch }: Props) {
 
   return (
     <PanelShell>
-      <PanelHeader badge="D" scope="Funnel-weit" title="Design" />
-
       <Section title="Markenfarbe">
         <ColorField
           label="Brand-Farbe"
@@ -54,12 +52,9 @@ export function ThemePanel({ state, onPatch }: Props) {
           onChange={(v) => onPatch({ backgroundColor: v })}
           hint="Hintergrund des Widget-Kastens. Default Weiß."
         />
-        <ColorField
-          label="Seiten-Hintergrund"
+        <PageBackgroundField
           value={state.pageBackgroundColor}
           onChange={(v) => onPatch({ pageBackgroundColor: v })}
-          hint='Hinter der Card. „transparent" = Parent-Website scheint durch.'
-          allowTransparent
         />
       </Section>
 
@@ -104,12 +99,6 @@ export function ThemePanel({ state, onPatch }: Props) {
           />
         </Field>
       </Section>
-
-      <Section>
-        <p className="px-1 text-xs leading-relaxed text-gray-400 dark:text-gray-500">
-          Änderungen werden live in der Mitte angezeigt. Speichern via Speichern-Button oben.
-        </p>
-      </Section>
     </PanelShell>
   );
 }
@@ -123,24 +112,20 @@ function ColorField({
   value,
   onChange,
   hint,
-  allowTransparent,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   hint?: string;
-  allowTransparent?: boolean;
 }) {
-  const isTransparent = allowTransparent && value === "transparent";
   return (
     <Field label={label}>
       <div className="flex items-center gap-2">
         <input
           type="color"
-          value={isTransparent ? "#ffffff" : value}
+          value={value}
           onChange={(e) => onChange(e.target.value)}
-          disabled={isTransparent}
-          className="h-9 w-9 cursor-pointer rounded-lg border border-gray-300 bg-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700"
+          className="lp-color-chip h-9 w-9 cursor-pointer rounded-lg border border-gray-300 bg-white dark:border-gray-700"
         />
         <input
           type="text"
@@ -149,22 +134,70 @@ function ColorField({
           placeholder="#22c55e"
           className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
         />
-        {allowTransparent && (
-          <button
-            type="button"
-            onClick={() => onChange(isTransparent ? "#ffffff" : "transparent")}
-            className={
-              isTransparent
-                ? "rounded-lg border border-primary bg-primary/10 px-2 py-2 text-xs font-medium text-primary"
-                : "rounded-lg border border-gray-300 px-2 py-2 text-xs font-medium text-gray-600 hover:border-primary hover:text-primary dark:border-gray-700 dark:text-gray-400"
-            }
-            title={isTransparent ? "Wieder Farbe verwenden" : "Auf transparent setzen"}
-          >
-            {isTransparent ? "transparent" : "Klar"}
-          </button>
-        )}
       </div>
       {hint && <FieldHint>{hint}</FieldHint>}
+    </Field>
+  );
+}
+
+/* Aufgabe 50: Seiten-Hintergrund — klarer Umschalter „Transparent | Eigene Farbe" statt
+   des unschönen „transparent"-Text-im-Input + Toggle-Button. Bei „Eigene Farbe" erscheint der Picker. */
+function PageBackgroundField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const isTransparent = value === "transparent";
+  return (
+    <Field label="Seiten-Hintergrund">
+      <div className="inline-flex w-full rounded-lg border border-gray-300 p-0.5 dark:border-gray-700">
+        <button
+          type="button"
+          onClick={() => onChange("transparent")}
+          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+            isTransparent
+              ? "bg-primary/10 text-primary"
+              : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+          }`}
+        >
+          Transparent
+        </button>
+        <button
+          type="button"
+          onClick={() => { if (isTransparent) onChange("#ffffff"); }}
+          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+            !isTransparent
+              ? "bg-primary/10 text-primary"
+              : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+          }`}
+        >
+          Eigene Farbe
+        </button>
+      </div>
+      {!isTransparent && (
+        <div className="mt-2 flex items-center gap-2">
+          <input
+            type="color"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="lp-color-chip h-9 w-9 cursor-pointer rounded-lg border border-gray-300 bg-white dark:border-gray-700"
+          />
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="#ffffff"
+            className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+          />
+        </div>
+      )}
+      <FieldHint>
+        {isTransparent
+          ? "Die Einbett-Seite scheint durch — ideal beim Einbetten."
+          : "Eigene Hintergrundfarbe hinter der Card."}
+      </FieldHint>
     </Field>
   );
 }

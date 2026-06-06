@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Pencil, Save, TriangleAlert } from "lucide-react";
+import { ArrowLeft, Check, Pencil, Save, TriangleAlert } from "lucide-react";
 import type { EditorState, EditorQuestion, ContactFieldConfig, QuestionType } from "@/types";
 import { TopTabs, type TopTabKey } from "./TopTabs";
 import { StepList } from "./StepList";
@@ -13,10 +13,13 @@ import { WebhooksPanel } from "./WebhooksPanel";
 import { EmailsPanel } from "./EmailsPanel";
 import { SharePanel } from "./SharePanel";
 import { AddContactFieldPicker } from "./properties/AddContactFieldPicker";
+import { EditorModal } from "./ui/EditorModal";
+import { EDITOR_LEFT_COL } from "./ui/Panel";
 import type { SelectedStep } from "./types";
 import {
   makeDefaultCustomPage,
   makeAddressCustomPage,
+  makeContactCard,
   makeDefaultWelcomePage,
 } from "@/components/tenant-editor/defaults";
 import { generateFieldKey, toKey } from "@/lib/editorUtils";
@@ -95,6 +98,25 @@ function defaultContactField(
     _keyTouched: SEMANTIC_CONTACT_TYPES.has(type),
     ...(type === "radio" ? { options: ["Option 1", "Option 2"] } : {}),
   };
+}
+
+// Aufgabe 50: sinnvoller Default-Titel für eine 1-Feld-Karte, die aus einem einzelnen Feld erzeugt
+// wird (der große Karten-Titel ersetzt im 1-Feld-Fall das Feld-Label). Leer = User benennt selbst.
+function cardTitleForField(type: ContactFieldConfig["type"]): string {
+  switch (type) {
+    case "full_name":
+    case "first_name":
+    case "last_name":
+      return "Wie heißt du?";
+    case "email":
+      return "Wie lautet deine E-Mail-Adresse?";
+    case "tel":
+      return "Wie lautet deine Telefonnummer?";
+    case "plz":
+      return "Wie lautet deine Postleitzahl?";
+    default:
+      return "";
+  }
 }
 
 function defaultQuestion(type: QuestionType): EditorQuestion {
@@ -306,6 +328,22 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
     [state.questions.length],
   );
 
+  // Aufgabe 50: Kontaktdaten-Quick-Card (Name + E-Mail + Telefon) — häufigste Lead-Card.
+  const handleAddContactCard = useCallback(
+    (atIndex?: number) => {
+      const newPage = makeContactCard();
+      setState((prev) => {
+        const insertAt = atIndex ?? prev.questions.length;
+        const next = [...prev.questions];
+        next.splice(insertAt, 0, newPage);
+        return { ...prev, questions: next };
+      });
+      const insertAt = atIndex ?? state.questions.length;
+      setSelected({ kind: "question", questionIndex: insertAt });
+    },
+    [state.questions.length],
+  );
+
   // Aufgabe 39: Welcome-Screen IMMER an Position 0 (Intro vor allem anderen).
   // Max 1 Welcome-Screen pro Funnel — wenn schon einer da ist, wird er nicht doppelt
   // angelegt sondern stattdessen selektiert (User landet im Properties-Panel des bestehenden).
@@ -385,6 +423,33 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
       });
     },
     [],
+  );
+
+  // Aufgabe 50: Karten-Feld hinzufügen (Karten-Model). Einfaches Feld wandert in die gewählte
+  // Karte (wenn erlaubt + eine Karte selektiert ist), sonst entsteht eine NEUE Karte mit genau
+  // diesem Feld an atIndex. Spezial-Typen laufen weiter über handleAddQuestion (eigene Seite).
+  const handleAddCardField = useCallback(
+    (type: ContactFieldConfig["type"], atIndex: number, allowIntoSelected: boolean) => {
+      if (allowIntoSelected && selected.kind === "question") {
+        const page = state.questions[selected.questionIndex];
+        if (page && page.kind === "custom") {
+          handleAddCustomField(selected.questionIndex, type);
+          return;
+        }
+      }
+      const newPage = makeDefaultCustomPage();
+      newPage.title = cardTitleForField(type);
+      newPage.customFields = [defaultContactField(type, [])];
+      const clampedIndex = Math.min(Math.max(atIndex, 0), state.questions.length);
+      setState((prev) => {
+        const insertAt = Math.min(Math.max(atIndex, 0), prev.questions.length);
+        const next = [...prev.questions];
+        next.splice(insertAt, 0, newPage);
+        return { ...prev, questions: next };
+      });
+      setSelected({ kind: "question", questionIndex: clampedIndex });
+    },
+    [selected, state.questions, handleAddCustomField],
   );
 
   // Aufgabe 38: Feld einer Custom-Page löschen
@@ -629,11 +694,18 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
     return href.includes("?") ? `${href}&v=2` : `${href}?v=2`;
   }
 
-  async function handleSave() {
+  // Aufgabe 50: Speichern vom Navigieren entkoppelt. Default bleibt im Editor — der globale
+  // Save ist jetzt iterativ nutzbar. Navigation passiert nur noch (a) wenn explizit verlassen
+  // wird (ExitModal → leaveAfter=true), oder (b) im Create-Modus, wo nach dem POST auf die
+  // Edit-URL des neuen Slugs gewechselt werden MUSS (sonst POSTet der nächste Save ein Duplikat).
+  async function handleSave({ leaveAfter = false }: { leaveAfter?: boolean } = {}) {
     if (!state.funnelName) {
       setSaveError("Bitte gib einen Funnel-Namen ein.");
       return;
     }
+    // Snapshot dessen, was wir tatsächlich senden — damit savedSnapshot exakt der gespeicherte
+    // Stand ist, auch wenn der User während des Requests weitertippt (dann bleibt es dirty).
+    const savedState = state;
     setIsSaving(true);
     setSaveError(null);
     try {
@@ -644,17 +716,36 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
       const res = await fetch(url, {
         method: mode === "create" ? "POST" : "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ state }),
+        body: JSON.stringify({ state: savedState }),
       });
       const json = await res.json();
       if (!res.ok) {
         setSaveError(json.error ?? "Unbekannter Fehler beim Speichern.");
         return;
       }
-      const dest = pendingHref ?? "/dashboard/funnels";
-      setPendingHref(null);
-      router.push(withV2Flag(dest));
-      router.refresh();
+
+      if (mode === "create") {
+        // Funnel existiert jetzt → in die Edit-URL des neuen Slugs wechseln, damit der nächste
+        // Save als PUT läuft. Beim expliziten Verlassen stattdessen zum pendingHref.
+        const newSlug = typeof json.slug === "string" ? json.slug : undefined;
+        const dest = leaveAfter
+          ? (pendingHref ?? "/dashboard/funnels")
+          : newSlug
+            ? `/dashboard/funnels/${newSlug}/edit`
+            : "/dashboard/funnels";
+        setPendingHref(null);
+        router.push(withV2Flag(dest));
+        return;
+      }
+
+      // Edit-Modus: Baseline nachziehen → isDirty=false, Badge „Gespeichert". Im Editor bleiben
+      // (kein router.refresh — der Client-State ist die Wahrheit, sonst Flicker/State-Verlust).
+      setSavedSnapshot(savedState);
+      if (leaveAfter) {
+        const dest = pendingHref ?? "/dashboard/funnels";
+        setPendingHref(null);
+        router.push(withV2Flag(dest));
+      }
     } catch {
       setSaveError("Netzwerkfehler. Bitte erneut versuchen.");
     } finally {
@@ -728,13 +819,14 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
     <>
       {showNamePrompt && <NamePromptModal pendingName={pendingName} setPendingName={setPendingName} onConfirm={confirmNamePrompt} onCancel={cancelNamePrompt} />}
       {showExitModal && (
-        <ExitModal onCancel={handleCancelExit} onDiscard={handleDiscardAndLeave} onSave={() => { setShowExitModal(false); handleSave(); }} />
+        <ExitModal onCancel={handleCancelExit} onDiscard={handleDiscardAndLeave} onSave={() => { setShowExitModal(false); handleSave({ leaveAfter: true }); }} />
       )}
 
       <div
         className="fixed inset-y-0 right-0 left-0 lg:left-16 flex flex-col bg-gray-50 dark:bg-[#0d1117]"
       >
-        {/* Top-Bar: 3 Zonen — links Back+Name · Mitte Tabs (zentriert) · rechts Status+Speichern */}
+        {/* Top-Bar: EINE Zeile — links Back+Name · Mitte Tabs (zentriert) · rechts Status+Speichern.
+            Test/Geräte-Controls schweben im Canvas (CenterCanvas) statt als eigener Balken. */}
         <header className="flex shrink-0 items-center gap-4 border-b border-gray-200 bg-white px-4 py-2.5 dark:border-gray-800 dark:bg-gray-900">
           {/* Links */}
           <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -784,22 +876,30 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
             {saveError && (
               <span className="hidden text-xs text-red-600 dark:text-red-400 md:inline">{saveError}</span>
             )}
-            {/* Aufgabe 45: globaler Save nur auf Dokument-Tabs (Inhalt/Design) — oder wenn es
-                ungesicherte Dokument-Änderungen gibt. Ressourcen-Tabs speichern pro Eintrag. */}
-            {(isDocumentTab || isDirty) && (
-              <>
-                <SaveBadge isDirty={isDirty} isSaving={isSaving} />
+            {/* Aufgabe 45/50: globaler Save nur auf Dokument-Tabs (Inhalt/Design) — oder wenn es
+                ungesicherte Dokument-Änderungen gibt. Status + Aktion sind EIN Element: grünes
+                „Gespeichert" im Ruhezustand, „Speichern"-Button bei ungesicherten Änderungen. */}
+            {(isDocumentTab || isDirty) &&
+              (isDirty || isSaving ? (
                 <button
                   type="button"
-                  onClick={handleSave}
+                  onClick={() => handleSave()}
                   disabled={!canSave || isSaving}
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <Save size={14} />
+                  {isSaving ? (
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white/80" />
+                  ) : (
+                    <Save size={14} />
+                  )}
                   {isSaving ? "Speichern…" : "Speichern"}
                 </button>
-              </>
-            )}
+              ) : (
+                <span className="inline-flex items-center gap-1.5 rounded-xl border border-green-200 bg-green-50 px-3.5 py-2 text-sm font-medium text-green-700 dark:border-green-700/40 dark:bg-green-900/20 dark:text-green-400">
+                  <Check size={14} strokeWidth={2.5} />
+                  Gespeichert
+                </span>
+              ))}
           </div>
         </header>
 
@@ -855,15 +955,22 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
             <SharePanel funnelSlug={originalSlug} funnelName={state.funnelName} />
           )
         ) : (
-          <div className="grid min-h-0 flex-1 grid-cols-[420px_minmax(0,1fr)_420px]">
+          // Aufgabe 50: clamp statt fix — Seiten-Panels schrumpfen sanft auf kleineren Screens,
+          // Canvas behält Priorität. Linke Spalte = geteilte EDITOR_LEFT_COL (konsistent über alle Tabs).
+          <div
+            className="grid min-h-0 flex-1"
+            style={{ gridTemplateColumns: `${EDITOR_LEFT_COL} minmax(0, 1fr) clamp(340px, 24vw, 400px)` }}
+          >
             <StepList
               state={state}
               selected={selected}
               onSelect={setSelected}
               onReorder={handleReorder}
               onAddQuestion={handleAddQuestion}
+              onAddCardField={handleAddCardField}
               onAddCustomPage={handleAddCustomPage}
               onAddAddressCard={handleAddAddressCard}
+              onAddContactCard={handleAddContactCard}
               onAddWelcome={handleAddWelcome}
               webhookCountsByPageId={webhookCountsByPageId}
               onSwitchToWebhooksTab={() => setActiveTab("webhooks")}
@@ -886,7 +993,7 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
             <div className="flex min-h-0 flex-col">
               {/* Aufgabe 45: Inspektor-Umschalter Inhalt | Design (rechte Spalte des Bearbeiten-Tabs).
                   „Inhalt" = Eigenschaften des gewählten Schritts, „Design" = funnel-weites Theme. */}
-              <div className="flex shrink-0 items-center gap-1 border-b border-l border-gray-200 bg-white p-2 dark:border-gray-800 dark:bg-gray-900">
+              <div className="flex h-14 shrink-0 items-center gap-1 border-b border-l border-gray-200 bg-white px-2 dark:border-gray-800 dark:bg-gray-900">
                 {(["content", "design"] as const).map((m) => (
                   <button
                     key={m}
@@ -948,31 +1055,6 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
 
 /* ───────────────────────────── Sub-components ───────────────────────────── */
 
-function SaveBadge({ isDirty, isSaving }: { isDirty: boolean; isSaving: boolean }) {
-  if (isSaving) {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-400" />
-        Speichern…
-      </span>
-    );
-  }
-  if (isDirty) {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 dark:border-amber-700/40 dark:bg-amber-900/20 dark:text-amber-400">
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-        Ungespeichert
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 dark:border-green-700/40 dark:bg-green-900/20 dark:text-green-400">
-      <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-      Gespeichert
-    </span>
-  );
-}
-
 function NamePromptModal({
   pendingName,
   setPendingName,
@@ -985,47 +1067,49 @@ function NamePromptModal({
   onCancel: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
-        <div className="p-6">
-          <h3 className="mb-2 text-base font-bold text-gray-900 dark:text-white">
-            Wie soll dein neuer Funnel heißen?
-          </h3>
-          <p className="mb-4 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
-            Der Name ist nur für dich zur Wiedererkennung. Endkunden sehen ihn nicht. Du kannst ihn später jederzeit ändern.
-          </p>
-          <input
-            type="text"
-            value={pendingName}
-            onChange={(e) => setPendingName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") onConfirm();
-              if (e.key === "Escape") onCancel();
-            }}
-            placeholder="z. B. Solar-Anfrage Frühling 2026"
-            autoFocus
-            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
-          />
-          <div className="mt-5 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-            >
-              Abbrechen
-            </button>
-            <button
-              type="button"
-              onClick={onConfirm}
-              disabled={!pendingName.trim()}
-              className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Funnel anlegen
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <EditorModal
+      open
+      onClose={onCancel}
+      dismissible={false}
+      scope="Neuer Funnel"
+      title="Wie soll dein neuer Funnel heißen?"
+      maxWidth="max-w-md"
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+          >
+            Abbrechen
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={!pendingName.trim()}
+            className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Funnel anlegen
+          </button>
+        </>
+      }
+    >
+      <p className="mb-4 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
+        Der Name ist nur für dich zur Wiedererkennung. Endkunden sehen ihn nicht. Du kannst ihn später jederzeit ändern.
+      </p>
+      <input
+        type="text"
+        value={pendingName}
+        onChange={(e) => setPendingName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") onConfirm();
+          if (e.key === "Escape") onCancel();
+        }}
+        placeholder="z. B. Solar-Anfrage Frühling 2026"
+        autoFocus
+        className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+      />
+    </EditorModal>
   );
 }
 
@@ -1039,45 +1123,46 @@ function ExitModal({
   onSave: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
-        <div className="p-6">
-          <div className="mb-4 flex items-start gap-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-50 dark:bg-amber-900/20">
-              <TriangleAlert size={18} className="text-amber-500" />
-            </div>
-            <div>
-              <h3 className="mb-1 text-sm font-bold text-gray-900 dark:text-white">Ungespeicherte Änderungen</h3>
-              <p className="text-sm leading-relaxed text-gray-500 dark:text-gray-400">
-                Du hast Änderungen vorgenommen, die noch nicht gespeichert wurden.
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-            >
-              Abbrechen
-            </button>
-            <button
-              type="button"
-              onClick={onDiscard}
-              className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-semibold text-gray-500 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
-            >
-              Verwerfen
-            </button>
-            <button
-              type="button"
-              onClick={onSave}
-              className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
-            >
-              Speichern
-            </button>
-          </div>
+    <EditorModal
+      open
+      onClose={onCancel}
+      scope="Editor verlassen"
+      title="Ungespeicherte Änderungen"
+      maxWidth="max-w-sm"
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+          >
+            Abbrechen
+          </button>
+          <button
+            type="button"
+            onClick={onDiscard}
+            className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-500 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
+          >
+            Verwerfen
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
+          >
+            Speichern
+          </button>
+        </>
+      }
+    >
+      <div className="flex items-start gap-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-50 dark:bg-amber-900/20">
+          <TriangleAlert size={18} className="text-amber-500" />
         </div>
+        <p className="text-sm leading-relaxed text-gray-500 dark:text-gray-400">
+          Du hast Änderungen vorgenommen, die noch nicht gespeichert wurden.
+        </p>
       </div>
-    </div>
+    </EditorModal>
   );
 }

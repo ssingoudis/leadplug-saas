@@ -18,6 +18,7 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DraggableSyntheticListeners,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -39,7 +40,15 @@ import type {
   NumberConfig,
   CheckboxConfig,
   ContactFieldConfig,
+  OptionMarker,
 } from "@/types";
+
+// Aufgabe 50: Marker-String einer Antwort-Option je nach Stil. null = kein Chip rendern.
+function optionMarkerFor(marker: OptionMarker | undefined, idx: number): string | null {
+  if (marker === "none") return null;
+  if (marker === "numbers") return String(idx + 1);
+  return String.fromCharCode(65 + idx); // 'letters' (Default)
+}
 
 // =============================================================================
 // CONSTANTS
@@ -329,7 +338,11 @@ export function Funnel({
   // ---------------------------------------------------------------------------
 
   const containerRef     = useRef<HTMLDivElement>(null);
-  const visibleQuestions = questions.filter((q) => q.visible);
+  // Aufgabe 50 Fix: im Editor NICHT nach visible filtern — dort enthält `questions` bewusst auch
+  // hidden Pages (keepHidden), damit der Sidebar-Index 1:1 dem Widget-Index entspricht und hidden
+  // Steps ausgegraut anzeigbar sind. Sonst kippt die Zuordnung, sobald ein hidden Step vor dem
+  // selektierten liegt (z.B. ein deaktivierter Welcome-Screen an Index 0). Live/Test filtert normal.
+  const visibleQuestions = editMode ? questions : questions.filter((q) => q.visible);
 
   const [currentStep, setCurrentStep] = useState(initialStep ?? 0);
   // C.1c — Slide-Animations-Richtung (1 = forward/slide-up, -1 = backward/slide-down). In editMode unbenutzt.
@@ -377,6 +390,18 @@ export function Funnel({
   const visibleCustomFields = isCustomStep && currentQuestion?.customFields
     ? currentQuestion.customFields.filter((f) => f.visible)
     : [];
+
+  // Aufgabe 50: 1-Feld-Karte = sauberer Einzelfrage-Look. Bei genau EINEM sichtbaren Feld blenden
+  // wir das Feld-Label aus — der große Karten-Titel benennt die Frage. Ab 2 Feldern: Labels zeigen.
+  // Fallback: hat die Karte (noch) keinen Titel, bleibt das Feld-Label sichtbar (sonst stünde nichts da).
+  const singleCustomField = visibleCustomFields.length === 1;
+  const cardHasTitle = Boolean((currentQuestion?.title ?? "").trim());
+  const customFieldLabel = (field: ContactFieldConfig) =>
+    singleCustomField && cardHasTitle ? null : (
+      <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
+        {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
+      </label>
+    );
 
   // Custom-Step ist disabled bis alle required Fields gültig sind.
   const isCustomStepValid = visibleCustomFields
@@ -903,9 +928,7 @@ export function Funnel({
                       if (field.type === "radio" && field.options) {
                         return (
                           <div key={field.key}>
-                            <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
-                              {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
-                            </label>
+                            {customFieldLabel(field)}
                             <div className="flex gap-5">
                               {field.options.map((option) => (
                                 <label key={option} className="flex items-center gap-2 cursor-pointer min-h-11">
@@ -940,9 +963,7 @@ export function Funnel({
                         const selected = (fieldValue || "").split(",").map((s) => s.trim()).filter(Boolean);
                         return (
                           <div key={field.key}>
-                            <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
-                              {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
-                            </label>
+                            {customFieldLabel(field)}
                             <div className="flex flex-col gap-2">
                               {field.options.map((opt) => {
                                 const isChecked = selected.includes(opt);
@@ -996,9 +1017,7 @@ export function Funnel({
                         const current = fieldValue ? Number(fieldValue) : fallback;
                         return (
                           <div key={field.key}>
-                            <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
-                              {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
-                            </label>
+                            {customFieldLabel(field)}
                             <p className="text-2xl font-bold font-mono mb-2 leading-none" style={{ color: theme.primaryColor }}>
                               {current.toLocaleString("de-DE")}{" "}
                               {field.sliderUnit && (
@@ -1031,9 +1050,7 @@ export function Funnel({
                         const currentVal = Number(fieldValue) || 0;
                         return (
                           <div key={field.key}>
-                            <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
-                              {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
-                            </label>
+                            {customFieldLabel(field)}
                             <RatingStars
                               maxStars={maxStars}
                               value={currentVal}
@@ -1051,9 +1068,7 @@ export function Funnel({
                         const max = field.scaleMax ?? 10;
                         return (
                           <div key={field.key}>
-                            <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
-                              {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
-                            </label>
+                            {customFieldLabel(field)}
                             <ScaleButtons
                               min={min}
                               max={max}
@@ -1076,9 +1091,7 @@ export function Funnel({
                       if (field.type === "long_text") {
                         return (
                           <div key={field.key}>
-                            <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
-                              {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
-                            </label>
+                            {customFieldLabel(field)}
                             <textarea
                               placeholder={field.placeholder ?? ""}
                               value={fieldValue}
@@ -1099,9 +1112,7 @@ export function Funnel({
                       if (field.type === "number") {
                         return (
                           <div key={field.key}>
-                            <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
-                              {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
-                            </label>
+                            {customFieldLabel(field)}
                             <input
                               type="number"
                               placeholder={field.placeholder ?? ""}
@@ -1122,9 +1133,7 @@ export function Funnel({
                       if (field.type === "date") {
                         return (
                           <div key={field.key}>
-                            <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
-                              {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
-                            </label>
+                            {customFieldLabel(field)}
                             <DateInlinePicker
                               value={fieldValue}
                               onChange={(iso) =>
@@ -1181,9 +1190,7 @@ export function Funnel({
                       if (field.type === "dropdown" && field.options) {
                         return (
                           <div key={field.key}>
-                            <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
-                              {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
-                            </label>
+                            {customFieldLabel(field)}
                             <select
                               value={fieldValue}
                               onChange={(e) =>
@@ -1217,9 +1224,7 @@ export function Funnel({
                         "";
                       return (
                         <div key={field.key}>
-                          <label className="block text-xs font-medium mb-1" style={{ color: theme.textColorMuted }}>
-                            {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
-                          </label>
+                          {customFieldLabel(field)}
                           <input
                             type={inputType}
                             placeholder={field.placeholder || defaultPlaceholder}
@@ -1241,6 +1246,25 @@ export function Funnel({
                   </div>
                 )}
 
+                {/* Aufgabe 50: Canvas-„+" auf nicht-leeren Karten — Feld direkt in die Karte hinzufügen. */}
+                {isCustomStep && editMode && visibleCustomFields.length > 0 && onAddCustomFieldRequest && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onAddCustomFieldRequest(); }}
+                    className="mb-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed py-2.5 text-sm font-medium transition-colors"
+                    style={{
+                      borderColor: theme.tintColorHover,
+                      color: theme.primaryColor,
+                      backgroundColor: theme.tintColor,
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.tintColorHover; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = theme.tintColor; }}
+                  >
+                    <Plus size={15} strokeWidth={2.5} />
+                    Feld hinzufügen
+                  </button>
+                )}
+
                 {/* single_choice / multi_choice — Typeform-Stil: Letter-Chip LINKS + Label RECHTS, vertikal gestapelt
                     Welcome + Custom haben kein eigenes Choice-Input — der Block würde sonst fälschlich
                     den "+ Option hinzufügen" Builder-Slot rendern (Welcome hat fallback questionType="single_choice"). */}
@@ -1249,12 +1273,20 @@ export function Funnel({
                   const isMultiple = currentQuestion.questionType === "multi_choice";
                   const selectedValues = answers[currentQuestion.id]?.split(",").filter(Boolean) ?? [];
 
-                  const renderOptionContent = (option: typeof currentQuestion.options[0], idx: number, isSelected: boolean) => {
-                    const letter = String.fromCharCode(65 + idx);
-                    const indicator = (
+                  const renderOptionContent = (
+                    option: typeof currentQuestion.options[0],
+                    idx: number,
+                    isSelected: boolean,
+                    // Aufgabe 50: im editMode wird der Letter-Chip zusätzlich zum Griff zum Drag-Handle
+                    // (größerer Greifbereich) — die Listener kommen aus dem SortableEditOption-Wrapper.
+                    dragListeners?: DraggableSyntheticListeners,
+                  ) => {
+                    const letter = optionMarkerFor(currentQuestion.optionMarker, idx);
+                    const indicator = letter === null ? null : (
                       <span
                         aria-hidden="true"
-                        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded font-mono text-[11px] font-bold border"
+                        {...(dragListeners ?? {})}
+                        className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded font-mono text-[11px] font-bold border${dragListeners ? " cursor-grab active:cursor-grabbing" : ""}`}
                         style={{
                           borderColor: isSelected ? theme.primaryColor : theme.underlineColor,
                           backgroundColor: isSelected ? theme.primaryColor : theme.backgroundColor,
@@ -1289,15 +1321,6 @@ export function Funnel({
                           className="flex-1 text-sm @md:text-base font-light leading-snug"
                           style={{ color: theme.textColor }}
                         />
-                        {isMultiple && (
-                          <span
-                            aria-hidden="true"
-                            className="shrink-0 font-mono text-[10px] uppercase opacity-40"
-                            style={{ color: theme.textColorMuted }}
-                          >
-                            {letter}
-                          </span>
-                        )}
                       </>
                     );
                   };
@@ -1341,7 +1364,7 @@ export function Funnel({
                                   onDuplicate={onDuplicateOption}
                                   onDelete={onDeleteOption}
                                 >
-                                  {renderOptionContent(option, idx, isSelected)}
+                                  {(dragListeners) => renderOptionContent(option, idx, isSelected, dragListeners)}
                                 </SortableEditOption>
                               );
                             })}
@@ -2437,7 +2460,9 @@ interface SortableEditOptionProps {
   wrapperStyle: React.CSSProperties;
   onDuplicate?: (idx: number) => void;
   onDelete?: (idx: number) => void;
-  children: React.ReactNode;
+  // Aufgabe 50: children als Render-Funktion bekommt die Drag-Listener — damit z.B. der
+  // Letter-Chip zusätzlich zum Griff als Drag-Handle dienen kann.
+  children: React.ReactNode | ((dragListeners: DraggableSyntheticListeners) => React.ReactNode);
 }
 
 function SortableEditOption({
@@ -2482,7 +2507,7 @@ function SortableEditOption({
         <GripVertical size={14} />
       </span>
 
-      {children}
+      {typeof children === "function" ? children(listeners) : children}
 
       {/* Aktions-Buttons rechts — auf Hover sichtbar */}
       <span className="ml-auto flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/option:opacity-100">

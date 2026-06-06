@@ -139,6 +139,23 @@ export function makeAddressCustomPage(): EditorQuestion {
   };
 }
 
+// Aufgabe 50: Kontaktdaten-Vorlage — die häufigste Lead-Card (Name + E-Mail + Telefon).
+export function makeContactCard(): EditorQuestion {
+  const rand = Math.random().toString(36).slice(2, 8);
+  return {
+    ...makeDefaultCustomPage(),
+    _id: `q_contact_${Date.now().toString(36)}_${rand}`,
+    questionKey: `kontaktdaten_${rand}`,
+    title: "Deine Kontaktdaten",
+    subtitle: "Wie können wir dich erreichen?",
+    customFields: [
+      { _clientId: `cf_c_${rand}_name`,  key: "name",    type: "full_name", label: "Name",    placeholder: "", required: true,  visible: true, sort_order: 0, _keyTouched: true },
+      { _clientId: `cf_c_${rand}_email`, key: "email",   type: "email",     label: "E-Mail",  placeholder: "", required: true,  visible: true, sort_order: 1, _keyTouched: true },
+      { _clientId: `cf_c_${rand}_tel`,   key: "telefon", type: "tel",       label: "Telefon", placeholder: "", required: false, visible: true, sort_order: 2, _keyTouched: true },
+    ],
+  };
+}
+
 // Default-Layout: 2 Felder (Name + Email) als sinnvolle Startbasis. Tenant erweitert via Properties-Panel.
 export function makeDefaultCustomPage(): EditorQuestion {
   const rand = Math.random().toString(36).slice(2, 8);

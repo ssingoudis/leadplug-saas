@@ -109,7 +109,43 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
-## Aktuell: Aufgabe 49 — Editor-UX-Uplift + Autosave-Pattern + Funnel-Cards + Webhook-Namen (2026-06-03)
+## Aktuell: Aufgabe 50 — Editor-Uplift: Bearbeiten-Tab + Karten-Model + Konsistenz (go-live-reif) (2026-06-06)
+
+**Status:** Branch `feature/aufgabe-50-bearbeiten-tab-uplift`. Type-Check durchgehend grün, Production-Build erfolgreich. Iterativ visuell mit Stavros abgenommen. **Kein DB-Change** (Marker-Stil nutzt die bestehende `fields.config`-jsonb-Spalte).
+
+Der finale Pre-Go-Live-Pass über den Editor — funktional **und** optisch. Highlights:
+
+**Save-Modell & Layout-Chrome:**
+- **Speichern entkoppelt vom Navigieren** ([`EditorShell.tsx`](../components/tenant-editor/v2/EditorShell.tsx) `handleSave({ leaveAfter })`): Edit-Modus speichert + **bleibt** (Badge „Gespeichert"), nur ExitModal/Create navigieren. Status + Aktion sind EIN Element oben rechts (kein separates Badge mehr).
+- **Top-Bar = eine Zeile** (Name · Tabs mittig · Speichern). „Funnel testen" + Geräte-Umschalter **schweben im Canvas** (Schatten, kein Kasten), kein eigener Balken.
+- **clamp-Spaltenbreiten** + geteilte `EDITOR_LEFT_COL` (clamp 280–340) → linke Spalte springt beim Tab-Wechsel nicht mehr. Alle Pane-Header einheitlich `h-14`/text-sm via `PanelListHeader` ([`ui/Panel.tsx`](../components/tenant-editor/v2/ui/Panel.tsx)).
+
+**Karten-Model (Kernstück) — siehe [[feature_card_model]]:**
+- Add-Menü ([`AddElementModal.tsx`](../components/tenant-editor/v2/AddElementModal.tsx)) = **Frage** (immersiv, eigener Schritt) · **Karten** (Kontaktdaten/Adresse/Eigene Karte) · **Einzelne Felder** (kompakt) · **Start** (Welcome).
+- **Felder → in die gewählte Karte** (footer) oder neue Karte (`handleAddCardField` in EditorShell); Spezial-Typen = eigenständige Schritte. **Cards halten nur kompakte Felder** (Slider/Rating/Skala/Multi raus aus dem In-Card-Picker — würden sonst schrumpfen).
+- **1-Feld-Karte rendert wie saubere Einzelfrage** (Feld-Label ausgeblendet bei genau 1 Feld + vorhandenem Titel) — `customFieldLabel` in [`funnel.tsx`](../components/funnel.tsx). **Canvas-„+"** auf nicht-leeren Karten. Neue Preset-Card **„Kontaktdaten"** (`makeContactCard` in [`defaults.ts`](../components/tenant-editor/defaults.ts)).
+
+**Widget-Fixes ([`funnel.tsx`](../components/funnel.tsx)):**
+- Mehrfachauswahl: doppelter Buchstabe entfernt; Option auch am Letter-Chip ziehbar.
+- **Marker-Stil A/B/C · 1/2/3 · ohne** pro Choice-Frage (Inspektor-Segmented-Control), persistiert in `fields.config.optionMarker`, gerendert via `optionMarkerFor`. Mapping in [`editorUtils.ts`](../lib/editorUtils.ts) + [`getTenantConfig.ts`](../lib/getTenantConfig.ts).
+- **Bugfix `visibleQuestions`:** im Editor wird NICHT mehr nach `visible` gefiltert (`editMode ? questions : filter`) → Off-by-one behoben, der bei einem deaktivierten Step vor dem selektierten auftrat (z.B. hidden Welcome an Index 0).
+
+**Modals & Inspektor:**
+- Alle Editor-Dialoge auf geteiltes [`EditorModal`](../components/tenant-editor/v2/ui/EditorModal.tsx) (+ `dismissible`-Prop für Pflicht-Dialoge) — behebt den Scroll-/Out-of-screen-Bug des Feld-Pickers. Natives `confirm()` → gestyltes [`ConfirmModal`](../components/tenant-editor/v2/ui/ConfirmModal.tsx). Frage-Inspektor flacher (kein „Feld dieser Seite"-Wrapper). Löschen-Buttons full-width zentriert.
+- **Webhooks** ([`WebhooksPanel.tsx`](../components/tenant-editor/v2/WebhooksPanel.tsx)): Name **inline im Header editierbar** (on-blur), Config-Name-Feld raus; Detail-Body `max-w-3xl` zentriert; „Aktiv"-Toggle am Content-Rand (nicht mehr „lost").
+- **StepList**: Welcome in eigener „Start"-Sektion, Footer-„Frage hinzufügen"-Button, Insert-„+" nach **jeder** Frage (inkl. letzter).
+- **Design-Tab** ([`ThemePanel.tsx`](../components/tenant-editor/v2/ThemePanel.tsx)): „Funnel-weit/Design"-Header weg, **Seiten-Hintergrund = Segmented „Transparent | Eigene Farbe"**, Farb-Picker als sauberer Chip (globals.css `.lp-color-chip`), unnötiger Fußnoten-Hinweis weg.
+- **Datenschutz editierbar** im Kontaktformular-Inspektor (`privacyText` + `privacyPolicyUrl` — waren im State, nicht im UI). **Bridge-Fix** — das Kontaktformular bleibt aber ein Relikt.
+
+**Linke Nav** ([`Sidebar.tsx`](../components/dashboard/Sidebar.tsx)): Hover-Expand smoother (300ms + 130ms Grace-Delay beim Zuklappen). Overlay-Verhalten im Editor verifiziert (kein Reflow).
+
+**Bewusst NICHT gemacht:** Paket „D" (lokale Inspektor-Controls auf `ui/Controls` vereinheitlichen) — reines DRY, Regressions-Risiko, kein User-Nutzen → gestrichen (Stavros: „UX-Prio 1, keine Konsistenz um der Konsistenz willen").
+
+**Offen / nächster fokussierter Task (NACH Go-Live, in-depth analysieren):** **Kontaktformular card-ifizieren** — den hartkodierten Submit-Schritt abschaffen, Lead-Erfassung als normale Cards, Submit am Funnel-Ende, Consent optional. Go-live-kritisch (Billing-Pfad) → erst nach Validierung mit Sicherheitsnetz. Siehe CLAUDE.md „Submit-Page-Abschaffung geplant".
+
+---
+
+## Aufgabe 49 — Editor-UX-Uplift + Autosave-Pattern + Funnel-Cards + Webhook-Namen (2026-06-03)
 
 **Status:** Branch `feature/aufgabe-49-funnel-cards`. Type-Check grün durchgehend. Visuell abgenommen. **1 additiver DB-Change** (`webhook_subscriptions.name`).
 

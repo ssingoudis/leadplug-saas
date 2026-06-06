@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Plus, Trash2, Send, RefreshCw, Copy, Check, ChevronDown, ChevronRight,
-  CircleAlert, CircleCheck, Clock,
+  CircleAlert, CircleCheck, Clock, Pencil,
 } from "lucide-react";
 import type { EditorQuestion } from "@/types";
 import { WebhookAddModal } from "./WebhookAddModal";
-import { SectionCard, EmptyState } from "./ui/Panel";
+import { SectionCard, EmptyState, EDITOR_LEFT_COL, PanelListHeader } from "./ui/Panel";
 import { EditorButton, TextInput, Select, Toggle } from "./ui/Controls";
 
 // =============================================================================
@@ -143,16 +143,11 @@ export function WebhooksPanel({ funnelSlug, questions, onSubsChanged }: Props) {
     <div className="flex min-h-0 flex-1 flex-col">
       <div
         className="grid min-h-0 flex-1 bg-gray-50 dark:bg-background"
-        style={{ gridTemplateColumns: "300px minmax(0, 1fr)" }}
+        style={{ gridTemplateColumns: `${EDITOR_LEFT_COL} minmax(0, 1fr)` }}
       >
         {/* LEFT: Liste */}
         <aside className="flex min-h-0 flex-col overflow-hidden border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-          <div className="border-b border-gray-200 px-5 py-4 dark:border-gray-800">
-            <h2 className="text-sm font-bold text-gray-900 dark:text-white">Webhooks</h2>
-            <p className="mt-0.5 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-              Leads automatisch an dein CRM (Zapier, Make, n8n, eigener Endpoint).
-            </p>
-          </div>
+          <PanelListHeader title="Webhooks" />
           <div className="flex-1 overflow-y-auto">
             {loading ? (
               <div className="p-4 text-center text-xs text-gray-400">Lade…</div>
@@ -328,22 +323,62 @@ function WebhookDetail({
   onPatch,
   onDelete,
 }: WebhookDetailProps) {
+  // Aufgabe 50: Name inline im Header editierbar (wie bei E-Mails) → keine Dopplung im Config-Feld.
+  // On-Blur-Save via onPatch. Lokaler Draft, resettet pro Auswahl (WebhookDetail hat key={sub.id}).
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const [nameDraft, setNameDraft] = useState(sub.name ?? "");
+  const nameWidth = Math.max(8, Math.min(40, (nameDraft || "Webhook").length + 1));
+
+  function commitName() {
+    const trimmed = nameDraft.trim();
+    if (!trimmed) {
+      setNameDraft(sub.name ?? "");
+      return;
+    }
+    if (trimmed !== (sub.name ?? "")) onPatch({ name: trimmed });
+  }
+
   return (
     <div className="flex flex-col">
-      {/* Header: Name + aktiv-Toggle (Name wird in der Konfiguration bearbeitet) */}
-      <div className="flex items-center gap-3 border-b border-gray-200 bg-white px-5 py-3.5 dark:border-gray-800 dark:bg-gray-900">
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-gray-900 dark:text-white" title={sub.name ?? sub.url}>
-            {sub.name || sub.url}
-          </p>
-          <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
-            {sub.is_active ? "Aktiv" : "Pausiert"}
-          </p>
+      {/* Header: Bar full-bleed, Inhalt auf Content-Breite zentriert (Name links, Aktiv rechts) */}
+      <div className="flex h-14 shrink-0 items-center border-b border-gray-200 bg-white px-5 dark:border-gray-800 dark:bg-gray-900">
+        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3">
+          <div className="group inline-flex min-w-0 items-center gap-1.5">
+            <input
+              ref={nameInputRef}
+              type="text"
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              onBlur={commitName}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+                if (e.key === "Escape") { setNameDraft(sub.name ?? ""); e.currentTarget.blur(); }
+              }}
+              placeholder="Webhook benennen"
+              aria-label="Name dieses Webhooks (zum Bearbeiten klicken)"
+              title="Klick zum Umbenennen"
+              className="min-w-0 rounded border border-transparent bg-transparent px-1.5 py-0.5 text-sm font-bold text-gray-900 dark:text-white outline-none transition-colors hover:border-gray-200 dark:hover:border-gray-700 focus:border-primary focus:bg-white dark:focus:bg-gray-950"
+              style={{ width: `${nameWidth}ch` }}
+            />
+            <button
+              type="button"
+              onClick={() => nameInputRef.current?.focus()}
+              title="Namen bearbeiten"
+              aria-label="Namen bearbeiten"
+              className="text-gray-300 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <Pencil size={12} />
+            </button>
+          </div>
+          <span className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-xs text-gray-600 dark:text-gray-300">
+            Aktiv
+            <Toggle checked={sub.is_active} onChange={(v) => onPatch({ is_active: v })} />
+          </span>
         </div>
-        <Toggle checked={sub.is_active} onChange={(v) => onPatch({ is_active: v })} />
       </div>
 
-      <div className="flex flex-col gap-4 p-5">
+      <div className="p-5">
+        <div className="mx-auto max-w-3xl space-y-4">
         {revealedSecret && <SecretRevealBanner secret={revealedSecret} onDismiss={onDismissSecret} />}
         <ConfigSection sub={sub} questions={questions} onPatch={onPatch} />
         <TestSection funnelSlug={funnelSlug} subId={sub.id} />
@@ -364,6 +399,7 @@ function WebhookDetail({
             Webhook löschen
           </EditorButton>
         </div>
+        </div>
       </div>
     </div>
   );
@@ -382,7 +418,6 @@ function ConfigSection({
   questions: EditorQuestion[];
   onPatch: (body: Record<string, unknown>) => Promise<void>;
 }) {
-  const [name, setName] = useState(sub.name ?? "");
   const [url, setUrl] = useState(sub.url);
   const [triggerType, setTriggerType] = useState(sub.trigger_type);
   const [triggerPageId, setTriggerPageId] = useState(sub.trigger_page_id ?? "");
@@ -391,7 +426,6 @@ function ConfigSection({
   const [saving, setSaving] = useState(false);
 
   const dirty =
-    (!!name.trim() && name.trim() !== (sub.name ?? "")) ||
     url !== sub.url ||
     triggerType !== sub.trigger_type ||
     (triggerType === "after_page" && triggerPageId !== (sub.trigger_page_id ?? "")) ||
@@ -420,7 +454,6 @@ function ConfigSection({
         trigger_page_id: triggerType === "after_page" ? triggerPageId : null,
         event_types: events,
       };
-      if (name.trim()) body.name = name.trim();
       await onPatch(body);
     } finally {
       setSaving(false);
@@ -430,11 +463,6 @@ function ConfigSection({
   return (
     <SectionCard title="Konfiguration">
       <div className="flex flex-col gap-3">
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Name</span>
-          <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. Pipedrive CRM" />
-        </label>
-
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Endpoint-URL</span>
           <TextInput type="url" value={url} onChange={(e) => setUrl(e.target.value)} />

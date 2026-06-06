@@ -97,56 +97,60 @@ export function CenterCanvas({
   }
 
   return (
-    <div className="flex h-full flex-col bg-gray-50 dark:bg-[#0d1117]">
-      {/* Oben: Test-Toggle + Desktop/Mobile-Toggle */}
-      <div className="flex items-center justify-center gap-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3">
-        <button
-          type="button"
-          onClick={onToggleTestMode}
-          title={isTestMode ? "Zurück zum Editor" : "Funnel wie ein End-Kunde testen"}
-          className={
-            isTestMode
-              ? "inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-amber-600"
-              : "inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-hover"
-          }
-        >
-          {isTestMode ? <Pencil size={14} /> : <Play size={14} fill="currentColor" />}
-          {isTestMode ? "Zurück zum Editor" : "Funnel testen"}
-        </button>
+    <div className="relative flex h-full flex-col bg-gray-50 dark:bg-[#0d1117]">
+      {/* Aufgabe 50: Test-Toggle + Geräte-Umschalter schweben über der Bühne — nur Schatten,
+          kein umschließender Kasten. */}
+      <div className="pointer-events-none absolute inset-x-0 top-4 z-20 flex justify-center px-4">
+        <div className="pointer-events-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onToggleTestMode}
+            title={isTestMode ? "Zurück zum Editor" : "Funnel wie ein End-Kunde testen"}
+            className={
+              isTestMode
+                ? "inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-lg ring-1 ring-black/5 transition-colors hover:bg-amber-600"
+                : "inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-lg ring-1 ring-black/5 transition-colors hover:bg-primary-hover"
+            }
+          >
+            {isTestMode ? <Pencil size={14} /> : <Play size={14} fill="currentColor" />}
+            {isTestMode ? "Zurück zum Editor" : "Funnel testen"}
+          </button>
 
-        <div className="inline-flex items-center gap-1 rounded-xl bg-gray-100 p-1 dark:bg-gray-800">
-          <button
-            type="button"
-            onClick={() => setIsMobile(false)}
-            title="Desktop-Ansicht"
-            aria-label="Desktop-Ansicht"
-            className={
-              !isMobile
-                ? "flex h-8 w-8 items-center justify-center rounded-lg bg-white text-gray-900 shadow-sm transition-colors dark:bg-gray-900 dark:text-white"
-                : "flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-            }
-          >
-            <Monitor size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsMobile(true)}
-            title="Mobile-Ansicht"
-            aria-label="Mobile-Ansicht"
-            className={
-              isMobile
-                ? "flex h-8 w-8 items-center justify-center rounded-lg bg-white text-gray-900 shadow-sm transition-colors dark:bg-gray-900 dark:text-white"
-                : "flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-            }
-          >
-            <Smartphone size={14} />
-          </button>
+          <div className="inline-flex items-center gap-1 rounded-xl border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-900">
+            <button
+              type="button"
+              onClick={() => setIsMobile(false)}
+              title="Desktop-Ansicht"
+              aria-label="Desktop-Ansicht"
+              className={
+                !isMobile
+                  ? "flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-900 transition-colors dark:bg-gray-800 dark:text-white"
+                  : "flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+              }
+            >
+              <Monitor size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsMobile(true)}
+              title="Mobile-Ansicht"
+              aria-label="Mobile-Ansicht"
+              className={
+                isMobile
+                  ? "flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-900 transition-colors dark:bg-gray-800 dark:text-white"
+                  : "flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+              }
+            >
+              <Smartphone size={14} />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Canvas — Click-into-empty (Background außerhalb des Widget-Containers) deselected */}
+      {/* Canvas — Click-into-empty (Background außerhalb des Widget-Containers) deselected.
+          pt-24 hält den Inhalt unter den schwebenden Controls. */}
       <div
-        className="flex-1 overflow-y-auto p-6 lg:p-10"
+        className="flex-1 overflow-y-auto p-6 pt-24 lg:p-10 lg:pt-24"
         onClick={(e) => {
           // Nur deselect wenn auf den Outer-Container geklickt wurde (kein bubble-Target im Widget)
           if (e.target === e.currentTarget) {
