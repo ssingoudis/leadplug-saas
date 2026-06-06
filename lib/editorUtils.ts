@@ -159,8 +159,6 @@ export function buildFunnelConfig(state: EditorState): FunnelConfig {
     answersOverviewLabel:
       state.answersOverviewLabel || "Ihre Angaben im Überblick:",
     showAnswersOverview: state.showAnswersOverview,
-    footerText:
-      state.footerText || "{{company_name}} · {{public_email}}",
   };
 }
 
@@ -340,10 +338,6 @@ export function editorStateToFunnelRow(
     privacy_text: state.privacyText || null,
     answers_overview_label: state.answersOverviewLabel || null,
     show_answers_overview: state.showAnswersOverview,
-    footer_text: state.footerText || null,
-    footer_company_name: state.footerCompanyName || null,
-    footer_email: state.footerEmail || null,
-    footer_phone: state.footerPhone || null,
     notification_email: state.notificationEmail?.trim() || fallbackNotificationEmail,
     email_sender_local: state.emailSenderLocal || null,
     primary_color: state.primaryColor || null,
@@ -962,12 +956,8 @@ export function dbToEditorState(
     responseMessage: funnelRow.response_message ?? "",
     privacyText: funnelRow.privacy_text ?? "",
     privacyPolicyUrl: funnelRow.privacy_policy_url ?? "",
-    footerText: funnelRow.footer_text ?? "",
     answersOverviewLabel: funnelRow.answers_overview_label ?? "",
     showAnswersOverview: funnelRow.show_answers_overview ?? false,
-    footerCompanyName: funnelRow.footer_company_name ?? "",
-    footerEmail: funnelRow.footer_email ?? "",
-    footerPhone: funnelRow.footer_phone ?? "",
     notificationEmail: funnelRow.notification_email ?? "",
     emailSenderLocal: funnelRow.email_sender_local ?? "",
     isActive: funnelRow.is_active ?? true,

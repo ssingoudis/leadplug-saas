@@ -245,12 +245,8 @@ export const DEFAULT_EDITOR_STATE: EditorState = {
   privacyText:
     "Mit dem Absenden stimme ich zu, per E-Mail und Telefon zu meiner Anfrage kontaktiert zu werden.",
   privacyPolicyUrl: "",
-  footerText: "{{company_name}} · {{public_email}} · {{public_phone}}",
   answersOverviewLabel: "Ihre Angaben im Überblick:",
   showAnswersOverview: false,
-  footerCompanyName: "",
-  footerEmail: "",
-  footerPhone: "",
   notificationEmail: "",
   emailSenderLocal: "",
   isActive: true,

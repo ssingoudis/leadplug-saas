@@ -174,7 +174,7 @@ export interface FunnelConfig {
   privacyText: string          // Einwilligungstext vor dem Datenschutz-Link
   answersOverviewLabel: string // Überschrift der Antworten-Zusammenfassung
   showAnswersOverview: boolean  // Aufgabe 51: Antworten-Übersicht im End-Screen zeigen (default false = cleaner Dank)
-  footerText: string           // Footer-Template mit {{company_name}}, {{public_email}}, {{public_phone}}
+  // Aufgabe 52: footerText entfernt (Footer abgeschafft).
 }
 
 /* alte Datenbank solar-widget
@@ -203,11 +203,10 @@ export interface TenantConfig {
   id?: string          // tenant ID
   funnelId?: string    // funnel ID
   slug: string         // funnel slug (URL-Identifier)
-  companyName: string
-  publicEmail: string          // Wird dem Kunden angezeigt (z.B. im Success-Screen)
+  companyName: string          // = tenant.company_name (Account-Name) — E-Mail-Absendername, Webhook-Payload, Page-Title
+  // Aufgabe 52: publicEmail/phone entfernt (Footer abgeschafft, Firmen-E-Mail-Variablen raus).
   notificationEmail: string    // Wohin neue Leads gesendet werden
   emailSenderLocal?: string    // Lokalteil der Absender-Adresse, z.B. "anfragen" → anfragen@domain.de
-  phone?: string
   theme: FunnelTheme
   funnel: FunnelConfig
   billingModel: 'per_lead' | 'per_month' | 'per_year'
@@ -310,14 +309,10 @@ export interface EditorState {
   responseMessage: string
   privacyText: string
   privacyPolicyUrl: string
-  footerText: string
   answersOverviewLabel: string
   // Aufgabe 51: Antworten-Übersicht im End-Screen zeigen (default false = cleaner Dank ohne Antworten)
   showAnswersOverview: boolean
-  // Footer-Kontaktdaten (pro Funnel)
-  footerCompanyName: string
-  footerEmail: string
-  footerPhone: string
+  // Aufgabe 52: footerText + footerCompanyName/Email/Phone entfernt (Footer abgeschafft).
   // E-Mail-Einstellungen (pro Funnel)
   notificationEmail: string   // Wohin neue Leads gesendet werden (Leer = Tenant-Standard)
   emailSenderLocal: string    // Lokalteil der Absender-Adresse, z.B. "anfragen"

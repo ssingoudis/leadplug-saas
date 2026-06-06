@@ -175,23 +175,6 @@ function mix(hex1: string, hex2: string, pct: number): string {
 // FOOTER HELPER
 // =============================================================================
 
-// Ersetzt {{company_name}}, {{public_email}}, {{public_phone}} im Template.
-// Segmente die nach der Ersetzung leer sind, werden samt ihrem " · " Trennzeichen
-// entfernt, so dass z.B. ein fehlendes phone keine doppelten Punkte hinterlässt.
-function resolveFooterText(
-  template: string,
-  vars: { company_name: string; public_email: string; public_phone: string },
-): string {
-  const replaced = template.replace(
-    /\{\{(company_name|public_email|public_phone)\}\}/g,
-    (_, key) => vars[key as keyof typeof vars] ?? "",
-  );
-  return replaced
-    .split("·")
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .join(" · ");
-}
 
 // =============================================================================
 // SLIDE-ANIMATION-VARIANTS (Typeform-Stil) — Spring-Slide auf Y-Achse
@@ -213,9 +196,6 @@ interface FunnelProps {
   funnel: FunnelConfig;
   questions: QuestionConfig[];
   contactFields: ContactFieldConfig[];
-  companyName?: string;
-  publicEmail?: string;
-  publicPhone?: string;
   initialSubmitted?: boolean;
   initialStep?: number;
   previewHighlight?: string; // Editor-only: hebt das gerade bearbeitete Element hervor
@@ -259,9 +239,6 @@ export function Funnel({
   funnel,
   questions,
   contactFields,
-  companyName,
-  publicEmail,
-  publicPhone,
   initialSubmitted,
   initialStep,
   previewHighlight,
@@ -467,13 +444,6 @@ export function Funnel({
   const sliderVal = sliderConfig
     ? Number(answers[currentQuestion!.id] ?? sliderConfig.default ?? sliderConfig.min)
     : 0;
-
-  // Footer-Text mit aufgelösten Template-Variablen.
-  const resolvedFooter = resolveFooterText(funnel.footerText, {
-    company_name: companyName ?? "",
-    public_email: publicEmail ?? "",
-    public_phone: publicPhone ?? "",
-  });
 
   // ---------------------------------------------------------------------------
   // Handlers
