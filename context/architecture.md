@@ -6,9 +6,7 @@
 >
 > **Komplement zu:**
 > - [`CLAUDE.md`](../CLAUDE.md) §1-15 — strategische + organisatorische Wahrheit
-> - [`project-overview.md`](project-overview.md) — Code-Struktur (Verzeichnisse) + DB-Schema-Referenz
 > - [`supabase-schema.md`](supabase-schema.md) — vollständige DB-Referenz (Enums, Tables, RLS, Indices)
-> - [`roadmap.md`](roadmap.md) — Aufgaben-History + nächste Schritte
 
 ---
 
@@ -453,11 +451,8 @@ DB (pages + fields)
 ### Müssen aktuell gehalten werden
 
 - `CLAUDE.md` — strategische Regeln, niemals raten, immer fragen bei Unsicherheit. Bei Architektur-Änderungen anpassen.
-- `context/project-overview.md` — Code-Struktur + DB-Schema. Bei Schema-Änderungen anpassen.
 - `context/supabase-schema.md` — DB-Vollreferenz. Bei jeder Migration regenerieren.
 - `context/architecture.md` — **diese Datei**. Bei Builder/Widget-Architektur-Änderungen anpassen.
-- `context/roadmap.md` — granulare Aufgaben-Liste. Pro Aufgabe ein Eintrag.
-- `context/builder-fokus-roadmap.html` — strategische Reihenfolge (was wir bauen bis Launch). Bei Strategie-Shifts anpassen.
 - `context/current-feature.md` — chronologische History. Pro abgeschlossener Aufgabe ein Eintrag.
 - `MEMORY.md` + memory/*.md (im ~/.claude-Pfad) — persistente Notizen. Bei strategischen Entscheidungen schreiben.
 
@@ -503,7 +498,7 @@ DB (pages + fields)
 - ✅ **Aufgabe 40 (Webhook-Actions, 2026-05-29)** — Action-Element-Modell: Webhooks sind dynamisch konfigurierbare Builder-Elemente im neuen „Webhooks"-Tab. Backend (Sender + HMAC + Cron + Retry + abandoned-Trigger), Editor-Tab + Step-Pill-Badges, CRUD-API. Schema additive (siehe `supabase-schema.md`). Replaces ursprünglichen C.5-Scope.
 - ✅ **Aufgabe 41 (E-Mail-Drip-Actions, 2026-05-31, auf Branch `feature/aufgabe-41-emails-tab`)** — Drip-System für Lead-Nurturing: zeitversetzte Mail-Sequenz nach Submit (`delay_minutes`). TipTap-WYSIWYG-Editor mit Custom Variable + Magic-Section Nodes. 3-Pane-In-Place-Layout (Liste · Editor · Live-Vorschau, resizable). Auto-Save mit 1.5 s Debounce. Vorschau mit Mock- oder echten Lead-Daten. Schema `email_subscriptions` + `email_delivery_attempts` (Queue-Pattern). Cron erweitert um due-pending + due-retrying. Hartkodierter `sendAllEmails`-Pfad in `/api/submit` durch Backfill-Subscriptions ersetzt. **Detail-Doku: [`email-drip-architektur.md`](email-drip-architektur.md).**
 
-**Offen vor Launch (siehe roadmap.md + builder-fokus-roadmap.html):**
+**Offen vor Launch:**
 - C.4 Logic Jumps (v1.1 OK)
 - D.1 Stripe Live (aufgeschoben, Testkunden `free`-Tier)
 - D.2 Conversion-Tracking via postMessage + Script-Loader-Embed (Performance-Marketing-Blocker)

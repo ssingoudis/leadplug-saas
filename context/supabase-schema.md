@@ -3,7 +3,7 @@
 > **Auto-generierte Maschinen-Wahrheit** der aktuellen DB-Struktur.
 > Generiert direkt aus `pg_catalog` / `information_schema` via Supabase MCP.
 >
-> Für architektonisches Verständnis und Zweck der Tabellen: siehe [`project-overview.md`](project-overview.md) §4.
+> Für architektonisches Verständnis und Zweck der Tabellen: siehe [`architecture.md`](architecture.md) §4.
 > Bei jeder neuen Migration: dieses File neu regenerieren.
 
 - **Stand:** 2026-06-06 (nach Aufgabe 52D — Submit-Page/Kontaktformular-Cleanup)

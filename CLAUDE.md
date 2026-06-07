@@ -121,7 +121,7 @@ LeadPlug ist „eine Art Typeform-Klon". **Alle Output-Mechanismen sind dynamisc
 
 **Offen bis Launch (Phase D-Rest):** D.1 Stripe Test→Live (~1 Tag, aufgeschoben — Testkunden bekommen `free`-Tier), D.3 3-5 Demo-Funnel-Templates (Content). **Optional / v1.1:** C.4 Logic Jumps (eigener „Logik"-Tab, Action-Element-Pattern). Danach: Launch + Direct-Sales.
 
-**Bewusst gestrichen** (nicht mehr im Plan — siehe [`context/builder-fokus-roadmap.html`](context/builder-fokus-roadmap.html) für Begründungen):
+**Bewusst gestrichen** (nicht mehr im Plan):
 
 - Twilio · Call-Dialer · Kanban-Board · Whitelabel-Endkunden-Portal
 - Plattform-Owner-Dashboard v2 · Public REST-API · Audit-Log · Team-Workspaces
@@ -135,29 +135,20 @@ LeadPlug ist „eine Art Typeform-Klon". **Alle Output-Mechanismen sind dynamisc
 
 ## 6. Doku-Index
 
-> **Zwei Roadmaps mit getrennten Rollen:**
-> - **Fokus-Roadmap** (HTML, strategisch) = *Was bauen wir bis Launch? Was ist gestrichen?* → Definiert Scope, Reihenfolge, Strich-Liste. **Die strategische Wahrheit.** Bei Konflikt mit roadmap.md wiegt sie stärker.
-> - **roadmap.md** (granular, taktisch) = *Welche konkrete Aufgabe ist als Nächstes dran?* → Aufgabe X.Y mit Detail-Beschreibung, History pro Phase. Die Arbeitsliste für die einzelne Coding-Session.
->
-> Im Workflow: Fokus-Roadmap sagt was, roadmap.md sagt wie & in welchem Aufgabe-Block. Nie roadmap.md über Fokus-Roadmap stellen — bei Widerspruch ist roadmap.md veraltet.
+> **Pre-Go-Live-Stand (2026-06-07):** Die Fahrpläne (`roadmap.md`, `builder-fokus-roadmap.html`, `saas-phasenplan.html`) wurden entfernt — die Anwendung ist launch-reif, Planungs-Dokumente sind obsolet. Strategische Wahrheit lebt in dieser CLAUDE.md (§1-5).
 
-- [`context/builder-fokus-roadmap.html`](context/builder-fokus-roadmap.html) — **strategische Roadmap bis Launch** (Lifestyle-Business via Direct-Sales an DACH-Marketing-Agenturen, ~4-5 Wo Engineering). Definiert Scope (was bleibt, was gestrichen ist, was on-demand kommt). **Erste Anlaufstelle für „was sollen wir bauen".**
-- [`context/roadmap.md`](context/roadmap.md) — **granulare Aufgaben-Liste** (Phasen A-E, Sub-Nummern B.1, B.2, …, C.1, C.2, …) mit Detail-Beschreibungen und Phase-B-Historie. **Erste Anlaufstelle für „welche Aufgabe konkret als Nächstes".** Inhaltlich der Fokus-Roadmap unterzuordnen.
 - [`context/architecture.md`](context/architecture.md) — **technische Karte des Produkts**: wie ist die App gebaut, wo lebt was, welche Komponente macht welchen Job. Builder + Widget + Mapping + Submission-Pipeline. **Erste Anlaufstelle für „wo ist X im Code".**
+- [`context/architektur-diagramme.md`](context/architektur-diagramme.md) — **7 Architektur-Diagramme als Diagram-as-Code** (Cloud/Infra · App-Komponenten · Sequenz · ER · Funnel-Journey · Produkt-Überblick · Capability-Map) + Eraser-Link. Versioniert + regenerierbar; die „schöne" interaktive Ansicht liegt in Eraser.
 - [`context/webhook-architecture.md`](context/webhook-architecture.md) — **Webhook-Subsystem vollständig** (Aufgabe 40): DB-Schema, Code-Layout, Sequence-Diagramme (completed/abandoned/retry/test), Payload-Format, HMAC, ENV-Vars, UI-Verkabelung, Known-Issues. **Erste Anlaufstelle für „wie funktioniert der Webhook-Sender".**
 - [`context/webhook-architecture.html`](context/webhook-architecture.html) — **dieselbe Architektur visuell** (Stavros-Style): Tabellen-Karten, Sequence-Diagramme als Lanes, Payload-Highlighting, Status-Cards.
 - [`context/webhook-erklaert.md`](context/webhook-erklaert.md) — **Webhooks von Anfang an erklärt** für Lernende mit Programmier-Grundkenntnissen. Konzept-Einstieg mit Analogien, Use-Case, DB-Tabellen, End-to-End-Flow, HMAC, Backoff, Cron, Dedup, Glossar. **Erste Anlaufstelle wenn jemand das System komplett neu kennenlernt.**
 - [`context/email-drip-architektur.md`](context/email-drip-architektur.md) — **E-Mail-Drip-Subsystem vollständig** (Aufgabe 41): DB-Schema, Code-Layout (Sender, Queue, Cron), TipTap-Editor + Custom-Nodes, Template-Substitutions-Regex, UI-Architektur (3-Pane mit Draft-Lift), Sequence-Diagramme (immediate/delayed/retry/test). **Erste Anlaufstelle für „wie funktioniert der E-Mail-Drip-Sender".**
 - [`context/conversion-tracking.md`](context/conversion-tracking.md) — **Conversion-Tracking + `embed.js`-Script-Loader vollständig** (Aufgabe 42 / D.2): postMessage-Bridge (iFrame→Parent), `embed.js`-Loader, Code-Layout, Tenant-Einbettung, 3 Abgreif-Wege (GTM-`dataLayer` / data-Attribute / `onLead`-Callback), Sicherheits-/PII-Modell. **Erste Anlaufstelle für „wie kommen Funnel-Leads als Conversion zu Meta/Google".**
 - [`context/architecture.html`](context/architecture.html) — **dieselbe Architektur visuell** (vom Stavros gepflegt) — 3-Worlds-Map, DB-Tree, Page-Flow, Field-Types-Grid, Komponenten-Baum, Decisions-Legend.
-- [`context/project-overview.md`](context/project-overview.md) — Code-Struktur (Verzeichnisse), DB-Schema, API-Routes
 - [`context/supabase-schema.md`](context/supabase-schema.md) — vollständige technische DB-Referenz (Enums, Tables, RLS, Indices, Functions)
-- [`context/saas-phasenplan.html`](context/saas-phasenplan.html) — visuelle High-Level Phasen-Übersicht mit Status-Badges (Phasen 1-6) — vom User selbst gepflegt
 - [`context/current-feature.md`](context/current-feature.md) — laufende Arbeit + Aufgaben-History (chronologisch)
 - [`context/history-archive.md`](context/history-archive.md) — ältere Aufgaben (archiviert)
 - [`context/design-system.md`](context/design-system.md) — UI-Komponenten Dashboard + Tenant-Portal
-- [`context/tenant-funnel-editor.html`](context/tenant-funnel-editor.html) — Editor-Struktur (EditorState, Save-Flow)
-- [`context/funnel-funktionsweise.html`](context/funnel-funktionsweise.html) — UI-Konzept des öffentlichen Widgets (Beschreibung des Widget-Verhaltens; Schema-Referenzen sind seit B.5 veraltet — pages+fields statt funnel_questions+contact_fields)
 - [`context/workflows.html`](context/workflows.html) — Auth-Workflows (Signup, Login, Session, Navigation)
 - [`context/resize-erklaerung.html`](context/resize-erklaerung.html) — iFrame-postMessage-Mechanik
 
@@ -312,7 +303,7 @@ Klare Trennung — keine Override-Hierarchien zwischen Tabellen:
 
 ### 13.5 Schema-Refactor-Status
 
-**Phase B abgeschlossen (Mai 2026).** Alle Schema-Refactor-Tasks vor MVP-Launch erledigt: B.1 (`tenant_members`) ✅, B.2 (UUID-FKs) ✅, B.3 (submissions.contact\_\*-Cleanup) ✅, B.4 (tenants als reine Account-Tabelle) ✅, B.5 (pages + fields, Kontaktfelder als reguläre Field-Types) ✅, B.6 (Webhook-Schema) ✅, B.7 (updated_at-Trigger-Konsistenz, mit B.5 erledigt) ✅. Details: siehe [`context/roadmap.md`](context/roadmap.md).
+**Phase B abgeschlossen (Mai 2026).** Alle Schema-Refactor-Tasks vor MVP-Launch erledigt: B.1 (`tenant_members`) ✅, B.2 (UUID-FKs) ✅, B.3 (submissions.contact\_\*-Cleanup) ✅, B.4 (tenants als reine Account-Tabelle) ✅, B.5 (pages + fields, Kontaktfelder als reguläre Field-Types) ✅, B.6 (Webhook-Schema) ✅, B.7 (updated_at-Trigger-Konsistenz, mit B.5 erledigt) ✅.
 
 **Aufgabe 34 Schema-Erweiterungen (2026-05-28):**
 - `aufgabe_34_strip_icon_keys_from_field_options`: UPDATE auf `fields.options` jsonb — `icon_key` + `icon_url` aus allen Option-Objekten gestrippt (45 Fields betroffen, 175 Option-Einträge). Forward-only, kein DOWN-Pfad (Brand-Decision).
