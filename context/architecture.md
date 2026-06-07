@@ -1,6 +1,6 @@
 # LeadPlug — Architektur & Funktionsweise
 
-> **Stand:** 2026-05-28 (Ende Polish-Iteration nach Aufgabe 39)
+> **Stand:** 2026-06-07 (nach Aufgabe 53 — Submit-Page entfernt, Webhooks + E-Mail-Drip + Conversion-Tracking live)
 >
 > Diese Datei ist die **technische Karte des Produkts**. Wenn du wissen willst „wie ist die App gebaut", „wo lebt was", „welche Komponente macht welchen Job" — hier nachlesen.
 >
@@ -73,17 +73,18 @@ leadplug-saas/
 │   │   │   └── [slug]/edit/        # Funnel-EDITOR
 │   │   │       ├── page.tsx        # Server: lädt funnel + pages + fields → EditorState
 │   │   │       └── FunnelEditorClient.tsx  # Client-Wrapper für EditorShell
-│   │   ├── leads/                  # Lead-Inbox (3 Tabs: Completed / Abgebrochen-mit-Email / Abgebrochen-ohne)
-│   │   ├── kontakte/               # Aggregierte Contact-View
+│   │   ├── leads/                  # Lead-Inbox (3 Tabs: Completed / Abgebrochen-mit-Email / Abgebrochen-ohne) + Notizen
 │   │   ├── statistiken/            # Monatliche Conversion-Charts
-│   │   ├── account/, billing/, embed/
-│   └── api/                        # API-Routes
-│       ├── submit/                 # Final-Submit vom Widget → UPSERT + Mail
-│       ├── track-progress/         # Partial-Submission-Tracking vom Widget (debounced)
-│       ├── track-view/             # View-Counter
-│       ├── tenant/funnels/         # Funnel-CRUD vom Editor (RLS via user-client)
+│   │   ├── account/, billing/      # Account-Settings · Stripe-Billing
+│   └── api/                        # API-Routes (runtime nodejs)
+│       ├── submit/                 # Final-Submit → UPSERT(completed) + after(): Webhooks + Drip-Mails
+│       ├── track-progress/         # Partial-Submission + after_page-Webhook (debounced)
+│       ├── track-view/             # View-Counter (funnel_view_logs)
+│       ├── tenant/funnels/         # Funnel-CRUD + .../webhooks · emails · tracking · preview-leads
 │       ├── tenant/slug-check/      # Slug-Uniqueness
-│       ├── leads/[id]/             # Lead-Status-Update
+│       ├── leads/[id]/             # Lead-Status + interne Notiz
+│       ├── account/delete/         # Account-Löschung
+│       ├── cron/webhook-retry/     # Vercel-Cron (5 Min): Webhook-Retry + Abbrecher + Mail-Queue
 │       └── stripe/                 # checkout / portal / webhook
 ├── components/
 │   ├── funnel.tsx                  # 🌟 DAS WIDGET (Live + Editor-Preview, ~2000 LOC)
@@ -98,9 +99,12 @@ leadplug-saas/
 │   ├── supabase/{server,client,admin}.ts  # 3 Supabase-Clients (User + Anon + Service)
 │   ├── editorUtils.ts              # EditorState ⇄ DB-Pages+Fields Mapping (zentral!)
 │   ├── getTenantConfig.ts          # Service-Key Load der Widget-Config aus DB
-│   ├── tracking.ts                 # submissions UPSERT + email-status
-│   ├── sendEmails.ts               # Resend-Wrapper für Customer + Tenant-Mail
-│   └── validateContactField.ts     # Pflichtfeld-Validation pro field_type
+│   ├── tracking.ts                 # submissions UPSERT · honeypot · rate-limit · deriveContactFromAnswers
+│   ├── webhooks.ts                 # Webhook-Sender: HMAC · Payload · Retry (Aufgabe 40)
+│   ├── emails.ts / emailTemplates.ts  # Drip-Mail-Sender + Queue + Variablen/Magic-Sections (Aufgabe 41)
+│   ├── validateContactField.ts     # Pflichtfeld-Validation pro field_type
+│   ├── billing.ts / stripe.ts      # Plan-Logik + Stripe-Client
+│   └── embedSnippet.ts             # iFrame-/Script-Embed-Code-Generator
 ├── types/index.ts                  # Zentrale Type-Definitionen (single source of truth)
 ├── supabase/migrations/            # SQL-Migrations (UP + DOWN, hourly-timestamp-Konvention)
 └── context/                        # Doku-Files (du liest gerade eine davon)
@@ -120,11 +124,11 @@ tenant_members ─── owner/admin/member ──→ tenants ──→ funnels
                                                          │
                                                          │ 1:N
                                                          ↓
-                                                       pages (page_type: welcome | question | custom | submit | success)
-                                                         │
+                                                       pages (page_type: welcome | question | custom | success)
+                                                         │                    ('submit'-Enum-Wert verwaist seit 52D)
                                                          │ 1:N
                                                          ↓
-                                                       fields (field_type: 14 Werte, siehe Type-System)
+                                                       fields (field_type: 19 Werte, siehe Type-System)
 ```
 
 ### 4.1 Multi-Tenancy
@@ -132,10 +136,10 @@ tenant_members ─── owner/admin/member ──→ tenants ──→ funnels
 - **`tenant_members`** = Junction-Table N:M (auth_user_id → tenant_id, role)
 - **RLS überall**: Helper-Funktionen `current_tenant_ids()` + `current_tenant_role(uuid)` in der DB. User-Client nutzt RLS, Service-Key nur in dokumentierten Ausnahmen (siehe CLAUDE.md §13.2).
 
-### 4.2 Funnel-Struktur (Aufgabe 30 + 38 + 39)
-- **`funnels`** = pro Endkunde 1 Funnel. Halt: Theme (Colors/Font/Radius), Texte (success_message, etc.), Footer, `notification_email`, `skip_submit_step`, `redirect_url`
-- **`pages`** = ordered Liste pro Funnel. `page_type` ∈ {`welcome`, `question`, `custom`, `submit`, `success`}. `config jsonb` für Page-Level-Settings (Title/Subtitle bei custom+welcome, button_label bei welcome)
-- **`fields`** = N pro Page. `field_type` ∈ {14 Werte}. `config jsonb` für Type-spezifische Settings (z.B. slider {min/max/step}, rating {maxStars}, scale {min/max/labelLeft/labelRight})
+### 4.2 Funnel-Struktur (Aufgabe 30 + 38 + 39; Submit-Page entfernt 52D)
+- **`funnels`** = pro Endkunde 1 Funnel. Hält: Theme (Colors/Font/Radius), Texte (success_message, response_message, etc.), `notification_email`, `email_sender_local`, `redirect_url`, `show_answers_overview`, Conversion-IDs (`meta_pixel_id`, `google_ads_conversion`). *(Footer-Spalten + `skip_submit_step` in Aufgabe 52 gedroppt.)*
+- **`pages`** = ordered Liste pro Funnel. `page_type` ∈ {`welcome`, `question`, `custom`, `success`}. `config jsonb` für Page-Level-Settings (Title/Subtitle bei custom+welcome, button_label bei welcome). *(Enum-Wert `submit` existiert noch, wird aber seit 52D nicht mehr erzeugt.)*
+- **`fields`** = N pro Page. `field_type` ∈ {19 Werte}. `config jsonb` für Type-spezifische Settings (z.B. slider {min/max/step}, rating {maxStars}, scale {min/max/labelLeft/labelRight})
 
 ### 4.3 Partial-Submissions (Aufgabe 34)
 - **`submissions.session_id uuid UNIQUE`** = client-generierte UUID via sessionStorage (`lp_session_<slug>`)
@@ -144,14 +148,14 @@ tenant_members ─── owner/admin/member ──→ tenants ──→ funnels
 - Finaler Submit-Klick POSTet an `/api/submit` (UPSERT mit `completed=true` + Mails + Webhooks)
 - **Pricing-Logik:** Lead = `completed_at IS NOT NULL` OR (`completed_at IS NULL` AND `contact->>'email'` befüllt)
 
-### 4.4 Webhook-Schema (Aufgabe 29, Sender-Code in C.5)
-- **`webhook_subscriptions`** = pro Tenant N: url, secret, event_types[], is_active
-- **`webhook_delivery_attempts`** = Audit-Trail (status, attempt_count, last_error)
-- Tabellen + RLS stehen, Sender-Code ist noch nicht geschrieben (Aufgabe C.5).
+### 4.4 Webhook-Schema (Schema Aufgabe 29 · Sender live seit Aufgabe 40)
+- **`webhook_subscriptions`** = pro Funnel N: url, secret, event_types[], `trigger_type` (on_submit/after_page), `trigger_page_id`, name, is_active
+- **`webhook_delivery_attempts`** = Audit-Trail + Retry-Queue (status, attempt_count, next_retry_at, response_status_code, last_error)
+- Sender + HMAC + Cron-Retry + abandoned-Trigger: siehe §13 + [`webhook-architecture.md`](webhook-architecture.md).
 
 ---
 
-## 5. Type-System: 14 Field-Types
+## 5. Type-System: Field-Types (DB-Enum: 19 Werte)
 
 Single Source of Truth ist `types/index.ts`. Die Types verteilen sich auf zwei verwandte Strukturen:
 
@@ -162,13 +166,13 @@ slider           date            number        dropdown
 checkbox         rating          scale         statement
 ```
 
-### 5.2 `ContactFieldConfig.type` (für Submit + Custom-Pages, N Fields pro Page)
+### 5.2 `ContactFieldConfig.type` (für Custom-Karten-Pages, N Fields pro Page)
 ```
-text  email  tel  plz  radio  long_text  number  date  checkbox  dropdown
+text  email  tel  plz  radio  long_text  number  date  checkbox  dropdown  first_name  last_name  full_name
 ```
 
 ### 5.3 Mapping
-- **DB-Enum `field_type`** ist der gemeinsame Pool: alle 14 QuestionTypes + die ContactField-Submit-only-Types (`radio`, `email`, `tel`, `plz`, `text` als Alias zu `short_text`)
+- **DB-Enum `field_type`** ist der gemeinsame Pool (19 Werte): alle QuestionTypes + die ContactField-only-Types (`radio`, `email`, `tel`, `plz`, `first_name`, `last_name`, `full_name`, `text` als Alias zu `short_text`)
 - `lib/editorUtils.ts` macht die Roundtrips: `questionTypeToFieldType()`, `fieldTypeToQuestionType()`, `fieldTypeToContactType()`, `CONTACT_TYPE_TO_FIELD_TYPE`
 - **Vermeintliche Doppelung:** `text` (ContactField) = `short_text` (Question). Bewusste Aliasierung wegen historischer Gründe (Aufgabe 31 hat email + tel als Question-Types entfernt — bleiben aber als ContactField-Types).
 
@@ -193,9 +197,8 @@ EditorShell.tsx (~750 LOC)              ← der Hauptcontainer
 │   ├── QuestionProps                      ← für kind=question
 │   ├── CustomPageProps                    ← für kind=custom (Aufgabe 38)
 │   ├── WelcomeProps                       ← für kind=welcome (Aufgabe 39)
-│   ├── SubmitProps                        ← Submit-Page
 │   ├── SuccessProps                       ← Success-Page mit Redirect-Toggle (Aufgabe 39)
-│   ├── SortableContactFieldRow            ← Field-Row in Submit + Custom
+│   ├── SortableContactFieldRow            ← Field-Row in Custom-Karten
 │   └── properties/
 │       ├── FieldRow.tsx                   ← Field-Row-Wrapper mit Drag, Eye, Trash
 │       ├── FieldProperties.tsx            ← Question vs Contact-Field-Properties
@@ -209,18 +212,17 @@ EditorShell.tsx (~750 LOC)              ← der Hauptcontainer
 
 | Top-Tab     | Body-Layout                                           |
 | ----------- | ----------------------------------------------------- |
-| `content` (Inhalt) | 3-Pane: StepList \| CenterCanvas \| PropertiesPanel  |
-| `design`    | 2-Pane: CenterCanvas \| ThemePanel                    |
+| `content` (Bearbeiten) | 3-Pane: StepList \| CenterCanvas \| PropertiesPanel — Inhalt + Design vereint via Inspektor-Umschalter (Aufgabe 45/49) |
+| `emails`    | Master-Detail: EmailsPanel (Liste · Editor · Live-Vorschau) — **live** (Aufgabe 41) |
+| `webhooks`  | WebhooksPanel (full-width) — **live** (Aufgabe 40)    |
+| `share` (Einbinden) | SharePanel: Embed-Code + Conversion-Tracking — **live** (Aufgabe 42/43) |
 | `logic`     | disabled (kommt mit C.4)                              |
-| `emails`    | disabled (post-launch)                                |
-| `share`     | disabled (post-launch)                                |
 
 ### 6.3 Selection-Modell
 
 ```ts
 type SelectedStep =
-  | { kind: "question"; questionIndex: number }   // Question-Page, Custom-Page UND Welcome-Page
-  | { kind: "submit" }                            // Submit-Page
+  | { kind: "question"; questionIndex: number }   // Question-, Custom- UND Welcome-Page (kind-Diskriminator)
   | { kind: "success" };                          // Success-Page
 ```
 
@@ -232,13 +234,11 @@ Ein `EditorState` ist im Wesentlichen die gesamte Builder-State-Snapshot. Aktuel
 
 - **Funnel-Metadaten:** funnelName, isActive
 - **Theme:** primaryColor, textColor, backgroundColor, pageBackgroundColor, font, borderRadius, maxWidth
-- **Submit-Page-Texte:** funnelTitle, contactFormSubtitle, submitButtonLabel, successMessage, responseMessage, privacyText, privacyPolicyUrl, footerText, answersOverviewLabel
-- **Footer-Kontakt:** footerCompanyName, footerEmail, footerPhone
+- **Funnel-Texte:** funnelTitle, contactFormSubtitle, submitButtonLabel, successMessage, responseMessage, privacyText, privacyPolicyUrl, answersOverviewLabel
 - **E-Mail-Settings:** notificationEmail, emailSenderLocal
-- **Submit-Verhalten:** skipSubmitStep (Aufgabe 35)
-- **End-Screen-Verhalten:** redirectUrl (Aufgabe 39)
-- **Steps:** `questions: EditorQuestion[]` mit kind-Diskriminator
-- **Submit-Fields:** `contactFields: ContactFieldConfig[]`
+- **End-Screen-Verhalten:** redirectUrl (Aufgabe 39), showAnswersOverview (Aufgabe 51)
+- **Conversion-Tracking:** metaPixelId, googleAdsConversion (Aufgabe 43)
+- **Steps:** `questions: EditorQuestion[]` mit kind-Diskriminator (welcome/question/custom)
 
 ### 6.5 EditorQuestion — der Diskriminator-Trick
 
@@ -305,12 +305,12 @@ Der Funnel rendert sich identisch in zwei Kontexten, gesteuert über Props:
 Das Widget weiß nichts von Welcome/Custom/Submit auf Schema-Ebene — es bekommt eine `questions: QuestionConfig[]` mit `kind`-Diskriminator pro Entry. Die Render-Logik branchet:
 
 ```
-isContactStep    = !skipSubmitStep && currentStep === visibleQuestions.length
 isWelcomeStep    = currentQuestion?.kind === "welcome"
 isCustomStep     = currentQuestion?.kind === "custom"
 isStatementStep  = currentQuestion?.questionType === "statement"
 isChoiceType     = single_choice + nicht welcome + nicht custom (für Auto-Advance)
-showWeiterButton = !isContactStep && !isChoiceType
+isLastStep       = currentStep === visibleQuestions.length - 1  (Submit am Ende via autoFinish)
+showWeiterButton = !isChoiceType
 ```
 
 Render-Pipeline pro Step:
@@ -328,36 +328,32 @@ Render-Pipeline pro Step:
    - long_text → Textarea
    - short_text, number, date, dropdown, checkbox → Standard-Inputs
 4. **Bottom-Action-Bar** ([BackButton tinted] + [primary OK-Button mit kontext-Label])
-5. **Honeypot** (nur isContactStep)
-6. **Privacy-Notice + Submit-Button** (nur isContactStep)
+5. **Honeypot** (am Widget-Root, unsichtbar — seit 52D nicht mehr im Kontaktformular)
+6. **Letzter Step:** OK-Button löst `autoFinish()` aus (kein separates Kontaktformular mehr; Consent = Checkbox-Feld mit Markdown-Link)
 
-### 7.3 Submit-Pipeline
+### 7.3 Submit-Pipeline (seit 52D: kein Submit-Step mehr — `autoFinish` am Funnel-Ende für ALLE Funnels)
 
 ```
 Widget                                Server
 ─────                                 ──────
-[OK-Klick auf letzter Frage]
-        │
-        ├─► (skipSubmitStep?) ──ja──► autoFinish()
-        │                              ├─► setIsSubmitted(true)
-        │                              └─► onSubmit({answers, contact, honeypot})
-        │
-        └─► (Submit-Page-Klick) ───► handleFormSubmit()
-                                       ├─► validate
-                                       └─► onSubmit(...)
-                                             │
-                                             ▼
-                                       /api/submit
-                                       ├─► Honeypot-Check
-                                       ├─► Rate-Limit
-                                       ├─► getTenantConfig
-                                       ├─► deriveContactFromAnswers (Skip-Mode-Backstop)
-                                       ├─► upsertSubmissionProgress(completed=true)
-                                       ├─► sendAllEmails
-                                       └─► updateEmailStatus
+[OK-Klick auf letztem Step]
+        └─► autoFinish()
+              ├─► postMessage 'funnel-submit' an Parent (Conversion, PII-frei)
+              ├─► setIsSubmitted(true)
+              └─► onSubmit({answers, contact, honeypot})
+                    │
+                    ▼
+              /api/submit
+              ├─► Honeypot-Check (→ 200, kein Lead)
+              ├─► Rate-Limit (3/IP/10min)
+              ├─► getTenantConfig
+              ├─► deriveContactFromAnswers(answers)   # Lead-Daten aus Karten-Antworten
+              ├─► Card-Backstop-Validierung (Pflicht-Custom-Felder serverseitig)
+              ├─► upsertSubmissionProgress(completed=true)
+              └─► after(): triggerOnSubmit (Webhooks) + triggerEmailsOnSubmit (Drip-Mails)
 
-[redirectUrl?] ─ja─► nach 1.5s window.location.replace(url)
-[sonst] ──────────► Success-Page (responseMessage + answers-overview)
+[redirectUrl?] ─ja──► nach 1.5s window.location.replace(url)
+[sonst] ───────────► Success-Page (responseMessage + optional answers-overview)
 ```
 
 ### 7.4 Partial-Submissions
@@ -387,11 +383,11 @@ Nur **single_choice + nicht welcome + nicht custom** auto-advancen nach 250ms (T
 2. User tippt Antworten
    └─► State-Updates triggern 600ms-debounced /api/track-progress
        └─► UPSERT submissions{session_id, answers, contact={}, completed_at=NULL}
-3. User klickt finalen Submit (oder Auto-Finish im Skip-Mode)
+3. User klickt finalen OK / autoFinish am Funnel-Ende
+   └─► postMessage 'funnel-submit' an Parent → embed.js feuert Conversions (Meta/Google/GTM)
    └─► /api/submit feuert
        ├─► UPSERT submissions{completed_at=NOW(), contact=deriveContactFromAnswers(answers)}
-       ├─► sendAllEmails (Customer + Tenant)
-       └─► (zukünftig C.5) Webhook-Delivery
+       └─► after(): triggerOnSubmit (Webhooks) + triggerEmailsOnSubmit (Drip-Queue)
 4. (optional) redirect_url gesetzt → window.location.replace
 ```
 
@@ -420,8 +416,7 @@ EditorState
                 ├─ kind="welcome" → page_type='welcome' + page.config{title,subtitle,page_key,button_label}
                 ├─ kind="custom"  → page_type='custom' + page.config{title,subtitle,page_key} + N fields
                 ├─ kind="question" (default) → page_type='question' + 1 field
-                ├─ + 1 page_type='submit' am Ende mit N contactFields-Fields
-                └─ + 1 page_type='success' (leer)
+                └─ + 1 page_type='success' (leer)   # KEINE submit-Page mehr (52D)
 ```
 
 ### 9.2 Leserichtung (DB → Editor)
@@ -433,8 +428,7 @@ DB (pages + fields)
     │       1. Group fields by page_id
     │       2. Filter stepPages = pages WHERE type IN (welcome, question, custom)
     │       3. Rekonstruiere EditorQuestion[] mit kind je nach page_type
-    │       4. Submit-Page → contactFields[]
-    │       5. Funnel-Row-Fields → EditorState-Texte
+    │       4. Funnel-Row-Fields → EditorState-Texte
     │
     └─► buildQuestions(state.questions, opts)
             Für das Widget: filtert visible (außer keepHidden), strippt Editor-only Felder
@@ -471,7 +465,7 @@ DB (pages + fields)
 | `kind`-Diskriminator statt 3 Type-Arrays | Sortierung in `state.questions[]` bleibt 1:1 mit DB-sort_order |
 | Service-Key nur in 6 dokumentierten Ausnahmen | Defense-in-depth via RLS (CLAUDE.md §13.2) |
 | Icons komplett raus (Aufgabe 34) | A/B/C/D-Letter-Chips, kein IconPicker mehr |
-| email/tel als Submit-only-Types | Auf Question-Pages waren sie nur kosmetische Text-Inputs (Aufgabe 34) |
+| email/tel als Karten-Feld-Typen | Auf Question-Pages waren sie nur kosmetische Text-Inputs; bleiben als Custom-Karten-Felder (Aufgabe 34) |
 | Partial-Submission UPSERT statt INSERT | Idempotent, kein Duplikat-Risk bei Network-Retry |
 | `funnels.slug` nach Anlage unveränderlich | Sonst würden Tenant-Embeds brechen |
 | Widget = 1 Datei, hands-off | Konsistenz-Risiko bei Splitting, Doppelnutzung Live + Builder |
@@ -480,7 +474,7 @@ DB (pages + fields)
 
 ---
 
-## 12. Aktueller Zustand des Builders (2026-05-31)
+## 12. Aktueller Zustand des Builders (2026-06-07)
 
 **Fertig (live auf main bzw. auf Feature-Branch):**
 - ✅ Aufgaben 25-31 (Schema-Refactor, B-Phase)
@@ -496,13 +490,15 @@ DB (pages + fields)
 - ✅ Aufgabe 39 (Welcome + Rating/Scale/Statement + End-Screen-Redirect + Builder-Cleanup)
 - ✅ Polish-Iteration nach 39 (UX-Bugs + Defaults + Visual-Builder)
 - ✅ **Aufgabe 40 (Webhook-Actions, 2026-05-29)** — Action-Element-Modell: Webhooks sind dynamisch konfigurierbare Builder-Elemente im neuen „Webhooks"-Tab. Backend (Sender + HMAC + Cron + Retry + abandoned-Trigger), Editor-Tab + Step-Pill-Badges, CRUD-API. Schema additive (siehe `supabase-schema.md`). Replaces ursprünglichen C.5-Scope.
-- ✅ **Aufgabe 41 (E-Mail-Drip-Actions, 2026-05-31, auf Branch `feature/aufgabe-41-emails-tab`)** — Drip-System für Lead-Nurturing: zeitversetzte Mail-Sequenz nach Submit (`delay_minutes`). TipTap-WYSIWYG-Editor mit Custom Variable + Magic-Section Nodes. 3-Pane-In-Place-Layout (Liste · Editor · Live-Vorschau, resizable). Auto-Save mit 1.5 s Debounce. Vorschau mit Mock- oder echten Lead-Daten. Schema `email_subscriptions` + `email_delivery_attempts` (Queue-Pattern). Cron erweitert um due-pending + due-retrying. Hartkodierter `sendAllEmails`-Pfad in `/api/submit` durch Backfill-Subscriptions ersetzt. **Detail-Doku: [`email-drip-architektur.md`](email-drip-architektur.md).**
+- ✅ **Aufgabe 41 (E-Mail-Drip-Actions, 2026-05-31)** — Drip-System für Lead-Nurturing: zeitversetzte Mail-Sequenz nach Submit (`delay_minutes`). TipTap-WYSIWYG-Editor mit Custom Variable + Magic-Section Nodes. 3-Pane-In-Place-Layout. Schema `email_subscriptions` + `email_delivery_attempts` (Queue-Pattern). **Detail-Doku: [`email-drip-architektur.md`](email-drip-architektur.md).**
+- ✅ **Aufgabe 42 + 43 (Conversion-Tracking, 2026-05-31)** — postMessage-Bridge (iFrame→Parent) + `embed.js`-Loader + Turnkey-Pixel-IDs pro Funnel (`meta_pixel_id`/`google_ads_conversion`). **Detail-Doku: [`conversion-tracking.md`](conversion-tracking.md).**
+- ✅ **Aufgaben 44–50 (Editor-/Dashboard-Uplift, 2026-05-31 → 06-06)** — Side-Nav-Shell + Vollbild-Editor, Editor-Design-System (`ui/Panel.tsx`), Mini-CRM (Lead-Notizen), Autosave-Pattern, Karten-Model, „Bearbeiten"-Tab (Inhalt + Design vereint), Webhook-Namen.
+- ✅ **Aufgaben 51–53 (Go-live-Politur, 2026-06-06)** — Submit-Page/Kontaktformular abgeschafft (51) + restlos rausgerissen (52D) inkl. `skip_submit_step`/Footer-Drop; dynamische Mail-Variablen aus Funnel-Feldern + Empfänger-Modi + Dark-Mode (53).
 
 **Offen vor Launch:**
-- C.4 Logic Jumps (v1.1 OK)
-- D.1 Stripe Live (aufgeschoben, Testkunden `free`-Tier)
-- D.2 Conversion-Tracking via postMessage + Script-Loader-Embed (Performance-Marketing-Blocker)
-- D.3 3-5 Demo-Funnels als Templates
+- D.1 Stripe Test→Live (aufgeschoben, Testkunden `free`-Tier)
+- D.3 3-5 Demo-Funnel-Templates (Content)
+- C.4 Logic Jumps (optional / v1.1)
 
 ## 13. Action-Element-Architektur (Aufgabe 40)
 
