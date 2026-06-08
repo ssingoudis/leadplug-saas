@@ -2,6 +2,8 @@
 // Server-Komponente — native <details>/<summary>, kein Client-JS nötig.
 // Inhalt gespiegelt aus Anleitungen/Widget-Einbetten.md.
 
+import { ChevronDown } from 'lucide-react'
+
 type Guide = { platform: string; steps: string[] }
 
 const GUIDES: Guide[] = [
@@ -57,9 +59,9 @@ export default function PlatformGuides() {
         >
           <summary className="flex items-center justify-between px-5 py-3.5 cursor-pointer list-none text-sm font-semibold text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
             <span>{g.platform}</span>
-            <span className="text-gray-400 dark:text-gray-500 text-xs transition-transform group-open:rotate-90">▶</span>
+            <ChevronDown size={16} className="shrink-0 text-gray-400 dark:text-gray-500 transition-transform group-open:rotate-180" />
           </summary>
-          <ol className="px-5 pb-4 pt-1 flex flex-col gap-2">
+          <ol className="flex flex-col gap-2 border-t border-gray-100 px-5 pb-4 pt-3 dark:border-gray-800">
             {g.steps.map((step, i) => (
               <li key={i} className="flex gap-3 text-sm text-gray-600 dark:text-gray-400">
                 <span className="shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center mt-0.5">

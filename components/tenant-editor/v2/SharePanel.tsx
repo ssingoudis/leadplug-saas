@@ -113,7 +113,7 @@ export function SharePanel({ funnelSlug, funnelName }: Props) {
         <details className="group overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
           <summary className="flex items-center justify-between px-5 py-3.5 cursor-pointer list-none text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50">
             <span>Für Entwickler & Google Tag Manager (optional)</span>
-            <span className="text-gray-400 text-[10px] transition-transform group-open:rotate-90">▶</span>
+            <ChevronDown size={16} className="shrink-0 text-gray-400 transition-transform group-open:rotate-180" />
           </summary>
           <div className="px-5 pb-5 pt-1 flex flex-col gap-4 border-t border-gray-100 dark:border-gray-800">
             <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mt-3">
