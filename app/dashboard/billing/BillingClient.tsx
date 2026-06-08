@@ -72,9 +72,9 @@ export default function BillingClient({
         <div className="flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 p-4 text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">
           <Sparkles size={18} className="mt-0.5 shrink-0" />
           <div className="text-sm">
-            <p className="font-semibold">Du nutzt LeadPlug aktuell kostenlos — im vollen Funktionsumfang.</p>
+            <p className="font-semibold">Open Beta: LeadPlug ist für dich kostenlos.</p>
             <p className="mt-0.5 text-green-700/90 dark:text-green-300/80">
-              Es fallen keine Kosten an und du musst nichts tun. Wir melden uns rechtzeitig, falls sich daran etwas ändert.
+              Du hast vollen Zugriff auf alle Funktionen — ohne Kosten und ohne Kreditkarte. Leg einfach los.
             </p>
           </div>
         </div>
@@ -118,8 +118,8 @@ export default function BillingClient({
           {[
             'Unbegrenzte Funnels',
             'Lead-Verwaltung & Statistiken',
-            'Self-Service Editor',
-            'iFrame-Embed für jede Website',
+            'Eigener Funnel-Editor',
+            'Auf jeder Website einbettbar',
           ].map((f) => (
             <li key={f} className="flex items-center gap-2">
               <CheckCircle2 size={14} className="text-primary shrink-0" />
@@ -152,7 +152,7 @@ export default function BillingClient({
           )}
           {status === 'free' && (
             <p className="text-xs text-gray-400 dark:text-gray-500 self-center">
-              Kostenlos-Status wird durch den Administrator verwaltet.
+              Während der offenen Beta brauchst du nichts weiter zu tun.
             </p>
           )}
         </div>

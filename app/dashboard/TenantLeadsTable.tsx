@@ -417,7 +417,7 @@ function KanbanColumn({
       </div>
       <div
         ref={setNodeRef}
-        className={`flex min-h-32 flex-1 flex-col gap-2 rounded-xl border-2 border-dashed p-2 transition-colors ${
+        className={`flex max-h-[68vh] min-h-32 flex-1 flex-col gap-2 overflow-y-auto rounded-xl border-2 border-dashed p-2 transition-colors ${
           isOver ? 'border-primary/50 bg-primary/5' : 'border-gray-200 dark:border-gray-800'
         }`}
       >
@@ -457,10 +457,12 @@ export default function TenantLeadsTable({
   const [detailId, setDetailId]     = useState<string | null>(null)
   const [query, setQuery]           = useState('')
   const [funnelFilter, setFunnelFilter] = useState('alle')
+  const [dateRange, setDateRange]   = useState('all')
   const [dateFrom, setDateFrom]     = useState('')
   const [dateTo, setDateTo]         = useState('')
   const [sortBy, setSortBy]         = useState('date_desc')
   const [statusTab, setStatusTab]   = useState<'alle' | LeadStatus>(initialStatus)
+  const [visibleCount, setVisibleCount] = useState(25)
   const [activeId, setActiveId]     = useState<string | null>(null)
   const justDragged = useRef(false)
 
@@ -500,6 +502,25 @@ export default function TenantLeadsTable({
     setRows((rs) => rs.map((r) => (r.id === id ? { ...r, notes } : r)))
   }
 
+  // Zeitraum-Preset → konkrete Von/Bis-Grenzen (ms). 'custom' nutzt die Datumsfelder.
+  const dateBounds = useMemo(() => {
+    const now = new Date()
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+    let from: number | null = null
+    let to: number | null = null
+    switch (dateRange) {
+      case 'today': from = startOfToday; break
+      case '7d':    from = startOfToday - 6 * 86400000; break
+      case '30d':   from = startOfToday - 29 * 86400000; break
+      case 'month': from = new Date(now.getFullYear(), now.getMonth(), 1).getTime(); break
+      case 'custom':
+        if (dateFrom) { const f = new Date(dateFrom); f.setHours(0, 0, 0, 0); from = f.getTime() }
+        if (dateTo)   { const t = new Date(dateTo);   t.setHours(23, 59, 59, 999); to = t.getTime() }
+        break
+    }
+    return { from, to }
+  }, [dateRange, dateFrom, dateTo])
+
   // Gemeinsame Filter (ohne Status, ohne Sort) — Basis für Liste + Board.
   const baseFiltered = useMemo(() => {
     const q = query.toLowerCase()
@@ -508,19 +529,12 @@ export default function TenantLeadsTable({
                !(s.contact_email ?? '').toLowerCase().includes(q) &&
                !(s.contact_phone ?? '').toLowerCase().includes(q)) return false
       if (funnelFilter !== 'alle' && s.funnel_slug !== funnelFilter) return false
-      if (dateFrom) {
-        const from = new Date(dateFrom)
-        from.setHours(0, 0, 0, 0)
-        if (new Date(s.created_at) < from) return false
-      }
-      if (dateTo) {
-        const to = new Date(dateTo)
-        to.setHours(23, 59, 59, 999)
-        if (new Date(s.created_at) > to) return false
-      }
+      const ts = new Date(s.created_at).getTime()
+      if (dateBounds.from !== null && ts < dateBounds.from) return false
+      if (dateBounds.to !== null && ts > dateBounds.to) return false
       return true
     })
-  }, [rows, query, funnelFilter, dateFrom, dateTo])
+  }, [rows, query, funnelFilter, dateBounds])
 
   // Listen-Ansicht: Status-Tab + Sortierung.
   const listRows = useMemo(() => {
@@ -534,6 +548,9 @@ export default function TenantLeadsTable({
       }
     })
   }, [baseFiltered, sortBy, statusTab])
+
+  // Render-Limit zurücksetzen, wenn sich die sichtbare Liste durch Filter/Tab/Sort ändert.
+  useEffect(() => { setVisibleCount(25) }, [statusTab, query, funnelFilter, dateRange, dateFrom, dateTo, sortBy])
 
   // Board-Ansicht: nach Status gruppiert, je Spalte neueste zuerst.
   const boardColumns = useMemo(() => {
@@ -566,7 +583,7 @@ export default function TenantLeadsTable({
     setTimeout(() => { justDragged.current = false }, 0)
   }
 
-  const hasActiveFilters = query || funnelFilter !== 'alle' || dateFrom || dateTo
+  const hasActiveFilters = query || funnelFilter !== 'alle' || dateRange !== 'all'
   const showFunnel = funnels.length > 1
   const activeLead = activeId ? rows.find((r) => r.id === activeId) ?? null : null
   const detailLead = detailId ? rows.find((r) => r.id === detailId) ?? null : null
@@ -596,10 +613,10 @@ export default function TenantLeadsTable({
     )
   }
 
-  function renderSearchAndFunnel() {
+  function renderToolbar({ showSort }: { showSort: boolean }) {
     return (
-      <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-        <div className="relative min-w-0 sm:w-72">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="relative min-w-0 flex-1">
           <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
@@ -612,6 +629,57 @@ export default function TenantLeadsTable({
         {showFunnel && (
           <Select value={funnelFilter} onChange={setFunnelFilter} options={funnelOptions} className="sm:w-40" />
         )}
+        <Select
+          value={dateRange}
+          onChange={setDateRange}
+          options={[
+            { value: 'all',    label: 'Alle Zeit' },
+            { value: 'today',  label: 'Heute' },
+            { value: '7d',     label: 'Letzte 7 Tage' },
+            { value: '30d',    label: 'Letzte 30 Tage' },
+            { value: 'month',  label: 'Dieser Monat' },
+            { value: 'custom', label: 'Benutzerdefiniert…' },
+          ]}
+          className="sm:w-44"
+        />
+        {showSort && (
+          <Select
+            value={sortBy}
+            onChange={setSortBy}
+            options={[
+              { value: 'date_desc', label: 'Neueste zuerst' },
+              { value: 'date_asc',  label: 'Älteste zuerst' },
+              { value: 'status',    label: 'Status (Neu → Erledigt)' },
+            ]}
+            className="sm:w-44"
+          />
+        )}
+        {hasActiveFilters && (
+          <button
+            onClick={() => { setQuery(''); setFunnelFilter('alle'); setDateRange('all'); setDateFrom(''); setDateTo('') }}
+            className="shrink-0 rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-500 transition hover:border-gray-300 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:text-gray-200"
+          >
+            Zurücksetzen
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  function renderCustomDates() {
+    if (dateRange !== 'custom') return null
+    return (
+      <div className="mb-4 -mt-2 flex items-center gap-2">
+        <div className="flex items-center divide-x divide-gray-200 overflow-hidden rounded-xl border border-gray-300 bg-white dark:divide-gray-600 dark:border-gray-600 dark:bg-gray-800">
+          <div className="flex items-center gap-1.5 px-3 py-1.5">
+            <span className="whitespace-nowrap text-xs text-gray-400 dark:text-gray-500">Von</span>
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={dateInputClass} />
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1.5">
+            <span className="whitespace-nowrap text-xs text-gray-400 dark:text-gray-500">Bis</span>
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={dateInputClass} />
+          </div>
+        </div>
       </div>
     )
   }
@@ -656,9 +724,8 @@ export default function TenantLeadsTable({
       {view === 'board' ? (
         /* ─── Board-Ansicht ─── */
         <div>
-          <div className="mb-4">
-            {renderSearchAndFunnel()}
-          </div>
+          {renderToolbar({ showSort: false })}
+          {renderCustomDates()}
           {rows.length === 0 ? (
             <p className="py-6 text-center text-sm text-gray-400">Noch keine Leads eingegangen.</p>
           ) : (
@@ -693,42 +760,8 @@ export default function TenantLeadsTable({
       ) : (
         /* ─── Listen-Ansicht ─── */
         <div>
-          {/* Suche + Funnel */}
-          <div className="mb-2">
-            {renderSearchAndFunnel()}
-          </div>
-
-          {/* Zeile 2: Datum + Sort */}
-          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-            <div className="flex items-center divide-x divide-gray-200 overflow-hidden rounded-xl border border-gray-300 bg-white dark:divide-gray-600 dark:border-gray-600 dark:bg-gray-800">
-              <div className="flex items-center gap-1.5 px-3 py-1.5">
-                <span className="whitespace-nowrap text-xs text-gray-400 dark:text-gray-500">Von</span>
-                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={dateInputClass} />
-              </div>
-              <div className="flex items-center gap-1.5 px-3 py-1.5">
-                <span className="whitespace-nowrap text-xs text-gray-400 dark:text-gray-500">Bis</span>
-                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={dateInputClass} />
-              </div>
-            </div>
-            <Select
-              value={sortBy}
-              onChange={setSortBy}
-              options={[
-                { value: 'date_desc', label: 'Neueste zuerst' },
-                { value: 'date_asc',  label: 'Älteste zuerst' },
-                { value: 'status',    label: 'Status (Neu → Erledigt)' },
-              ]}
-              className="sm:w-40"
-            />
-            {hasActiveFilters && (
-              <button
-                onClick={() => { setQuery(''); setFunnelFilter('alle'); setDateFrom(''); setDateTo('') }}
-                className="rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-500 transition hover:border-gray-300 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:text-gray-200"
-              >
-                Zurücksetzen
-              </button>
-            )}
-          </div>
+          {renderToolbar({ showSort: true })}
+          {renderCustomDates()}
 
           {hasActiveFilters && (
             <p className="mb-3 text-xs text-gray-400 dark:text-gray-500">
@@ -743,7 +776,7 @@ export default function TenantLeadsTable({
           ) : (
             <div className="-mx-6 -mb-6 overflow-hidden rounded-xl border border-gray-100 dark:border-gray-800">
               <AnimatePresence initial={false}>
-              {listRows.map((s) => {
+              {listRows.slice(0, visibleCount).map((s) => {
                 const isOpen = openId === s.id
 
                 return (
@@ -796,6 +829,14 @@ export default function TenantLeadsTable({
                 )
               })}
               </AnimatePresence>
+              {listRows.length > visibleCount && (
+                <button
+                  onClick={() => setVisibleCount((c) => c + 25)}
+                  className="block w-full border-t border-gray-100 bg-gray-50 px-5 py-3 text-center text-sm font-medium text-gray-600 transition hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+                >
+                  Mehr laden ({listRows.length - visibleCount} weitere)
+                </button>
+              )}
             </div>
           )}
         </div>

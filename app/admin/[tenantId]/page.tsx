@@ -5,6 +5,7 @@ import { getWorkspaceDetail } from '@/lib/admin/queries'
 import Card from '@/components/ui/Card'
 import StatTile from '@/components/ui/StatTile'
 import Badge from '@/components/ui/Badge'
+import WorkspaceDangerZone from '@/components/admin/WorkspaceDangerZone'
 
 type Variant = 'amber' | 'purple' | 'green' | 'gray'
 const STATUS: Record<string, { label: string; variant: Variant }> = {
@@ -126,6 +127,15 @@ export default async function AdminWorkspaceDetailPage({ params }: { params: Pro
           </div>
         )}
       </Card>
+
+      {/* Gefahrenzone — Deaktivieren + Löschen (mit Popup-Warnungen) */}
+      <WorkspaceDangerZone
+        tenantId={tenant.id}
+        companyName={tenant.companyName ?? ''}
+        isActive={tenant.isActive}
+        funnelCount={totals.funnels}
+        leadCount={totals.leads}
+      />
     </div>
   )
 }
