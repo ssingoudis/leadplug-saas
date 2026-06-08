@@ -165,7 +165,7 @@ export function Sidebar({
             collapsed ? 'justify-center' : ''
           }`}
         >
-          {collapsed ? <ChevronRight size={17} /> : <><ChevronLeft size={17} /><span>Einklappen</span></>}
+          {collapsed ? <ChevronRight size={17} /> : <><ChevronLeft size={17} /><span className="truncate">Einklappen</span></>}
         </button>
       )}
 
@@ -245,7 +245,7 @@ function SidebarFooter({
         }`}
       >
         {dark ? <Sun size={17} /> : <Moon size={17} />}
-        {!collapsed && <span className="flex-1 text-left">{dark ? 'Heller Modus' : 'Dunkler Modus'}</span>}
+        {!collapsed && <span className="truncate">{dark ? 'Heller Modus' : 'Dunkler Modus'}</span>}
       </button>
 
       {/* User-Menü */}
