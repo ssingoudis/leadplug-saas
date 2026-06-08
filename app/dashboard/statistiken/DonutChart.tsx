@@ -23,8 +23,8 @@ export default function DonutChart({ value, total, centerLabel, subLabel, toolti
   // Minimum visible arc of 8% so small values don't look broken — center label shows the truth
   const pct     = rawPct > 0 ? Math.max(rawPct, 0.08) : 0
   const filled  = pct * CIRCUMFERENCE
-  const dim     = size === 'sm' ? 80 : 120
-  const stroke  = size === 'sm' ? 11 : 16
+  const dim     = size === 'sm' ? 80 : 132
+  const stroke  = size === 'sm' ? 11 : 12
   const subSz   = size === 'sm' ? 'text-[10px]' : 'text-xs'
 
   return (

@@ -69,6 +69,11 @@ export default function StatistikenCockpit({
     const conversion = totalViews > 0 ? Math.round((totalLeads / totalViews) * 100) : 0
     const avgPerMonth = filledMonths.length > 0 ? Math.round(totalLeads / filledMonths.length) : 0
 
+    // Rollierendes 30-Tage-Fenster (Recency-Signal — unabhängig vom Kalendermonat).
+    const cutoff30 = Date.now() - 30 * 24 * 60 * 60 * 1000
+    const leads30 = fLeads.filter((l) => new Date(l.ts).getTime() >= cutoff30).length
+    const views30 = fViews.filter((v) => new Date(v.ts).getTime() >= cutoff30).length
+
     return {
       monthlyData,
       filledMonths,
@@ -76,6 +81,8 @@ export default function StatistikenCockpit({
       totalLeads,
       conversion,
       avgPerMonth,
+      leads30,
+      views30,
       submissionTimestamps: fLeads.map((l) => l.ts),
       viewLogTimestamps: fViews.map((v) => v.ts),
     }
@@ -110,6 +117,8 @@ export default function StatistikenCockpit({
           <div className="grid flex-1 grid-cols-2 gap-4">
             <StatTile value={agg.totalLeads} label="Leads gesamt" />
             <StatTile value={agg.totalViews} label="Aufrufe gesamt" />
+            <StatTile value={agg.leads30} label="Leads (30 Tage)" />
+            <StatTile value={agg.views30} label="Aufrufe (30 Tage)" />
             <StatTile value={agg.avgPerMonth} label="Ø Leads / Monat" />
             <StatTile value={agg.filledMonths.length} label="Aktive Monate" />
           </div>
