@@ -1,14 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Plus, Trash2, Send, RefreshCw, Copy, Check, ChevronDown, ChevronRight,
-  CircleAlert, CircleCheck, Clock, Pencil,
+  CircleAlert, CircleCheck, Clock, Pencil, Braces,
 } from "lucide-react";
 import type { EditorQuestion } from "@/types";
 import { WebhookAddModal } from "./WebhookAddModal";
 import { SectionCard, EmptyState, EDITOR_LEFT_COL, PanelListHeader } from "./ui/Panel";
 import { EditorButton, TextInput, Select, Toggle } from "./ui/Controls";
+import { ConfirmModal } from "./ui/ConfirmModal";
+import { EditorModal } from "./ui/EditorModal";
 
 // =============================================================================
 // Aufgabe 40 — Webhooks-Tab im Funnel-Editor
@@ -122,7 +124,6 @@ export function WebhooksPanel({ funnelSlug, questions, onSubsChanged }: Props) {
   }
 
   async function deleteSub(id: string) {
-    if (!confirm("Webhook wirklich löschen? Bestehende Delivery-Logs gehen mit verloren.")) return;
     const res = await fetch(`/api/tenant/funnels/${funnelSlug}/webhooks/${id}`, {
       method: "DELETE",
     });
@@ -188,9 +189,9 @@ export function WebhooksPanel({ funnelSlug, questions, onSubsChanged }: Props) {
                         </p>
                         <p className="mt-0.5 truncate pl-3.5 text-[11px] text-gray-500 dark:text-gray-400">
                           {sub.trigger_type === "on_submit"
-                            ? "feuert am Funnel-Ende"
+                            ? "Am Funnel-Ende"
                             : triggerPage
-                              ? `nach „${triggerPage.title || "Frage"}"`
+                              ? `Nach „${triggerPage.title || "Schritt"}"`
                               : "Trigger entfernt"}
                         </p>
                       </button>
@@ -328,6 +329,7 @@ function WebhookDetail({
   const nameInputRef = useRef<HTMLInputElement>(null);
   const [nameDraft, setNameDraft] = useState(sub.name ?? "");
   const nameWidth = Math.max(8, Math.min(40, (nameDraft || "Webhook").length + 1));
+  const [confirmAction, setConfirmAction] = useState<null | "delete" | "rotate">(null);
 
   function commitName() {
     const trimmed = nameDraft.trim();
@@ -381,26 +383,38 @@ function WebhookDetail({
         <div className="mx-auto max-w-3xl space-y-4">
         {revealedSecret && <SecretRevealBanner secret={revealedSecret} onDismiss={onDismissSecret} />}
         <ConfigSection sub={sub} questions={questions} onPatch={onPatch} />
+        <ExamplePayloadSection questions={questions} />
         <TestSection funnelSlug={funnelSlug} subId={sub.id} />
         <LogsSection funnelSlug={funnelSlug} subId={sub.id} />
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-4 dark:border-gray-800">
-          <EditorButton
-            variant="secondary"
-            onClick={() => {
-              if (!confirm("Neues Secret generieren? Das alte Secret wird sofort ungültig — bestehende CRM-Integrationen müssen den neuen Wert bekommen.")) return;
-              onPatch({ rotate_secret: true });
-            }}
-          >
+          <EditorButton variant="secondary" onClick={() => setConfirmAction("rotate")}>
             <RefreshCw size={13} />
             Secret neu generieren
           </EditorButton>
-          <EditorButton variant="danger" onClick={onDelete}>
+          <EditorButton variant="danger" onClick={() => setConfirmAction("delete")}>
             <Trash2 size={13} />
             Webhook löschen
           </EditorButton>
         </div>
         </div>
       </div>
+
+      <ConfirmModal
+        open={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={() => {
+          if (confirmAction === "delete") onDelete();
+          else if (confirmAction === "rotate") onPatch({ rotate_secret: true });
+        }}
+        title={confirmAction === "delete" ? "Webhook löschen?" : "Secret neu generieren?"}
+        message={
+          confirmAction === "delete"
+            ? "Der Webhook und seine Zustell-Logs werden dauerhaft entfernt. Das lässt sich nicht rückgängig machen."
+            : "Das alte Secret wird sofort ungültig — bestehende CRM-Integrationen müssen den neuen Wert bekommen."
+        }
+        confirmLabel={confirmAction === "delete" ? "Löschen" : "Neu generieren"}
+        danger={confirmAction === "delete"}
+      />
     </div>
   );
 }
@@ -517,6 +531,215 @@ function ConfigSection({
 }
 
 // ===========================================================================
+// ExamplePayloadSection — zeigt die exakte JSON-Struktur, funnel-spezifisch
+// ===========================================================================
+
+const EXAMPLE_BY_TYPE: Record<string, string> = {
+  short_text: "Beispieltext",
+  long_text: "Eine längere Beispielantwort …",
+  number: "42",
+  date: "2026-06-15",
+  slider: "5",
+  rating: "4",
+  scale: "7",
+  email: "max@beispiel.de",
+  tel: "+49 151 23456789",
+  plz: "10115",
+  first_name: "Max",
+  last_name: "Mustermann",
+  full_name: "Max Mustermann",
+  text: "Beispieltext",
+};
+
+function slugify(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "wert";
+}
+
+// Spiegelt die Server-Logik aus lib/webhooks.ts (resolveAnswerEntries) als Beispiel —
+// echte Feld-Keys/Labels dieses Funnels, damit der Kunde direkt mappen kann.
+function buildExamplePayload(questions: EditorQuestion[]): Record<string, unknown> {
+  const answers: Array<Record<string, unknown>> = [];
+  const answersFlat: Record<string, string> = {};
+
+  function add(key: string, label: string, type: string, optLabels: string[], optValues: string[]) {
+    if (type === "single_choice" || type === "dropdown" || type === "radio") {
+      const l = optLabels[0] ?? "Option A";
+      const v = optValues[0] ?? slugify(l);
+      answers.push({ key, label, type, value: v, value_label: l });
+      answersFlat[key] = l;
+    } else if (type === "multi_choice") {
+      const ls = optLabels.length ? optLabels.slice(0, 2) : ["Option A", "Option B"];
+      const vs = optValues.length ? optValues.slice(0, 2) : ls.map(slugify);
+      answers.push({ key, label, type, value: vs, value_label: ls });
+      answersFlat[key] = ls.join(", ");
+    } else if (type === "checkbox") {
+      answers.push({ key, label, type, value: "true", value_label: "Ja" });
+      answersFlat[key] = "Ja";
+    } else {
+      const v = EXAMPLE_BY_TYPE[type] ?? "Beispieltext";
+      answers.push({ key, label, type, value: v });
+      answersFlat[key] = v;
+    }
+  }
+
+  for (const q of questions) {
+    if (q.kind === "welcome" || q.questionType === "statement") continue;
+    if (q.kind === "custom" && q.customFields) {
+      for (const f of q.customFields) {
+        const opts = Array.isArray(f.options) ? f.options : [];
+        add(f.key, f.label, f.type, opts, opts);
+      }
+      continue;
+    }
+    const optLabels = (q.options ?? []).map((o) => o.label);
+    const optValues = (q.options ?? []).map((o) => o.value);
+    add(q.questionKey, q.title || "Frage", q.questionType, optLabels, optValues);
+  }
+
+  if (answers.length === 0) {
+    add("beispiel_frage", "Beispiel-Frage", "single_choice", ["Option A", "Option B"], ["option_a", "option_b"]);
+  }
+
+  return {
+    event: "submission.completed",
+    delivery_id: "8f1c2d3e-…-uuid",
+    delivered_at: "2026-06-08T10:15:30.000Z",
+    tenant_id: "a3f29b10-…-uuid",
+    funnel: { id: "c91b77a4-…-uuid", slug: "<dein-funnel-slug>", name: "Deine Agentur" },
+    submission: {
+      id: "d72e5f81-…-uuid",
+      session_id: "11ab33cd-…-uuid",
+      created_at: "2026-06-08T10:14:55.000Z",
+      completed_at: "2026-06-08T10:15:29.000Z",
+      source_url: "https://kunde.de/angebot",
+    },
+    available_channels: { email: true, telefon: true, name: true },
+    contact: { name: "Max Mustermann", email: "max@beispiel.de", telefon: "+49 151 23456789" },
+    answers,
+    answers_flat: answersFlat,
+  };
+}
+
+// JSON-Syntax-Farben (auf dunklem #0f172a, analog zu components/dashboard/CodeSnippet.tsx).
+const JSON_COLOR = {
+  key: "#818cf8",
+  string: "#fb923c",
+  number: "#fbbf24",
+  literal: "#f472b6",
+  punct: "#94a3b8",
+} as const;
+
+function tokenizeJson(src: string): Array<{ t: keyof typeof JSON_COLOR; v: string }> {
+  const out: Array<{ t: keyof typeof JSON_COLOR; v: string }> = [];
+  const re = /"(?:\\.|[^"\\])*"|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(src)) !== null) {
+    if (m.index > last) out.push({ t: "punct", v: src.slice(last, m.index) });
+    const tok = m[0];
+    let type: keyof typeof JSON_COLOR = "number";
+    if (tok[0] === '"') {
+      // Key vs. String: ist das nächste Nicht-Whitespace-Zeichen ein ":" → Key.
+      let j = re.lastIndex;
+      while (j < src.length && /\s/.test(src[j])) j++;
+      type = src[j] === ":" ? "key" : "string";
+    } else if (tok === "true" || tok === "false" || tok === "null") {
+      type = "literal";
+    }
+    out.push({ t: type, v: tok });
+    last = re.lastIndex;
+  }
+  if (last < src.length) out.push({ t: "punct", v: src.slice(last) });
+  return out;
+}
+
+function JsonCodeBlock({ json }: { json: string }) {
+  const tokens = useMemo(() => tokenizeJson(json), [json]);
+  return (
+    <pre
+      className="overflow-auto rounded-xl px-4 py-3 text-[13px] leading-6"
+      style={{
+        backgroundColor: "#0f172a",
+        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
+        maxHeight: "58vh",
+      }}
+    >
+      {tokens.map((t, i) => (
+        <span key={i} style={{ color: JSON_COLOR[t.t] }}>{t.v}</span>
+      ))}
+    </pre>
+  );
+}
+
+function JsonCopyButton({ json }: { json: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() =>
+        navigator.clipboard?.writeText(json).then(() => {
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 2000);
+        })
+      }
+      className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
+    >
+      {copied ? <Check size={14} /> : <Copy size={14} />}
+      {copied ? "Kopiert!" : "Kopieren"}
+    </button>
+  );
+}
+
+function ExamplePayloadSection({ questions }: { questions: EditorQuestion[] }) {
+  const [open, setOpen] = useState(false);
+  const json = useMemo(() => JSON.stringify(buildExamplePayload(questions), null, 2), [questions]);
+
+  return (
+    <>
+      <SectionCard title="Beispiel-Daten">
+        <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+          So sehen die Daten aus, die wir bei jedem Lead an deine URL senden — mit den Feldern
+          dieses Funnels. Ideal zum Zuordnen in Make, Zapier, n8n oder deinem CRM.
+        </p>
+        <div className="mt-3">
+          <EditorButton variant="secondary" onClick={() => setOpen(true)}>
+            <Braces size={13} />
+            Beispiel-Daten ansehen
+          </EditorButton>
+        </div>
+      </SectionCard>
+
+      <EditorModal
+        open={open}
+        onClose={() => setOpen(false)}
+        scope="Webhook"
+        title="Beispiel-Daten (JSON)"
+        maxWidth="max-w-2xl"
+        footer={
+          <>
+            <JsonCopyButton json={json} />
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              Schließen
+            </button>
+          </>
+        }
+      >
+        <p className="mb-3 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+          Genau dieses Format senden wir bei jedem Lead. Die Schlüssel unter{" "}
+          <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px] text-gray-700 dark:bg-gray-800 dark:text-gray-300">answers_flat</code>{" "}
+          sind die Felder dieses Funnels — perfekt zum direkten Zuordnen.
+        </p>
+        <JsonCodeBlock json={json} />
+      </EditorModal>
+    </>
+  );
+}
+
+// ===========================================================================
 // TestSection
 // ===========================================================================
 
@@ -623,17 +846,23 @@ function LogsSection({ funnelSlug, subId }: { funnelSlug: string; subId: string 
                   )}
                 </div>
                 {openLogId === log.id && (log.last_error || log.response_body) && (
-                  <div className="ml-6 mt-2 space-y-1">
+                  <div className="ml-6 mt-2 space-y-2">
                     {log.last_error && (
                       <div>
-                        <p className="text-[10px] uppercase text-gray-500">Error</p>
-                        <pre className="whitespace-pre-wrap break-all rounded bg-gray-50 px-2 py-1 text-[11px] text-gray-700 dark:bg-gray-950 dark:text-gray-300">{log.last_error}</pre>
+                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Error</p>
+                        <pre
+                          className="overflow-x-auto whitespace-pre-wrap break-all rounded-lg px-3 py-2 text-[12px] leading-5 text-slate-200"
+                          style={{ backgroundColor: "#0f172a", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace" }}
+                        >{log.last_error}</pre>
                       </div>
                     )}
                     {log.response_body && (
                       <div>
-                        <p className="text-[10px] uppercase text-gray-500">Response-Body</p>
-                        <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap break-all rounded bg-gray-50 px-2 py-1 text-[11px] text-gray-700 dark:bg-gray-950 dark:text-gray-300">{log.response_body}</pre>
+                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Response-Body</p>
+                        <pre
+                          className="max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-lg px-3 py-2 text-[12px] leading-5 text-slate-200"
+                          style={{ backgroundColor: "#0f172a", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace" }}
+                        >{log.response_body}</pre>
                       </div>
                     )}
                   </div>
