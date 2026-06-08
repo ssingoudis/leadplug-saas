@@ -16,7 +16,10 @@ export type WorkspaceRow = {
   ownerUserId: string | null
   lastSignInAt: string | null
   funnelCount: number
+  activeFunnelCount: number
   leadCount: number
+  viewCount: number
+  lastLeadAt: string | null
   billingModel: string | null
   isActive: boolean
   createdAt: string
@@ -25,11 +28,12 @@ export type WorkspaceRow = {
 export async function getWorkspaces(): Promise<WorkspaceRow[]> {
   const admin = createAdminClient()
 
-  const [tenantsRes, membersRes, funnelsRes, subsRes, usersRes] = await Promise.all([
+  const [tenantsRes, membersRes, funnelsRes, subsRes, viewsRes, usersRes] = await Promise.all([
     admin.from('tenants').select('id, company_name, billing_model, is_active, created_at'),
     admin.from('tenant_members').select('tenant_id, auth_user_id, role').eq('role', 'owner'),
-    admin.from('funnels').select('id, tenant_id'),
-    admin.from('submissions').select('tenant_id, completed_at'),
+    admin.from('funnels').select('id, tenant_id, is_active'),
+    admin.from('submissions').select('tenant_id, completed_at, created_at'),
+    admin.from('funnel_view_logs').select('tenant_id'),
     admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
   ])
 
@@ -37,6 +41,7 @@ export async function getWorkspaces(): Promise<WorkspaceRow[]> {
   const members = (membersRes.data ?? []) as any[]
   const funnels = (funnelsRes.data ?? []) as any[]
   const subs    = (subsRes.data ?? []) as any[]
+  const views   = (viewsRes.data ?? []) as any[]
   const users   = usersRes.data?.users ?? []
 
   const userById = new Map<string, { email: string | null; lastSignInAt: string | null }>()
@@ -46,10 +51,24 @@ export async function getWorkspaces(): Promise<WorkspaceRow[]> {
   for (const m of members) if (!ownerByTenant.has(m.tenant_id)) ownerByTenant.set(m.tenant_id, m.auth_user_id)
 
   const funnelCount = new Map<string, number>()
-  for (const f of funnels) if (f.tenant_id) funnelCount.set(f.tenant_id, (funnelCount.get(f.tenant_id) ?? 0) + 1)
+  const activeFunnelCount = new Map<string, number>()
+  for (const f of funnels) {
+    if (!f.tenant_id) continue
+    funnelCount.set(f.tenant_id, (funnelCount.get(f.tenant_id) ?? 0) + 1)
+    if (f.is_active) activeFunnelCount.set(f.tenant_id, (activeFunnelCount.get(f.tenant_id) ?? 0) + 1)
+  }
 
   const leadCount = new Map<string, number>()
-  for (const s of subs) if (s.tenant_id && s.completed_at) leadCount.set(s.tenant_id, (leadCount.get(s.tenant_id) ?? 0) + 1)
+  const lastLeadAt = new Map<string, string>()
+  for (const s of subs) {
+    if (!s.tenant_id || !s.completed_at) continue
+    leadCount.set(s.tenant_id, (leadCount.get(s.tenant_id) ?? 0) + 1)
+    const prev = lastLeadAt.get(s.tenant_id)
+    if (!prev || new Date(s.created_at) > new Date(prev)) lastLeadAt.set(s.tenant_id, s.created_at as string)
+  }
+
+  const viewCount = new Map<string, number>()
+  for (const v of views) if (v.tenant_id) viewCount.set(v.tenant_id, (viewCount.get(v.tenant_id) ?? 0) + 1)
 
   return tenants
     .map((t) => {
@@ -62,7 +81,10 @@ export async function getWorkspaces(): Promise<WorkspaceRow[]> {
         ownerUserId: ownerId,
         lastSignInAt: owner?.lastSignInAt ?? null,
         funnelCount: funnelCount.get(t.id) ?? 0,
+        activeFunnelCount: activeFunnelCount.get(t.id) ?? 0,
         leadCount: leadCount.get(t.id) ?? 0,
+        viewCount: viewCount.get(t.id) ?? 0,
+        lastLeadAt: lastLeadAt.get(t.id) ?? null,
         billingModel: (t.billing_model as string | null) ?? null,
         isActive: (t.is_active as boolean) ?? true,
         createdAt: t.created_at as string,
