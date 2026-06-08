@@ -109,6 +109,23 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
+## Pre-Go-Live UI-Politur: Dashboard-Cockpit, Admin-Cockpit, Leads/Webhooks/Billing-Feinschliff + DB-Cleanup (2026-06-08)
+
+**Status:** Auf Branch `feature/dashboard-ui-politur`, Type-Check durchgehend grün, visuell vom User abgenommen. Reine UI-/Doku-Politur + ein Prod-Daten-Cleanup — keine Schema-Migration.
+
+- **Dashboard-Cockpit** (`app/dashboard/page.tsx`, neu `components/dashboard/Sparkline.tsx`, gelöscht `components/dashboard/DailyLeadsChart.tsx`): aufgeblasenes 14-Tage-Balkendiagramm raus → 4 klickbare KPI-Karten (30-Tage Leads/Aufrufe mit **Mini-Sparkline** · Conversion · aktive Funnels), Begrüßung + „Neuer Funnel"-CTA, klickbare „Neueste Leads", Pipeline (→ gefilterte Leads), neuer „Deine Funnels"-Block (Leads/Aufrufe pro Funnel). Trend lebt als Sparkline; volle Tages-Charts bleiben auf Statistiken.
+- **Admin-Cockpit** (neu `components/admin/WorkspacesCockpit.tsx` + `WorkspaceDangerZone.tsx`, `app/admin/page.tsx`, `app/admin/[tenantId]/page.tsx`, `lib/admin/queries.ts`, neu `app/api/admin/workspaces/[id]/route.ts`): 4 Kennzahlen (aktive Workspaces/Formulare/Aufrufe/Leads), durchsuch-/sortierbare Tabelle mit **Status-Spalte** (Kein Funnel/Ohne Traffic/Live/Leads ✓), Plan-Badge, „letzter Lead", Owner-E-Mail-Klick-Kopieren. ⋯-Menü (Details · Anschreiben · Plan · Deaktivieren-mit-Warnung) — Löschen **nicht** im Menü, sondern als **Gefahrenzone** in der Workspace-Einsicht (Deaktivieren-Warnpopup + Löschen im Funnel-Modal-Stil mit Tippe-den-Namen-Sicherung). API superadmin-gated (404 statt 403). `queries.ts` um `viewCount`/`lastLeadAt`/`activeFunnelCount` erweitert.
+- **Leads** (`app/dashboard/TenantLeadsTable.tsx`): kompakte 1-Zeilen-Filterleiste (Suche füllt Breite), **Zeitraum-Dropdown mit Presets** statt nativem Kalender (Benutzerdefiniert blendet Datumsfelder ein), Kanban-Spalten mit max-Höhe + Eigenscroll, Liste „erst 25, dann Mehr laden".
+- **Webhooks** (`components/tenant-editor/v2/WebhooksPanel.tsx`): „**Beispiel-Daten**"-Popup (funnel-spezifisches JSON mit Syntax-Highlight + Copy, gespiegelt aus `lib/webhooks.ts`), native `confirm()` → `ConfirmModal` (Löschen + Secret-Rotation), „Letzte Versuche" im dunklen Code-Look, Listen-Wording „feuert am Funnel-Ende" → „Am Funnel-Ende".
+- **Einbinden** (`SharePanel.tsx`, `components/dashboard/PlatformGuides.tsx`): Unicode-`▶` → lucide-`ChevronDown` (konsistent zum Rest), Header-Trennlinie bei den Plattform-Anleitungen.
+- **Statistik** (`StatistikenCockpit.tsx`, `DonutChart.tsx`): 2 „letzte 30 Tage"-Kacheln, Donut dünner + größer.
+- **Billing** (`billing/page.tsx`, `BillingClient.tsx`, `lib/billing.ts`, `components/dashboard/navItems.ts`): Open-Beta-Texte (kein Dev-Jargon, keine Angst-Phrasen), Badge „Kostenlos" statt „Kostenlos (Admin)", Überschrift/Nav „Billing" → „Plan & Abrechnung"/„Abrechnung". Free-bei-Registrierung war bereits aktiv (kein Eingriff nötig).
+- **Sidebar** (`components/dashboard/Sidebar.tsx`): Dark-Mode-Eintrag „springt" nicht mehr beim Auf-/Einklappen (Label `truncate` wie die Navi-Punkte).
+- **DB-Cleanup** (direkt auf Produktion, mit User-Go): 6 ownerlose Alt-/Test-Workspaces gelöscht (5 leer + `demo` mit 9 Funnels/1 Lead; submissions-first, dann Tenant-Cascade). Ursache = Alt-Seed (`per_month`-Default) + manuelle Auth-User-Löschungen — **kein** Bug im Registrierungs-Flow. Danach nur noch 3 echte Accounts.
+- **Doku-Fixes** (`architecture.md` §13, `architektur-diagramme.md`): Payload-Beispiel `lead_price` entfernt (echter Sender schickt es nicht — `lead_price`/`per_lead` ist deprecated, siehe Memory), DailyLeadsChart-Diagramm-Label → „Overview-Cockpit (KPIs + Sparkline)".
+
+---
+
 ## Aufgabe 53 — E-Mail-Editor-Überhaul: dynamische Variablen, Empfänger, Link, Dark-Mode (2026-06-06)
 
 **Status:** Fertig + gemergt. Build durchgehend grün, vom User live im Editor (Hell + Dunkel) verifiziert + abgenommen. Branch `feature/aufgabe-53-mail-variablen-dynamisch`.

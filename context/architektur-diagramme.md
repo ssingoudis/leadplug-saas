@@ -101,7 +101,7 @@ EditorWorld [label: "② Funnel-Editor v2 (Auth + RLS)", icon: edit, color: blue
 
 DashWorld [label: "③ Dashboard (Agentur, Auth + RLS)", icon: grid, color: green] {
   dashLayout [label: "dashboard/layout.tsx (Tenant-Lookup + Auto-Provision)", icon: nextjs]
-  overview [label: "Overview + DailyLeadsChart", icon: nextjs]
+  overview [label: "Overview-Cockpit (KPIs + Sparkline)", icon: nextjs]
   funnelsList [label: "Funnels-Liste + FunnelCard", icon: nextjs]
   leadsPage [label: "Leads-Inbox (3 Tabs)", icon: nextjs]
   statsPage [label: "Statistiken", icon: nextjs]

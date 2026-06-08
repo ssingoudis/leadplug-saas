@@ -525,7 +525,7 @@ DB (pages + fields)
   "delivered_at": "2026-05-29T14:23:00Z",
   "tenant_id": "<uuid>",
   "funnel": { "id": "<uuid>", "slug": "...", "name": "..." },
-  "submission": { "id", "session_id", "created_at", "completed_at", "source_url", "lead_price" },
+  "submission": { "id", "session_id", "created_at", "completed_at", "source_url" },
   "available_channels": { "email": true, "telefon": false, "name": true },
   "contact": { "email": "...", "name": "...", "telefon": "..." },
   "answers": [
