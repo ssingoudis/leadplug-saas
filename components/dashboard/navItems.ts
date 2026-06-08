@@ -14,7 +14,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Meine Funnels', href: '/dashboard/funnels',     icon: Layers },
   { label: 'Leads',         href: '/dashboard/leads',       icon: Inbox },
   { label: 'Statistiken',   href: '/dashboard/statistiken', icon: BarChart2 },
-  { label: 'Billing',       href: '/dashboard/billing',     icon: CreditCard },
+  { label: 'Abrechnung',    href: '/dashboard/billing',     icon: CreditCard },
 ]
 
 // Aktiv-Logik: Funnels matcht per Prefix (Editor liegt unter /dashboard/funnels/*),

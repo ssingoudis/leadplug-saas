@@ -30,7 +30,7 @@ export function getSubscriptionStatus(tenant: BillingTenant): SubscriptionStatus
 }
 
 export const STATUS_LABELS: Record<SubscriptionStatus, string> = {
-  free:       'Kostenlos (Admin)',
+  free:       'Kostenlos',
   active:     'Aktiv',
   trialing:   'Testphase',
   past_due:   'Zahlung überfällig',
