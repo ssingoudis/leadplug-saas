@@ -58,9 +58,7 @@ export default function AccountPage() {
   const [email, setEmail]               = useState('')
   const [displayName, setDisplayName]   = useState('')
   const [tenantId, setTenantId]         = useState<string | null>(null)
-  const [phone, setPhone]               = useState('')
   const [savedName, setSavedName]       = useState('')
-  const [savedPhone, setSavedPhone]     = useState('')
   const profileSave                     = useSaveStatus()
 
   const [pw, setPw]                     = useState('')
@@ -81,9 +79,7 @@ export default function AccountPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       setEmail(user.email ?? '')
-      setPhone(user.user_metadata?.phone ?? '')
-      setSavedPhone(user.user_metadata?.phone ?? '')
-      // Anzeigename = tenants.company_name (der Name, der in der Navigation angezeigt wird).
+      // Workspace-Name = tenants.company_name (der Name, der in der Navigation angezeigt wird).
       // RLS (tenants_select) liefert nur den eigenen Tenant.
       const { data: tenant } = await supabase
         .from('tenants')
@@ -98,26 +94,21 @@ export default function AccountPage() {
     })()
   }, [])
 
-  // Aufgabe 50: Profil-Felder speichern on-blur (Autosave-Pattern). Nur wenn sich vs. zuletzt
-  // gespeichert etwas geändert hat. Anzeigename → tenants.company_name (RLS: tenants_update),
-  // Telefon → Auth-Metadaten. Fehler bleiben als „Nicht gespeichert" sichtbar (kein stiller Verlust).
+  // Workspace-Name on-blur speichern (Autosave-Pattern), nur bei Änderung vs. zuletzt gespeichert.
+  // → tenants.company_name (RLS: tenants_update). Fehler bleiben als „Nicht gespeichert" sichtbar
+  // (kein stiller Verlust).
   async function saveProfile() {
     const trimmedName = displayName.trim()
-    if (trimmedName === savedName && phone === savedPhone) return
+    if (trimmedName === savedName) return
     await profileSave.run(async () => {
-      if (tenantId && trimmedName !== savedName) {
+      if (tenantId) {
         const { error } = await supabase
           .from('tenants')
           .update({ company_name: trimmedName || null })
           .eq('id', tenantId)
         if (error) throw error
       }
-      if (phone !== savedPhone) {
-        const { error } = await supabase.auth.updateUser({ data: { phone } })
-        if (error) throw error
-      }
       setSavedName(trimmedName)
-      setSavedPhone(phone)
       // Server-Layout (Sidebar-Footer liest tenant.company_name) neu laden.
       router.refresh()
     })
@@ -176,18 +167,11 @@ export default function AccountPage() {
         <div className="flex flex-col gap-4">
           <Field label="E-Mail" value={email} readOnly />
           <Field
-            label="Anzeigename (in der Navigation sichtbar)"
+            label="Workspace-Name"
             value={displayName}
             onChange={setDisplayName}
             onBlur={saveProfile}
             placeholder="z. B. Deine Agentur"
-          />
-          <Field
-            label="Telefon (optional)"
-            value={phone}
-            onChange={setPhone}
-            onBlur={saveProfile}
-            placeholder="+49 ..."
           />
           <div className="flex h-5 items-center justify-end">
             <SaveStatus status={profileSave.status} />
