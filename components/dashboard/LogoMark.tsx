@@ -1,8 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" rx="22" fill="#4648d4"/>
-  <svg x="14" y="14" width="72" height="72" viewBox="0 0 440 436" preserveAspectRatio="xMidYMid meet">
-    <g transform="translate(0,436) scale(0.1,-0.1)" fill="#ffffff" stroke="none">
-      <path d="M2075 4144 c-286 -23 -565 -102 -784 -221 -560 -305 -926 -828 -1017
+// LeadPlug-Markenlogo (Stecker im Kreis). Inline-SVG, damit das Quadrat `currentColor`
+// nutzen kann: per Klasse `text-primary` matcht es automatisch die Marken-Primärfarbe
+// in beiden Modi (Indigo hell #4648d4 / Blau dunkel #5b78f5) — wie zuvor der bg-primary-Block.
+// Der Stecker ist weiß; der Blitz ist ein Cutout und zeigt die Quadrat-Farbe.
+// Standalone-Variante (fixes Indigo) für den Favicon liegt in app/icon.svg.
+export function LogoMark({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 100 100" className={className} role="img" aria-hidden="true">
+      <rect width="100" height="100" rx="22" fill="currentColor" />
+      <svg x="14" y="14" width="72" height="72" viewBox="0 0 440 436" preserveAspectRatio="xMidYMid meet">
+        <g transform="translate(0,436) scale(0.1,-0.1)" fill="#ffffff" stroke="none">
+          <path d="M2075 4144 c-286 -23 -565 -102 -784 -221 -560 -305 -926 -828 -1017
 -1453 -24 -169 -15 -471 19 -630 84 -387 246 -693 517 -974 191 -199 416 -344
 661 -427 81 -28 109 -32 199 -33 133 -1 222 25 330 99 155 106 256 281 282
 492 l11 93 62 0 c34 0 66 5 73 12 18 18 14 56 -7 68 -25 13 -411 13 -445 0
@@ -15,22 +22,24 @@
 -12 -10 144 -38 286 -51 215 -20 479 15 723 96 287 94 540 252 770 480 235
 232 398 508 489 825 60 208 70 289 70 550 -1 270 -12 343 -90 577 -169 509
 -505 897 -983 1137 -182 92 -369 151 -567 181 -104 15 -324 26 -410 19z"/>
-      <path d="M1783 3390 c-49 -20 -54 -50 -51 -322 l3 -253 97 -3 c95 -3 98 -2
+          <path d="M1783 3390 c-49 -20 -54 -50 -51 -322 l3 -253 97 -3 c95 -3 98 -2
 103 20 3 13 5 133 3 267 l-3 243 -33 29 c-34 30 -75 37 -119 19z"/>
-      <path d="M2488 3371 l-33 -29 0 -264 0 -263 100 0 100 0 3 250 c3 272 -1 296
+          <path d="M2488 3371 l-33 -29 0 -264 0 -263 100 0 100 0 3 250 c3 272 -1 296
 -49 320 -44 23 -85 19 -121 -14z"/>
-      <path d="M1434 2736 c-109 -48 -120 -226 -17 -293 25 -17 77 -18 778 -18 701
+          <path d="M1434 2736 c-109 -48 -120 -226 -17 -293 25 -17 77 -18 778 -18 701
 0 753 1 778 18 109 71 88 264 -32 297 -22 6 -311 10 -756 10 -580 -1 -726 -3
 -751 -14z"/>
-      <path d="M1513 2353 c-17 -6 -18 -248 -2 -359 37 -268 211 -482 464 -571 73
+          <path d="M1513 2353 c-17 -6 -18 -248 -2 -359 37 -268 211 -482 464 -571 73
 -25 92 -28 220 -28 127 0 147 3 219 28 220 78 389 261 447 485 16 61 20 115
 22 262 l1 185 -679 2 c-374 1 -686 -1 -692 -4z m767 -90 c0 -8 -11 -64 -25
 -125 -14 -61 -23 -114 -19 -117 3 -3 39 -6 81 -7 41 -2 80 -7 86 -13 12 -12
 -8 -43 -167 -258 -83 -113 -114 -141 -130 -115 -2 4 6 60 20 123 34 160 37
 149 -44 149 -42 0 -75 5 -87 14 -18 13 -18 14 0 42 45 71 237 323 248 327 18
 6 37 -3 37 -20z"/>
-      <path d="M1968 1319 c-28 -16 -23 -58 8 -69 14 -6 112 -10 219 -10 107 0 205
+          <path d="M1968 1319 c-28 -16 -23 -58 8 -69 14 -6 112 -10 219 -10 107 0 205
 4 219 10 32 12 36 54 7 70 -26 13 -430 13 -453 -1z"/>
-    </g>
-  </svg>
-</svg>
+        </g>
+      </svg>
+    </svg>
+  )
+}

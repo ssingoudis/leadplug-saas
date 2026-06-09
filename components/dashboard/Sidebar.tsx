@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Zap, Menu, X, Settings, Power, ChevronLeft, ChevronRight, Moon, Sun, MoreHorizontal, ShieldCheck } from 'lucide-react'
+import { Menu, X, Settings, Power, ChevronLeft, ChevronRight, Moon, Sun, MoreHorizontal, ShieldCheck } from 'lucide-react'
 import ThemeToggle from '@/components/ui/ThemeToggle'
+import { LogoMark } from './LogoMark'
 import { NAV_ITEMS, isNavItemActive } from './navItems'
 
 // Aufgabe 44 — App-Navigation als linke Side-Nav (Desktop) + Top-Bar/Drawer (Mobile).
@@ -119,9 +120,7 @@ export function Sidebar({
           className="flex items-center gap-2 min-w-0"
           aria-label="LeadPlug Dashboard"
         >
-          <span className="flex items-center justify-center w-8 h-8 shrink-0 rounded-lg bg-primary text-white shadow-sm">
-            <Zap size={16} fill="currentColor" />
-          </span>
+          <LogoMark className="w-8 h-8 shrink-0 rounded-lg text-primary shadow-sm" />
           {!collapsed && (
             <span className="text-base font-bold text-gray-900 dark:text-white tracking-tight truncate">
               LeadPlug
@@ -332,9 +331,7 @@ export function MobileNav({ userName, isSuperadmin = false }: { userName?: strin
     <div className="lg:hidden sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
       <div className="flex items-center justify-between px-4 h-14">
         <Link href="/dashboard" onClick={(e) => guardedClick(e, '/dashboard')} className="flex items-center gap-2" aria-label="LeadPlug">
-          <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-white shadow-sm">
-            <Zap size={16} fill="currentColor" />
-          </span>
+          <LogoMark className="w-8 h-8 rounded-lg text-primary shadow-sm" />
           <span className="text-base font-bold text-gray-900 dark:text-white tracking-tight">LeadPlug</span>
         </Link>
         <div className="flex items-center gap-2">
