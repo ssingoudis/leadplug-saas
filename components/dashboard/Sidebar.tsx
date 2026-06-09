@@ -92,8 +92,25 @@ export function Sidebar({
     <aside
       onMouseEnter={forceCollapsed ? handleHoverEnter : undefined}
       onMouseLeave={forceCollapsed ? handleHoverLeave : undefined}
-      className={`hidden lg:flex flex-col shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 transition-all duration-300 ease-in-out ${positionClass}`}
+      className={`group hidden lg:flex flex-col shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 transition-all duration-300 ease-in-out ${positionClass}`}
     >
+      {/* Collapse-Toggle: schwebt auf der rechten Kante (VectorWitch-Muster). Ausgeklappt immer
+          sichtbar; eingeklappt erst beim Hovern der Leiste — so bleibt der eingeklappte Rail eine
+          ruhige, reine Icon-Spalte. */}
+      {!forceCollapsed && (
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          aria-label={collapsed ? 'Navigation ausklappen' : 'Navigation einklappen'}
+          title={collapsed ? 'Ausklappen' : 'Einklappen'}
+          className={`absolute -right-3 z-50 flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-400 shadow-sm hover:text-primary hover:border-primary transition-all cursor-pointer ${
+            collapsed ? 'top-12 opacity-0 group-hover:opacity-100' : 'top-5'
+          }`}
+        >
+          {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+        </button>
+      )}
+
       {/* Logo */}
       <div className={`flex items-center h-16 shrink-0 ${collapsed ? 'justify-center' : 'px-4'}`}>
         <Link
@@ -153,21 +170,6 @@ export function Sidebar({
           </Link>
         )}
       </nav>
-
-      {/* Collapse-Toggle (nur außerhalb des Editors) */}
-      {!forceCollapsed && (
-        <button
-          type="button"
-          onClick={toggleCollapsed}
-          aria-label={collapsed ? 'Navigation ausklappen' : 'Navigation einklappen'}
-          title={collapsed ? 'Ausklappen' : 'Einklappen'}
-          className={`mx-2 mb-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer ${
-            collapsed ? 'justify-center' : ''
-          }`}
-        >
-          {collapsed ? <ChevronRight size={17} /> : <><ChevronLeft size={17} /><span className="truncate">Einklappen</span></>}
-        </button>
-      )}
 
       {/* Footer: sichtbare Theme-Zeile + User-Menü */}
       <SidebarFooter userName={userName} userEmail={userEmail} collapsed={collapsed} />
