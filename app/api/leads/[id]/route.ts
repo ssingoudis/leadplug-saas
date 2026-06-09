@@ -14,7 +14,10 @@ export async function PATCH(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await req.json()
+  const body = await req.json().catch(() => null)
+  if (!body || typeof body !== 'object') {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  }
 
   // Aufgabe 46: PATCH akzeptiert status und/oder notes. Nur die mitgeschickten
   // Felder werden geschrieben — mindestens eins muss dabei sein.

@@ -253,7 +253,7 @@ async function processAttempt(
     .select(`
       id, subscription_id, submission_id, attempt_count, recipient_address,
       email_subscriptions!email_delivery_attempts_subscription_id_fkey (
-        id, funnel_id, tenant_id, name, recipient_type, delay_minutes,
+        id, funnel_id, tenant_id, name, recipient_type, recipient_value, delay_minutes,
         subject, body_html, from_local, is_active
       )
     `)
@@ -381,7 +381,7 @@ async function scheduleAttemptsForSubmission(
 ): Promise<string[]> {
   const { data: subs, error } = await supabase
     .from('email_subscriptions')
-    .select('id, funnel_id, tenant_id, name, recipient_type, delay_minutes, subject, body_html, from_local, is_active')
+    .select('id, funnel_id, tenant_id, name, recipient_type, recipient_value, delay_minutes, subject, body_html, from_local, is_active')
     .eq('funnel_id', funnelId)
     .eq('is_active', true)
 
@@ -572,7 +572,7 @@ export async function sendTestEmail(
   const { data: sub, error: subErr } = await supabase
     .from('email_subscriptions')
     .select(`
-      id, funnel_id, tenant_id, name, recipient_type, delay_minutes,
+      id, funnel_id, tenant_id, name, recipient_type, recipient_value, delay_minutes,
       subject, body_html, from_local, is_active,
       funnels!email_subscriptions_funnel_id_fkey ( slug )
     `)

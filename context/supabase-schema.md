@@ -152,6 +152,17 @@ AS $function$
 $function$
 ```
 
+### `replace_funnel_content(p_funnel_id uuid, p_pages jsonb, p_fields jsonb) → void`
+**Atomares Funnel-Speichern (Aufgabe 54).** Wird von PUT `/api/tenant/funnels/[slug]` über den User-Client aufgerufen — ersetzt das frühere nicht-transaktionale delete-then-insert. `SECURITY INVOKER` (Default): alle Statements laufen unter den RLS-Policies des Aufrufers. `EXECUTE` granted für `authenticated`, revoked für `anon`/`public`. `search_path = public`.
+
+Ablauf (eine Transaktion — jeder Fehler rollt alles zurück):
+1. RLS-Backstop: Funnel muss für den Aufrufer sichtbar sein (sonst Exception).
+2. Pages löschen, die im neuen Stand fehlen (CASCADE räumt deren Fields).
+3. Pages **upserten** (`ON CONFLICT (id) DO UPDATE`) — bestehende Page-UUIDs bleiben über Saves stabil → `webhook_subscriptions.trigger_page_id`-Bindings (FK SET NULL) überleben das Speichern. `funnel_id` wird hart auf `p_funnel_id` gesetzt (Payload-Wert ignoriert).
+4. Fields der verbleibenden Pages: delete + insert (keine Inbound-FKs auf `fields`; umgeht `UNIQUE(page_id, field_key)` bei Key-Renames).
+
+Volltext: [`supabase/migrations/20260609120000_aufgabe_54_replace_funnel_content_rpc.sql`](../supabase/migrations/20260609120000_aufgabe_54_replace_funnel_content_rpc.sql) (DOWN-File daneben — beim Rollback erst den App-Code zurückrollen, der PUT ruft die Funktion).
+
 ### `update_updated_at() → trigger`
 Setzt `NEW.updated_at = NOW()` bei jedem UPDATE. Wird von Triggers auf `funnels`, `tenants`, `tenant_members`, `webhook_subscriptions`, `pages`, `fields` verwendet.
 
@@ -515,6 +526,7 @@ Eine Zeile pro User-Session (Partial-Submissions seit Aufgabe 34). Das ist die C
 - `idx_submissions_funnel` — btree(funnel_slug, created_at) — für Funnel-spezifische Lookups + DELETE-Pfad
 - `idx_submissions_tenant` — btree(tenant_slug, created_at) — Legacy (nicht mehr aktiv genutzt, kann später entfallen)
 - `idx_submissions_abandoned_pending` — **partial** btree(created_at) WHERE completed_at IS NULL AND abandoned_webhook_fired_at IS NULL (Aufgabe 40, Cron-Pick-Query)
+- `idx_submissions_ip_completed` — **partial** btree(ip_address, created_at) WHERE completed_at IS NOT NULL (Aufgabe 54, Rate-Limiter-Query in `/api/submit` — zählt nur completed Submissions pro IP)
 
 **Triggers:** keine
 

@@ -18,6 +18,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .from('tenant_members')
     .select('tenant_id')
     .eq('auth_user_id', user.id)
+    // Aufgabe 54b: limit(1) + order — maybeSingle() errort bei >1 Membership.
+    // Deterministisch: älteste Membership zuerst (relevant ab Multi-User, Phase E).
+    .order('created_at', { ascending: true })
+    .limit(1)
     .maybeSingle()
 
   let tenant: { id: string; company_name: string | null } | null = null

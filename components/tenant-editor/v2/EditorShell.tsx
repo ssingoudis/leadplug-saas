@@ -686,7 +686,31 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
 
       // Edit-Modus: Baseline nachziehen → isDirty=false, Badge „Gespeichert". Im Editor bleiben
       // (kein router.refresh — der Client-State ist die Wahrheit, sonst Flicker/State-Verlust).
-      setSavedSnapshot(savedState);
+      //
+      // Aufgabe 54: Der PUT gibt die persistierten Page-UUIDs zurück (pageIds, gemappt über
+      // EditorQuestion._id). Wir mergen sie als dbId in State UND Snapshot — identisch, sonst
+      // bliebe isDirty (JSON-Vergleich) fälschlich true. Damit haben neu angelegte Steps ab dem
+      // ersten Save eine stabile dbId: Webhook-Binding ohne Reload, keine UUID-Rotation mehr
+      // bei Folge-Saves. Mid-Flight-Edits des Users bleiben korrekt dirty (andere Felder
+      // differieren weiterhin gegen den Snapshot).
+      const returnedPageIds: Array<{ clientId: string; pageId: string }> = Array.isArray(json.pageIds)
+        ? (json.pageIds as Array<{ clientId?: unknown; pageId?: unknown }>).filter(
+            (e): e is { clientId: string; pageId: string } =>
+              typeof e?.clientId === "string" && typeof e?.pageId === "string",
+          )
+        : [];
+      if (returnedPageIds.length > 0) {
+        const byClientId = new Map(returnedPageIds.map((e) => [e.clientId, e.pageId]));
+        const withDbIds = (qs: EditorState["questions"]): EditorState["questions"] =>
+          qs.map((q) => {
+            const dbId = byClientId.get(q._id);
+            return dbId && q.dbId !== dbId ? { ...q, dbId } : q;
+          });
+        setState((prev) => ({ ...prev, questions: withDbIds(prev.questions) }));
+        setSavedSnapshot({ ...savedState, questions: withDbIds(savedState.questions) });
+      } else {
+        setSavedSnapshot(savedState);
+      }
       if (leaveAfter) {
         const dest = pendingHref ?? "/dashboard/funnels";
         setPendingHref(null);

@@ -101,60 +101,46 @@ function getSupabase(): SupabaseClient | null {
   return cachedClient
 }
 
-export async function isRateLimited(ip: string): Promise<boolean> {
+/**
+ * Rate-Limit für /api/submit (Aufgabe 54 überarbeitet).
+ *
+ * Zählt NUR completed Submissions der IP in den letzten 10 Minuten. Vorher zählten
+ * auch Partial-Rows aus /api/track-progress mit — dadurch blockten sich schon
+ * 3 parallele Nutzer hinter einer geteilten IP (Büro-NAT, Mobilfunk-CGNAT)
+ * gegenseitig still die Submits = Lead-Verlust. Die eigene Session wird
+ * ausgenommen (Re-Submit derselben Session ist idempotent, darf nie blocken).
+ * Schwelle 10/10min: großzügig für geteilte IPs, eng genug gegen Submit-Spam —
+ * Honeypot + Card-Backstop-Validierung fangen den Rest.
+ * Query läuft über den partial Index idx_submissions_ip_completed (Aufgabe 54).
+ */
+const RATE_LIMIT_MAX_COMPLETED = 10
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000
+
+export async function isRateLimited(ip: string, excludeSessionId?: string): Promise<boolean> {
   const supabase = getSupabase()
   if (!supabase) return false
 
   try {
-    const since = new Date(Date.now() - 10 * 60 * 1000).toISOString()
-    const { count, error } = await supabase
+    const since = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString()
+    let query = supabase
       .from('submissions')
       .select('id', { count: 'exact', head: true })
       .eq('ip_address', ip)
+      .not('completed_at', 'is', null)
       .gte('created_at', since)
+    if (excludeSessionId) query = query.neq('session_id', excludeSessionId)
+    const { count, error } = await query
 
     if (error) return false
-    return (count ?? 0) >= 3
+    return (count ?? 0) >= RATE_LIMIT_MAX_COMPLETED
   } catch {
     return false
   }
 }
 
-export async function logSubmission(params: {
-  funnelSlug: string
-  tenantId: string
-  contact: ContactData
-  answers: Record<string, string>
-  leadPrice: number
-  sourceUrl: string
-  userAgent: string
-  ipAddress?: string
-}): Promise<string | null> {
-  const supabase = getSupabase()
-  if (!supabase) return null
-
-  try {
-    const { data, error } = await supabase.from('submissions').insert({
-      funnel_slug:    params.funnelSlug,
-      tenant_id:      params.tenantId,
-      contact:        params.contact,
-      answers:        params.answers,
-      lead_price:     params.leadPrice,
-      source_url:     params.sourceUrl,
-      user_agent:     params.userAgent,
-      ip_address:     params.ipAddress ?? null,
-    }).select('id').single()
-
-    if (error) {
-      console.error('Supabase logging error:', error)
-      return null
-    }
-    return data?.id ?? null
-  } catch (err) {
-    console.error('Supabase logging exception:', err)
-    return null
-  }
-}
+// Aufgabe 54b: logSubmission entfernt — seit Aufgabe 34 deprecated (Insert ohne
+// session_id verletzt die UNIQUE/NOT-NULL-Spalte), war nirgends mehr referenziert.
+// Einziger Submission-Schreibpfad ist upsertSubmissionProgress (unten).
 
 /**
  * Partial-Submissions: UPSERT by session_id. Wird vom Widget bei jedem Antwort-Commit gefeuert.
@@ -169,7 +155,17 @@ export async function logSubmission(params: {
  * Window). Ohne diesen Guard würde der UPSERT contact={} + answers={} setzen und
  * die echten Submit-Daten überschreiben — completed_at bliebe stehen (war nicht im
  * UPDATE-Set), aber Lead-Inbox + Cron-Abandoned-Logik wären zerstört.
+ *
+ * Aufgabe 54: Rückgabe enthält `alreadyCompleted` — war die Session VOR diesem
+ * Aufruf schon completed, überschreibt auch der completed-Pfad nichts mehr
+ * (Erst-Submit-Daten stehen) und /api/submit skippt Webhooks + Mails. Vorher
+ * feuerte ein doppelter POST (Doppelklick, Netzwerk-Retry) alle Actions doppelt.
  */
+export interface UpsertSubmissionResult {
+  id: string | null
+  alreadyCompleted: boolean
+}
+
 export async function upsertSubmissionProgress(params: {
   sessionId: string
   funnelSlug: string
@@ -181,24 +177,22 @@ export async function upsertSubmissionProgress(params: {
   userAgent: string
   ipAddress?: string
   completed?: boolean
-}): Promise<string | null> {
+}): Promise<UpsertSubmissionResult> {
   const supabase = getSupabase()
-  if (!supabase) return null
+  if (!supabase) return { id: null, alreadyCompleted: false }
 
   try {
-    // Race-Guard: bei track-progress (completed=false) prüfen ob die Session
-    // schon completed ist. Wenn ja, NICHT überschreiben — geben die existierende ID
-    // zurück (für Webhook-Linking falls Caller das braucht).
-    if (!params.completed) {
-      const { data: existing } = await supabase
-        .from('submissions')
-        .select('id, completed_at')
-        .eq('session_id', params.sessionId)
-        .maybeSingle()
-      if (existing?.completed_at) {
-        // Late track-progress nach Submit — skip Overwrite, ID zurückgeben
-        return existing.id
-      }
+    // Race-Guard (beide Pfade): wenn die Session schon completed ist, nie
+    // überschreiben — existierende ID + Flag zurückgeben. track-progress würde
+    // sonst die Submit-Daten zerstören, ein Doppel-Submit würde die Actions
+    // (Webhooks/Mails) doppelt feuern.
+    const { data: existing } = await supabase
+      .from('submissions')
+      .select('id, completed_at')
+      .eq('session_id', params.sessionId)
+      .maybeSingle()
+    if (existing?.completed_at) {
+      return { id: existing.id, alreadyCompleted: true }
     }
 
     const row: Record<string, unknown> = {
@@ -224,12 +218,12 @@ export async function upsertSubmissionProgress(params: {
 
     if (error) {
       console.error('Supabase upsert progress error:', error)
-      return null
+      return { id: null, alreadyCompleted: false }
     }
-    return data?.id ?? null
+    return { id: data?.id ?? null, alreadyCompleted: false }
   } catch (err) {
     console.error('Supabase upsert progress exception:', err)
-    return null
+    return { id: null, alreadyCompleted: false }
   }
 }
 

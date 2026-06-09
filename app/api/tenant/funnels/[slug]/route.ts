@@ -11,9 +11,14 @@ import {
 import type { EditorState } from "@/types";
 
 async function getCurrentTenant(supabase: SupabaseClient) {
+  // Aufgabe 54b: limit(1) + order — maybeSingle() ERRORT bei >1 Row. Heute hat
+  // jeder User genau einen Tenant; sobald Multi-Membership kommt (Phase E), würde
+  // der Editor sonst hart brechen. Deterministisch: ältester Tenant zuerst.
   const { data: tenant } = await supabase
     .from("tenants")
     .select("id, company_name")
+    .order("created_at", { ascending: true })
+    .limit(1)
     .maybeSingle();
   return tenant;
 }
@@ -81,7 +86,15 @@ export async function PUT(
   const tenant = await getCurrentTenant(supabase);
   if (!tenant) return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
 
-  const { state }: { state: EditorState } = await req.json();
+  let state: EditorState;
+  try {
+    ({ state } = (await req.json()) as { state: EditorState });
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  if (!state || !Array.isArray(state.questions)) {
+    return NextResponse.json({ error: "Ungültiger Editor-State" }, { status: 400 });
+  }
 
   // notification_email ist seit B.4 NOT NULL — Fallback auf User-E-Mail wenn leer.
   const fallbackEmail = user.email ?? '';
@@ -108,25 +121,27 @@ export async function PUT(
     return NextResponse.json({ error: "Funnel nicht gefunden" }, { status: 404 });
   }
 
-  // Pages: alle alten löschen (CASCADE entfernt Fields mit), neue einfügen.
-  // RLS filtert beides auf eigene Funnels.
-  await supabase.from("pages").delete().eq("funnel_id", updatedFunnel.id);
+  // Pages + Fields atomar ersetzen (Aufgabe 54): die RPC replace_funnel_content
+  // läuft als EINE Transaktion — schlägt irgendwas fehl, bleibt der alte Stand
+  // vollständig erhalten (vorher: delete-then-insert mit Datenverlust-Fenster).
+  // Bestehende Page-UUIDs werden upserted statt rotiert → after_page-Webhook-
+  // Bindings (trigger_page_id) überleben das Speichern. SECURITY INVOKER: RLS
+  // filtert in der Funktion weiterhin auf eigene Funnels.
+  const { pages, fields, pageIdByClientId } = editorStateToPagesAndFields(state, updatedFunnel.id);
 
-  const { pages, fields } = editorStateToPagesAndFields(state, updatedFunnel.id);
-
-  const { error: pagesErr } = await supabase.from("pages").insert(pages);
-  if (pagesErr) {
-    return NextResponse.json({ error: pagesErr.message }, { status: 500 });
+  const { error: rpcErr } = await supabase.rpc("replace_funnel_content", {
+    p_funnel_id: updatedFunnel.id,
+    p_pages: pages,
+    p_fields: fields,
+  });
+  if (rpcErr) {
+    return NextResponse.json({ error: rpcErr.message }, { status: 500 });
   }
 
-  if (fields.length > 0) {
-    const { error: fieldsErr } = await supabase.from("fields").insert(fields);
-    if (fieldsErr) {
-      return NextResponse.json({ error: fieldsErr.message }, { status: 500 });
-    }
-  }
-
-  return NextResponse.json({ slug: oldSlug });
+  // Aufgabe 54: persistierte Page-UUIDs zurückgeben — der Editor mergt sie als dbId
+  // in seinen State, damit auch neu angelegte Steps ab dem ersten Save eine stabile
+  // UUID haben (Webhook-Binding ohne Editor-Reload, keine ID-Rotation bei Folge-Saves).
+  return NextResponse.json({ slug: oldSlug, pageIds: pageIdByClientId });
 }
 
 // PATCH /api/tenant/funnels/[slug] — leichtgewichtiges Metadaten-Update (Autosave).

@@ -106,22 +106,39 @@ export function TenantFunnelClient({ config }: Props) {
       )
     }
 
-    try {
-      await fetch('/api/submit', {
+    // Aufgabe 54c: ein Retry bei Netzwerkfehler/5xx. Der Endkunde sieht bewusst sofort
+    // „Danke" (Partial-Submissions sind das Sicherheitsnetz in der DB), aber der Retry
+    // rettet die häufigsten transienten Fehler (Funkloch, kurzer 5xx). 4xx wird NICHT
+    // retried (deterministisch). keepalive: der POST überlebt auch die redirectUrl-
+    // Navigation des iFrames. Doppel-POSTs sind safe — /api/submit ist seit Aufgabe 54
+    // idempotent (alreadyCompleted-Guard skippt Webhooks/Mails beim zweiten Mal).
+    const body = JSON.stringify({
+      sessionId,
+      tenant: config.slug,
+      answers: data.answers,
+      contact: data.contact,
+      honeypot: data.honeypot,
+      sourceUrl: typeof document !== 'undefined' ? document.referrer : '',
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+    })
+    const post = () =>
+      fetch('/api/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId,
-          tenant: config.slug,
-          answers: data.answers,
-          contact: data.contact,
-          honeypot: data.honeypot,
-          sourceUrl: typeof document !== 'undefined' ? document.referrer : '',
-          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
-        }),
+        body,
+        keepalive: true,
       })
+    try {
+      const res = await post()
+      if (res.status >= 500) throw new Error(`HTTP ${res.status}`)
     } catch (err) {
-      console.error('TenantFunnelClient: submit failed', err)
+      console.error('TenantFunnelClient: submit failed, retrying once', err)
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      try {
+        await post()
+      } catch (retryErr) {
+        console.error('TenantFunnelClient: submit retry failed', retryErr)
+      }
     }
   }
 
