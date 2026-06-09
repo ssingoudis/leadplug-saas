@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { validateWebhookUrl } from '@/lib/webhooks'
 
 // =============================================================================
 // Aufgabe 40 — Subscription Detail/Update/Delete
@@ -22,8 +23,6 @@ interface PatchBody {
   event_types?: string[]
   rotate_secret?: boolean
 }
-
-const URL_PATTERN = /^https?:\/\/[^\s]{6,}$/i
 
 async function loadSubscriptionWithFunnelCheck(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -81,13 +80,18 @@ export async function PATCH(
   const sub = await loadSubscriptionWithFunnelCheck(supabase, slug, id)
   if (!sub) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const body = (await req.json()) as PatchBody
+  const body = (await req.json().catch(() => null)) as PatchBody | null
+  if (!body || typeof body !== 'object') {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const patch: Record<string, any> = {}
 
   if (typeof body.url === 'string') {
-    if (!URL_PATTERN.test(body.url.trim())) {
-      return NextResponse.json({ error: 'Invalid URL' }, { status: 400 })
+    // Aufgabe 54b: gehärtete Validierung (nur https, keine privaten/internen Ziele — SSRF-Schutz)
+    const urlError = validateWebhookUrl(body.url.trim())
+    if (urlError) {
+      return NextResponse.json({ error: urlError }, { status: 400 })
     }
     patch.url = body.url.trim()
   }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { generateWebhookSecret } from '@/lib/webhooks'
+import { generateWebhookSecret, validateWebhookUrl } from '@/lib/webhooks'
 
 // =============================================================================
 // Aufgabe 40 — Subscription-CRUD (funnel-scoped Webhooks)
@@ -25,8 +25,6 @@ interface CreateBody {
   event_types?: string[]
   is_active?: boolean
 }
-
-const URL_PATTERN = /^https?:\/\/[^\s]{6,}$/i
 
 // Aufgabe 50: Default-Name aus dem URL-Host ableiten (z.B. "webhook.site"), wenn der
 // Tenant keinen eigenen Namen angibt. So ist ein Webhook nie namenlos.
@@ -90,9 +88,14 @@ export async function POST(
     .maybeSingle()
   if (!funnel) return NextResponse.json({ error: 'Funnel not found' }, { status: 404 })
 
-  const body = (await req.json()) as CreateBody
-  if (!body?.url || typeof body.url !== 'string' || !URL_PATTERN.test(body.url.trim())) {
-    return NextResponse.json({ error: 'Invalid URL (https:// erwartet, min. 10 Zeichen)' }, { status: 400 })
+  const body = (await req.json().catch(() => null)) as CreateBody | null
+  if (!body?.url || typeof body.url !== 'string') {
+    return NextResponse.json({ error: 'Invalid URL' }, { status: 400 })
+  }
+  // Aufgabe 54b: gehärtete Validierung (nur https, keine privaten/internen Ziele — SSRF-Schutz)
+  const urlError = validateWebhookUrl(body.url.trim())
+  if (urlError) {
+    return NextResponse.json({ error: urlError }, { status: 400 })
   }
 
   const triggerType = body.trigger_type === 'after_page' ? 'after_page' : 'on_submit'

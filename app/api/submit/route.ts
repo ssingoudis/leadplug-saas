@@ -61,12 +61,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true })
   }
 
-  // 2. Rate Limiting – max. 3 Submissions pro IP in 10 Minuten
-  if (ip && await isRateLimited(ip)) {
-    return NextResponse.json({ success: true })
-  }
-
-  // 3. Struktur-Check
+  // 2. Struktur-Check
   if (!isValidShape(body)) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
   }
@@ -80,6 +75,14 @@ export async function POST(req: Request) {
     typeof body.sessionId === 'string' && UUID_RE.test(body.sessionId)
       ? body.sessionId
       : crypto.randomUUID()
+
+  // 3. Rate Limiting (Aufgabe 54): zählt nur completed Submissions der IP (10/10min),
+  // eigene Session ausgenommen — geteilte IPs (Büro-NAT, CGNAT) blocken sich nicht
+  // mehr gegenseitig über Partial-Rows. Läuft NACH dem Shape-Check, damit die
+  // sessionId für die Ausnahme zur Verfügung steht.
+  if (ip && await isRateLimited(ip, sessionId)) {
+    return NextResponse.json({ success: true })
+  }
 
   // 4. Tenant-Config laden
   const tenantConfig = await getTenantConfig(tenant)
@@ -112,7 +115,7 @@ export async function POST(req: Request) {
     tenantConfig.billingModel === 'per_lead' ? tenantConfig.leadPrice : 0
 
   // 7. Submission als COMPLETED loggen (UPSERT — falls schon partielle Session existiert, wird sie ergänzt + completed_at gesetzt)
-  const submissionId = await upsertSubmissionProgress({
+  const { id: submissionId, alreadyCompleted } = await upsertSubmissionProgress({
     sessionId,
     funnelSlug: tenant,
     tenantId:   tenantConfig.id,
@@ -124,6 +127,13 @@ export async function POST(req: Request) {
     ipAddress:  ip ?? undefined,
     completed:  true,
   })
+
+  // Aufgabe 54 — Idempotenz: War die Session schon completed (Doppelklick,
+  // Netzwerk-Retry des Widgets), wurden Webhooks + Mails bereits beim Erst-Submit
+  // getriggert. Nicht erneut feuern — sonst doppelte CRM-Events + doppelte Mails.
+  if (alreadyCompleted) {
+    return NextResponse.json({ success: true })
+  }
 
   // 8. Webhooks + E-Mails (Aufgabe 40 / 41 — Action-Element-Modell)
   //

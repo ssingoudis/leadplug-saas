@@ -752,6 +752,64 @@ function mockValueForContactField(f: ContactFieldConfig): string {
 }
 
 /**
+ * Härtung (Aufgabe 54b): Webhook-Ziele müssen öffentliche HTTPS-Endpoints sein.
+ * Blockt http://, localhost, private/link-local IP-Ranges und interne Hostnamen.
+ * Grund: der Sender läuft server-side und der Response-Body wird dem Tenant im
+ * Logs-Drawer angezeigt — ohne diese Prüfung wäre der "Test senden"-Button ein
+ * SSRF-Orakel gegen interne Dienste. Hostname-basiert = Best-Effort (DNS-Rebinding
+ * bleibt theoretisch möglich), hebt die Hürde aber deutlich.
+ *
+ * Greift nur bei Anlage/Änderung — bestehende Subscriptions sind unberührt
+ * (Prod-Check 2026-06-10: alle bestehenden URLs sind https).
+ *
+ * @returns null wenn ok, sonst deutsche Fehlermeldung für die UI.
+ */
+export function validateWebhookUrl(raw: string): string | null {
+  let url: URL
+  try {
+    url = new URL(raw)
+  } catch {
+    return 'Ungültige URL.'
+  }
+  if (url.protocol !== 'https:') {
+    return 'Nur https://-URLs sind erlaubt.'
+  }
+  const host = url.hostname.toLowerCase()
+  if (
+    host === 'localhost' ||
+    host.endsWith('.localhost') ||
+    host.endsWith('.local') ||
+    host.endsWith('.internal')
+  ) {
+    return 'Interne Hostnamen sind nicht erlaubt.'
+  }
+  // IPv6-Literale pauschal ablehnen — echte Webhook-Endpoints haben Hostnamen.
+  if (host.includes(':') || host.startsWith('[')) {
+    return 'IP-Literale sind nicht erlaubt — bitte einen Hostnamen verwenden.'
+  }
+  // Rein numerische Hosts (z.B. Decimal-encoded IPv4 wie 2130706433) ablehnen.
+  if (/^\d+$/.test(host)) {
+    return 'IP-Literale sind nicht erlaubt — bitte einen Hostnamen verwenden.'
+  }
+  // IPv4-Literale: private / loopback / link-local / CGNAT-Ranges blocken.
+  const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host)
+  if (v4) {
+    const a = Number(v4[1])
+    const b = Number(v4[2])
+    if (
+      a === 0 || a === 10 || a === 127 ||
+      (a === 100 && b >= 64 && b <= 127) ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168)
+    ) {
+      return 'Private IP-Adressen sind nicht erlaubt.'
+    }
+  }
+  return null
+}
+
+/**
  * Generiert ein neues Secret beim Anlegen einer Subscription.
  * 32 Bytes = 64 Hex-Chars — passt zum Check `length(secret) >= 16` und ist
  * konsistent mit Stripe's whsec_-Format-Länge (32 Bytes Entropie).

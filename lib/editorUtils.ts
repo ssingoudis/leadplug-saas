@@ -441,6 +441,10 @@ function newPageId(): string {
   return crypto.randomUUID();
 }
 
+// Aufgabe 54: Form-Check für wiederverwendete dbIds (kommen aus der DB, aber der
+// State läuft durch den Client — defensiv validieren bevor wir sie persistieren).
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export interface PageInsertRow {
   id: string;
   funnel_id: string;
@@ -469,17 +473,39 @@ export interface FieldInsertRow {
 export function editorStateToPagesAndFields(
   state: EditorState,
   funnelId: string,
-): { pages: PageInsertRow[]; fields: FieldInsertRow[] } {
+): {
+  pages: PageInsertRow[];
+  fields: FieldInsertRow[];
+  /** Aufgabe 54: Mapping EditorQuestion._id → persistierte Page-UUID. Der PUT gibt
+   *  es an den Editor zurück, der die dbIds in seinen State mergt — neu angelegte
+   *  Steps haben damit ab dem ersten Save eine stabile UUID (statt bis zum Reload
+   *  bei jedem Save zu rotieren). */
+  pageIdByClientId: Array<{ clientId: string; pageId: string }>;
+} {
   const pages: PageInsertRow[] = [];
   const fields: FieldInsertRow[] = [];
+  const pageIdByClientId: Array<{ clientId: string; pageId: string }> = [];
 
   // Aufgabe 40 Polish: Globale Key-Sammlung über alle Question-Pages
   // (Custom-Pages haben eigene per-Page-Eindeutigkeit via DB-Constraint).
   const allQuestionKeys = new Set<string>();
 
+  // Aufgabe 54: Page-UUIDs bleiben über Saves stabil — bestehende Steps reichen ihre
+  // dbId (aus dbToEditorState) wieder mit. Damit überleben after_page-Webhook-Bindings
+  // (webhook_subscriptions.trigger_page_id, FK ON DELETE SET NULL) das Speichern;
+  // vorher bekam jede Page bei jedem Save eine frische UUID → Bindings wurden genullt.
+  // Frische UUIDs gibt es nur für neue Steps (kein dbId) und — defensiv — bei
+  // ID-Dubletten im State. Persistiert wird via replace_funnel_content-RPC (Upsert).
+  const seenPageIds = new Set<string>();
+
   // Steps (question + custom + welcome Pages interleaved nach Array-Reihenfolge)
   state.questions.forEach((q, idx) => {
-    const pageId = newPageId();
+    const pageId =
+      q.dbId && UUID_PATTERN.test(q.dbId) && !seenPageIds.has(q.dbId)
+        ? q.dbId
+        : newPageId();
+    seenPageIds.add(pageId);
+    pageIdByClientId.push({ clientId: q._id, pageId });
 
     // Aufgabe 39: Welcome-Screen = Intro-Step mit eigenem Button-Label, kein Field
     if (q.kind === "welcome") {
@@ -607,7 +633,7 @@ export function editorStateToPagesAndFields(
     config: {},
   });
 
-  return { pages, fields };
+  return { pages, fields, pageIdByClientId };
 }
 
 // =============================================================================

@@ -96,7 +96,7 @@ export async function POST(req: Request) {
   // Damit trifft die Pricing-Logik (contact->>'email') auch für Abbrecher.
   const effectiveContact = deriveContactFromAnswers(answers, tenantConfig)
 
-  const submissionId = await upsertSubmissionProgress({
+  const { id: submissionId } = await upsertSubmissionProgress({
     sessionId,
     funnelSlug: tenant,
     tenantId:   tenantConfig.id,

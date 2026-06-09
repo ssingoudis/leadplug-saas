@@ -19,6 +19,8 @@ export async function GET() {
   const { data: tenant } = await supabase
     .from("tenants")
     .select("id")
+    .order("created_at", { ascending: true })
+    .limit(1)
     .maybeSingle();
 
   if (!tenant) return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
@@ -70,6 +72,8 @@ export async function POST(req: NextRequest) {
   const { data: tenant } = await supabase
     .from("tenants")
     .select("id")
+    .order("created_at", { ascending: true })
+    .limit(1)
     .maybeSingle();
 
   if (!tenant) return NextResponse.json({ error: "Tenant not found" }, { status: 404 });

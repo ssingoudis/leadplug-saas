@@ -46,9 +46,14 @@ function fieldTypeToContactType(ft: string): ContactFieldConfig['type'] {
 // Rückmapping für Question-Page-Fields → QuestionType.
 // Seit Aufgabe 31 sind alle QuestionType-Werte 1:1 valide field_type-Werte.
 // `radio` + `plz` sind Submit-Page-only und fallen auf single_choice zurück.
+// Aufgabe 54b: 'email' + 'tel' entfernt — als Question-Types seit Aufgabe 34
+// abgeschafft, das TS-Union QuestionType kennt sie nicht (der Cast unten log das
+// Type-System an). DB-verifiziert (2026-06-10): 0 Fields mit diesen Typen auf
+// Question-Pages. Als ContactField-Types (Karten) laufen sie über
+// fieldTypeToContactType, nicht über dieses Set.
 const VALID_QUESTION_TYPES: ReadonlySet<string> = new Set([
   'single_choice', 'multi_choice', 'short_text', 'long_text', 'slider',
-  'email', 'tel', 'date', 'number', 'dropdown', 'checkbox',
+  'date', 'number', 'dropdown', 'checkbox',
   // Aufgabe 39
   'rating', 'scale', 'statement',
   // Aufgabe 40 Polish

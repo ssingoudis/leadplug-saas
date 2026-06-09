@@ -333,7 +333,13 @@ Klare Trennung — keine Override-Hierarchien zwischen Tabellen:
 **Aufgabe 53 Migration (2026-06-06):**
 - `aufgabe_53_strip_funnel_var_chips`: `UPDATE email_subscriptions` — strippt tote `<span data-variable="funnel.*">`-Chips aus `body_html` + `subject` (15 Mails). Reines Data-Cleanup (funnel.*-Variablen wurden in 52A aus `resolveVar` entfernt, rendern seither ''), per Dry-Run verifiziert (nur funnel.*-Chips weg, contact.*/Magic-Sections intakt). Safe für jede Code-Version. Rollback: `..._DOWN.sql` (exakte Re-UPDATEs der Snapshot-Werte) + Backup.
 
-**Nächste DB-Arbeit:** keine offen. `footer_*`-Spalten, orphaned Submit-Pages und `skip_submit_step` sind weg (52B/52D), tote funnel.*-Chips gestrippt (53).
+**Aufgabe 54 Migration (2026-06-09):**
+- `aufgabe_54_replace_funnel_content_rpc`: neue RPC `replace_funnel_content(p_funnel_id, p_pages jsonb, p_fields jsonb)` — atomares Speichern des Funnel-Inhalts (eine Transaktion statt delete-then-insert in PUT `/api/tenant/funnels/[slug]`). Pages werden **upserted**, bestehende Page-UUIDs bleiben über Saves stabil (Editor reicht `dbId` wieder mit) → `after_page`-Webhook-Bindings (`trigger_page_id`, FK SET NULL) überleben das Speichern. SECURITY INVOKER (RLS gilt vollständig), EXECUTE nur für `authenticated`. Plus partial Index `idx_submissions_ip_completed` — der Rate-Limiter in `/api/submit` zählt seit 54 nur completed Submissions (10/10min, eigene Session ausgenommen). Additiv, direkt auf Produktion appliziert (mit User-Go), SQL-seitig getestet (3 Läufe inkl. Atomicity-Rollback via ungültigem enum-Cast). DOWN-File vorhanden (Achtung Reihenfolge: erst Code zurückrollen, dann Funktion droppen — der PUT nutzt die RPC).
+
+**Aufgabe 54b Migration (2026-06-10):**
+- `aufgabe_54b_advisor_hardening`: EXECUTE auf `rls_auto_enable()` für public/anon/authenticated revoked (Event-Trigger feuert systemseitig, braucht keine RPC-Grants) + `update_updated_at()` mit gepinntem `search_path = public, pg_temp` (Advisor 0011). `current_tenant_ids`/`current_tenant_role` bleiben bewusst für authenticated ausführbar — RLS-Policies rufen sie auf. Additiv, direkt auf Produktion appliziert, Trigger danach funktional verifiziert, DOWN-File vorhanden. **Manuell offen:** Leaked-Password-Protection ist ein Auth-Dashboard-Toggle (Authentication → Passwords), nicht per SQL setzbar.
+
+**Nächste DB-Arbeit:** keine offen. `footer_*`-Spalten, orphaned Submit-Pages und `skip_submit_step` sind weg (52B/52D), tote funnel.*-Chips gestrippt (53), Funnel-Save atomar via RPC (54), Advisor-Härtung (54b).
 
 ---
 

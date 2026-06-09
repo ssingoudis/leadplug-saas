@@ -55,8 +55,11 @@ export function WebhookAddModal({ open, onClose, questions, onCreate }: Props) {
   async function handleSubmit() {
     setError(null);
     const trimmed = url.trim();
-    if (!/^https?:\/\/[^\s]{6,}$/i.test(trimmed)) {
-      setError("Bitte eine gültige URL eingeben (https://… mindestens 10 Zeichen).");
+    // Aufgabe 54b: konsistent zum Server (validateWebhookUrl) — nur noch https.
+    // Die feinere Prüfung (private IPs etc.) macht der Server; sein Fehlertext
+    // wird unten via setError angezeigt.
+    if (!/^https:\/\/[^\s]{4,}$/i.test(trimmed)) {
+      setError("Bitte eine gültige https://-URL eingeben.");
       return;
     }
     if (triggerType === "after_page" && !triggerPageId) {

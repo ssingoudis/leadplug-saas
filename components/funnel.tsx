@@ -149,6 +149,19 @@ function hexToRgb(hex: string): [number, number, number] {
   ];
 }
 
+// Aufgabe 54c: Theme-Farben aus der DB defensiv normalisieren — die Color-Math oben
+// (hexToRgb/darken/mix) braucht 6-stelliges Hex. 3-stellige Werte (#abc) werden
+// expandiert, alles andere Ungültige fällt auf den Default zurück. Ohne das würde
+// ein einziger kaputter DB-Wert ALLE abgeleiteten Farben (hover/muted/border/tint)
+// zu "NaN"-Strings zerschießen.
+function normalizeHex(value: string | undefined, fallback: string): string {
+  if (!value) return fallback;
+  const v = value.trim();
+  if (/^#[0-9a-f]{6}$/i.test(v)) return v;
+  if (/^#[0-9a-f]{3}$/i.test(v)) return `#${v[1]}${v[1]}${v[2]}${v[2]}${v[3]}${v[3]}`;
+  return fallback;
+}
+
 function toHex(r: number, g: number, b: number): string {
   const clamp = (c: number) => Math.max(0, Math.min(255, Math.round(c)));
   return `#${[r, g, b].map((c) => clamp(c).toString(16).padStart(2, "0")).join("")}`;
@@ -296,9 +309,12 @@ export function Funnel({
   // automatically via color math so no manual secondary colors are needed.
   // ---------------------------------------------------------------------------
 
-  const primaryColor        = themeOverrides?.primaryColor        ?? THEME_DEFAULTS.primaryColor;
-  const textColor           = themeOverrides?.textColor           ?? THEME_DEFAULTS.textColor;
-  const backgroundColor     = themeOverrides?.backgroundColor     ?? THEME_DEFAULTS.backgroundColor;
+  // Aufgabe 54c: normalizeHex statt nacktem ?? — die drei Farben laufen durch die
+  // Color-Math und müssen valides 6-stelliges Hex sein. pageBackgroundColor bleibt
+  // un-normalisiert (wird nur als CSS-Wert durchgereicht, darf z.B. 'transparent' sein).
+  const primaryColor        = normalizeHex(themeOverrides?.primaryColor,    THEME_DEFAULTS.primaryColor);
+  const textColor           = normalizeHex(themeOverrides?.textColor,       THEME_DEFAULTS.textColor);
+  const backgroundColor     = normalizeHex(themeOverrides?.backgroundColor, THEME_DEFAULTS.backgroundColor);
   const pageBackgroundColor = themeOverrides?.pageBackgroundColor ?? THEME_DEFAULTS.pageBackgroundColor;
   const borderRadius        = themeOverrides?.borderRadius        ?? THEME_DEFAULTS.borderRadius;
   const maxWidth            = themeOverrides?.maxWidth            ?? THEME_DEFAULTS.maxWidth;

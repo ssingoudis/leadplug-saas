@@ -33,6 +33,12 @@ const MAX_RETRIES_PER_RUN  = 50
 const MAX_ABANDONED_PER_RUN = 50
 const ABANDONED_COOLDOWN_MS = 10 * 60 * 1000  // 10 Min — Konsens 2026-05-29
 
+// Aufgabe 54b: Zeitbudget. Worst-Case wären 200 HTTP-Posts × 10s Timeout — weit
+// über maxDuration (60s), die Function würde mitten im Run gekilled. Stattdessen:
+// jede Loop prüft das Budget und bricht sauber ab; Liegengebliebenes pickt der
+// nächste Run (alle 5 Min) über dieselben Queues wieder auf.
+const TIME_BUDGET_MS = 45_000
+
 function getAdminClient() {
   return createClient(
     process.env.SUPABASE_URL!,
@@ -55,6 +61,14 @@ export async function GET(req: Request) {
   let retrySuccess = 0
   let abandonedCount = 0
   let abandonedTriggered = 0
+  let budgetExhausted = false
+  const overBudget = () => {
+    if (Date.now() - startedAt > TIME_BUDGET_MS) {
+      budgetExhausted = true
+      return true
+    }
+    return false
+  }
 
   // ----------------------------------------------------------------------
   // 1. Retries
@@ -76,6 +90,7 @@ export async function GET(req: Request) {
       // Sequenziell statt parallel — vermeidet Verbindungslimit-Spitzen am
       // Supabase-Pool wenn 50 gleichzeitig laufen.
       for (const att of dueAttempts) {
+        if (overBudget()) break
         try {
           await retryDelivery(att.id, supabase)
           retrySuccess++
@@ -109,14 +124,31 @@ export async function GET(req: Request) {
       abandonedCount = pendingAbandoned.length
 
       // Für jede candidate-Submission:
-      //   a) effectiveContact bauen
-      //   b) Skip wenn email + telefon fehlen (= Trash-Lead, kein Webhook-würdig)
-      //   c) tenantConfig laden (cache via Map damit gleicher Funnel nicht 50x lädt)
+      //   a) CLAIM: abandoned_webhook_fired_at = NOW() — VOR dem Trigger (Aufgabe 54b)
+      //   b) tenantConfig laden (cache via Map damit gleicher Funnel nicht 50x lädt)
+      //   c) effectiveContact bauen, Skip wenn email + telefon fehlen (= Trash-Lead)
       //   d) triggerOnSubmit('submission.abandoned', ...)
-      //   e) submissions.abandoned_webhook_fired_at = NOW() — verhindert Doppel-Trigger im nächsten Run
+      //
+      // Claim-first (Aufgabe 54b): Vorher stand der Marker NACH dem Trigger — stirbt
+      // die Function dazwischen (Timeout/Kill), feuert der nächste Run denselben
+      // Abbrecher noch einmal → doppelte CRM-Events beim Tenant. At-most-once ist
+      // hier richtiger als at-least-once: im seltenen Kill-Fall geht ein einzelner
+      // Abandoned-Webhook verloren statt Duplikate zu erzeugen. Der `.is(NULL)`-Guard
+      // macht den Claim zusätzlich race-sicher gegen parallel laufende Runs.
       const configCache = new Map<string, Awaited<ReturnType<typeof getTenantConfig>>>()
 
       for (const sub of pendingAbandoned) {
+        if (overBudget()) break
+
+        const { error: claimErr } = await supabase.from('submissions')
+          .update({ abandoned_webhook_fired_at: new Date().toISOString() })
+          .eq('id', sub.id)
+          .is('abandoned_webhook_fired_at', null)
+        if (claimErr) {
+          console.error('cron/webhook-retry: abandoned claim failed', claimErr, sub.id)
+          continue
+        }
+
         const rawAnswers = (sub.answers as Record<string, string> | null) ?? {}
         const rawContact = (sub.contact as Record<string, string> | null) ?? {}
 
@@ -128,22 +160,14 @@ export async function GET(req: Request) {
           configCache.set(sub.funnel_slug as string, tenantConfig)
         }
         if (!tenantConfig || !tenantConfig.funnelId) {
-          // Funnel gelöscht / inaktiv — Trash-Markieren damit wir's nicht wiederholen
-          await supabase.from('submissions')
-            .update({ abandoned_webhook_fired_at: new Date().toISOString() })
-            .eq('id', sub.id)
+          // Funnel gelöscht / inaktiv — geclaimt, kein Trigger nötig
           continue
         }
 
         const effective = { ...deriveContactFromAnswers(rawAnswers, tenantConfig), ...rawContact }
         const hasReachableChannel = Boolean(effective.email) || Boolean(effective.telefon)
-
-        // Wir markieren immer (auch wenn skip), sonst pickt der Cron diese Row
-        // beim nächsten Run wieder. Nur Trigger ist konditional.
         if (!hasReachableChannel) {
-          await supabase.from('submissions')
-            .update({ abandoned_webhook_fired_at: new Date().toISOString() })
-            .eq('id', sub.id)
+          // Trash-Lead ohne Kontaktkanal — geclaimt, kein Trigger
           continue
         }
 
@@ -171,12 +195,6 @@ export async function GET(req: Request) {
         } catch (err) {
           console.error('cron/webhook-retry: triggerOnSubmit threw', err, sub.id)
         }
-
-        // Marker setzen — auch wenn 0 Subscriptions oder Trigger-Error.
-        // Verhindert dass wir die Session beim nächsten Run wieder picken.
-        await supabase.from('submissions')
-          .update({ abandoned_webhook_fired_at: new Date().toISOString() })
-          .eq('id', sub.id)
       }
     }
   } catch (err) {
@@ -218,6 +236,7 @@ export async function GET(req: Request) {
     } else if (duePending && duePending.length > 0) {
       emailDueCount = duePending.length
       for (const att of duePending) {
+        if (overBudget()) break
         try {
           await processPendingDelivery(att.id, supabase)
           emailDueProcessed++
@@ -243,6 +262,7 @@ export async function GET(req: Request) {
     } else if (dueRetry && dueRetry.length > 0) {
       emailRetryCount = dueRetry.length
       for (const att of dueRetry) {
+        if (overBudget()) break
         try {
           await retryEmailDelivery(att.id, supabase)
           emailRetryProcessed++
@@ -268,6 +288,7 @@ export async function GET(req: Request) {
   return NextResponse.json({
     ok: true,
     elapsed_ms: Date.now() - startedAt,
+    budget_exhausted: budgetExhausted,
     webhooks: {
       retries:   { picked: retryCount, success: retrySuccess },
       abandoned: { picked: abandonedCount, triggered: abandonedTriggered },
