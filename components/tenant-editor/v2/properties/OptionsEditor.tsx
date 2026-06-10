@@ -19,6 +19,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { EditorOption } from "@/types";
+import { useSelectedFieldRef, selRing } from "./selection";
 
 interface Props {
   value: EditorOption[];
@@ -113,8 +114,17 @@ function SortableOptionRow({
     opacity: isDragging ? 0.85 : undefined,
   };
 
+  // Aufgabe 57C: Canvas-Klick auf Option N markiert diese Zeile (Ref "option_<idx>").
+  const isCanvasSelected = useSelectedFieldRef() === `option_${index}`;
+
   return (
-    <div ref={setNodeRef} style={style} {...attributes} className="flex items-center gap-1.5">
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      data-sel-target={`option_${index}`}
+      className={`flex items-center gap-1.5 ${isCanvasSelected ? `rounded-lg ${selRing(true)}` : ""}`}
+    >
       <span
         ref={setActivatorNodeRef}
         {...listeners}

@@ -965,11 +965,15 @@ export function Funnel({
                   <div className="space-y-4 mb-2">
                     {visibleCustomFields.map((field) => {
                       const fieldValue = answers[field.key] ?? "";
+                      // Aufgabe 57C: Canvas-Klick-Selektion pro Karten-Feld. Identität = _clientId ?? key —
+                      // exakt die Row-Identität im Properties-Panel (CustomPageProps), kollisionssicher auch
+                      // bei doppelten/leeren Keys vor dem Save. Im Live-Widget inert (onFieldClick undefined).
+                      const cardFieldRef = `card_field_${field._clientId ?? field.key}`;
 
                       // --- Radio (z.B. Anrede) ---
                       if (field.type === "radio" && field.options) {
                         return (
-                          <div key={field.key}>
+                          <div key={field.key} data-edit-field={cardFieldRef} style={{ ...editCursor, ...hl(cardFieldRef) }}>
                             {customFieldLabel(field)}
                             <div className="flex gap-5">
                               {field.options.map((option) => (
@@ -1004,7 +1008,7 @@ export function Funnel({
                       if (field.type === "multi_choice" && field.options) {
                         const selected = (fieldValue || "").split(",").map((s) => s.trim()).filter(Boolean);
                         return (
-                          <div key={field.key}>
+                          <div key={field.key} data-edit-field={cardFieldRef} style={{ ...editCursor, ...hl(cardFieldRef) }}>
                             {customFieldLabel(field)}
                             <div className="flex flex-col gap-2">
                               {field.options.map((opt) => {
@@ -1058,7 +1062,7 @@ export function Funnel({
                         const fallback = field.sliderDefault ?? Math.floor((min + max) / 2);
                         const current = fieldValue ? Number(fieldValue) : fallback;
                         return (
-                          <div key={field.key}>
+                          <div key={field.key} data-edit-field={cardFieldRef} style={{ ...editCursor, ...hl(cardFieldRef) }}>
                             {customFieldLabel(field)}
                             <p className="text-2xl font-bold font-mono mb-2 leading-none" style={{ color: theme.primaryColor }}>
                               {current.toLocaleString("de-DE")}{" "}
@@ -1095,7 +1099,7 @@ export function Funnel({
                         const maxStars = Math.max(1, Math.min(10, field.ratingMaxStars ?? 5));
                         const currentVal = Number(fieldValue) || 0;
                         return (
-                          <div key={field.key}>
+                          <div key={field.key} data-edit-field={cardFieldRef} style={{ ...editCursor, ...hl(cardFieldRef) }}>
                             {customFieldLabel(field)}
                             <RatingStars
                               maxStars={maxStars}
@@ -1113,7 +1117,7 @@ export function Funnel({
                         const min = field.scaleMin ?? 0;
                         const max = field.scaleMax ?? 10;
                         return (
-                          <div key={field.key}>
+                          <div key={field.key} data-edit-field={cardFieldRef} style={{ ...editCursor, ...hl(cardFieldRef) }}>
                             {customFieldLabel(field)}
                             <ScaleButtons
                               min={min}
@@ -1136,7 +1140,7 @@ export function Funnel({
                       // Aufgabe 39 Polish: Long-Text (Textarea)
                       if (field.type === "long_text") {
                         return (
-                          <div key={field.key}>
+                          <div key={field.key} data-edit-field={cardFieldRef} style={{ ...editCursor, ...hl(cardFieldRef) }}>
                             {customFieldLabel(field)}
                             <div className="relative">
                               <textarea
@@ -1160,7 +1164,7 @@ export function Funnel({
                       // Aufgabe 39 Polish: Number
                       if (field.type === "number") {
                         return (
-                          <div key={field.key}>
+                          <div key={field.key} data-edit-field={cardFieldRef} style={{ ...editCursor, ...hl(cardFieldRef) }}>
                             {customFieldLabel(field)}
                             <div className="relative">
                               <input
@@ -1184,7 +1188,7 @@ export function Funnel({
                       // Aufgabe 39 Polish: Date
                       if (field.type === "date") {
                         return (
-                          <div key={field.key}>
+                          <div key={field.key} data-edit-field={cardFieldRef} style={{ ...editCursor, ...hl(cardFieldRef) }}>
                             {customFieldLabel(field)}
                             <DateInlinePicker
                               value={fieldValue}
@@ -1205,6 +1209,7 @@ export function Funnel({
                         return (
                           <label
                             key={field.key}
+                            data-edit-field={cardFieldRef}
                             className="flex items-center gap-3 cursor-pointer px-3 py-3 border transition-colors"
                             style={{
                               borderColor: isChecked ? theme.primaryColor : theme.borderColor,
@@ -1212,6 +1217,7 @@ export function Funnel({
                                 ? `color-mix(in srgb, ${theme.primaryColor} 12%, transparent)`
                                 : theme.inputBgColor,
                               borderRadius: theme.borderRadius,
+                              ...hl(cardFieldRef),
                             }}
                           >
                             <span
@@ -1241,7 +1247,7 @@ export function Funnel({
                       // Aufgabe 39 Polish: Dropdown
                       if (field.type === "dropdown" && field.options) {
                         return (
-                          <div key={field.key}>
+                          <div key={field.key} data-edit-field={cardFieldRef} style={{ ...editCursor, ...hl(cardFieldRef) }}>
                             {customFieldLabel(field)}
                             <select
                               value={fieldValue}
@@ -1275,7 +1281,7 @@ export function Funnel({
                         field.type === "full_name"  ? "Voller Name" :
                         "";
                       return (
-                        <div key={field.key}>
+                        <div key={field.key} data-edit-field={cardFieldRef} style={{ ...editCursor, ...hl(cardFieldRef) }}>
                           {customFieldLabel(field)}
                           <div className="relative">
                             <input

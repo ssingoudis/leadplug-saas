@@ -199,9 +199,9 @@ export function CenterCanvas({
             <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-800 shadow-sm dark:border-amber-700/40 dark:bg-amber-900/20 dark:text-amber-300">
               <TriangleAlert size={14} className="mt-0.5 shrink-0" />
               <span>
-                <strong>Kein E-Mail-/Telefon-Pflichtfeld im Funnel.</strong> Leads erscheinen im
-                Posteingang, sind aber nicht kontaktierbar. Füge z.&nbsp;B. eine Kontaktdaten-Karte
-                hinzu („+ Frage hinzufügen").
+                <strong>Kein E-Mail-/Telefon-Pflichtfeld im Funnel.</strong>{" "}
+                Leads erscheinen im Posteingang, sind aber nicht kontaktierbar. Füge z.&nbsp;B.
+                eine Kontaktdaten-Karte hinzu („+ Frage hinzufügen").
               </span>
             </div>
           </div>

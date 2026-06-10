@@ -1117,6 +1117,7 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
                   <PropertiesPanel
                     state={state}
                     selected={selected}
+                    selectedFieldRef={selectedFieldRef}
                     onPatch={handlePatch}
                     onPatchQuestion={handlePatchQuestion}
                     onDeleteQuestion={handleDeleteQuestion}
