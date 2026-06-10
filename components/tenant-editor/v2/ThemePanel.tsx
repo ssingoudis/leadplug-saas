@@ -114,7 +114,9 @@ export function ThemePanel({ state, onPatch }: Props) {
           onToggle={(v) => onPatch({ showStepBadge: v })}
           hint="Kleines Nummern-Badge über der Frage."
         />
-        <Field label="Überschriften-Ausrichtung">
+        {/* Aufgabe 59: aus „Überschriften-Ausrichtung" wurde ein Layout-Modus der ganzen Karte
+            (zentriert zusätzlich Rating/Skala + Button-Zeile; vollbreite Elemente bleiben). */}
+        <Field label="Ausrichtung">
           <div className="inline-flex w-full rounded-lg border border-gray-300 p-0.5 dark:border-gray-700">
             {([
               { value: "left", label: "Links" },
@@ -134,7 +136,7 @@ export function ThemePanel({ state, onPatch }: Props) {
               </button>
             ))}
           </div>
-          <FieldHint>Gilt für Titel + Untertitel aller Schritte.</FieldHint>
+          <FieldHint>Gilt für Überschrift, Inhalt und Buttons aller Schritte.</FieldHint>
         </Field>
       </Section>
     </PanelShell>

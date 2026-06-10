@@ -20,7 +20,10 @@ const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   ghost:
     "text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white",
   danger:
-    "border border-red-200 bg-white text-red-600 hover:bg-red-600 hover:text-white dark:border-red-800 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white",
+    // Aufgabe 59 (Stavros-Entscheid): Inline-Löschen-Trigger hovern dezent getönt
+    // (wie „Seite löschen" im PropertiesPanel) — das satte Voll-Rot bleibt exklusiv
+    // dem finalen Bestätigungs-Button im ConfirmModal vorbehalten.
+    "border border-red-200 bg-white text-red-600 hover:bg-red-50 dark:border-red-900/40 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-900/20",
 };
 
 export function EditorButton({

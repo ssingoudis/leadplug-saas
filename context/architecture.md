@@ -205,6 +205,8 @@ EditorShell.tsx (~750 LOC)              ← der Hauptcontainer
 │       ├── OptionsEditor.tsx              ← Drag-Reorder für Choice-Options
 │       └── AddContactFieldPicker.tsx      ← Modal für „+ Feld hinzufügen"
 ├── ThemePanel.tsx                         ← Design-Tab-Inhalt (Aufgabe C.2)
+├── LogicMapPanel.tsx                      ← „Logik"-Tab: read-only Logic-Map (Aufgabe 59 — SVG-Kette + Sprung-Bögen, Zoom/Pan/Fit, kein React Flow)
+├── LogicRuleModal.tsx                     ← Regel-Editor pro Step (Aufgabe 58 — einziger Schreibweg für Logik)
 └── vorlagen.ts                            ← (legacy, entfernt in Polish-Iteration 39)
 ```
 
@@ -216,7 +218,9 @@ EditorShell.tsx (~750 LOC)              ← der Hauptcontainer
 | `emails`    | Master-Detail: EmailsPanel (Liste · Editor · Live-Vorschau) — **live** (Aufgabe 41) |
 | `webhooks`  | WebhooksPanel (full-width) — **live** (Aufgabe 40)    |
 | `share` (Einbinden) | SharePanel: Embed-Code + Conversion-Tracking — **live** (Aufgabe 42/43) |
-| `logic`     | disabled (kommt mit C.4)                              |
+| `logic`     | LogicMapPanel (full-width) — **live** (Aufgabe 59): read-only Logic-Map, Karten-Klick öffnet das LogicRuleModal, Stift navigiert zum Step |
+
+> **Tab-Routing (Aufgabe 59):** der aktive Tab lebt in der URL (`?tab=logic|emails|webhooks|share`, Bearbeiten = ohne Param) via shallow `history.pushState` — Browser-Zurück/Vor wechselt Tabs statt den Editor zu verlassen, Tab-Links sind teilbar/refresh-fest. Das alte `?v=2`-Flag ist entfernt (tot seit v1-Aus).
 
 ### 6.3 Selection-Modell
 

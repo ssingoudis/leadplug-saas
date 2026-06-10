@@ -199,7 +199,8 @@ export default function AccountPage() {
         <button
           type="button"
           onClick={() => { setShowDelete(true); setConfirmText(''); setDeleteError(null) }}
-          className="mt-4 rounded-xl border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-600 hover:text-white dark:border-red-800 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white"
+          // Aufgabe 59: Lösch-Trigger hovern dezent getönt — Voll-Rot nur im Bestätigungs-Dialog.
+          className="mt-4 rounded-xl border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 dark:border-red-800 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-900/20"
         >
           Account löschen
         </button>
@@ -208,7 +209,8 @@ export default function AccountPage() {
       {/* Lösch-Bestätigung */}
       {showDelete && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          // Aufgabe 59: Backdrop an den App-Standard angeglichen (bg-black/50 + blur — wie EditorModal).
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
           onClick={() => { if (!deleting) setShowDelete(false) }}
         >
           <div

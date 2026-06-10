@@ -119,7 +119,10 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
         title: typeof pageCfg.title === 'string' ? pageCfg.title : '',
         subtitle: typeof pageCfg.subtitle === 'string' ? pageCfg.subtitle : undefined,
         questionType: 'single_choice',
-        visible: true,
+        // Aufgabe 59 Bugfix: Sichtbarkeit aus dem page-config — vorher hart true,
+        // ausgeblendete Welcome-Screens erschienen im Live-Widget trotzdem.
+        // Alt-Rows ohne Key → sichtbar.
+        visible: pageCfg.visible !== false,
         options: [],
         config: {
           buttonLabel: typeof pageCfg.button_label === 'string' ? pageCfg.button_label : 'Starten',
@@ -152,7 +155,8 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
         // Custom-Page hat keinen klassischen questionType — Default-Wert nur fürs Type-System,
         // wird vom Widget durch kind="custom" überschrieben/ignoriert.
         questionType: 'single_choice',
-        visible: true,
+        // Aufgabe 59 Bugfix: Sichtbarkeit aus dem page-config (siehe Welcome oben).
+        visible: pageCfg.visible !== false,
         options: [],
         config: {},
         kind: 'custom',

@@ -726,7 +726,7 @@ Bot-Hits-Log. Aktuell 0 Zeilen (Honeypot greift selten / Bots sind sauber abgewe
 ### 4.4 JSONB für strukturierte Felder
 - `fields.options` — Antwortoptionen pro Field (Choice-Types: Object-Array, Radio: String-Array)
 - `fields.config` — Field-Type-spezifische Config (Slider min/max/etc, Text maxLength)
-- `pages.config` — Page-spezifische Config (B.5: leer, Future-use)
+- `pages.config` — Page-spezifische Config jsonb. `welcome`: `{title, subtitle, page_key, button_label, visible}` · `custom`: `{title, subtitle, page_key, visible}` · `question`/`success`: leer. **`visible` seit Aufgabe 59** (Bugfix: Sichtbarkeit von Welcome-/Custom-Pages wurde vorher nie persistiert — Questions speichern sie am Field; Alt-Rows ohne Key gelten als sichtbar)
 - `submissions.contact` — komplettes Kontakt-Objekt (einzige Quelle seit Aufgabe 27)
 - `submissions.answers` — `{ field_key: value }`
 
