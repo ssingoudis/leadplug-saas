@@ -536,6 +536,9 @@ export function editorStateToPagesAndFields(
           subtitle: q.subtitle || "",
           page_key: q.questionKey || "",
           button_label: q.welcomeButtonLabel || "Starten",
+          // Aufgabe 59 Bugfix: Sichtbarkeit persistieren — Welcome/Custom haben kein
+          // Field (Questions speichern visible am Field), das Flag lebt im page-config.
+          visible: q.visible,
         },
       });
       return;
@@ -554,6 +557,8 @@ export function editorStateToPagesAndFields(
           title: q.title || "",
           subtitle: q.subtitle || "",
           page_key: q.questionKey || "",
+          // Aufgabe 59 Bugfix: page-level Sichtbarkeit der Karte (siehe Welcome oben).
+          visible: q.visible,
         },
       });
 
@@ -853,7 +858,8 @@ export function dbToEditorState(
         title: typeof pageCfg.title === "string" ? pageCfg.title : "",
         subtitle: typeof pageCfg.subtitle === "string" ? pageCfg.subtitle : "",
         welcomeButtonLabel: typeof pageCfg.button_label === "string" ? pageCfg.button_label : "Starten",
-        visible: true,
+        // Aufgabe 59 Bugfix: visible aus dem page-config lesen (Alt-Rows ohne Key → sichtbar).
+        visible: pageCfg.visible !== false,
         // Aufgabe 40 Polish: existing keys aus DB sind "festgesetzt" — kein Auto-Sync
         _keyTouched: true,
       };
@@ -873,7 +879,8 @@ export function dbToEditorState(
         questionKey: typeof pageCfg.page_key === "string" ? pageCfg.page_key : "",
         title: typeof pageCfg.title === "string" ? pageCfg.title : "",
         subtitle: typeof pageCfg.subtitle === "string" ? pageCfg.subtitle : "",
-        visible: true,
+        // Aufgabe 59 Bugfix: visible aus dem page-config lesen (Alt-Rows ohne Key → sichtbar).
+        visible: pageCfg.visible !== false,
         customFields,
         _keyTouched: true,
       };

@@ -406,6 +406,12 @@ export function Funnel({
   const isChoiceType     = !isCustomStep && !isWelcomeStep && currentQuestion?.questionType === "single_choice";
   const showWeiterButton = !isChoiceType;
 
+  // Aufgabe 59: „Mittig" ist ein Layout-Modus für die ganze Karte, nicht nur die Überschrift.
+  // Zentriert werden kompakte Inline-Gruppen (Rating-Sterne, Skala-Chips) + die Button-Zeile.
+  // Vollbreite Elemente (Optionen, Text-Inputs, Slider, Checkbox-Box) bleiben unverändert —
+  // die sind von Natur aus symmetrisch, zentrierter Input-Text wäre UX-Murks.
+  const isCenteredLayout = funnel.titleAlignment === "center";
+
   const currentAnswer      = currentQuestion ? (answers[currentQuestion.id] ?? "") : "";
   const isQuestionRequired = (currentQuestion?.config as TextConfig)?.required !== false;
 
@@ -614,6 +620,55 @@ export function Funnel({
     },
     [editMode],
   );
+
+  // Aufgabe 59 — Tastatur-Bedienung (Typeform-Parität), nur live/test, nie im Builder:
+  //   • A–Z bzw. 1–9 wählen Antwort-Optionen (beide Tastengruppen unabhängig vom
+  //     Marker-Stil — die Chips zeigen Buchstaben ODER Ziffern, gedrückt werden darf beides).
+  //     single_choice advanced wie ein Klick, multi_choice toggelt.
+  //   • Enter bestätigt (OK/Weiter/Start) — außer der Fokus liegt in einem Eingabe-Element
+  //     (Felder regeln Enter selbst) oder auf einem Button (nativer Klick reicht, sonst doppelt).
+  useEffect(() => {
+    if (editMode || isSubmitted) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const el = document.activeElement as HTMLElement | null;
+      const inField =
+        !!el &&
+        (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
+
+      if (e.key === "Enter") {
+        if (inField || el?.tagName === "BUTTON") return;
+        if (!showWeiterButton || isWeiterDisabled) return;
+        e.preventDefault();
+        handleNext();
+        return;
+      }
+
+      if (inField) return;
+      const q = currentQuestion;
+      if (!q || q.kind === "custom" || q.kind === "welcome") return;
+      if (q.questionType !== "single_choice" && q.questionType !== "multi_choice") return;
+      let idx = -1;
+      if (/^[a-zA-Z]$/.test(e.key)) idx = e.key.toUpperCase().charCodeAt(0) - 65;
+      else if (/^[1-9]$/.test(e.key)) idx = Number(e.key) - 1;
+      const option = idx >= 0 ? q.options[idx] : undefined;
+      if (!option) return;
+      e.preventDefault();
+      if (q.questionType === "multi_choice") handleToggleMultiple(q.id, option.value);
+      else handleSelect(q.id, option.value);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [
+    editMode,
+    isSubmitted,
+    currentQuestion,
+    showWeiterButton,
+    isWeiterDisabled,
+    handleNext,
+    handleSelect,
+    handleToggleMultiple,
+  ]);
 
   // Aufgabe 39: End-Screen-Redirect-Modus. Wenn redirectUrl gesetzt UND wir gerade
   // submitted haben → kurze Success-Anzeige (~1500ms damit Tracking-Pixel feuern können),
@@ -912,14 +967,18 @@ export function Funnel({
                     Aufgabe 56: Badge per Design-Schalter abschaltbar — die Zeile rendert dann nur noch,
                     wenn der Zurück-Pfeil (Single-Choice-Steps ab Schritt 2) sie braucht. */}
                 {!isWelcomeStep && (funnel.showStepBadge || (!editMode && !showWeiterButton && currentStep > 0)) && (
-                  <div className={`mb-3 flex items-center gap-2 font-mono text-xs ${funnel.titleAlignment === "center" ? "justify-center" : ""}`} style={{ color: theme.primaryColor }}>
+                  // Aufgabe 59: Im Mittig-Layout ist der Zurück-Pfeil Chrome, kein Inhalt —
+                  // er ankert absolut am linken Rand, nur das Badge sitzt auf der Mittelachse
+                  // (zentriert klebten beide als Paar zusammen — sah kaputt aus, Stavros-Befund).
+                  // h-5 hält die Zeilenhöhe stabil, auch wenn nur der absolute Pfeil rendert.
+                  <div className={`relative mb-3 flex h-5 items-center gap-2 font-mono text-xs ${isCenteredLayout ? "justify-center" : ""}`} style={{ color: theme.primaryColor }}>
                     {!editMode && !showWeiterButton && currentStep > 0 && (
                       <button
                         type="button"
                         onClick={handleBack}
                         aria-label="Zurück"
                         title="Zurück"
-                        className="inline-flex h-5 w-5 items-center justify-center transition-colors"
+                        className={`inline-flex h-5 w-5 items-center justify-center transition-colors ${isCenteredLayout ? "absolute left-0 top-0" : ""}`}
                         style={{
                           backgroundColor: theme.tintColor,
                           color: theme.primaryColor,
@@ -1190,11 +1249,13 @@ export function Funnel({
                               <textarea
                                 placeholder={field.placeholder ?? ""}
                                 value={fieldValue}
-                                rows={3}
+                                rows={1}
+                                ref={autoGrowTextarea}
+                                onInput={(e) => autoGrowTextarea(e.currentTarget)}
                                 onChange={(e) =>
                                   setAnswers((prev) => ({ ...prev, [field.key]: e.target.value }))
                                 }
-                                className="w-full bg-transparent border-b text-base @md:text-lg py-2 pr-7 outline-none transition-colors resize-none font-light"
+                                className="w-full bg-transparent border-b text-base @md:text-lg py-2 pr-7 outline-none transition-colors resize-none overflow-hidden font-light"
                                 style={{ borderColor: theme.underlineColor, color: theme.textColor }}
                                 onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
                                 onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; markTouched(field.key); }}
@@ -1578,9 +1639,11 @@ export function Funnel({
                       }}
                       placeholder={`${(currentQuestion.config as TextConfig).placeholder ?? ""}${(currentQuestion.config as TextConfig).required === false ? " (optional)" : ""}`}
                       maxLength={(currentQuestion.config as TextConfig).maxLength}
-                      rows={3}
+                      rows={1}
+                      ref={autoGrowTextarea}
+                      onInput={(e) => autoGrowTextarea(e.currentTarget)}
                       data-edit-field="text_input"
-                      className="w-full bg-transparent border-b text-lg @md:text-xl py-2 outline-none transition-colors resize-none font-light"
+                      className="w-full bg-transparent border-b text-lg @md:text-xl py-2 outline-none transition-colors resize-none overflow-hidden font-light"
                       style={{
                         borderColor:     theme.underlineColor,
                         color:           theme.textColor,
@@ -1589,6 +1652,11 @@ export function Funnel({
                       onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
                       onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
                     />
+                    {/* Aufgabe 59: Typeform-Hinweis — macht den Unterschied zu Kurz-Text sichtbar
+                        (Enter springt weiter, Shift+Enter bricht um) und lehrt das Tastatur-Muster. */}
+                    <p className="mt-1.5 text-xs font-light" style={{ color: theme.textColorMuted }}>
+                      Shift ⇧ + Enter ↵ für eine neue Zeile
+                    </p>
                   </div>
                 )}
 
@@ -1720,6 +1788,7 @@ export function Funnel({
                       onChange={(v) => setAnswers((prev) => ({ ...prev, [currentQuestion.id]: String(v) }))}
                       primaryColor={theme.primaryColor}
                       mutedColor={theme.textColorMuted}
+                      centered={isCenteredLayout}
                     />
                   );
                 })()}
@@ -1738,6 +1807,7 @@ export function Funnel({
                       onChange={(v) => setAnswers((prev) => ({ ...prev, [currentQuestion.id]: v }))}
                       labelLeft={cfg.labelLeft}
                       labelRight={cfg.labelRight}
+                      centered={isCenteredLayout}
                       primaryColor={theme.primaryColor}
                       tintColor={theme.tintColor}
                       tintColorHover={theme.tintColorHover}
@@ -1808,7 +1878,7 @@ export function Funnel({
                 der wirkte "verloren". Stattdessen rendert oben ein Text-Link „← Zurück".
                 So bleibt Navigation universal, ohne orphan-Buttons. */}
             {showWeiterButton && (
-              <div className="mt-6 flex items-center gap-2">
+              <div className={`mt-6 flex items-center gap-2 ${isCenteredLayout ? "justify-center" : ""}`}>
                 {currentStep > 0 && (
                   <BackButton onClick={handleBack} theme={theme} editMode={editMode} />
                 )}
@@ -1886,24 +1956,37 @@ function BackButton({
    Klick setzt Wert. Hover füllt bis zur gehoverten Position. Wert als String "1"..."N".
    ────────────────────────────────────────────────────────────────────────────── */
 
+// Aufgabe 59 (Stavros-Befund): Lang-Text startet einzeilig und wächst mit dem Inhalt
+// (Typeform-Pattern). Vorher rows={3}: der Platzhalter klebte oben in einer hohen leeren
+// Box, die Unterstrich-Linie hing zwei Zeilen tiefer — deplatziert gegenüber allen anderen
+// Underline-Feldern. Als ref (initial, deckt restaurierte Antworten ab) + onInput (Tippen).
+function autoGrowTextarea(el: HTMLTextAreaElement | null) {
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = `${el.scrollHeight}px`;
+}
+
 function RatingStars({
   maxStars,
   value,
   onChange,
   primaryColor,
   mutedColor,
+  centered = false,
 }: {
   maxStars: number;
   value: number;
   onChange: (v: number) => void;
   primaryColor: string;
   mutedColor: string;
+  /** Aufgabe 59: folgt dem Karten-Layout „Mittig" (titleAlignment). */
+  centered?: boolean;
 }) {
   const [hovered, setHovered] = useState<number | null>(null);
   const display = hovered ?? value;
   return (
     <div
-      className="mb-3 flex items-center gap-1 @md:gap-1.5"
+      className={`mb-3 flex items-center gap-1 @md:gap-1.5 ${centered ? "justify-center" : ""}`}
       onMouseLeave={() => setHovered(null)}
     >
       {Array.from({ length: maxStars }, (_, i) => i + 1).map((n) => {
@@ -1952,6 +2035,7 @@ function ScaleButtons({
   textColor,
   mutedColor,
   borderRadius,
+  centered = false,
 }: {
   min: number;
   max: number;
@@ -1965,11 +2049,13 @@ function ScaleButtons({
   textColor: string;
   mutedColor: string;
   borderRadius: string;
+  /** Aufgabe 59: folgt dem Karten-Layout „Mittig" (titleAlignment). */
+  centered?: boolean;
 }) {
   const range = Array.from({ length: Math.max(0, max - min + 1) }, (_, i) => min + i);
   return (
     <div className="mb-3">
-      <div className="flex flex-wrap items-center gap-1.5 @md:gap-2">
+      <div className={`flex flex-wrap items-center gap-1.5 @md:gap-2 ${centered ? "justify-center" : ""}`}>
         {range.map((n) => {
           const active = String(n) === value;
           return (
