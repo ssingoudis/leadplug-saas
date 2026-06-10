@@ -234,7 +234,7 @@ Ein `EditorState` ist im Wesentlichen die gesamte Builder-State-Snapshot. Aktuel
 
 - **Funnel-Metadaten:** funnelName, isActive
 - **Theme:** primaryColor, textColor, backgroundColor, pageBackgroundColor, font, borderRadius, maxWidth
-- **Funnel-Texte:** funnelTitle, contactFormSubtitle, submitButtonLabel, successMessage, responseMessage, privacyText, privacyPolicyUrl, answersOverviewLabel
+- **Funnel-Texte:** funnelTitle, contactFormSubtitle, successMessage, responseMessage, privacyText, privacyPolicyUrl, answersOverviewLabel
 - **E-Mail-Settings:** notificationEmail, emailSenderLocal
 - **End-Screen-Verhalten:** redirectUrl (Aufgabe 39), showAnswersOverview (Aufgabe 51)
 - **Conversion-Tracking:** metaPixelId, googleAdsConversion (Aufgabe 43)

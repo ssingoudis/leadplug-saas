@@ -339,7 +339,13 @@ Klare Trennung — keine Override-Hierarchien zwischen Tabellen:
 **Aufgabe 54b Migration (2026-06-10):**
 - `aufgabe_54b_advisor_hardening`: EXECUTE auf `rls_auto_enable()` für public/anon/authenticated revoked (Event-Trigger feuert systemseitig, braucht keine RPC-Grants) + `update_updated_at()` mit gepinntem `search_path = public, pg_temp` (Advisor 0011). `current_tenant_ids`/`current_tenant_role` bleiben bewusst für authenticated ausführbar — RLS-Policies rufen sie auf. Additiv, direkt auf Produktion appliziert, Trigger danach funktional verifiziert, DOWN-File vorhanden. **Manuell offen:** Leaked-Password-Protection ist ein Auth-Dashboard-Toggle (Authentication → Passwords), nicht per SQL setzbar.
 
-**Nächste DB-Arbeit:** keine offen. `footer_*`-Spalten, orphaned Submit-Pages und `skip_submit_step` sind weg (52B/52D), tote funnel.*-Chips gestrippt (53), Funnel-Save atomar via RPC (54), Advisor-Härtung (54b).
+**Aufgabe 56 Migration (2026-06-10):**
+- `aufgabe_56_design_toggles`: `funnels` + `show_progress_bar boolean NOT NULL DEFAULT true` + `show_step_badge boolean NOT NULL DEFAULT true` + `title_alignment text NOT NULL DEFAULT 'left'` (CHECK `'left'|'center'`) — 3 Anzeige-Schalter für das Widget (ThemePanel-Sektion „Anzeige"). Additiv mit Defaults, direkt auf Produktion appliziert (mit User-Go), DOWN-File vorhanden.
+
+**Aufgabe 57A Migration (2026-06-10):**
+- `aufgabe_57a_drop_submit_button_label`: `ALTER TABLE funnels DROP COLUMN submit_button_label` — Spalte war tot seit 52D (kein Submit-Button mehr), Code-Referenzen in Aufgabe 56 Runde 4 entfernt, Drop nach Deploy (skip_submit_step-Pattern). Datenlage beim Drop: 2 Funnels mit Standard-Label 'Anfrage absenden' — exakter Snapshot-Restore im DOWN-File. Direkt auf Produktion appliziert (mit User-Go), Prod-Widget danach verifiziert.
+
+**Nächste DB-Arbeit:** Aufgabe 57 Block B — `email_delivery_attempts.is_test boolean NOT NULL DEFAULT false` (Test-Mails in Versand-Historie, additiv). Sonst keine offen: `footer_*`-Spalten, orphaned Submit-Pages, `skip_submit_step` und `submit_button_label` sind weg (52B/52D/57A), tote funnel.*-Chips gestrippt (53), Funnel-Save atomar via RPC (54), Advisor-Härtung (54b).
 
 ---
 

@@ -28,7 +28,6 @@
 | Feld | Default |
 |---|---|
 | `funnel_title` | `"Jetzt kostenloses Angebot anfordern"` |
-| `submit_button_label` | `"Anfrage absenden"` |
 | `success_message` | `"Vielen Dank! Wir melden uns in Kürze."` |
 | `response_time_text` | `"24 Stunden"` |
 | `contact_form_subtitle` | `"Wer soll das Angebot erhalten?"` |

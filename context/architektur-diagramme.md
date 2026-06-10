@@ -321,7 +321,6 @@ funnels [icon: filter, color: green] {
   funnel_name text
   contact_form_title text
   contact_form_subtitle text
-  submit_button_label text
   success_message text
   response_message text
   answers_overview_label text
