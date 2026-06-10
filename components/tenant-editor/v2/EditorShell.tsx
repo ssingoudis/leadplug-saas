@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Pencil, Save, TriangleAlert } from "lucide-react";
+import { ArrowLeft, Check, Pencil, Redo2, Save, TriangleAlert, Undo2 } from "lucide-react";
 import type { EditorState, EditorQuestion, ContactFieldConfig, QuestionType } from "@/types";
 import { TopTabs, type TopTabKey } from "./TopTabs";
 import { StepList } from "./StepList";
@@ -23,6 +23,7 @@ import {
   makeDefaultWelcomePage,
 } from "@/components/tenant-editor/defaults";
 import { generateFieldKey, toKey } from "@/lib/editorUtils";
+import { useHistoryState } from "@/lib/useHistoryState";
 import { useSaveStatus } from "@/lib/useSaveStatus";
 import { SaveStatus } from "@/components/ui/SaveStatus";
 
@@ -159,7 +160,9 @@ function defaultQuestion(type: QuestionType): EditorQuestion {
 export function EditorShell({ initialState, mode, originalSlug, companyName }: Props) {
   const router = useRouter();
 
-  const [state, setState] = useState<EditorState>(initialState);
+  // Aufgabe 55: useHistoryState statt useState — Drop-in (identische set-Signatur),
+  // alle ~30 Handler unten bleiben unverändert. history liefert Undo/Redo + applyToAll.
+  const [state, setState, history] = useHistoryState<EditorState>(initialState);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const nameSave = useSaveStatus();
   const [isSaving, setIsSaving] = useState(false);
@@ -245,6 +248,43 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  // Aufgabe 55 — Undo/Redo-Shortcuts: Strg+Z / Strg+Shift+Z / Strg+Y.
+  // WICHTIG: nicht kapern, wenn der Fokus in einem Input/Textarea/contentEditable
+  // liegt — dort gilt das native Text-Undo des Browsers (Typeform-Verhalten).
+  // Nur im Bearbeiten-Tab (Dokument-State) und nicht im Test-Modus.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const key = e.key.toLowerCase();
+      if (key !== "z" && key !== "y") return;
+      const el = document.activeElement as HTMLElement | null;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
+      if (activeTab !== "content" || isTestMode) return;
+      e.preventDefault();
+      if (key === "y" || (key === "z" && e.shiftKey)) {
+        history.redo();
+      } else {
+        history.undo();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // undo/redo sind stabile useCallbacks — das History-Objekt selbst wechselt pro Render.
+  }, [activeTab, isTestMode, history.undo, history.redo]);
+
+  // Aufgabe 55 — Selection-Clamp: Undo/Redo (oder jede andere State-Änderung) kann die
+  // Fragen-Liste verkürzen, während selected noch auf einen höheren Index zeigt. Ohne
+  // Clamp zeigt der Canvas dann fälschlich den "Keine Frage"-Placeholder.
+  useEffect(() => {
+    if (selected.kind === "question" && selected.questionIndex >= state.questions.length) {
+      setSelected(
+        state.questions.length > 0
+          ? { kind: "question", questionIndex: state.questions.length - 1 }
+          : { kind: "success" },
+      );
+    }
+  }, [state.questions.length, selected]);
 
   // Exit-Guard registrieren (identische Signatur zu v1, konsumiert von Sidebar/MobileNav/UserMenu).
   useEffect(() => {
@@ -501,6 +541,38 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
     [state.questions.length],
   );
 
+  // Aufgabe 55: Step duplizieren (Hover-Action in der StepList). Deep-Copy mit frischen
+  // Client-IDs; dbId wird bewusst NICHT kopiert — die Kopie ist eine neue Page und bekommt
+  // beim Save eine eigene UUID (zwei Steps mit derselben dbId würde der Save-Pfad zwar
+  // defensiv auflösen, aber sauber ist sauber). questionKey bleibt — der Save-Pfad
+  // dedupliziert Frage-Keys global via ensureUniqueKey (Suffix _2); Karten-Feld-Keys
+  // sind nur pro Page unique, identische Keys auf der neuen Page sind also valide.
+  const handleDuplicateQuestion = useCallback((index: number) => {
+    setState((prev) => {
+      const src = prev.questions[index];
+      if (!src || src.kind === "welcome") return prev; // max 1 Welcome pro Funnel
+      const stamp = Date.now().toString(36);
+      const copy: EditorQuestion = {
+        ...src,
+        _id: makeId(),
+        dbId: undefined,
+        options: src.options.map((o, i) => ({
+          ...o,
+          _id: `opt_${stamp}_${i}_${Math.random().toString(36).slice(2, 6)}`,
+        })),
+        customFields: src.customFields?.map((f, i) => ({
+          ...f,
+          _clientId: `cf_${stamp}_${i}_${Math.random().toString(36).slice(2, 8)}`,
+          options: f.options ? [...f.options] : undefined,
+        })),
+      };
+      const next = [...prev.questions];
+      next.splice(index + 1, 0, copy);
+      return { ...prev, questions: next };
+    });
+    setSelected({ kind: "question", questionIndex: index + 1 });
+  }, [setState]);
+
   /* ─── Aufgabe 52D: Contact-Field-Handler entfernt (Submit-Page/Kontaktformular abgeschafft).
          Lead-Erfassung läuft über Kontaktdaten-Karten → handlePatchCustomField etc. ─── */
 
@@ -706,7 +778,11 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
             const dbId = byClientId.get(q._id);
             return dbId && q.dbId !== dbId ? { ...q, dbId } : q;
           });
-        setState((prev) => ({ ...prev, questions: withDbIds(prev.questions) }));
+        // Aufgabe 55: applyToAll statt setState — der dbId-Merge ist ein technischer
+        // Schritt (kein Undo-Eintrag!) und muss auch in past/future gelten, sonst
+        // verliert ein Undo über den Save-Punkt die frischen Page-UUIDs → der nächste
+        // Save würde Pages neu anlegen und after_page-Webhook-Bindings zerstören.
+        history.applyToAll((s) => ({ ...s, questions: withDbIds(s.questions) }));
         setSavedSnapshot({ ...savedState, questions: withDbIds(savedState.questions) });
       } else {
         setSavedSnapshot(savedState);
@@ -841,8 +917,34 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
             <TopTabs active={activeTab} onChange={setActiveTab} />
           </div>
 
-          {/* Rechts: Status + Speichern */}
+          {/* Rechts: Undo/Redo + Status + Speichern */}
           <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
+            {/* Aufgabe 55: Undo/Redo — nur im Bearbeiten-Tab (Dokument-State; Ressourcen-Tabs
+                speichern server-seitig pro Eintrag, ein UI-only-Undo wäre dort eine Lüge). */}
+            {isDocumentTab && !isTestMode && (
+              <div className="flex items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={history.undo}
+                  disabled={!history.canUndo}
+                  title="Rückgängig (Strg+Z)"
+                  aria-label="Rückgängig"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white dark:disabled:hover:bg-transparent"
+                >
+                  <Undo2 size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={history.redo}
+                  disabled={!history.canRedo}
+                  title="Wiederholen (Strg+Shift+Z)"
+                  aria-label="Wiederholen"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white dark:disabled:hover:bg-transparent"
+                >
+                  <Redo2 size={16} />
+                </button>
+              </div>
+            )}
             {saveError && (
               <span className="hidden text-xs text-red-600 dark:text-red-400 md:inline">{saveError}</span>
             )}
@@ -942,6 +1044,8 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
               onAddAddressCard={handleAddAddressCard}
               onAddContactCard={handleAddContactCard}
               onAddWelcome={handleAddWelcome}
+              onDuplicateQuestion={handleDuplicateQuestion}
+              onDeleteQuestion={handleDeleteQuestion}
               webhookCountsByPageId={webhookCountsByPageId}
               onSwitchToWebhooksTab={() => setActiveTab("webhooks")}
             />

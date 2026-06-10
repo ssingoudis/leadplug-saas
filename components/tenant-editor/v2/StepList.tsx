@@ -42,9 +42,31 @@ interface Props {
   // Aufgabe 50: Kontaktdaten-Quick-Card
   onAddContactCard: (atIndex?: number) => void;
   onAddWelcome: (atIndex?: number) => void;
+  // Aufgabe 55: Hover-Quick-Actions auf den Step-Pills (Duplizieren ohne Confirm —
+  // Undo/Redo ist das Sicherheitsnetz; Löschen ebenso, konsistent zu Figma/Typeform).
+  onDuplicateQuestion: (index: number) => void;
+  onDeleteQuestion: (index: number) => void;
   // Aufgabe 40: Webhook-Badges auf Step-Pills
   webhookCountsByPageId?: Record<string, number>;
   onSwitchToWebhooksTab?: () => void;
+}
+
+// Aufgabe 55: Auto-Titel für unbenannte Steps — abgeleitet aus dem Inhalt statt
+// kursivem „Ohne Titel" (wirkte wie ein Bug). Karten: Feld-Labels („Name · E-Mail …"),
+// Fragen: Options-Labels. Liefert "" wenn nichts Ableitbares da ist (StepPill zeigt
+// dann den neutralen „Unbenannt"-Fallback).
+function derivedStepTitle(q: EditorQuestion): string {
+  if (q.kind === "custom") {
+    const labels = (q.customFields ?? [])
+      .filter((f) => f.visible !== false)
+      .map((f) => f.label.trim())
+      .filter(Boolean);
+    if (labels.length > 0) return labels.slice(0, 3).join(" · ") + (labels.length > 3 ? " …" : "");
+    return "";
+  }
+  const opts = (q.options ?? []).map((o) => o.label.trim()).filter(Boolean);
+  if (opts.length > 0) return opts.slice(0, 3).join(" · ") + (opts.length > 3 ? " …" : "");
+  return "";
 }
 
 export function StepList({
@@ -58,6 +80,8 @@ export function StepList({
   onAddAddressCard,
   onAddContactCard,
   onAddWelcome,
+  onDuplicateQuestion,
+  onDeleteQuestion,
   webhookCountsByPageId = {},
   onSwitchToWebhooksTab,
 }: Props) {
@@ -127,6 +151,8 @@ export function StepList({
                       number={pos + 1}
                       selected={isSameStep(selected, step)}
                       onClick={() => onSelect(step)}
+                      onDuplicate={() => onDuplicateQuestion(idx)}
+                      onDelete={() => onDeleteQuestion(idx)}
                       webhookCount={webhookCount}
                       onWebhookBadgeClick={onSwitchToWebhooksTab}
                     />
@@ -233,6 +259,8 @@ function SortableQuestionItem({
   number,
   selected,
   onClick,
+  onDuplicate,
+  onDelete,
   webhookCount,
   onWebhookBadgeClick,
 }: {
@@ -240,6 +268,8 @@ function SortableQuestionItem({
   number: number;
   selected: boolean;
   onClick: () => void;
+  onDuplicate?: () => void;
+  onDelete?: () => void;
   webhookCount?: number;
   onWebhookBadgeClick?: () => void;
 }) {
@@ -263,7 +293,7 @@ function SortableQuestionItem({
     <div ref={setNodeRef} style={style} {...attributes}>
       <StepPill
         number={number}
-        title={question.title}
+        title={question.title || derivedStepTitle(question)}
         meta={meta}
         selected={selected}
         hidden={question.visible === false}
@@ -273,6 +303,8 @@ function SortableQuestionItem({
           ...listeners,
         }}
         onClick={onClick}
+        onDuplicate={onDuplicate}
+        onDelete={onDelete}
         webhookCount={webhookCount}
         onWebhookBadgeClick={onWebhookBadgeClick}
       />

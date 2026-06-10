@@ -347,7 +347,7 @@ function FixedRecipients({
                 else if (tryAddEmail()) setAddingEmail(false);
               }}
               placeholder="E-Mail eingeben und Enter drücken…"
-              className={`flex-1 rounded border bg-white px-2 py-1 text-sm text-gray-900 dark:bg-gray-950 dark:text-gray-100 ${
+              className={`flex-1 rounded border bg-white px-2 py-1 text-sm text-gray-900 dark:bg-gray-800 dark:text-gray-100 ${
                 inputError ? "border-red-300 dark:border-red-700" : "border-gray-200 dark:border-gray-700"
               }`}
             />
@@ -1389,7 +1389,7 @@ function TestSection({
         onChange={(e) => setOverrideRecipient(e.target.value)}
         placeholder="optional: andere Test-Adresse"
         disabled={demoMode}
-        className="w-full rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-2 py-1.5 text-xs text-gray-900 dark:text-gray-100 disabled:opacity-60"
+        className="w-full rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-xs text-gray-900 dark:text-gray-100 disabled:opacity-60"
       />
       <button
         onClick={send}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Monitor, Smartphone, Play, Pencil, EyeOff, ListPlus } from "lucide-react";
+import { motion } from "framer-motion";
 import { Funnel } from "@/components/funnel";
 import { buildTheme, buildFunnelConfig, buildQuestions } from "@/lib/editorUtils";
 import type { EditorState } from "@/types";
@@ -50,6 +51,11 @@ export function CenterCanvas({
   const questions = buildQuestions(state.questions, { keepEmpty: !isTestMode, keepHidden: !isTestMode });
   const theme = buildTheme(state);
   const funnel = buildFunnelConfig(state);
+
+  // Aufgabe 55: Bühne = Seitenhintergrund des Funnels (WYSIWYG). 'transparent'/leer →
+  // Editor-Default-Bühne mit Punktraster (unten). Hex/benannte Farben werden 1:1 gesetzt.
+  const rawPageBg = (state.pageBackgroundColor ?? "").trim();
+  const stageBg = rawPageBg && rawPageBg !== "transparent" ? rawPageBg : null;
 
   // initialStep berechnen — mapped die Selection auf den Widget-Step.
   // Widget-Steps: 0..N-1 = Fragen/Karten, danach intern Success (Submit am Funnel-Ende).
@@ -133,10 +139,20 @@ export function CenterCanvas({
         </div>
       </div>
 
-      {/* Canvas — Click-into-empty (Background außerhalb des Widget-Containers) deselected.
-          pt-24 hält den Inhalt unter den schwebenden Controls. */}
+      {/* Aufgabe 55 — Bühnen-Inszenierung:
+          • Karte vertikal zentriert (my-auto im Flex-Scroll-Container — degradiert sauber zu
+            Scroll, wenn die Karte höher als der Viewport ist).
+          • Stage-Hintergrund = pageBackgroundColor des Funnels (echtes WYSIWYG: der Endkunde
+            sieht genau diese Fläche um das Widget). Bei transparent/leer: Editor-Default mit
+            subtilem Punktraster statt toter Fläche.
+          • Click-into-empty deselected weiterhin (leere Fläche gehört dem Scroll-Container). */}
       <div
-        className="flex-1 overflow-y-auto p-6 pt-24 lg:p-10 lg:pt-24"
+        className={`flex flex-1 flex-col overflow-y-auto p-6 pt-24 lg:p-10 lg:pt-24 ${
+          stageBg
+            ? ""
+            : "bg-[radial-gradient(circle,rgba(17,24,39,0.06)_1px,transparent_1px)] bg-size-[18px_18px] dark:bg-[radial-gradient(circle,rgba(255,255,255,0.05)_1px,transparent_1px)]"
+        }`}
+        style={stageBg ? { backgroundColor: stageBg } : undefined}
         onClick={(e) => {
           // Nur deselect wenn auf den Outer-Container geklickt wurde (kein bubble-Target im Widget)
           if (e.target === e.currentTarget) {
@@ -145,13 +161,33 @@ export function CenterCanvas({
         }}
       >
         <div
-          className="mx-auto w-full transition-[max-width] duration-300"
+          className="mx-auto my-auto w-full transition-[max-width] duration-300"
           style={{ maxWidth: isMobile ? "375px" : state.maxWidth || "720px" }}
         >
           {placeholder === "no_questions" ? (
             <NoQuestionsPlaceholder />
           ) : (
-            <div className="relative">
+            <motion.div
+              // Aufgabe 55: sanfter Auftritt beim Step-Wechsel (Selection-Klick in der StepList).
+              // Im Test-Modus stabiler Key → keine Re-Animation während der Test-Session.
+              key={
+                isTestMode
+                  ? "test-session"
+                  : `${selected.kind}-${selected.kind === "question" ? selected.questionIndex : 0}`
+              }
+              initial={{ opacity: 0, y: 10, scale: 0.995 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="relative"
+            >
+              {/* Aufgabe 55: weicher Ambient-Glow hinter der Karte — nur im Dark Mode und nur
+                  auf der Default-Bühne (vermittelt zwischen dunkler Stage und weißer Karte). */}
+              {!stageBg && (
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -inset-10 hidden rounded-[3rem] bg-white/4 blur-3xl dark:block"
+                />
+              )}
               {/* Polish: Hidden-Page wird normal gerendert, aber ausgegraut + Eye-Off-Badge oben rechts.
                   Tenant sieht weiter den Inhalt der Frage, weiß aber dass sie im Live invisible ist. */}
               {isCurrentStepHidden && (
@@ -163,14 +199,8 @@ export function CenterCanvas({
                   </div>
                 </>
               )}
-              <div className={isCurrentStepHidden ? "opacity-50" : ""}>
+              <div className={`relative ${isCurrentStepHidden ? "opacity-50" : ""}`}>
                 <Funnel
-                  // Remount bei Step-/Selection-Wechsel im Edit-Modus, einmal pro Test-Session im Test-Modus.
-                  key={
-                    isTestMode
-                      ? "test-session"
-                      : `${selected.kind}-${selected.kind === "question" ? selected.questionIndex : 0}`
-                  }
                   theme={theme}
                   funnel={funnel}
                   questions={questions}
@@ -188,7 +218,7 @@ export function CenterCanvas({
                   onSubmit={() => {}}
                 />
               </div>
-            </div>
+            </motion.div>
           )}
         </div>
       </div>

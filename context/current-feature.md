@@ -109,6 +109,23 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
+## Aufgabe 55 — Editor-Uplift: Undo/Redo + Builder-Bühne + Slider-Fix (2026-06-10)
+
+**Status:** Branch `feature/aufgabe-55-editor-uplift`, Type-Check + `next build` grün, **manuell getestet durch Stavros („funktioniert alles")**, gemerged + deployed. Logic Jumps bewusst verschoben (Konzept steht, Chat 2026-06-10). Leaked-Password-Protection: Stavros-Entscheidung = bewusst aus (Beta, kein CIA).
+
+**Feedback-Runde (gleiche Session):**
+6. **StepPill-Bugfix:** `min-w-0` am Titel-Button — bei langen (Auto-)Titeln schob der nicht-schrumpfende Flex-Button die Hover-Actions aus dem `overflow-hidden`-Pill (Mülleimer unsichtbar).
+7. **Theme-Toggle-Platzierung** ([`Sidebar.tsx`](../components/dashboard/Sidebar.tsx)): Menü-Ansatz nach Stavros-Feedback verworfen → wiederverwendete [`ThemeToggle`](../components/ui/ThemeToggle.tsx)-Komponente **oben rechts in der Logo-Zeile** (Stavros-Spot, `mr-3` Abstand zum Zuklapp-Pfeil). Eingeklappter Rail zeigt bewusst KEINEN Toggle (reine Navigation; Mount-Apply des Themes übernimmt das CSS-versteckte MobileNav-`ThemeToggle`). Footer = nur noch Workspace-Karte.
+8. **E-Mail-Tab-Kontrast:** Eingabeflächen (Betreff/TipTap-Body/Link-Popover/Test-Empfänger/Name-Inline) von `dark:bg-gray-950` auf App-Standard `dark:bg-gray-800` — Vorschau-Bühne + Error-Log-`<pre>` bewusst dunkel belassen.
+
+1. **Undo/Redo im Editor** (neu [`lib/useHistoryState.ts`](../lib/useHistoryState.ts), [`EditorShell`](../components/tenant-editor/v2/EditorShell.tsx)): Snapshot-Modell — Drop-in-Ersatz für das eine `useState<EditorState>`, kein Handler angefasst. Pause-Coalescing 600ms (Tipp-Burst = 1 Undo-Schritt), Stack-Limit 50, StrictMode-sicher (pure Updater). Strg+Z / Strg+Shift+Z / Strg+Y (Input/contentEditable-Fokus ausgenommen → natives Text-Undo), ↶/↷-Buttons in der Topbar (nur Bearbeiten-Tab — Ressourcen-Tabs speichern server-seitig, UI-Undo wäre dort eine Lüge). **`applyToAll`** für den dbId-Merge nach Save: gilt in present+past+future OHNE History-Eintrag — sonst würde Undo über den Save-Punkt die Page-UUIDs verlieren und der nächste Save würde after_page-Webhook-Bindings zerstören (Aufgabe-54-Invariante). Selection-Clamp-Effect gegen out-of-range nach Undo.
+2. **Builder-Bühne** ([`CenterCanvas`](../components/tenant-editor/v2/CenterCanvas.tsx)): Karte vertikal zentriert (`my-auto` im Flex-Scroll — degradiert sauber zu Scroll), Stage-Hintergrund = `pageBackgroundColor` des Funnels (echtes WYSIWYG; bei transparent: Punktraster statt toter Fläche), Ambient-Glow hinter der Karte im Dark Mode (nur Default-Bühne), sanfter framer-motion-Auftritt beim Step-Wechsel (Test-Modus: stabiler Key, keine Re-Animation).
+3. **StepList-Uplift**: Auto-Titel für unbenannte Steps (Karten → Feld-Labels „Name · E-Mail …", Fragen → Options-Labels; [`StepList`](../components/tenant-editor/v2/StepList.tsx) `derivedStepTitle`), neutraler „Unbenannt"-Fallback statt kursivem „Ohne Titel" ([`StepPill`](../components/tenant-editor/v2/StepPill.tsx)), **Hover-Quick-Actions Duplizieren/Löschen** pro Step-Pill (ohne Confirm — Undo ist das Sicherheitsnetz). **Step-Duplizieren ist neu** (`handleDuplicateQuestion`: Deep-Copy mit frischen `_id`/`_clientId`s, `dbId` bewusst nicht kopiert → neue Page-UUID beim Save; questionKey-Dedup macht der Save-Pfad via ensureUniqueKey).
+4. **Fragetyp als Icon-Galerie** ([`PropertiesPanel`](../components/tenant-editor/v2/PropertiesPanel.tsx) `TypeSelect`): 2-spaltiges Popover mit denselben Typ-Chips (Icon + Pill-Farbe) wie StepList statt nacktem `<select>`. Verhalten identisch (onChange → questionType-Patch).
+5. **Widget: Slider-Default-Commit** ([`funnel.tsx`](../components/funnel.tsx), mit User-Go): Step-Entry-Effect committet fehlende Slider-Werte in `answers` — exakt mit der Anzeige-Fallback-Kette (Frage-Slider: `default ?? min`; Karten-Slider: `sliderDefault ?? Mitte`). Vorher übermittelte „Default akzeptiert + weitergeklickt" keinen Wert. editMode/isSubmitted ausgenommen.
+
+---
+
 ## Aufgabe 54 — Pre-Launch-Fixes: 5 Sicherheits-/Robustheits-Befunde aus Codebase-Audit (2026-06-09)
 
 **Status:** Auf Branch `feature/aufgabe-54-pre-launch-fixes`. Migration **auf Produktion angewendet** (additiv: 1 RPC + 1 Index, mit Stavros-Go), RPC SQL-seitig mit Wegwerf-Funnel getestet (3 Läufe inkl. Atomicity-Rollback, danach gelöscht). Type-Check + `next build` grün, Framing-Header per `curl` gegen alle Routen-Typen verifiziert, echter Funnel-Slug rendert weiter mit `frame-ancestors *`.

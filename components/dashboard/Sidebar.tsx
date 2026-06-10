@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Menu, X, Settings, Power, ChevronLeft, ChevronRight, Moon, Sun, MoreHorizontal, ShieldCheck } from 'lucide-react'
+import { Menu, X, Settings, Power, ChevronLeft, ChevronRight, MoreHorizontal, ShieldCheck } from 'lucide-react'
 import ThemeToggle from '@/components/ui/ThemeToggle'
 import { LogoMark } from './LogoMark'
 import { NAV_ITEMS, isNavItemActive } from './navItems'
@@ -112,8 +112,11 @@ export function Sidebar({
         </button>
       )}
 
-      {/* Logo */}
-      <div className={`flex items-center h-16 shrink-0 ${collapsed ? 'justify-center' : 'px-4'}`}>
+      {/* Logo + Theme-Toggle (Aufgabe 55: Sonne/Mond als einzelnes Icon oben rechts in der
+          Logo-Zeile — Stavros-Spot. Eingeklappt bewusst NICHT gerendert: der Icon-Rail soll
+          reine Navigation bleiben; zum Umschalten kurz aufklappen (Editor-Rail klappt beim
+          Hovern eh auf). mr-3 hält Abstand zum Zuklapp-Pfeil auf der Kante (gleiche Höhe). */}
+      <div className={`flex items-center h-16 shrink-0 ${collapsed ? 'justify-center' : 'justify-between px-4'}`}>
         <Link
           href="/dashboard"
           onClick={(e) => guardedClick(e, '/dashboard')}
@@ -127,6 +130,11 @@ export function Sidebar({
             </span>
           )}
         </Link>
+        {!collapsed && (
+          <div className="mr-3 shrink-0">
+            <ThemeToggle />
+          </div>
+        )}
       </div>
 
       {/* Nav */}
@@ -187,22 +195,9 @@ function SidebarFooter({
   userEmail?: string
   collapsed: boolean
 }) {
-  const [dark, setDark] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
-
-  // Theme beim Mount anwenden (Desktop-Rolle des früheren ThemeToggle) + Zustand fürs Label.
-  useEffect(() => {
-    let initial: boolean
-    try {
-      const stored = localStorage.getItem('theme')
-      initial = stored === 'dark' ? true : stored === 'light' ? false : window.matchMedia('(prefers-color-scheme: dark)').matches
-    } catch {
-      initial = false
-    }
-    document.documentElement.classList.toggle('dark', initial)
-    setDark(initial)
-  }, [])
+  // Theme-Logik lebt komplett in <ThemeToggle> (Header-Zeile) — inkl. Mount-Apply.
 
   useEffect(() => {
     if (!menuOpen) return
@@ -220,34 +215,12 @@ function SidebarFooter({
     }
   }, [menuOpen])
 
-  function toggleTheme() {
-    const next = !dark
-    setDark(next)
-    document.documentElement.classList.toggle('dark', next)
-    try {
-      localStorage.setItem('theme', next ? 'dark' : 'light')
-    } catch {
-      /* ignore */
-    }
-  }
-
   const initials = userName ? initialsOf(userName) : ''
 
   return (
     <div className="border-t border-gray-100 dark:border-gray-800 p-2 flex flex-col gap-1">
-      {/* Theme — sichtbare, beschriftete Zeile mit Switch */}
-      <button
-        type="button"
-        onClick={toggleTheme}
-        title={collapsed ? (dark ? 'Heller Modus' : 'Dunkler Modus') : undefined}
-        aria-label={dark ? 'Zu hellem Modus wechseln' : 'Zu dunklem Modus wechseln'}
-        className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer ${
-          collapsed ? 'justify-center' : ''
-        }`}
-      >
-        {dark ? <Sun size={17} /> : <Moon size={17} />}
-        {!collapsed && <span className="truncate">{dark ? 'Heller Modus' : 'Dunkler Modus'}</span>}
-      </button>
+      {/* Aufgabe 55: Theme-Toggle lebt jetzt oben in der Logo-Zeile (Stavros-Spot) — der
+          Footer trägt nur noch die Workspace-Karte, kein Einrückungs-Mix mehr. */}
 
       {/* User-Menü */}
       <div ref={ref} className="relative">
