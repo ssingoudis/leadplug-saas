@@ -345,7 +345,10 @@ Klare Trennung — keine Override-Hierarchien zwischen Tabellen:
 **Aufgabe 57A Migration (2026-06-10):**
 - `aufgabe_57a_drop_submit_button_label`: `ALTER TABLE funnels DROP COLUMN submit_button_label` — Spalte war tot seit 52D (kein Submit-Button mehr), Code-Referenzen in Aufgabe 56 Runde 4 entfernt, Drop nach Deploy (skip_submit_step-Pattern). Datenlage beim Drop: 2 Funnels mit Standard-Label 'Anfrage absenden' — exakter Snapshot-Restore im DOWN-File. Direkt auf Produktion appliziert (mit User-Go), Prod-Widget danach verifiziert.
 
-**Nächste DB-Arbeit:** Aufgabe 57 Block B — `email_delivery_attempts.is_test boolean NOT NULL DEFAULT false` (Test-Mails in Versand-Historie, additiv). Sonst keine offen: `footer_*`-Spalten, orphaned Submit-Pages, `skip_submit_step` und `submit_button_label` sind weg (52B/52D/57A), tote funnel.*-Chips gestrippt (53), Funnel-Save atomar via RPC (54), Advisor-Härtung (54b).
+**Aufgabe 57B Migration (2026-06-10):**
+- `aufgabe_57b_email_test_logging`: `email_delivery_attempts` + `is_test boolean NOT NULL DEFAULT false` — Test-Mails landen seit 57B in der Versand-Historie (Konsistenz zu Webhook-Tests): `sendTestEmail` legt nach jedem tatsächlichen Send eine Attempt-Row an (submission_id NULL, Status terminal success/failed, delivered_at bei success wegen CHECK). Cron-Queues (pending/retrying) + `aggregateEmailStatusForSubmission` (filtert auf submission_id) bleiben unberührt. Additiv, direkt auf Produktion appliziert (mit User-Go), verifiziert (7 Bestands-Rows = false). DOWN-File vorhanden (Reihenfolge: erst Code zurückrollen, dann Spalte droppen).
+
+**Nächste DB-Arbeit:** keine offen. `footer_*`-Spalten, orphaned Submit-Pages, `skip_submit_step` und `submit_button_label` sind weg (52B/52D/57A), tote funnel.*-Chips gestrippt (53), Funnel-Save atomar via RPC (54), Advisor-Härtung (54b), Test-Mail-Logging (57B).
 
 ---
 

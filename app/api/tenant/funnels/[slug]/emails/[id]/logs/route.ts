@@ -33,7 +33,7 @@ export async function GET(
 
   const { data: attempts, error } = await supabase
     .from('email_delivery_attempts')
-    .select('id, scheduled_at, attempt_count, status, last_error, resend_message_id, recipient_address, delivered_at, next_retry_at, created_at')
+    .select('id, scheduled_at, attempt_count, status, last_error, resend_message_id, recipient_address, delivered_at, next_retry_at, created_at, is_test')
     .eq('subscription_id', id)
     .order('created_at', { ascending: false })
     .limit(limit)
