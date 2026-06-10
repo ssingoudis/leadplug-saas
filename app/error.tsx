@@ -23,7 +23,7 @@ export default function Error({
 
   return (
     <div
-      className="min-h-screen bg-gray-100 dark:bg-[#0d1117] flex items-center justify-center p-4"
+      className="min-h-screen bg-gray-100 dark:bg-background flex items-center justify-center p-4"
       style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
     >
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm p-8 max-w-md w-full text-center">

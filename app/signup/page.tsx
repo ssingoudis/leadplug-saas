@@ -55,7 +55,7 @@ export default function SignupPage() {
   if (sent) {
     return (
       <div
-        className="min-h-screen bg-primary/5 dark:bg-[#0d1117] flex items-center justify-center p-4"
+        className="min-h-screen bg-primary/5 dark:bg-background flex items-center justify-center p-4"
         style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
       >
         <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-lg w-full max-w-sm px-10 py-10 text-center">
@@ -81,7 +81,7 @@ export default function SignupPage() {
 
   return (
     <div
-      className="min-h-screen bg-primary/5 dark:bg-[#0d1117] flex items-center justify-center p-4"
+      className="min-h-screen bg-primary/5 dark:bg-background flex items-center justify-center p-4"
       style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
     >
       <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-lg w-full max-w-sm px-10 py-10">

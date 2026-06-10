@@ -99,6 +99,44 @@ export function ThemePanel({ state, onPatch }: Props) {
           />
         </Field>
       </Section>
+
+      {/* Aufgabe 56: kuratierte Anzeige-Schalter — bewusst wenige, kein Per-Element-Styling. */}
+      <Section title="Anzeige">
+        <ToggleField
+          label="Fortschrittsbalken"
+          enabled={state.showProgressBar}
+          onToggle={(v) => onPatch({ showProgressBar: v })}
+          hint="Dünner Balken oben an der Card."
+        />
+        <ToggleField
+          label="Schritt-Nummer"
+          enabled={state.showStepBadge}
+          onToggle={(v) => onPatch({ showStepBadge: v })}
+          hint="Kleines Nummern-Badge über der Frage."
+        />
+        <Field label="Überschriften-Ausrichtung">
+          <div className="inline-flex w-full rounded-lg border border-gray-300 p-0.5 dark:border-gray-700">
+            {([
+              { value: "left", label: "Links" },
+              { value: "center", label: "Mittig" },
+            ] as const).map((o) => (
+              <button
+                key={o.value}
+                type="button"
+                onClick={() => onPatch({ titleAlignment: o.value })}
+                className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  state.titleAlignment === o.value
+                    ? "bg-primary/10 text-primary"
+                    : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <FieldHint>Gilt für Titel + Untertitel aller Schritte.</FieldHint>
+        </Field>
+      </Section>
     </PanelShell>
   );
 }
@@ -198,6 +236,46 @@ function PageBackgroundField({
           ? "Die Einbett-Seite scheint durch — ideal beim Einbetten."
           : "Eigene Hintergrundfarbe hinter der Card."}
       </FieldHint>
+    </Field>
+  );
+}
+
+function ToggleField({
+  label,
+  enabled,
+  onToggle,
+  hint,
+}: {
+  label: string;
+  enabled: boolean;
+  onToggle: (v: boolean) => void;
+  hint?: string;
+}) {
+  return (
+    <Field label={label}>
+      <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 dark:border-gray-700">
+        <span className="text-sm text-gray-700 dark:text-gray-300">{enabled ? "An" : "Aus"}</span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={enabled}
+          onClick={() => onToggle(!enabled)}
+          className={
+            enabled
+              ? "relative inline-flex h-5 w-9 items-center rounded-full bg-primary transition-colors"
+              : "relative inline-flex h-5 w-9 items-center rounded-full bg-gray-300 transition-colors dark:bg-gray-600"
+          }
+        >
+          <span
+            className={
+              enabled
+                ? "inline-block h-4 w-4 translate-x-4.5 transform rounded-full bg-white shadow transition"
+                : "inline-block h-4 w-4 translate-x-0.5 transform rounded-full bg-white shadow transition"
+            }
+          />
+        </button>
+      </div>
+      {hint && <FieldHint>{hint}</FieldHint>}
     </Field>
   );
 }

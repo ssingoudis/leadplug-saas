@@ -362,7 +362,7 @@ function CardFace({ s, showFunnel }: { s: TenantSubmission; showFunnel: boolean 
   return (
     <div>
       <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{displayName(s)}</p>
-      <p className="truncate text-xs text-gray-400">{s.contact_email ?? s.contact_phone}</p>
+      <p className="truncate text-xs text-gray-400">{s.contact_email ?? s.contact_phone ?? "Keine Kontaktdaten"}</p>
       <div className="mt-2 flex items-center justify-between gap-2">
         <span className="text-[10px] text-gray-400">{fmtDate(s.created_at)}</span>
         {showFunnel && (
@@ -800,7 +800,7 @@ export default function TenantLeadsTable({
 
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{displayName(s)}</p>
-                        <p className="truncate text-xs text-gray-400">{s.contact_email ?? s.contact_phone}</p>
+                        <p className="truncate text-xs text-gray-400">{s.contact_email ?? s.contact_phone ?? "Keine Kontaktdaten"}</p>
                       </div>
 
                       {showFunnel && (

@@ -144,7 +144,7 @@ export function SectionCard({
   const hasHeader = title != null || right != null;
   return (
     <section
-      className={`overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 ${className}`}
+      className={`overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 ${className}`}
     >
       {hasHeader && (
         <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-4">

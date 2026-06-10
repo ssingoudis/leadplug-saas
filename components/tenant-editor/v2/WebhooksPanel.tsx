@@ -143,7 +143,7 @@ export function WebhooksPanel({ funnelSlug, questions, onSubsChanged }: Props) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div
-        className="grid min-h-0 flex-1 bg-gray-50 dark:bg-background"
+        className="grid min-h-0 flex-1 bg-gray-100 dark:bg-background"
         style={{ gridTemplateColumns: `${EDITOR_LEFT_COL} minmax(0, 1fr)` }}
       >
         {/* LEFT: Liste */}
@@ -359,7 +359,7 @@ function WebhookDetail({
               placeholder="Webhook benennen"
               aria-label="Name dieses Webhooks (zum Bearbeiten klicken)"
               title="Klick zum Umbenennen"
-              className="min-w-0 rounded border border-transparent bg-transparent px-1.5 py-0.5 text-sm font-bold text-gray-900 dark:text-white outline-none transition-colors hover:border-gray-200 dark:hover:border-gray-700 focus:border-primary focus:bg-white dark:focus:bg-gray-950"
+              className="min-w-0 rounded border border-transparent bg-transparent px-1.5 py-0.5 text-sm font-bold text-gray-900 dark:text-white outline-none transition-colors hover:border-gray-200 dark:hover:border-gray-700 focus:border-primary focus:bg-white dark:focus:bg-gray-800"
               style={{ width: `${nameWidth}ch` }}
             />
             <button
@@ -620,7 +620,7 @@ function buildExamplePayload(questions: EditorQuestion[]): Record<string, unknow
   };
 }
 
-// JSON-Syntax-Farben (auf dunklem #0f172a, analog zu components/dashboard/CodeSnippet.tsx).
+// JSON-Syntax-Farben (auf bg-code-surface, analog zu components/dashboard/CodeSnippet.tsx).
 const JSON_COLOR = {
   key: "#818cf8",
   string: "#fb923c",
@@ -657,12 +657,8 @@ function JsonCodeBlock({ json }: { json: string }) {
   const tokens = useMemo(() => tokenizeJson(json), [json]);
   return (
     <pre
-      className="overflow-auto rounded-xl px-4 py-3 text-[13px] leading-6"
-      style={{
-        backgroundColor: "#0f172a",
-        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
-        maxHeight: "58vh",
-      }}
+      className="overflow-auto rounded-xl bg-code-surface px-4 py-3 font-mono text-[13px] leading-6 ring-1 ring-white/10"
+      style={{ maxHeight: "58vh" }}
     >
       {tokens.map((t, i) => (
         <span key={i} style={{ color: JSON_COLOR[t.t] }}>{t.v}</span>
@@ -851,8 +847,7 @@ function LogsSection({ funnelSlug, subId }: { funnelSlug: string; subId: string 
                       <div>
                         <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Error</p>
                         <pre
-                          className="overflow-x-auto whitespace-pre-wrap break-all rounded-lg px-3 py-2 text-[12px] leading-5 text-slate-200"
-                          style={{ backgroundColor: "#0f172a", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace" }}
+                          className="overflow-x-auto whitespace-pre-wrap break-all rounded-lg bg-code-surface px-3 py-2 font-mono text-[12px] leading-5 text-slate-200 ring-1 ring-white/10"
                         >{log.last_error}</pre>
                       </div>
                     )}
@@ -860,8 +855,7 @@ function LogsSection({ funnelSlug, subId }: { funnelSlug: string; subId: string 
                       <div>
                         <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Response-Body</p>
                         <pre
-                          className="max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-lg px-3 py-2 text-[12px] leading-5 text-slate-200"
-                          style={{ backgroundColor: "#0f172a", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace" }}
+                          className="max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-code-surface px-3 py-2 font-mono text-[12px] leading-5 text-slate-200 ring-1 ring-white/10"
                         >{log.response_body}</pre>
                       </div>
                     )}

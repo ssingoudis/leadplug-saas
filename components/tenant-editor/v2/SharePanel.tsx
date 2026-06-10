@@ -63,7 +63,7 @@ export function SharePanel({ funnelSlug, funnelName }: Props) {
   );
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-background">
+    <div className="flex-1 overflow-y-auto bg-gray-100 dark:bg-background">
       <div className="mx-auto flex max-w-5xl flex-col gap-6 p-6">
         {/* Embed-Code */}
         <SectionCard
@@ -81,7 +81,7 @@ export function SharePanel({ funnelSlug, funnelName }: Props) {
 
           <button
             onClick={() => setShowFallback((s) => !s)}
-            className="flex w-full cursor-pointer items-center justify-between border-t border-gray-100 px-4 py-2.5 text-xs text-gray-500 transition-colors hover:bg-gray-50 dark:border-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/50"
+            className={`flex w-full cursor-pointer items-center justify-between border-t border-gray-100 px-4 py-2.5 text-xs text-gray-500 transition-colors dark:border-gray-800 dark:text-gray-400 ${showFallback ? "bg-gray-100 dark:bg-gray-800" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"}`}
           >
             <span>Klassische iFrame-Einbettung (ohne Tracking)</span>
             {showFallback ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
@@ -110,8 +110,8 @@ export function SharePanel({ funnelSlug, funnelName }: Props) {
         </SectionCard>
 
         {/* Erweitert: GTM / Callback */}
-        <details className="group overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-          <summary className="flex items-center justify-between px-5 py-3.5 cursor-pointer list-none text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+        <details className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
+          <summary className="flex items-center justify-between px-5 py-3.5 cursor-pointer list-none text-sm font-semibold text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50 group-open:bg-gray-100 dark:group-open:bg-gray-800">
             <span>Für Entwickler & Google Tag Manager (optional)</span>
             <ChevronDown size={16} className="shrink-0 text-gray-400 transition-transform group-open:rotate-180" />
           </summary>
@@ -119,13 +119,13 @@ export function SharePanel({ funnelSlug, funnelName }: Props) {
             <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mt-3">
               Statt der Felder oben kannst du dein Tracking auch selbst am Event andocken. Bei jedem Lead wird in den <code className="font-mono text-[12px] text-primary">dataLayer</code> gepusht:
             </p>
-            <pre className="overflow-x-auto rounded-lg px-4 py-3 text-[12px] leading-5 font-mono" style={{ backgroundColor: "#0f172a", color: "#cbd5e1" }}>
+            <pre className="overflow-x-auto rounded-xl bg-code-surface px-4 py-3 font-mono text-[12px] leading-5 text-slate-300 ring-1 ring-white/10">
 {`window.dataLayer.push({ event: "leadplug_lead", funnel: "${funnelSlug}" })`}
             </pre>
             <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
               In GTM einen Trigger „Benutzerdefiniertes Ereignis" auf <code className="font-mono text-[12px] text-primary">leadplug_lead</code> anlegen. Oder einen eigenen Callback registrieren:
             </p>
-            <pre className="overflow-x-auto rounded-lg px-4 py-3 text-[12px] leading-5 font-mono" style={{ backgroundColor: "#0f172a", color: "#cbd5e1" }}>
+            <pre className="overflow-x-auto rounded-xl bg-code-surface px-4 py-3 font-mono text-[12px] leading-5 text-slate-300 ring-1 ring-white/10">
 {`window.LeadPlug = { onLead: function (e) { /* e.funnel */ } }`}
             </pre>
           </div>

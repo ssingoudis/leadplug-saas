@@ -38,6 +38,14 @@ export function TenantFunnelClient({ config }: Props) {
   const lastSentRef = useRef<string>('')
 
   useEffect(() => {
+    // Aufgabe 56: Live-Preview-Modus. Der „Live ansehen"-Link im Editor öffnet
+    // /{slug}?preview=1 — der Aufruf wird dann NICHT gezählt (Tenant schaut sich
+    // seinen eigenen Funnel an, das ist kein Traffic). Bewusst NUR der View-Zähler:
+    // Submits/Mails/Webhooks bleiben in der Preview voll funktionsfähig, damit der
+    // Tenant einen echten End-to-End-Test machen kann.
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('preview')) {
+      return
+    }
     fetch('/api/track-view', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

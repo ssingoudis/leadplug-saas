@@ -144,7 +144,6 @@ export function buildTheme(state: EditorState): Partial<FunnelTheme> {
 export function buildFunnelConfig(state: EditorState): FunnelConfig {
   return {
     title: state.funnelTitle || "Jetzt kostenloses Angebot anfordern",
-    submitButtonLabel: state.submitButtonLabel || "Anfrage absenden",
     // Aufgabe 51: Titel nie leer (nacktes Häkchen reicht nicht) — interim Default-Fallback.
     // Antwort-Text bleibt optional: leer = zweite Zeile wird nicht angezeigt. (Sauberer Editor-Default → Plan.)
     successMessage: state.successMessage || "Vielen Dank für Ihre Anfrage!",
@@ -158,6 +157,9 @@ export function buildFunnelConfig(state: EditorState): FunnelConfig {
     answersOverviewLabel:
       state.answersOverviewLabel || "Ihre Angaben im Überblick:",
     showAnswersOverview: state.showAnswersOverview,
+    showProgressBar: state.showProgressBar,
+    showStepBadge: state.showStepBadge,
+    titleAlignment: state.titleAlignment,
   };
 }
 
@@ -329,8 +331,10 @@ export function editorStateToFunnelRow(
     tenant_id: tenantId,
     funnel_name: state.funnelName || null,
     contact_form_title: state.funnelTitle || null,
-    submit_button_label: state.submitButtonLabel || null,
     success_message: state.successMessage || null,
+    show_progress_bar: state.showProgressBar,
+    show_step_badge: state.showStepBadge,
+    title_alignment: state.titleAlignment,
     response_message: state.responseMessage || null,
     contact_form_subtitle: state.contactFormSubtitle || null,
     privacy_policy_url: state.privacyPolicyUrl || null,
@@ -935,12 +939,14 @@ export function dbToEditorState(
     borderRadius: funnelRow.border_radius ?? "0.5rem",
     maxWidth: funnelRow.max_width ?? "720px",
     contactFormSubtitle: funnelRow.contact_form_subtitle ?? "",
-    submitButtonLabel: funnelRow.submit_button_label ?? "",
     successMessage: funnelRow.success_message ?? "",
     responseMessage: funnelRow.response_message ?? "",
     privacyText: funnelRow.privacy_text ?? "",
     privacyPolicyUrl: funnelRow.privacy_policy_url ?? "",
     answersOverviewLabel: funnelRow.answers_overview_label ?? "",
+    showProgressBar: funnelRow.show_progress_bar ?? true,
+    showStepBadge: funnelRow.show_step_badge ?? true,
+    titleAlignment: funnelRow.title_alignment === "center" ? "center" : "left",
     showAnswersOverview: funnelRow.show_answers_overview ?? false,
     notificationEmail: funnelRow.notification_email ?? "",
     emailSenderLocal: funnelRow.email_sender_local ?? "",

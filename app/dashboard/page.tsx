@@ -54,13 +54,15 @@ async function getData() {
 
   const all = (submissions ?? []) as Row[]
 
-  // Kontaktierbare Leads (= das CRM-Universum: E-Mail oder Telefon vorhanden).
+  // CRM-Universum (Aufgabe 56, konsistent zu /dashboard/leads): completed IMMER,
+  // Abbrecher nur mit Kontaktkanal (E-Mail oder Telefon).
   const leads = all
     .map((s) => {
       const c = s.contact ?? {}
       return {
         id: s.id,
         created_at: s.created_at,
+        completed_at: s.completed_at,
         status: (s.status as LeadStatus) ?? 'offen',
         funnel_slug: s.funnel_slug,
         name: (c.name ?? '').trim(),
@@ -69,7 +71,7 @@ async function getData() {
         phone: (c.telefon ?? '').trim(),
       }
     })
-    .filter((l) => l.email || l.phone)
+    .filter((l) => l.completed_at || l.email || l.phone)
 
   // Pipeline = aktueller Stand ALLER Leads (Backlog), nicht zeitgefenstert.
   const statusCounts: Record<LeadStatus, number> = {

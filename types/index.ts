@@ -166,7 +166,6 @@ export interface ContactFieldConfig {
 export interface FunnelConfig {
   title: string
   subtitle?: string            // Nur noch optional (SEO-Fallback). Kommt nicht aus Supabase.
-  submitButtonLabel: string
   successMessage: string
   responseMessage: string
   contactFormSubtitle: string
@@ -174,6 +173,10 @@ export interface FunnelConfig {
   privacyText: string          // Einwilligungstext vor dem Datenschutz-Link
   answersOverviewLabel: string // Überschrift der Antworten-Zusammenfassung
   showAnswersOverview: boolean  // Aufgabe 51: Antworten-Übersicht im End-Screen zeigen (default false = cleaner Dank)
+  // Aufgabe 56: kuratierte Anzeige-Schalter (Design-Tab) — KEIN Per-Element-Styling.
+  showProgressBar: boolean      // dünner Fortschrittsbalken oben an der Card
+  showStepBadge: boolean        // Schritt-Nummern-Chip über der Frage
+  titleAlignment: 'left' | 'center'  // Überschriften links (Default) oder mittig
   // Aufgabe 52: footerText entfernt (Footer abgeschafft).
 }
 
@@ -303,7 +306,6 @@ export interface EditorState {
   maxWidth: string
   // Texte
   contactFormSubtitle: string
-  submitButtonLabel: string
   successMessage: string
   responseMessage: string
   privacyText: string
@@ -311,6 +313,10 @@ export interface EditorState {
   answersOverviewLabel: string
   // Aufgabe 51: Antworten-Übersicht im End-Screen zeigen (default false = cleaner Dank ohne Antworten)
   showAnswersOverview: boolean
+  // Aufgabe 56: Anzeige-Schalter (Design-Tab)
+  showProgressBar: boolean
+  showStepBadge: boolean
+  titleAlignment: 'left' | 'center'
   // Aufgabe 52: footerText + footerCompanyName/Email/Phone entfernt (Footer abgeschafft).
   // E-Mail-Einstellungen (pro Funnel)
   notificationEmail: string   // Wohin neue Leads gesendet werden (Leer = Tenant-Standard)

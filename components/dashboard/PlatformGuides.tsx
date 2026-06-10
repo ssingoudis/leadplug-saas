@@ -55,9 +55,9 @@ export default function PlatformGuides() {
       {GUIDES.map((g) => (
         <details
           key={g.platform}
-          className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden"
+          className="group rounded-xl border border-gray-100 shadow-sm dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden"
         >
-          <summary className="flex items-center justify-between px-5 py-3.5 cursor-pointer list-none text-sm font-semibold text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+          <summary className="flex items-center justify-between px-5 py-3.5 cursor-pointer list-none text-sm font-semibold text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50 group-open:bg-gray-100 dark:group-open:bg-gray-800 transition-colors">
             <span>{g.platform}</span>
             <ChevronDown size={16} className="shrink-0 text-gray-400 dark:text-gray-500 transition-transform group-open:rotate-180" />
           </summary>
