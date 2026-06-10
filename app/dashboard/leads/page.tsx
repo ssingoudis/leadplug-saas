@@ -17,11 +17,12 @@ async function getLeadsData(): Promise<{ submissions: TenantSubmission[]; funnel
       .from('submissions')
       .select('id, created_at, completed_at, contact, answers, status, notes, funnel_slug')
       .order('created_at', { ascending: false }),
-    // Frage-Metadaten: pages mit page_type='question' + ihre Fields (genau 1 pro Page)
+    // Frage-Metadaten: question- UND custom-Pages (Aufgabe 56: Karten-Felder brauchen
+    // ihre Labels in der Lead-Detailansicht — vorher zeigten sie rohe field_keys).
     supabase
       .from('pages')
       .select('id, funnel_id')
-      .eq('page_type', 'question'),
+      .in('page_type', ['question', 'custom']),
     supabase
       .from('funnels')
       .select('id, slug, funnel_name')

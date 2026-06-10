@@ -69,6 +69,9 @@ export type FunnelOption = {
 }
 
 function resolveAnswer(key: string, val: string, questions: QuestionMeta[]): string {
+  // Checkbox-Werte lesbar machen (Frage- wie Karten-Checkboxen speichern "true"/"false")
+  if (val === 'true') return 'Ja'
+  if (val === 'false') return 'Nein'
   const q = questions.find((q) => q.question_key === key)
   if (!q) return val
   const options = Array.isArray(q.options) ? q.options : []
@@ -211,6 +214,12 @@ function LeadDetailBody({
   const extraContact = Object.entries(s.contact ?? {}).filter(
     ([key]) => !['anrede', 'name', 'email', 'telefon'].includes(key)
   )
+  // Lesbare Labels fuer die abgeleiteten Kontakt-Keys (deriveContactFromAnswers)
+  const CONTACT_KEY_LABEL: Record<string, string> = {
+    plz: 'PLZ',
+    firstName: 'Vorname',
+    lastName: 'Nachname',
+  }
 
   return (
     <div className="px-5 py-5">
@@ -234,7 +243,7 @@ function LeadDetailBody({
           {extraContact.map(([key, value]) =>
             value ? (
               <div key={key}>
-                <p className="text-xs text-gray-400 dark:text-gray-500">{key}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">{CONTACT_KEY_LABEL[key] ?? key}</p>
                 <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{value}</p>
               </div>
             ) : null
@@ -329,11 +338,11 @@ function LeadDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:p-8"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-sm sm:p-8"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl rounded-2xl bg-white shadow-xl dark:bg-gray-900"
+        className="w-full max-w-2xl rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-800">
@@ -385,7 +394,7 @@ function KanbanCard({ s, showFunnel, onOpen }: { s: TenantSubmission; showFunnel
       {...attributes}
       onClick={onOpen}
       className={`cursor-grab touch-none rounded-xl border border-gray-200 bg-white p-3 shadow-sm transition active:cursor-grabbing dark:border-gray-700 dark:bg-gray-900 ${
-        isDragging ? 'opacity-40' : 'hover:border-primary/40 hover:shadow'
+        isDragging ? 'opacity-40' : 'hover:border-primary/40 hover:bg-gray-50 hover:shadow dark:hover:bg-gray-800'
       }`}
     >
       <CardFace s={s} showFunnel={showFunnel} />
