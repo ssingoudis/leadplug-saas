@@ -20,7 +20,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { EditorState, EditorQuestion, ContactFieldConfig, QuestionType, LogicRule } from "@/types";
-import { toKey } from "@/lib/editorUtils";
+import { hiddenPageIdSet, ruleConditionText, ruleTargetLabel, stepNumbersByDbId } from "@/lib/logicDisplay";
 import type { SelectedStep } from "./types";
 import {
   questionMeta,
@@ -431,39 +431,11 @@ function LogicSection({
     ? rules.filter((r) => r.sourcePageId === q.dbId).sort((a, b) => a.sortOrder - b.sortOrder)
     : [];
 
-  // Anzeige-Nummerierung wie in der StepList (Welcome zählt nicht mit).
-  const numberByDbId = new Map<string, number>();
-  let n = 0;
-  for (const qq of questions) {
-    if (qq.kind !== "welcome") n++;
-    if (qq.dbId) numberByDbId.set(qq.dbId, n);
-  }
-
-  function valueLabel(c: { value: string }): string {
-    if (q.kind === "custom") return c.value; // Karten-Options sind plain strings = gespeicherte Werte
-    const opt = q.options.find((o) => (o.value || toKey(o.label)) === c.value);
-    return opt?.label ?? c.value;
-  }
-
-  // Kompakter Operator-Präfix für die Kurzfassung („Wenn ≥ „4" → Schritt 5").
-  function opPrefix(op: LogicRule["conditions"][number]["op"]): string {
-    switch (op) {
-      case "neq":      return "nicht ";
-      case "contains": return "enthält ";
-      case "gte":      return "≥ ";
-      case "lte":      return "≤ ";
-      case "gt":       return "> ";
-      case "lt":       return "< ";
-      default:         return "";
-    }
-  }
-
-  function targetLabel(r: LogicRule): { text: string; broken: boolean } {
-    if (r.targetType === "end") return { text: "Ende", broken: false };
-    const num = r.targetPageId ? numberByDbId.get(r.targetPageId) : undefined;
-    if (num === undefined) return { text: "Ziel gelöscht → weiter", broken: true };
-    return { text: `Schritt ${num}`, broken: false };
-  }
+  // Aufgabe 59: Lesefassung (Nummerierung, Operator-Präfix, Value→Label, Ziel-Text)
+  // in lib/logicDisplay.ts geteilt mit der Logic-Map — eine Sprache für beide Ansichten.
+  const numberByDbId = stepNumbersByDbId(questions);
+  // Ausgeblendete Ziele → Regel ohne Wirkung (Runtime überspringt sie, „weiter").
+  const hiddenPageIds = hiddenPageIdSet(questions);
 
   return (
     <Section title="Logik">
@@ -473,6 +445,13 @@ function LogicSection({
         </p>
       ) : (
         <>
+          {/* Aufgabe 59: ausgeblendeter Quell-Schritt → seine Regeln laufen im Funnel nie. */}
+          {q.visible === false && ofPage.length > 0 && (
+            <p className="flex items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs leading-relaxed text-amber-800 dark:border-amber-700/40 dark:bg-amber-900/20 dark:text-amber-300">
+              <TriangleAlert size={12} className="mt-0.5 shrink-0" />
+              <span>Dieser Schritt ist ausgeblendet — seine Regeln laufen im Funnel nicht.</span>
+            </p>
+          )}
           {ofPage.length === 0 ? (
             <p className="px-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
               Keine Regeln — nach diesem Schritt geht es linear weiter.
@@ -480,7 +459,7 @@ function LogicSection({
           ) : (
             <ul className="flex flex-col gap-1">
               {ofPage.map((r) => {
-                const t = targetLabel(r);
+                const t = ruleTargetLabel(r, numberByDbId, hiddenPageIds);
                 return (
                   <li
                     key={r.id}
@@ -492,9 +471,7 @@ function LogicSection({
                       <Split size={12} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                     )}
                     <span className="min-w-0 flex-1">
-                      {r.isFallback
-                        ? "Alle anderen Fälle"
-                        : `Wenn ${r.conditions.map((c) => `${opPrefix(c.op)}„${valueLabel(c)}"`).join(" und ")}`}
+                      {ruleConditionText(q, r)}
                       {" → "}
                       <span className={t.broken ? "text-amber-600 dark:text-amber-400" : "font-medium"}>
                         {t.text}

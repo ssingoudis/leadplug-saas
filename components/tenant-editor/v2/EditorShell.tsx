@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Check, ExternalLink, Pencil, Redo2, Save, TriangleAlert, Undo2 } from "lucide-react";
 import type { EditorState, EditorQuestion, ContactFieldConfig, QuestionType, LogicRule } from "@/types";
 import { TopTabs, type TopTabKey } from "./TopTabs";
@@ -13,6 +13,7 @@ import { WebhooksPanel } from "./WebhooksPanel";
 import { EmailsPanel } from "./EmailsPanel";
 import { SharePanel } from "./SharePanel";
 import { LogicRuleModal } from "./LogicRuleModal";
+import { LogicMapPanel } from "./LogicMapPanel";
 import { AddContactFieldPicker } from "./properties/AddContactFieldPicker";
 import { EditorModal } from "./ui/EditorModal";
 import { EDITOR_LEFT_COL } from "./ui/Panel";
@@ -172,7 +173,25 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isTestMode, setIsTestMode] = useState(false);
-  const [activeTab, setActiveTab] = useState<TopTabKey>("content");
+
+  // Aufgabe 59 (Stavros-Befund): der aktive Tab lebt in der URL (?tab=…) statt nur im
+  // React-State — Browser-Zurück/Vor (+ Maustasten) wechseln damit zwischen den Tabs,
+  // statt aus dem Editor zu werfen; Tab-Links sind teilbar/refresh-fest. Shallow via
+  // History API (Next synct useSearchParams ohne Server-Roundtrip — Editor-State bleibt).
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const activeTab: TopTabKey =
+    tabParam === "logic" || tabParam === "emails" || tabParam === "webhooks" || tabParam === "share"
+      ? tabParam
+      : "content";
+  const setActiveTab = useCallback((tab: TopTabKey) => {
+    const url = new URL(window.location.href);
+    const current = url.searchParams.get("tab") ?? "content";
+    if (current === tab) return;
+    if (tab === "content") url.searchParams.delete("tab");
+    else url.searchParams.set("tab", tab);
+    window.history.pushState(null, "", url.toString());
+  }, []);
   // Aufgabe 45: rechter Inspektor im „Bearbeiten"-Tab — „content" = Schritt-Eigenschaften,
   // „design" = funnel-weites Theme. (Inhalt + Design sind ein Tab mit Umschalter.)
   const [inspectorMode, setInspectorMode] = useState<"content" | "design">("content");
@@ -342,6 +361,21 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
       );
     }
   }, [state.questions.length, selected]);
+
+  // Aufgabe 59: Browser-Verlassen-Schutz — der __editorGuard unten fängt nur In-App-Links.
+  // Tab schließen / F5 / Navigation zu einer fremden Seite mit ungespeicherten Änderungen
+  // → nativer Browser-Dialog. (Tab-Wechsel im Editor sind seit dem URL-Sync shallow und
+  // lösen kein beforeunload aus; Soft-Navigation zu anderen App-Routen via Browser-Zurück
+  // bleibt eine bekannte Lücke — popstate ist nicht zuverlässig blockierbar.)
+  useEffect(() => {
+    if (!isDirty) return;
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [isDirty]);
 
   // Exit-Guard registrieren (identische Signatur zu v1, konsumiert von Sidebar/MobileNav/UserMenu).
   useEffect(() => {
@@ -777,10 +811,9 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
     [selected, handlePatch, handlePatchQuestion],
   );
 
-  function withV2Flag(href: string): string {
-    if (href.includes("v=2")) return href;
-    return href.includes("?") ? `${href}&v=2` : `${href}?v=2`;
-  }
+  // Aufgabe 59: withV2Flag entfernt — das ?v=2-Routing-Flag war seit dem v1-Aus (C.1d) tot,
+  // beide Editor-Seiten rendern EditorShell bedingungslos. Alt-URLs mit v=2 bleiben gültig
+  // (der Parameter wird schlicht ignoriert).
 
   // Aufgabe 50: Speichern vom Navigieren entkoppelt. Default bleibt im Editor — der globale
   // Save ist jetzt iterativ nutzbar. Navigation passiert nur noch (a) wenn explizit verlassen
@@ -822,7 +855,7 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
             ? `/dashboard/funnels/${newSlug}/edit`
             : "/dashboard/funnels";
         setPendingHref(null);
-        router.push(withV2Flag(dest));
+        router.push(dest);
         return;
       }
 
@@ -880,7 +913,7 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
       if (leaveAfter) {
         const dest = pendingHref ?? "/dashboard/funnels";
         setPendingHref(null);
-        router.push(withV2Flag(dest));
+        router.push(dest);
       }
     } catch {
       setSaveError("Netzwerkfehler. Bitte erneut versuchen.");
@@ -1085,7 +1118,37 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
             PropertiesPanel durch ThemePanel. CenterCanvas bleibt für Live-Preview.
             Aufgabe 40: Webhooks-Tab ist full-width Panel — kein Canvas, keine StepList,
             weil Webhook-Config keine Page-Selection braucht. */}
-        {activeTab === "webhooks" ? (
+        {activeTab === "logic" ? (
+          // Aufgabe 59: Logic-Map — read-only Übersicht (Daten: state.questions + logicRules,
+          // beides lebt schon hier im Shell). Create-Modus: Regeln brauchen gespeicherte
+          // Page-UUIDs → gleicher Hinweis wie bei Webhooks/E-Mails.
+          mode === "create" || !originalSlug ? (
+            <div className="flex flex-1 items-center justify-center bg-gray-100 dark:bg-background p-8">
+              <div className="max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 text-center">
+                <p className="text-base font-semibold text-gray-900 dark:text-white">Funnel zuerst speichern</p>
+                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                  Logik-Regeln brauchen gespeicherte Schritte. Bitte speichere den Funnel einmal,
+                  dann siehst du hier den Ablauf deines Funnels als Übersicht.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <LogicMapPanel
+              questions={state.questions}
+              rules={logicRules}
+              selected={selected}
+              onSelectStep={(step) => {
+                setSelected(step);
+                setActiveTab("content");
+              }}
+              onOpenLogic={(idx) => setLogicModalIndex(idx)}
+              onStartTest={() => {
+                setIsTestMode(true);
+                setActiveTab("content");
+              }}
+            />
+          )
+        ) : activeTab === "webhooks" ? (
           mode === "create" || !originalSlug ? (
             <div className="flex flex-1 items-center justify-center bg-gray-100 dark:bg-background p-8">
               <div className="max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 text-center">
@@ -1138,24 +1201,30 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
             className="grid min-h-0 flex-1"
             style={{ gridTemplateColumns: `${EDITOR_LEFT_COL} minmax(0, 1fr) clamp(340px, 24vw, 400px)` }}
           >
-            <StepList
-              state={state}
-              selected={selected}
-              onSelect={setSelected}
-              onReorder={handleReorder}
-              onAddQuestion={handleAddQuestion}
-              onAddCardField={handleAddCardField}
-              onAddCustomPage={handleAddCustomPage}
-              onAddAddressCard={handleAddAddressCard}
-              onAddContactCard={handleAddContactCard}
-              onAddWelcome={handleAddWelcome}
-              onDuplicateQuestion={handleDuplicateQuestion}
-              onDeleteQuestion={handleDeleteQuestion}
-              logicCountsByPageId={logicCountsByPageId}
-              onLogicBadgeClick={(idx) => setLogicModalIndex(idx)}
-              webhookCountsByPageId={webhookCountsByPageId}
-              onSwitchToWebhooksTab={() => setActiveTab("webhooks")}
-            />
+            {/* Aufgabe 59 (Stavros-Wunsch): Test-Modus als Fokus-Modus — dunkle Blur-Overlays
+                über beiden Seitenleisten machen unmissverständlich „hier läuft ein Durchlauf".
+                Der Canvas bleibt unangetastet (WYSIWYG). Klick aufs Overlay beendet den Test. */}
+            <div className="relative min-h-0 overflow-hidden">
+              <StepList
+                state={state}
+                selected={selected}
+                onSelect={setSelected}
+                onReorder={handleReorder}
+                onAddQuestion={handleAddQuestion}
+                onAddCardField={handleAddCardField}
+                onAddCustomPage={handleAddCustomPage}
+                onAddAddressCard={handleAddAddressCard}
+                onAddContactCard={handleAddContactCard}
+                onAddWelcome={handleAddWelcome}
+                onDuplicateQuestion={handleDuplicateQuestion}
+                onDeleteQuestion={handleDeleteQuestion}
+                logicCountsByPageId={logicCountsByPageId}
+                onLogicBadgeClick={(idx) => setLogicModalIndex(idx)}
+                webhookCountsByPageId={webhookCountsByPageId}
+                onSwitchToWebhooksTab={() => setActiveTab("webhooks")}
+              />
+              {isTestMode && <TestModeOverlay onClick={() => setIsTestMode(false)} />}
+            </div>
             <CenterCanvas
               state={state}
               selected={selected}
@@ -1175,7 +1244,8 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
               onAddCustomFieldRequest={() => setCanvasFieldPickerOpen(true)}
               liveSlug={mode === "edit" ? originalSlug : undefined}
             />
-            <div className="flex min-h-0 flex-col">
+            <div className="relative flex min-h-0 flex-col">
+              {isTestMode && <TestModeOverlay onClick={() => setIsTestMode(false)} />}
               {/* Aufgabe 45: Inspektor-Umschalter Inhalt | Design (rechte Spalte des Bearbeiten-Tabs).
                   „Inhalt" = Eigenschaften des gewählten Schritts, „Design" = funnel-weites Theme. */}
               <div className="flex h-14 shrink-0 items-center gap-1 border-b border-l border-gray-200 bg-white px-2 dark:border-gray-800 dark:bg-gray-900">
@@ -1249,6 +1319,21 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
 }
 
 /* ───────────────────────────── Sub-components ───────────────────────────── */
+
+// Aufgabe 59: Fokus-Overlay für den Test-Modus — legt sich über eine Seitenleiste
+// (dunkel + leichter Blur), damit klar ist, dass gerade ein Durchlauf läuft.
+// Klick beendet den Test (zurück zum Editor, gleiche Wirkung wie der Toggle-Button).
+function TestModeOverlay({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title="Test beenden — zurück zum Editor"
+      aria-label="Test beenden — zurück zum Editor"
+      className="absolute inset-0 z-30 cursor-pointer bg-gray-900/30 backdrop-blur-[2px] dark:bg-black/50"
+    />
+  );
+}
 
 function NamePromptModal({
   pendingName,

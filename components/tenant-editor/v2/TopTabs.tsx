@@ -14,7 +14,8 @@ interface TabDef {
 const TABS: TabDef[] = [
   // Aufgabe 45: Inhalt + Design in einem Tab „Bearbeiten" (Inspektor-Umschalter rechts).
   { key: "content", label: "Bearbeiten", disabled: false },
-  { key: "logic", label: "Logik", badge: "bald", disabled: true },
+  // Aufgabe 59: Logic-Map live — read-only Übersicht der Logik-Sprünge (Stufe 2).
+  { key: "logic", label: "Logik", disabled: false },
   // Aufgabe 41: E-Mails als 2. Action-Klasse (Webhook-Pattern wiederverwendet).
   { key: "emails", label: "E-Mails", disabled: false },
   // Aufgabe 40: Webhooks als erste echte Action-Klasse.

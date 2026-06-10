@@ -121,6 +121,18 @@ export function CenterCanvas({
 
   return (
     <div className="relative flex h-full flex-col bg-gray-100 dark:bg-background">
+      {/* Aufgabe 59: Test-Modus = Spotlight — die ganze Bühne (inkl. Punktraster + Banner)
+          dunkelt ab, nur das Widget (z-20-Wrapper unten) und die schwebenden Controls (z-20)
+          bleiben im Fokus. Klick auf die abgedunkelte Fläche beendet den Test. */}
+      {isTestMode && (
+        <button
+          type="button"
+          onClick={onToggleTestMode}
+          title="Test beenden — zurück zum Editor"
+          aria-label="Test beenden — zurück zum Editor"
+          className="absolute inset-0 z-10 cursor-pointer bg-gray-900/30 backdrop-blur-[2px] dark:bg-black/50"
+        />
+      )}
       {/* Aufgabe 50: Test-Toggle + Geräte-Umschalter schweben über der Bühne — nur Schatten,
           kein umschließender Kasten. */}
       <div className="pointer-events-none absolute inset-x-0 top-4 z-20 flex justify-center px-4">
@@ -224,51 +236,9 @@ export function CenterCanvas({
           }
         }}
       >
-        {!isTestMode && contactWarningTier && !hideContactWarning && (
-          <div
-            className="mx-auto mb-4 w-full shrink-0"
-            style={{ maxWidth: isMobile ? "375px" : state.maxWidth || "720px" }}
-          >
-            <div
-              className={
-                contactWarningTier === "hard"
-                  ? "flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-800 shadow-sm dark:border-amber-700/40 dark:bg-amber-900/20 dark:text-amber-300"
-                  : "flex items-start gap-2.5 rounded-xl border border-gray-200 bg-white px-4 py-3 text-xs leading-relaxed text-gray-600 shadow-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400"
-              }
-            >
-              {contactWarningTier === "hard" ? (
-                <TriangleAlert size={14} className="mt-0.5 shrink-0" />
-              ) : (
-                <Info size={14} className="mt-0.5 shrink-0" />
-              )}
-              <span className="flex-1">
-                {contactWarningTier === "hard" ? (
-                  <>
-                    <strong>Kein E-Mail-/Telefon-Feld im Funnel.</strong>{" "}
-                    Leads erscheinen im Posteingang, sind aber nicht kontaktierbar. Füge z.&nbsp;B.
-                    eine Kontaktdaten-Karte hinzu („+ Frage hinzufügen").
-                  </>
-                ) : (
-                  <>
-                    <strong>E-Mail/Telefon ist optional.</strong>{" "}
-                    Nur Leads, die das Feld ausfüllen, sind kontaktierbar.
-                  </>
-                )}
-              </span>
-              <button
-                type="button"
-                onClick={() => onToggleContactWarning(true)}
-                title="Hinweis für diesen Funnel ausblenden"
-                aria-label="Hinweis für diesen Funnel ausblenden"
-                className="-m-1 shrink-0 rounded-md p-1 opacity-60 transition-opacity hover:opacity-100"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          </div>
-        )}
         <div
-          className="mx-auto my-auto w-full transition-[max-width] duration-300"
+          // relative + z-20: hebt das Widget im Test-Modus über das Spotlight-Overlay (z-10).
+          className={`relative mx-auto my-auto w-full transition-[max-width] duration-300 ${isTestMode ? "z-20" : ""}`}
           style={{ maxWidth: isMobile ? "375px" : state.maxWidth || "720px" }}
         >
           {placeholder === "no_questions" ? (
@@ -330,6 +300,55 @@ export function CenterCanvas({
           )}
         </div>
       </div>
+
+      {/* Aufgabe 59 (Stavros): Warnbanner schwebt unter der Control-Zeile statt im
+          Dokumentfluss — die Karte bleibt exakt zentriert, ob Banner oder nicht.
+          Breite folgt der Karte (maxWidth), damit es optisch zugehörig wirkt. */}
+      {!isTestMode && contactWarningTier && !hideContactWarning && (
+        <div className="pointer-events-none absolute inset-x-0 top-20 z-10 flex justify-center px-6 lg:px-10">
+          <div
+            className="pointer-events-auto w-full"
+            style={{ maxWidth: isMobile ? "375px" : state.maxWidth || "720px" }}
+          >
+            <div
+              className={
+                contactWarningTier === "hard"
+                  ? "flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-800 shadow-lg ring-1 ring-black/5 dark:border-amber-700/40 dark:bg-amber-900/20 dark:text-amber-300"
+                  : "flex items-start gap-2.5 rounded-xl border border-gray-200 bg-white px-4 py-3 text-xs leading-relaxed text-gray-600 shadow-lg ring-1 ring-black/5 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400"
+              }
+            >
+              {contactWarningTier === "hard" ? (
+                <TriangleAlert size={14} className="mt-0.5 shrink-0" />
+              ) : (
+                <Info size={14} className="mt-0.5 shrink-0" />
+              )}
+              <span className="flex-1">
+                {contactWarningTier === "hard" ? (
+                  <>
+                    <strong>Kein E-Mail-/Telefon-Feld im Funnel.</strong>{" "}
+                    Leads erscheinen im Posteingang, sind aber nicht kontaktierbar. Füge z.&nbsp;B.
+                    eine Kontaktdaten-Karte hinzu („+ Frage hinzufügen").
+                  </>
+                ) : (
+                  <>
+                    <strong>E-Mail/Telefon ist optional.</strong>{" "}
+                    Nur Leads, die das Feld ausfüllen, sind kontaktierbar.
+                  </>
+                )}
+              </span>
+              <button
+                type="button"
+                onClick={() => onToggleContactWarning(true)}
+                title="Hinweis für diesen Funnel ausblenden"
+                aria-label="Hinweis für diesen Funnel ausblenden"
+                className="-m-1 shrink-0 rounded-md p-1 opacity-60 transition-opacity hover:opacity-100"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
