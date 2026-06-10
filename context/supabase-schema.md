@@ -16,6 +16,7 @@
 > - `aufgabe_56_design_toggles` (56): `funnels` + `show_progress_bar` / `show_step_badge` (boolean NOT NULL DEFAULT true) + `title_alignment` (text NOT NULL DEFAULT 'left', CHECK left/center).
 > - `aufgabe_57a_drop_submit_button_label` (57A): `funnels.submit_button_label` GEDROPPT (tot seit 52D; DOWN mit Snapshot-Restore der 2 Werte).
 > - `aufgabe_57b_email_test_logging` (57B): `email_delivery_attempts.is_test boolean NOT NULL DEFAULT false` — Test-Sends aus dem Editor landen als Row (submission_id NULL, Status terminal) in der Versand-Historie.
+> - `aufgabe_57d_hide_contact_warning` (57D): `funnels.hide_contact_warning boolean NOT NULL DEFAULT false` — Kontaktierbarkeits-Warnung im Editor pro Funnel quittierbar (PATCH `/contact-warning`).
 
 > **Aufgabe 52 Migrationen (2026-06-06):**
 > - `aufgabe_52_drop_footer_columns` (52B): `funnels.footer_company_name/email/phone/text` GEDROPPT (Footer abgeschafft).
@@ -334,6 +335,7 @@ Das Widget pro Tenant. Ein Tenant kann mehrere haben. Aktuell 12 Zeilen.
 | `show_progress_bar` | bool | NO | `true` (Aufgabe 56: Anzeige-Schalter) |
 | `show_step_badge` | bool | NO | `true` (Aufgabe 56: Anzeige-Schalter) |
 | `title_alignment` | text | NO | `'left'` (Aufgabe 56, CHECK `left`/`center`) |
+| `hide_contact_warning` | bool | NO | `false` (Aufgabe 57D: Editor-Warnung quittiert) |
 | `redirect_url` | text | YES | — (Aufgabe 39: Redirect nach Submit statt Success-Page) |
 | `meta_pixel_id` | text | YES | — (Aufgabe 43: Conversion-Tracking) |
 | `google_ads_conversion` | text | YES | — (Aufgabe 43: Conversion-Tracking) |

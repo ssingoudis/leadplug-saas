@@ -32,6 +32,9 @@ interface Props {
   mode: "create" | "edit";
   originalSlug?: string;
   companyName: string;
+  // Aufgabe 57D: Kontaktierbarkeits-Warnung wurde für diesen Funnel quittiert
+  // (funnels.hide_contact_warning — bewusst NICHT im EditorState/Undo-Modell).
+  initialHideContactWarning?: boolean;
 }
 
 function makeId(): string {
@@ -157,7 +160,7 @@ function defaultQuestion(type: QuestionType): EditorQuestion {
   };
 }
 
-export function EditorShell({ initialState, mode, originalSlug, companyName }: Props) {
+export function EditorShell({ initialState, mode, originalSlug, companyName, initialHideContactWarning }: Props) {
   const router = useRouter();
 
   // Aufgabe 55: useHistoryState statt useState — Drop-in (identische set-Signatur),
@@ -183,6 +186,28 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
 
   // C.1c WYSIWYG-Edit — welches Element im CenterCanvas ist gerade selektiert (für Highlight + Inline-Edit)
   const [selectedFieldRef, setSelectedFieldRef] = useState<string>("");
+
+  // Aufgabe 57D: Kontaktierbarkeits-Warnung quittierbar. Toggle wirkt sofort in der
+  // Session; das PATCH persistiert pro Funnel als Best-Effort (Fehler nur loggen —
+  // es ist ein UX-Hinweis, kein Datenverlust-Risiko; schlimmstenfalls ist das Banner
+  // beim nächsten Laden wieder da). Create-Modus: noch kein Funnel in der DB → nur Session.
+  const [hideContactWarning, setHideContactWarning] = useState<boolean>(initialHideContactWarning ?? false);
+  const handleToggleContactWarning = useCallback(
+    (hidden: boolean) => {
+      setHideContactWarning(hidden);
+      if (mode !== "edit" || !originalSlug) return;
+      void fetch(`/api/tenant/funnels/${originalSlug}/contact-warning`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hidden }),
+      })
+        .then((res) => {
+          if (!res.ok) console.error("contact-warning persist failed", res.status);
+        })
+        .catch((err) => console.error("contact-warning persist failed", err));
+    },
+    [mode, originalSlug],
+  );
 
   // Polish: Canvas-side Inline-"+"-Button auf leerer Custom-Karte öffnet diesen Shell-Level-Picker.
   // Properties-Panel hat seinen eigenen Picker — beide funktionieren unabhängig.
@@ -1082,6 +1107,8 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
               selected={selected}
               companyName={companyName}
               isTestMode={isTestMode}
+              hideContactWarning={hideContactWarning}
+              onToggleContactWarning={handleToggleContactWarning}
               onToggleTestMode={() => setIsTestMode((t) => !t)}
               selectedFieldRef={selectedFieldRef}
               onSelectField={setSelectedFieldRef}

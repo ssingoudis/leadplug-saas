@@ -7,6 +7,7 @@ interface Props {
   initialState: EditorState;
   originalSlug: string;
   companyName: string;
+  initialHideContactWarning: boolean;
 }
 
 export default function FunnelEditorClient(props: Props) {
@@ -16,6 +17,7 @@ export default function FunnelEditorClient(props: Props) {
       originalSlug={props.originalSlug}
       initialState={props.initialState}
       companyName={props.companyName}
+      initialHideContactWarning={props.initialHideContactWarning}
     />
   );
 }

@@ -348,7 +348,10 @@ Klare Trennung — keine Override-Hierarchien zwischen Tabellen:
 **Aufgabe 57B Migration (2026-06-10):**
 - `aufgabe_57b_email_test_logging`: `email_delivery_attempts` + `is_test boolean NOT NULL DEFAULT false` — Test-Mails landen seit 57B in der Versand-Historie (Konsistenz zu Webhook-Tests): `sendTestEmail` legt nach jedem tatsächlichen Send eine Attempt-Row an (submission_id NULL, Status terminal success/failed, delivered_at bei success wegen CHECK). Cron-Queues (pending/retrying) + `aggregateEmailStatusForSubmission` (filtert auf submission_id) bleiben unberührt. Additiv, direkt auf Produktion appliziert (mit User-Go), verifiziert (7 Bestands-Rows = false). DOWN-File vorhanden (Reihenfolge: erst Code zurückrollen, dann Spalte droppen).
 
-**Nächste DB-Arbeit:** keine offen. `footer_*`-Spalten, orphaned Submit-Pages, `skip_submit_step` und `submit_button_label` sind weg (52B/52D/57A), tote funnel.*-Chips gestrippt (53), Funnel-Save atomar via RPC (54), Advisor-Härtung (54b), Test-Mail-Logging (57B).
+**Aufgabe 57D Migration (2026-06-10):**
+- `aufgabe_57d_hide_contact_warning`: `funnels` + `hide_contact_warning boolean NOT NULL DEFAULT false` — Kontaktierbarkeits-Warnung im Editor ist quittierbar (X am Banner → dezenter Amber-Marker an der Bühne; Toggle persistiert via PATCH `/api/tenant/funnels/[slug]/contact-warning`, Best-Effort, bewusst außerhalb EditorState/Undo). Zusätzlich zwei Warnstufen: hard (kein E-Mail-/Telefon-Feld, amber) / soft (Feld vorhanden aber optional, grauer Info-Hinweis). Additiv, direkt auf Produktion appliziert (mit User-Go), DOWN-File vorhanden (erst Code zurückrollen, dann droppen).
+
+**Nächste DB-Arbeit:** geplant für Logik-Tab (C.4): `funnel_logic_rules` (Konzept-Diskussion läuft, noch kein Schema festgezurrt). Sonst keine offen — `footer_*`, orphaned Submit-Pages, `skip_submit_step`, `submit_button_label` sind weg (52B/52D/57A), tote funnel.*-Chips gestrippt (53), Funnel-Save atomar via RPC (54), Advisor-Härtung (54b), Test-Mail-Logging (57B), Warnungs-Quittierung (57D).
 
 ---
 
