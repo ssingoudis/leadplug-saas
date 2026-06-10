@@ -49,6 +49,10 @@ interface Props {
   // Aufgabe 40: Webhook-Badges auf Step-Pills
   webhookCountsByPageId?: Record<string, number>;
   onSwitchToWebhooksTab?: () => void;
+  // Aufgabe 58: Logik-Badges auf Step-Pills (Anzahl Regeln pro Quell-Page).
+  // Klick öffnet den Regel-Editor für genau diesen Step.
+  logicCountsByPageId?: Record<string, number>;
+  onLogicBadgeClick?: (index: number) => void;
 }
 
 // Aufgabe 55: Auto-Titel für unbenannte Steps — abgeleitet aus dem Inhalt statt
@@ -84,6 +88,8 @@ export function StepList({
   onDeleteQuestion,
   webhookCountsByPageId = {},
   onSwitchToWebhooksTab,
+  logicCountsByPageId = {},
+  onLogicBadgeClick,
 }: Props) {
   // Aufgabe 50: Add-Ziel. `index` = Einfüge-Position. `allowIntoSelected` = darf ein Karten-Feld
   // in die aktuell gewählte Karte wandern (true beim Footer-„Hinzufügen", false bei Insert-Edges,
@@ -144,6 +150,7 @@ export function StepList({
               {flowQuestions.map(({ q, idx }, pos) => {
                 const step: SelectedStep = { kind: "question", questionIndex: idx };
                 const webhookCount = q.dbId ? (webhookCountsByPageId[q.dbId] ?? 0) : 0;
+                const logicCount = q.dbId ? (logicCountsByPageId[q.dbId] ?? 0) : 0;
                 return (
                   <div key={q._id} className="flex flex-col">
                     <SortableQuestionItem
@@ -155,6 +162,8 @@ export function StepList({
                       onDelete={() => onDeleteQuestion(idx)}
                       webhookCount={webhookCount}
                       onWebhookBadgeClick={onSwitchToWebhooksTab}
+                      logicCount={logicCount}
+                      onLogicBadgeClick={onLogicBadgeClick ? () => onLogicBadgeClick(idx) : undefined}
                     />
                     {/* Edge nach jeder Frage — inkl. der letzten (fügt dann ans Ende der Fragen ein) */}
                     <InsertEdge onClick={() => setAddTarget({ index: idx + 1, allowIntoSelected: false })} />
@@ -263,6 +272,8 @@ function SortableQuestionItem({
   onDelete,
   webhookCount,
   onWebhookBadgeClick,
+  logicCount,
+  onLogicBadgeClick,
 }: {
   question: EditorQuestion;
   number: number;
@@ -272,6 +283,8 @@ function SortableQuestionItem({
   onDelete?: () => void;
   webhookCount?: number;
   onWebhookBadgeClick?: () => void;
+  logicCount?: number;
+  onLogicBadgeClick?: () => void;
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: question._id });
@@ -307,6 +320,8 @@ function SortableQuestionItem({
         onDelete={onDelete}
         webhookCount={webhookCount}
         onWebhookBadgeClick={onWebhookBadgeClick}
+        logicCount={logicCount}
+        onLogicBadgeClick={onLogicBadgeClick}
       />
     </div>
   );

@@ -193,6 +193,10 @@ export function buildQuestions(
       if (q.kind === "welcome") {
         return {
           id: q.questionKey || q._id,
+          // Aufgabe 58: dbId als pageId durchreichen — der Editor-Test-Modus wertet
+          // damit dieselben Logik-Regeln aus wie das Live-Widget (neue, ungespeicherte
+          // Steps haben keine dbId → keine Regeln, linear weiter).
+          pageId: q.dbId,
           title: q.title,
           subtitle: q.subtitle || undefined,
           questionType: "single_choice" as const,
@@ -207,6 +211,7 @@ export function buildQuestions(
       if (q.kind === "custom") {
         return {
           id: q.questionKey || q._id,
+          pageId: q.dbId,
           title: q.title,
           subtitle: q.subtitle || undefined,
           questionType: "single_choice" as const,
@@ -238,6 +243,7 @@ export function buildQuestions(
       });
       return {
         id: q.questionKey || q._id,
+        pageId: q.dbId,
         title: q.title,
         subtitle: q.subtitle || undefined,
         questionType: q.questionType,
@@ -483,12 +489,15 @@ export function editorStateToPagesAndFields(
   /** Aufgabe 54: Mapping EditorQuestion._id → persistierte Page-UUID. Der PUT gibt
    *  es an den Editor zurück, der die dbIds in seinen State mergt — neu angelegte
    *  Steps haben damit ab dem ersten Save eine stabile UUID (statt bis zum Reload
-   *  bei jedem Save zu rotieren). */
-  pageIdByClientId: Array<{ clientId: string; pageId: string }>;
+   *  bei jedem Save zu rotieren).
+   *  Aufgabe 58: bei Question-Pages reist zusätzlich der FINALE field_key mit
+   *  (questionKey) — bei leerem Editor-Key wird er hier server-seitig generiert,
+   *  und der Editor muss ihn kennen (Logik-Bedingungen referenzieren ihn). */
+  pageIdByClientId: Array<{ clientId: string; pageId: string; questionKey?: string }>;
 } {
   const pages: PageInsertRow[] = [];
   const fields: FieldInsertRow[] = [];
-  const pageIdByClientId: Array<{ clientId: string; pageId: string }> = [];
+  const pageIdByClientId: Array<{ clientId: string; pageId: string; questionKey?: string }> = [];
 
   // Aufgabe 40 Polish: Globale Key-Sammlung über alle Question-Pages
   // (Custom-Pages haben eigene per-Page-Eindeutigkeit via DB-Constraint).
@@ -509,7 +518,11 @@ export function editorStateToPagesAndFields(
         ? q.dbId
         : newPageId();
     seenPageIds.add(pageId);
-    pageIdByClientId.push({ clientId: q._id, pageId });
+    const mappingEntry: { clientId: string; pageId: string; questionKey?: string } = {
+      clientId: q._id,
+      pageId,
+    };
+    pageIdByClientId.push(mappingEntry);
 
     // Aufgabe 39: Welcome-Screen = Intro-Step mit eigenem Button-Label, kein Field
     if (q.kind === "welcome") {
@@ -596,6 +609,8 @@ export function editorStateToPagesAndFields(
     const baseKey = rawQKey || generateFieldKey(q.questionType, q.title, allQuestionKeys);
     const finalQKey = ensureUniqueKey(baseKey, allQuestionKeys);
     allQuestionKeys.add(finalQKey);
+    // Aufgabe 58: finalen Key zurückmelden (Editor merged ihn wie die dbId).
+    mappingEntry.questionKey = finalQKey;
 
     fields.push({
       page_id: pageId,

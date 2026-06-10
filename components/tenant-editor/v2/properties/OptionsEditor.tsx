@@ -114,7 +114,9 @@ function SortableOptionRow({
     opacity: isDragging ? 0.85 : undefined,
   };
 
-  // Aufgabe 57C: Canvas-Klick auf Option N markiert diese Zeile (Ref "option_<idx>").
+  // Aufgabe 57C: Canvas-Klick auf Option N markiert das Options-Textfeld (Ref "option_<idx>").
+  // Ring NUR auf dem Eingabefeld (Stavros-Review) — nicht auf Chip/Griff/Mülleimer;
+  // data-sel-target bleibt am Row-Wrapper als Scroll-Anker.
   const isCanvasSelected = useSelectedFieldRef() === `option_${index}`;
 
   return (
@@ -123,7 +125,7 @@ function SortableOptionRow({
       style={style}
       {...attributes}
       data-sel-target={`option_${index}`}
-      className={`flex items-center gap-1.5 ${isCanvasSelected ? `rounded-lg ${selRing(true)}` : ""}`}
+      className="flex items-center gap-1.5"
     >
       <span
         ref={setActivatorNodeRef}
@@ -150,7 +152,7 @@ function SortableOptionRow({
         value={option.label}
         onChange={(e) => onPatch({ label: e.target.value })}
         placeholder={`Option ${index + 1}`}
-        className="flex-1 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+        className={`flex-1 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500 ${selRing(isCanvasSelected)}`}
       />
 
       <button

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Trash2, ChevronDown, Plus } from "lucide-react";
+import { Trash2, ChevronDown, Plus, Split, TriangleAlert } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -19,7 +19,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { EditorState, EditorQuestion, ContactFieldConfig, QuestionType } from "@/types";
+import type { EditorState, EditorQuestion, ContactFieldConfig, QuestionType, LogicRule } from "@/types";
+import { toKey } from "@/lib/editorUtils";
 import type { SelectedStep } from "./types";
 import {
   questionMeta,
@@ -42,6 +43,10 @@ interface Props {
   // Aufgabe 57C: Canvas-Selektion (data-edit-field-Ref aus funnel.tsx). Karten-Feld-Klicks
   // ("card_field_<id>") klappen rechts die passende Feld-Zeile auf.
   selectedFieldRef?: string;
+  // Aufgabe 58: Logik-Regeln des Funnels (für die Kurzfassung in der „Logik"-Sektion)
+  // + Öffner für den Regel-Editor (LogicRuleModal lebt im EditorShell).
+  logicRules?: LogicRule[];
+  onOpenLogicEditor?: (index: number) => void;
   onPatch: (patch: Partial<EditorState>) => void;
   onPatchQuestion: (index: number, patch: Partial<EditorQuestion>) => void;
   onDeleteQuestion: (index: number) => void;
@@ -56,6 +61,8 @@ export function PropertiesPanel({
   state,
   selected,
   selectedFieldRef,
+  logicRules,
+  onOpenLogicEditor,
   onPatch,
   onPatchQuestion,
   onDeleteQuestion,
@@ -96,6 +103,8 @@ export function PropertiesPanel({
           state={state}
           index={selected.questionIndex}
           selectedFieldRef={selectedFieldRef}
+          logicRules={logicRules}
+          onOpenLogicEditor={onOpenLogicEditor}
           onPatchQuestion={onPatchQuestion}
           onDelete={() => onDeleteQuestion(selected.questionIndex)}
           onPatchCustomField={(clientId, patch) => onPatchCustomField(selected.questionIndex, clientId, patch)}
@@ -107,6 +116,8 @@ export function PropertiesPanel({
         <QuestionProps
           state={state}
           index={selected.questionIndex}
+          logicRules={logicRules}
+          onOpenLogicEditor={onOpenLogicEditor}
           onPatchQuestion={onPatchQuestion}
           onDelete={() => onDeleteQuestion(selected.questionIndex)}
         />
@@ -125,11 +136,13 @@ export function PropertiesPanel({
 interface QuestionPropsArgs {
   state: EditorState;
   index: number;
+  logicRules?: LogicRule[];
+  onOpenLogicEditor?: (index: number) => void;
   onPatchQuestion: (index: number, patch: Partial<EditorQuestion>) => void;
   onDelete: () => void;
 }
 
-function QuestionProps({ state, index, onPatchQuestion, onDelete }: QuestionPropsArgs) {
+function QuestionProps({ state, index, logicRules, onOpenLogicEditor, onPatchQuestion, onDelete }: QuestionPropsArgs) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const q = state.questions[index];
   if (!q) {
@@ -183,6 +196,14 @@ function QuestionProps({ state, index, onPatchQuestion, onDelete }: QuestionProp
         />
       </Section>
 
+      <LogicSection
+        q={q}
+        index={index}
+        questions={state.questions}
+        rules={logicRules ?? []}
+        onEdit={onOpenLogicEditor}
+      />
+
       <Section>
         <button
           type="button"
@@ -216,6 +237,8 @@ function CustomPageProps({
   state,
   index,
   selectedFieldRef,
+  logicRules,
+  onOpenLogicEditor,
   onPatchQuestion,
   onDelete,
   onPatchCustomField,
@@ -226,6 +249,8 @@ function CustomPageProps({
   state: EditorState;
   index: number;
   selectedFieldRef?: string;
+  logicRules?: LogicRule[];
+  onOpenLogicEditor?: (index: number) => void;
   onPatchQuestion: (index: number, patch: Partial<EditorQuestion>) => void;
   onDelete: () => void;
   onPatchCustomField: (clientId: string, patch: Partial<ContactFieldConfig>) => void;
@@ -350,6 +375,14 @@ function CustomPageProps({
         />
       </Section>
 
+      <LogicSection
+        q={page}
+        index={index}
+        questions={state.questions}
+        rules={logicRules ?? []}
+        onEdit={onOpenLogicEditor}
+      />
+
       <Section>
         <button
           type="button"
@@ -369,6 +402,120 @@ function CustomPageProps({
         message="Diese Aktion kann nur durch Verwerfen ungespeicherter Änderungen rückgängig gemacht werden."
       />
     </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Aufgabe 58 — Logik-Kurzfassung pro Step. Zeigt die Regeln in Lesefassung
+   („Wenn „B" → Schritt 5 · Alle anderen Fälle → Ende") + öffnet den Regel-Editor
+   (LogicRuleModal, lebt im EditorShell). Ungespeicherte Steps (ohne dbId) können
+   keine Regeln tragen — Hinweis statt Button.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+function LogicSection({
+  q,
+  index,
+  questions,
+  rules,
+  onEdit,
+}: {
+  q: EditorQuestion;
+  index: number;
+  questions: EditorQuestion[];
+  rules: LogicRule[];
+  onEdit?: (index: number) => void;
+}) {
+  if (!onEdit) return null;
+
+  const ofPage = q.dbId
+    ? rules.filter((r) => r.sourcePageId === q.dbId).sort((a, b) => a.sortOrder - b.sortOrder)
+    : [];
+
+  // Anzeige-Nummerierung wie in der StepList (Welcome zählt nicht mit).
+  const numberByDbId = new Map<string, number>();
+  let n = 0;
+  for (const qq of questions) {
+    if (qq.kind !== "welcome") n++;
+    if (qq.dbId) numberByDbId.set(qq.dbId, n);
+  }
+
+  function valueLabel(c: { value: string }): string {
+    if (q.kind === "custom") return c.value; // Karten-Options sind plain strings = gespeicherte Werte
+    const opt = q.options.find((o) => (o.value || toKey(o.label)) === c.value);
+    return opt?.label ?? c.value;
+  }
+
+  // Kompakter Operator-Präfix für die Kurzfassung („Wenn ≥ „4" → Schritt 5").
+  function opPrefix(op: LogicRule["conditions"][number]["op"]): string {
+    switch (op) {
+      case "neq":      return "nicht ";
+      case "contains": return "enthält ";
+      case "gte":      return "≥ ";
+      case "lte":      return "≤ ";
+      case "gt":       return "> ";
+      case "lt":       return "< ";
+      default:         return "";
+    }
+  }
+
+  function targetLabel(r: LogicRule): { text: string; broken: boolean } {
+    if (r.targetType === "end") return { text: "Ende", broken: false };
+    const num = r.targetPageId ? numberByDbId.get(r.targetPageId) : undefined;
+    if (num === undefined) return { text: "Ziel gelöscht → weiter", broken: true };
+    return { text: `Schritt ${num}`, broken: false };
+  }
+
+  return (
+    <Section title="Logik">
+      {!q.dbId ? (
+        <p className="px-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+          Logik braucht gespeicherte Schritte — bitte zuerst speichern.
+        </p>
+      ) : (
+        <>
+          {ofPage.length === 0 ? (
+            <p className="px-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+              Keine Regeln — nach diesem Schritt geht es linear weiter.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-1">
+              {ofPage.map((r) => {
+                const t = targetLabel(r);
+                return (
+                  <li
+                    key={r.id}
+                    className="flex items-start gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs leading-relaxed text-gray-700 dark:border-gray-700 dark:text-gray-300"
+                  >
+                    {t.broken ? (
+                      <TriangleAlert size={12} className="mt-0.5 shrink-0 text-amber-500" />
+                    ) : (
+                      <Split size={12} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                    )}
+                    <span className="min-w-0 flex-1">
+                      {r.isFallback
+                        ? "Alle anderen Fälle"
+                        : `Wenn ${r.conditions.map((c) => `${opPrefix(c.op)}„${valueLabel(c)}"`).join(" und ")}`}
+                      {" → "}
+                      <span className={t.broken ? "text-amber-600 dark:text-amber-400" : "font-medium"}>
+                        {t.text}
+                      </span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <button
+            type="button"
+            onClick={() => onEdit(index)}
+            className="mt-2 inline-flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:border-primary hover:text-primary dark:border-gray-700 dark:text-gray-400"
+          >
+            <Split size={14} />
+            Logik bearbeiten
+          </button>
+        </>
+      )}
+    </Section>
   );
 }
 

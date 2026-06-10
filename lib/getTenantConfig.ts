@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import type { TenantConfig, FunnelFont, ContactFieldConfig, QuestionType, QuestionConfig } from '@/types'
+import { mapLogicRuleRow } from '@/lib/logicRuleMapping'
+import type { TenantConfig, FunnelFont, ContactFieldConfig, QuestionType, QuestionConfig, LogicRule } from '@/types'
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-_]*$/
 
@@ -290,7 +291,30 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
   const tenantActive = (data.tenants as Record<string, any>)?.is_active !== false
   if (!data.is_active || !tenantActive) throw new TenantInactiveError()
 
-  return mapDbRow(data)
+  const config = mapDbRow(data)
+  config.logicRules = await fetchLogicRules(supabase, data.id as string)
+  return config
+}
+
+// Aufgabe 58: Logik-Regeln des Funnels. Bewusst defensiv (eigene Query + eigener
+// catch): ein Fehler hier (z.B. Tabelle noch nicht migriert) darf das Widget nie
+// killen — dann läuft der Funnel einfach linear wie bisher.
+async function fetchLogicRules(supabase: SupabaseClient, funnelId: string): Promise<LogicRule[]> {
+  try {
+    const { data, error } = await supabase
+      .from('funnel_logic_rules')
+      .select('id, source_page_id, sort_order, is_fallback, conditions, target_type, target_page_id')
+      .eq('funnel_id', funnelId)
+      .order('sort_order', { ascending: true })
+    if (error) {
+      console.error('getTenantConfig: logic rules query failed', error)
+      return []
+    }
+    return (data ?? []).map(mapLogicRuleRow)
+  } catch (err) {
+    console.error('getTenantConfig: logic rules fetch failed', err)
+    return []
+  }
 }
 
 export async function getTenantConfig(slug: string): Promise<TenantConfig | null> {

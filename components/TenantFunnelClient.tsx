@@ -187,6 +187,7 @@ export function TenantFunnelClient({ config }: Props) {
       funnel={config.funnel}
       questions={config.questions}
       redirectUrl={config.redirectUrl}
+      logicRules={config.logicRules}
       onSubmit={handleSubmit}
       onAnswersChange={handleAnswersChange}
       onPageAdvanced={handlePageAdvanced}
