@@ -221,6 +221,30 @@ export interface TenantConfig {
   redirectUrl?: string         // Aufgabe 39: wenn gesetzt, Widget redirected nach Submit auf diese URL statt Success-Page
   metaPixelId?: string         // Aufgabe 43: Meta-Pixel-ID — embed.js feuert fbq('track','Lead') beim Submit
   googleAdsConversion?: string // Aufgabe 43: Google-Ads-Conversion send_to (AW-XXX/Label) — embed.js feuert gtag conversion
+  logicRules?: LogicRule[]     // Aufgabe 58: Logik-Sprünge (leer/undefined = lineares Verhalten wie bisher)
+}
+
+// =============================================================================
+// LOGIK-SPRÜNGE (Aufgabe 58) — Regeln pro Step, erste matchende gewinnt.
+// Auswertung client (Widget) + server (Submit-Backstop) via lib/funnelLogic.ts.
+// =============================================================================
+
+export type LogicOp = 'eq' | 'neq' | 'includes' | 'contains' | 'gt' | 'gte' | 'lt' | 'lte'
+
+export interface LogicCondition {
+  fieldKey: string   // answers-Key (Question: field_key der Frage; Karte: field_key des Feldes)
+  op: LogicOp        // 'includes' = comma-Liste (multi_choice) · 'contains' = Substring (Freitext) · gt/gte/lt/lte = numerisch (Slider/Zahl/Bewertung/Skala)
+  value: string
+}
+
+export interface LogicRule {
+  id: string
+  sourcePageId: string            // pages.id des Quell-Steps
+  sortOrder: number               // Auswertungs-Reihenfolge (erste matchende Regel gewinnt)
+  isFallback: boolean             // „Alle anderen Fälle" — ohne Bedingungen, wird zuletzt geprüft
+  conditions: LogicCondition[]    // UND-verknüpft; leer nur bei isFallback
+  targetType: 'page' | 'end'      // 'end' = sofort absenden (Erfolgsseite)
+  targetPageId: string | null     // NULL (z.B. Ziel-Page gelöscht) ⇒ Runtime-Fallback „weiter"
 }
 
 // Dynamische Kontaktdaten — Keys entsprechen den ContactFieldConfig.key-Werten.

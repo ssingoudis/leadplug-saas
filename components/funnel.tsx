@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import { ChevronLeft, Check, CircleAlert, GripVertical, Plus, Trash2, Copy } from "lucide-react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
@@ -29,6 +29,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 import { resolveAnswer } from "@/lib/resolveAnswer";
 import { validateContactField } from "@/lib/validateContactField";
+import { groupRulesBySource, resolveNext } from "@/lib/funnelLogic";
 import type {
   FunnelTheme,
   FunnelFont,
@@ -41,6 +42,7 @@ import type {
   CheckboxConfig,
   ContactFieldConfig,
   OptionMarker,
+  LogicRule,
 } from "@/types";
 
 // Aufgabe 50: Marker-String einer Antwort-Option je nach Stil. null = kein Chip rendern.
@@ -243,6 +245,9 @@ interface FunnelProps {
   redirectUrl?: string;
   // Polish: Custom-Karte leer → Builder rendert inline "+ Feld hinzufügen"-Button im Canvas, bubble up
   onAddCustomFieldRequest?: () => void;
+  // Aufgabe 58: Logik-Sprünge. Leer/undefined = lineares Verhalten (exakt wie vor 58).
+  // Auswertung beim Step-Advance via lib/funnelLogic (Quell-Page → Ziel-Page/Ende).
+  logicRules?: LogicRule[];
 }
 
 export function Funnel({
@@ -266,6 +271,7 @@ export function Funnel({
   onSubmit,
   redirectUrl,
   onAddCustomFieldRequest,
+  logicRules,
 }: FunnelProps) {
 
   // Editor-Preview-Highlight (Standard): outline AUSSERHALB des Elements (offset +3px).
@@ -355,6 +361,13 @@ export function Funnel({
   const [currentStep, setCurrentStep] = useState(initialStep ?? 0);
   // C.1c — Slide-Animations-Richtung (1 = forward/slide-up, -1 = backward/slide-down). In editMode unbenutzt.
   const [slideDirection, setSlideDirection] = useState<1 | -1>(1);
+
+  // Aufgabe 58 — Logik-Sprünge: Regeln nach Quell-Page gruppiert (O(1)-Lookup beim Advance).
+  const rulesBySource = useMemo(() => groupRulesBySource(logicRules ?? []), [logicRules]);
+  // History-Stack der besuchten Step-Indizes: „Zurück" nach einem Sprung muss auf den
+  // tatsächlich besuchten Step zurückführen, nicht auf Index-1. Ref statt State —
+  // der Stack ändert nie das Rendering (Back-Disabled hängt an currentStep > 0).
+  const stepHistoryRef = useRef<number[]>([]);
 
   const [answers, setAnswers] = useState<Record<string, string>>(initialAnswers ?? {});
 
@@ -502,59 +515,90 @@ export function Funnel({
     [answers, honeypot, onSubmit],
   );
 
+  // Aufgabe 58 — Sprung-Auflösung beim Step-Advance: wertet die Logik-Regeln der
+  // aktuellen Page gegen den Antworten-Snapshot aus. Liefert den Ziel-Index oder
+  // "end" (= sofort absenden). Vorwärts-only: Ziele vor/auf dem aktuellen Step
+  // (oder nicht (mehr) vorhandene Ziel-Pages) degradieren zu „nächster Schritt".
+  const resolveAdvanceIndex = useCallback(
+    (answersSnapshot: Record<string, string>): number | "end" => {
+      const pageId = currentQuestion?.pageId;
+      const target = pageId ? resolveNext(rulesBySource.get(pageId), answersSnapshot) : null;
+      if (target?.type === "end") return "end";
+      if (target?.type === "page") {
+        const idx = visibleQuestions.findIndex((q, j) => j > currentStep && q.pageId === target.pageId);
+        if (idx > currentStep) return idx;
+      }
+      return currentStep + 1;
+    },
+    [currentQuestion, currentStep, visibleQuestions, rulesBySource],
+  );
+
   // Single-choice: sets answer, then advances after 250ms so the selected color
   // is briefly visible before the step transition fires (Typeform-Pattern).
   // C.1c: editMode short-circuit — Builder-Klick auf Option soll selektieren/editieren, nicht advancen.
   // Aufgabe 35: im Skip-Mode + letzter Frage feuert direkt /api/submit + zeigt Success.
   // Aufgabe 40 Polish: nach Step-Advance feuert onPageAdvanced(pageId) — triggert after_page-Webhooks.
+  // Aufgabe 58: Advance läuft über resolveAdvanceIndex (Logik-Sprünge); History-Stack für „Zurück".
   const handleSelect = useCallback(
     (questionId: string, value: string) => {
       if (editMode) return;
       setAnswers((prev) => ({ ...prev, [questionId]: value }));
       setTimeout(() => {
-        if (isLastQuestion) {
+        const answersSnapshot = { ...answers, [questionId]: value };
+        const dest = isLastQuestion ? "end" : resolveAdvanceIndex(answersSnapshot);
+        if (dest === "end") {
           autoFinish({ questionId, value });
           return;
         }
-        if (currentStep < visibleQuestions.length) {
+        if (dest < visibleQuestions.length) {
           const advancingPageId = currentQuestion?.pageId;
+          stepHistoryRef.current.push(currentStep);
           setSlideDirection(1);
-          setCurrentStep((prev) => prev + 1);
+          setCurrentStep(dest);
           if (advancingPageId) {
-            const snapshot = { answers: { ...answers, [questionId]: value }, contact: {} };
-            onPageAdvanced?.(advancingPageId, snapshot);
+            onPageAdvanced?.(advancingPageId, { answers: answersSnapshot, contact: {} });
           }
         }
       }, 250);
     },
-    [currentStep, visibleQuestions.length, editMode, isLastQuestion, autoFinish, currentQuestion, onPageAdvanced],
+    [currentStep, visibleQuestions.length, editMode, isLastQuestion, autoFinish, currentQuestion, onPageAdvanced, answers, resolveAdvanceIndex],
   );
 
   // Goes back one step. The zurück button is disabled at step 0.
+  // Aufgabe 58: nach Sprüngen führt „Zurück" auf den tatsächlich besuchten Step (History-Stack);
+  // der Index-Guard ist Defensive gegen Stack-Desync (dann linear zurück).
   const handleBack = () => {
     if (editMode) return;
     if (currentStep > 0) {
       setSlideDirection(-1);
-      setCurrentStep((prev) => prev - 1);
+      const prev = stepHistoryRef.current.pop();
+      setCurrentStep(prev !== undefined && prev < currentStep ? prev : currentStep - 1);
     }
   };
 
   // Advances to the next step. Used by the Weiter button on non-choice question types.
   // Aufgabe 35: im Skip-Mode + letzter Frage Auto-Finish statt Step-Advance.
   // Aufgabe 40 Polish: nach Step-Advance feuert onPageAdvanced(pageId) — triggert after_page-Webhooks.
+  // Aufgabe 58: Advance läuft über resolveAdvanceIndex (Logik-Sprünge); History-Stack für „Zurück".
   const handleNext = useCallback(() => {
     if (editMode) return;
     if (isLastQuestion) {
       autoFinish();
       return;
     }
+    const dest = resolveAdvanceIndex(answers);
+    if (dest === "end") {
+      autoFinish();
+      return;
+    }
     const advancingPageId = currentQuestion?.pageId;
+    stepHistoryRef.current.push(currentStep);
     setSlideDirection(1);
-    setCurrentStep((prev) => prev + 1);
+    setCurrentStep(dest);
     if (advancingPageId) {
       onPageAdvanced?.(advancingPageId, { answers, contact: {} });
     }
-  }, [editMode, isLastQuestion, autoFinish, currentQuestion, onPageAdvanced, answers]);
+  }, [editMode, isLastQuestion, autoFinish, currentQuestion, onPageAdvanced, answers, resolveAdvanceIndex, currentStep]);
 
   // Multiple-choice: toggles `value` in/out of the comma-separated answer string for `questionId`.
   const handleToggleMultiple = useCallback(

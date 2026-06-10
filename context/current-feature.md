@@ -109,6 +109,23 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
+## Aufgabe 58 — Logik-Sprünge Stufe 1 (Logic Jumps, C.4) (2026-06-11)
+
+**Status:** Branch `feature/aufgabe-58-logic-rules`, Type-Check + Build grün, Migration auf Prod (mit User-Go) + RPC SQL-getestet, **manueller Test durch Stavros ausstehend**.
+
+Konzept aus 2 Diskussionsrunden (Typeform-Screenshots): Regeln werden **an der Frage** definiert (bewusste Abweichung vom Action-Element-Pattern — Logik ist der Fluss, kein Output), **nur Vorwärts-Sprünge** (Zyklen per Konstruktion unmöglich), Stufe 2 = read-only Logic-Map (Aufgabe 59).
+
+- **DB:** Tabelle `funnel_logic_rules` + RLS + RPC `replace_page_logic_rules` (atomar, SECURITY INVOKER) — Details CLAUDE.md §13.5. Regeln überleben das Funnel-Speichern (stabile Page-UUIDs aus Aufgabe 54); Step-Löschung CASCADEt die Regeln, Ziel-Löschung → SET NULL → Regel degradiert zu „weiter" + Editor-Warnung.
+- **Shared Evaluation** [lib/funnelLogic.ts](../lib/funnelLogic.ts): `evaluateConditions` (Ops: eq/neq · contains [Freitext-Substring] · includes [multi_choice] · gt/gte/lt/lte [numerisch], UND) · `resolveNext` (sort_order, erste matcht, sonst Fallback, sonst null=weiter) · `computePath` (Pfad-Simulation, vorwärts-only ⇒ terminiert). Row-Mapping geteilt in [lib/logicRuleMapping.ts](../lib/logicRuleMapping.ts). **Vergleichs-Semantik typ-tolerant** (Stavros-Testbefunde „Stavros ≠ stavros" + „Slider braucht ≥/≤"): trim + case-insensitiv, Zahlen numerisch inkl. Dezimal-Komma, numerische Ops matchen nie auf Nicht-Zahlen (leere Antwort springt nie). Das Modal bietet pro Feldtyp nur passende Ops an (Choice: ist/ist nicht · Text: +enthält · Numerisch: ist/≥/≤/>/</ist nicht); Panel-Kurzfassung zeigt Operator-Präfix („Wenn ≥ „4" → Schritt 5").
+- **Widget-Runtime** ([funnel.tsx](../components/funnel.tsx), mit User-Go): `resolveAdvanceIndex` in handleNext/handleSelect (Ziel-Index nur > aktuell, `end` → autoFinish), **History-Stack** (`stepHistoryRef`) — „Zurück" geht den tatsächlich besuchten Weg; übersprungene Pages feuern keine after_page-Webhooks (advancen nie). `logicRules` reist via `TenantConfig` → [TenantFunnelClient](../components/TenantFunnelClient.tsx); ohne Regeln exakt lineares Verhalten.
+- **Server-Backstop pfad-sensitiv** ([/api/submit](../app/api/submit/route.ts)): `computePath` mit denselben Regeln/Antworten → Pflichtfelder nur **besuchter** Custom-Pages validiert (die bekannte Stolperfalle: übersprungene Pflicht-Karte darf Leads nicht blocken).
+- **getTenantConfig** lädt Regeln defensiv (eigene Query + catch — Fehler ⇒ linear, Widget stirbt nie).
+- **API:** GET [`/logic`](../app/api/tenant/funnels/[slug]/logic/route.ts) (LogicRule[] camelCase) · PUT [`/logic/[pageId]`](../app/api/tenant/funnels/[slug]/logic/[pageId]/route.ts) (ersetzt via RPC; validiert Limits, Ops-Whitelist, max 1 Fallback, **Vorwärts-only via sort_order-Vergleich** — zweites Schloss).
+- **Editor:** Panel-Sektion „Logik" (Kurzfassung mit Operator-Präfix + „Logik bearbeiten", Hinweis bei ungespeicherten Steps) · [LogicRuleModal](../components/tenant-editor/v2/LogicRuleModal.tsx) (Typeform-Layout: Wenn/ist/Wert → gehe zu, „+ Bedingung" UND, ↑/↓-Reihenfolge, „Alle anderen Fälle", Wert-Picker je Feldtyp, Value-Ableitung = Save-Pfad `o.value || toKey(o.label)`) · **StepList-Badges** (emerald `Split`-Icon, Klick öffnet Modal) · **Test-Modus führt Sprünge aus** (`buildQuestions` reicht `dbId` als `pageId` durch, CenterCanvas übergibt Regeln nur im Test-Modus).
+- **Review-Fixes (Stavros-Tests):** (a) **questionKey-Merge nach Save** — unbetitelte Frage-Steps hatten editor-seitig leeren `questionKey` (DB-Key wird beim Save generiert) → Logik-Speichern blieb grau; jetzt gibt `editorStateToPagesAndFields` den finalen Key im `pageIdByClientId`-Mapping zurück und der Save merged ihn (wie dbId, `_keyTouched: true`); Modal zeigt für Alt-Steps ohne Key einen amber Hinweis „einmal speichern". (b) Operator-Dropdown war zu schmal (`w-28`→`w-44`, „mindestens (≥)" wurde abgeschnitten). (c) Canvas-Options-Selektion ringt nur noch das Options-Textfeld, nicht die ganze Panel-Zeile (Chip/Mülleimer raus — Konsistenz zur 57C-Regel „Ring nur auf dem Eingabefeld").
+
+---
+
 ## Aufgabe 57 — Restposten-Sprint (2026-06-10, laufend)
 
 Plan: Block A Hygiene → Block B Test-Mails in Versand-Historie → Block C Karten-Felder im Canvas verkabeln. Danach Block D (Demo-Templates / Logik-Tab / Config-Cache) als je eigene Aufgaben.

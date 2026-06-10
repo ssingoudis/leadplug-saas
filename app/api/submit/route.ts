@@ -8,6 +8,7 @@ import {
   deriveContactFromAnswers,
 } from '@/lib/tracking'
 import { validateContactField } from '@/lib/validateContactField'
+import { computePath } from '@/lib/funnelLogic'
 import { triggerOnSubmit, type SubmissionSnapshot } from '@/lib/webhooks'
 import { triggerEmailsOnSubmit, aggregateEmailStatusForSubmission } from '@/lib/emails'
 
@@ -99,8 +100,16 @@ export async function POST(req: Request) {
   // 5. Card-Backstop-Validierung: Pflicht-Felder der Kontaktdaten-Karten serverseitig prüfen —
   // zweites Schloss gegen Direct-POST. Das Widget erzwingt dieselben Regeln, echte Leads
   // passieren also immer (kein Geld-Verlust).
+  //
+  // Aufgabe 58 — pfad-sensitiv: Logik-Sprünge können Karten legitim überspringen. Wir
+  // simulieren den Pfad mit denselben Regeln + Antworten wie das Widget (computePath,
+  // vorwärts-only ⇒ terminiert) und validieren NUR besuchte Pages — sonst würde eine
+  // übersprungene Pflicht-Karte echte Leads blocken.
+  const visibleSteps = tenantConfig.questions.filter((q) => q.visible)
+  const { visitedPageIds } = computePath(visibleSteps, tenantConfig.logicRules ?? [], answers)
   for (const q of tenantConfig.questions) {
     if (q.kind !== 'custom' || !q.customFields) continue
+    if (q.pageId && !visitedPageIds.has(q.pageId)) continue // per Sprung übersprungen
     for (const field of q.customFields) {
       if (!field.visible || !field.required) continue
       const err = validateContactField(field, answers[field.key] ?? '')

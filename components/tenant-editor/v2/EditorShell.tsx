@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, ExternalLink, Pencil, Redo2, Save, TriangleAlert, Undo2 } from "lucide-react";
-import type { EditorState, EditorQuestion, ContactFieldConfig, QuestionType } from "@/types";
+import type { EditorState, EditorQuestion, ContactFieldConfig, QuestionType, LogicRule } from "@/types";
 import { TopTabs, type TopTabKey } from "./TopTabs";
 import { StepList } from "./StepList";
 import { CenterCanvas } from "./CenterCanvas";
@@ -12,6 +12,7 @@ import { ThemePanel } from "./ThemePanel";
 import { WebhooksPanel } from "./WebhooksPanel";
 import { EmailsPanel } from "./EmailsPanel";
 import { SharePanel } from "./SharePanel";
+import { LogicRuleModal } from "./LogicRuleModal";
 import { AddContactFieldPicker } from "./properties/AddContactFieldPicker";
 import { EditorModal } from "./ui/EditorModal";
 import { EDITOR_LEFT_COL } from "./ui/Panel";
@@ -248,6 +249,37 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
   useEffect(() => {
     reloadWebhookCounts();
   }, [reloadWebhookCounts]);
+
+  // Aufgabe 58 — Logik-Regeln des Funnels. Eine Quelle für: StepList-Badges,
+  // Panel-Kurzfassung, Regel-Modal UND die Test-Modus-Runtime im Canvas.
+  // Beim Mount geladen + nach jedem Modal-Save neu.
+  const [logicRules, setLogicRules] = useState<LogicRule[]>([]);
+  const reloadLogicRules = useCallback(async () => {
+    if (!originalSlug) return;
+    try {
+      const res = await fetch(`/api/tenant/funnels/${originalSlug}/logic`);
+      if (!res.ok) return;
+      const rules: LogicRule[] = await res.json();
+      setLogicRules(Array.isArray(rules) ? rules : []);
+    } catch {
+      // silent — Logik ist additiv, der Editor funktioniert auch ohne
+    }
+  }, [originalSlug]);
+
+  useEffect(() => {
+    reloadLogicRules();
+  }, [reloadLogicRules]);
+
+  const logicCountsByPageId = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const rule of logicRules) {
+      counts[rule.sourcePageId] = (counts[rule.sourcePageId] ?? 0) + 1;
+    }
+    return counts;
+  }, [logicRules]);
+
+  // Welcher Step ist im Logik-Modal geöffnet (Index in state.questions, null = zu).
+  const [logicModalIndex, setLogicModalIndex] = useState<number | null>(null);
 
   // Baseline für Dirty-Tracking. Startet als initialState, wird bei Feld-Autosave (z.B.
   // Funnel-Name on-blur) nachgezogen, damit ein bereits gespeichertes Feld das Dokument
@@ -803,18 +835,38 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
       // ersten Save eine stabile dbId: Webhook-Binding ohne Reload, keine UUID-Rotation mehr
       // bei Folge-Saves. Mid-Flight-Edits des Users bleiben korrekt dirty (andere Felder
       // differieren weiterhin gegen den Snapshot).
-      const returnedPageIds: Array<{ clientId: string; pageId: string }> = Array.isArray(json.pageIds)
-        ? (json.pageIds as Array<{ clientId?: unknown; pageId?: unknown }>).filter(
-            (e): e is { clientId: string; pageId: string } =>
-              typeof e?.clientId === "string" && typeof e?.pageId === "string",
+      // Aufgabe 58: zusätzlich zum pageId-Merge reist der FINALE questionKey von
+      // Question-Pages mit (bei leerem Editor-Key server-seitig generiert) — Logik-
+      // Bedingungen referenzieren ihn, der Editor muss ihn kennen.
+      const returnedPageIds: Array<{ clientId: string; pageId: string; questionKey?: string }> = Array.isArray(json.pageIds)
+        ? (json.pageIds as Array<{ clientId?: unknown; pageId?: unknown; questionKey?: unknown }>).flatMap(
+            (e) =>
+              typeof e?.clientId === "string" && typeof e?.pageId === "string"
+                ? [{
+                    clientId: e.clientId,
+                    pageId: e.pageId,
+                    questionKey: typeof e.questionKey === "string" && e.questionKey ? e.questionKey : undefined,
+                  }]
+                : [],
           )
         : [];
       if (returnedPageIds.length > 0) {
-        const byClientId = new Map(returnedPageIds.map((e) => [e.clientId, e.pageId]));
+        const byClientId = new Map(returnedPageIds.map((e) => [e.clientId, e]));
         const withDbIds = (qs: EditorState["questions"]): EditorState["questions"] =>
           qs.map((q) => {
-            const dbId = byClientId.get(q._id);
-            return dbId && q.dbId !== dbId ? { ...q, dbId } : q;
+            const entry = byClientId.get(q._id);
+            if (!entry) return q;
+            const needsDbId = q.dbId !== entry.pageId;
+            // entry.questionKey existiert nur für Question-Pages (editorStateToPagesAndFields
+            // setzt ihn ausschließlich im Question-Branch) — kein kind-Guard nötig.
+            const needsKey = entry.questionKey !== undefined && q.questionKey !== entry.questionKey;
+            if (!needsDbId && !needsKey) return q;
+            return {
+              ...q,
+              ...(needsDbId ? { dbId: entry.pageId } : {}),
+              // Key ist jetzt DB-Wahrheit → festschreiben (kein Auto-Sync mit dem Titel mehr).
+              ...(needsKey ? { questionKey: entry.questionKey!, _keyTouched: true } : {}),
+            };
           });
         // Aufgabe 55: applyToAll statt setState — der dbId-Merge ist ein technischer
         // Schritt (kein Undo-Eintrag!) und muss auch in past/future gelten, sonst
@@ -1099,6 +1151,8 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
               onAddWelcome={handleAddWelcome}
               onDuplicateQuestion={handleDuplicateQuestion}
               onDeleteQuestion={handleDeleteQuestion}
+              logicCountsByPageId={logicCountsByPageId}
+              onLogicBadgeClick={(idx) => setLogicModalIndex(idx)}
               webhookCountsByPageId={webhookCountsByPageId}
               onSwitchToWebhooksTab={() => setActiveTab("webhooks")}
             />
@@ -1107,6 +1161,7 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
               selected={selected}
               companyName={companyName}
               isTestMode={isTestMode}
+              logicRules={logicRules}
               hideContactWarning={hideContactWarning}
               onToggleContactWarning={handleToggleContactWarning}
               onToggleTestMode={() => setIsTestMode((t) => !t)}
@@ -1145,6 +1200,8 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
                     state={state}
                     selected={selected}
                     selectedFieldRef={selectedFieldRef}
+                    logicRules={logicRules}
+                    onOpenLogicEditor={(idx) => setLogicModalIndex(idx)}
                     onPatch={handlePatch}
                     onPatchQuestion={handlePatchQuestion}
                     onDeleteQuestion={handleDeleteQuestion}
@@ -1174,6 +1231,19 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
           setCanvasFieldPickerOpen(false);
         }}
       />
+
+      {/* Aufgabe 58 — Regel-Editor für Logik-Sprünge (öffnet aus Panel-Sektion + StepList-Badge). */}
+      {originalSlug && logicModalIndex !== null && (
+        <LogicRuleModal
+          open
+          onClose={() => setLogicModalIndex(null)}
+          funnelSlug={originalSlug}
+          sourceIndex={logicModalIndex}
+          questions={state.questions}
+          rules={logicRules}
+          onSaved={reloadLogicRules}
+        />
+      )}
     </>
   );
 }

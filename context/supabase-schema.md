@@ -6,9 +6,9 @@
 > Für architektonisches Verständnis und Zweck der Tabellen: siehe [`architecture.md`](architecture.md) §4.
 > Bei jeder neuen Migration: dieses File neu regenerieren.
 
-- **Stand:** 2026-06-10 (nach Aufgabe 57B — Test-Mail-Logging)
-- **Letzte angewendete Migration:** `aufgabe_57b_email_test_logging` (2026-06-10)
-- **Tabellen:** 12 in `public` (alle mit RLS aktiviert)
+- **Stand:** 2026-06-11 (nach Aufgabe 58 — Logik-Sprünge)
+- **Letzte angewendete Migration:** `aufgabe_58_funnel_logic_rules` (2026-06-11)
+- **Tabellen:** 13 in `public` (alle mit RLS aktiviert)
 
 > **Aufgaben 54–57 Migrationen (2026-06-09/10):**
 > - `aufgabe_54_replace_funnel_content_rpc` (54): RPC `replace_funnel_content(p_funnel_id, p_pages, p_fields)` — atomares Funnel-Speichern mit Page-UUID-Upsert (SECURITY INVOKER, EXECUTE nur authenticated). Plus partial Index `idx_submissions_ip_completed` (Rate-Limiter zählt nur completed).
@@ -17,6 +17,7 @@
 > - `aufgabe_57a_drop_submit_button_label` (57A): `funnels.submit_button_label` GEDROPPT (tot seit 52D; DOWN mit Snapshot-Restore der 2 Werte).
 > - `aufgabe_57b_email_test_logging` (57B): `email_delivery_attempts.is_test boolean NOT NULL DEFAULT false` — Test-Sends aus dem Editor landen als Row (submission_id NULL, Status terminal) in der Versand-Historie.
 > - `aufgabe_57d_hide_contact_warning` (57D): `funnels.hide_contact_warning boolean NOT NULL DEFAULT false` — Kontaktierbarkeits-Warnung im Editor pro Funnel quittierbar (PATCH `/contact-warning`).
+> - `aufgabe_58_funnel_logic_rules` (58, 2026-06-11): **neue Tabelle `funnel_logic_rules`** — Logik-Sprünge pro Step. Spalten: `id`, `funnel_id` (FK CASCADE), `tenant_id` (FK CASCADE, für billige RLS), `source_page_id` (FK pages CASCADE), `sort_order`, `is_fallback`, `conditions` jsonb (`[{field_key, op (eq|neq|includes|contains|gt|gte|lt|lte), value}]` UND-verknüpft, Ops app-seitig whitelisted; Vergleich trim/ci/numerisch-tolerant), `target_type` (CHECK page/end), `target_page_id` (FK pages SET NULL), `created_at`/`updated_at` (+Trigger). 3 Indizes (funnel · source+sort_order · UNIQUE partial: max 1 Fallback pro Step), 4 tenant-scoped RLS-Policies, CHECKs (fallback ohne conditions, conditions ist Array). Plus RPC `replace_page_logic_rules(uuid, uuid, jsonb)` — SECURITY INVOKER, atomares Ersetzen der Regeln eines Steps, EXECUTE nur authenticated. Nur Vorwärts-Sprünge (app-seitig erzwungen).
 
 > **Aufgabe 52 Migrationen (2026-06-06):**
 > - `aufgabe_52_drop_footer_columns` (52B): `funnels.footer_company_name/email/phone/text` GEDROPPT (Footer abgeschafft).

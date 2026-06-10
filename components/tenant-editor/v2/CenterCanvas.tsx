@@ -5,7 +5,7 @@ import { ExternalLink, Monitor, Smartphone, Play, Pencil, EyeOff, ListPlus, Tria
 import { motion } from "framer-motion";
 import { Funnel } from "@/components/funnel";
 import { buildTheme, buildFunnelConfig, buildQuestions } from "@/lib/editorUtils";
-import type { EditorState } from "@/types";
+import type { EditorState, LogicRule } from "@/types";
 import type { SelectedStep } from "./types";
 import { EmptyState } from "./ui/Panel";
 
@@ -31,6 +31,9 @@ interface Props {
   // Aufgabe 57D: Kontaktierbarkeits-Warnung quittierbar (persistiert pro Funnel).
   hideContactWarning: boolean;
   onToggleContactWarning: (hidden: boolean) => void;
+  // Aufgabe 58: Logik-Regeln — im Test-Modus führt der Canvas dieselben Sprünge aus
+  // wie das Live-Widget (Regeln matchen über pageId = dbId der gespeicherten Steps).
+  logicRules?: LogicRule[];
 }
 
 export function CenterCanvas({
@@ -50,6 +53,7 @@ export function CenterCanvas({
   liveSlug,
   hideContactWarning,
   onToggleContactWarning,
+  logicRules,
 }: Props) {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -311,6 +315,7 @@ export function CenterCanvas({
                   initialSubmitted={initialSubmitted}
                   previewHighlight={isTestMode ? "" : selectedFieldRef}
                   onFieldClick={isTestMode ? undefined : (field) => onSelectField(field)}
+                  logicRules={isTestMode ? logicRules : undefined}
                   editMode={!isTestMode}
                   onTextChange={onTextChange}
                   onAddOption={isTestMode ? undefined : onAddOption}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, GripVertical, EyeOff, Trash2, Webhook } from "lucide-react";
+import { Copy, GripVertical, EyeOff, Split, Trash2, Webhook } from "lucide-react";
 import type { FieldMeta } from "./fieldMeta";
 
 interface Props {
@@ -17,6 +17,10 @@ interface Props {
   webhookCount?: number;
   onClick: () => void;
   onWebhookBadgeClick?: () => void;
+  /** Aufgabe 58: Anzahl Logik-Regeln dieses Steps. Wenn > 0 → Verzweigungs-Badge,
+      Klick öffnet den Regel-Editor für genau diesen Step. */
+  logicCount?: number;
+  onLogicBadgeClick?: () => void;
   /** Aufgabe 55: Hover-Quick-Actions. Ohne Confirm — Undo/Redo ist das Sicherheitsnetz. */
   onDuplicate?: () => void;
   onDelete?: () => void;
@@ -36,6 +40,8 @@ export function StepPill({
   webhookCount = 0,
   onClick,
   onWebhookBadgeClick,
+  logicCount = 0,
+  onLogicBadgeClick,
   onDuplicate,
   onDelete,
   dragHandleProps,
@@ -128,6 +134,22 @@ export function StepPill({
             </button>
           )}
         </span>
+      )}
+
+      {logicCount > 0 && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onLogicBadgeClick?.();
+          }}
+          aria-label={`${logicCount} Logik-Regel${logicCount > 1 ? "n" : ""} an diesem Schritt — bearbeiten`}
+          title={`${logicCount} Logik-Regel${logicCount > 1 ? "n" : ""} an diesem Schritt — klicken zum Bearbeiten`}
+          className="mr-2 my-auto inline-flex items-center gap-1 rounded-md border border-emerald-200 dark:border-emerald-700/40 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
+        >
+          <Split size={10} strokeWidth={2.5} />
+          {logicCount}
+        </button>
       )}
 
       {webhookCount > 0 && (
