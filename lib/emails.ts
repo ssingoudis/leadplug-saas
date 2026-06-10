@@ -543,8 +543,10 @@ export async function aggregateEmailStatusForSubmission(
  * Sendet die Mail-Konfiguration mit Mock-Submission-Daten an einen Empfänger.
  * Default-Empfänger: der konfigurierte recipient_type. Override via customRecipient.
  *
- * Legt KEINE delivery_attempts-Row an (Test-Mails sind nicht Teil der Drip-Queue).
- * Stattdessen: gibt das Send-Result direkt zurück für UI-Feedback.
+ * Aufgabe 57B: jeder tatsächliche Send-Versuch wird als delivery_attempts-Row
+ * geloggt (is_test=true, submission_id=NULL, Status terminal) — Konsistenz zum
+ * Webhook-Test (event_type='webhook.test'). Die Drip-Queue bleibt außen vor:
+ * terminale Rows werden von Cron/Retry nie angefasst.
  */
 /**
  * Versendet eine Mock-Mail mit Beispiel-Daten.
@@ -646,6 +648,26 @@ export async function sendTestEmail(
     targetAddress, from, subject, bodyHtml, subject,
     tenantConfig.theme.primaryColor, tenantConfig.companyName, replyTo,
   )
+
+  // Aufgabe 57B: Test-Versuch in die Versand-Historie loggen (nur wenn tatsächlich
+  // gesendet wurde — Früh-Returns oben loggen nicht, wie beim Webhook-Test).
+  // Fehler beim Log: loggen, nicht werfen — das Send-Result zählt fürs UI-Feedback.
+  const nowIso = new Date().toISOString()
+  const { error: logErr } = await supabase.from('email_delivery_attempts').insert({
+    subscription_id:   subRow.id,
+    submission_id:     null,
+    scheduled_at:      nowIso,
+    attempt_count:     1,
+    status:            result.ok ? 'success' : 'failed',
+    last_error:        result.errorMessage,
+    resend_message_id: result.resendMessageId,
+    recipient_address: Array.isArray(targetAddress) ? targetAddress.join(', ') : targetAddress,
+    delivered_at:      result.ok ? nowIso : null,
+    next_retry_at:     null,
+    is_test:           true,
+  })
+  if (logErr) console.error('emails/test: attempt log failed', logErr)
+
   return { ok: result.ok, error: result.errorMessage }
 }
 

@@ -131,6 +131,9 @@ interface DeliveryAttempt {
   delivered_at:      string | null;
   next_retry_at:     string | null;
   created_at:        string;
+  // Aufgabe 57B: Test-Versand aus dem Editor (submission_id NULL). Optional,
+  // damit gecachte Responses ohne das Feld nicht brechen.
+  is_test?:          boolean;
 }
 
 // Draft: alles editierbar, lebt im Parent damit Editor + Vorschau die gleichen
@@ -1478,6 +1481,12 @@ function LogsSection({ funnelSlug, subId, demoMode }: { funnelSlug: string; subI
                     </p>
                     <p className="text-[11px] text-gray-500 dark:text-gray-400">{new Date(log.created_at).toLocaleString("de-DE")}</p>
                   </div>
+                  {/* Aufgabe 57B: Test-Versand vom echten Drip-Versand unterscheidbar (wie webhook.test) */}
+                  {log.is_test && (
+                    <span className="shrink-0 rounded border border-violet-200 bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 dark:border-violet-800 dark:bg-violet-900/30 dark:text-violet-300">
+                      Test
+                    </span>
+                  )}
                   {log.last_error && (openLogId === log.id ? <ChevronDown size={12} /> : <ChevronRight size={12} />)}
                 </div>
                 {openLogId === log.id && log.last_error && (

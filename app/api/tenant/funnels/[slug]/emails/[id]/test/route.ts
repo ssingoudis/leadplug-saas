@@ -4,7 +4,8 @@ import { sendTestEmail } from '@/lib/emails'
 
 // POST /api/tenant/funnels/[slug]/emails/[id]/test
 // Body: { recipient?: string }  ← optional, sonst default-Recipient laut Subscription
-// Resultat: { ok, error? } — landet auch im Logs-Drawer als event_type='email.test'.
+// Resultat: { ok, error? } — landet seit Aufgabe 57B auch in der Versand-Historie
+// (delivery_attempts-Row mit is_test=true, submission_id=NULL).
 
 export const runtime = 'nodejs'
 

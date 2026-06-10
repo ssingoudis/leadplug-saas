@@ -503,9 +503,13 @@ lib/emails.sendTestEmail:
   effectiveRecType = draftRecipientType ?? recipient_type
   renderEmail(effectiveSubject, effectiveBody, ctx)
   Resend.emails.send
+  INSERT email_delivery_attempts (is_test=true, submission_id=NULL,   ← Aufgabe 57B
+         status=success|failed terminal, delivered_at bei success)
 ```
 
 So sieht der Tenant immer den aktuellen Editor-Stand im Test-Posteingang, auch ohne vorher zu speichern.
+
+**Test-Logging (Aufgabe 57B):** Jeder tatsächliche Test-Send landet als Row in `email_delivery_attempts` mit `is_test=true` — Konsistenz zum Webhook-Test (`event_type='webhook.test'`). Die Versand-Historie im Editor zeigt dafür ein „Test"-Badge. Früh-Returns (Subscription fehlt, Empfänger fehlt, Config-Fehler) loggen nicht. Da der Status terminal ist (success/failed) und `submission_id` NULL, fassen Cron-Queues (pending/retrying) und `aggregateEmailStatusForSubmission` (filtert auf `submission_id`) Test-Rows nie an.
 
 ---
 

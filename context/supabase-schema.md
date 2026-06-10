@@ -6,9 +6,16 @@
 > Für architektonisches Verständnis und Zweck der Tabellen: siehe [`architecture.md`](architecture.md) §4.
 > Bei jeder neuen Migration: dieses File neu regenerieren.
 
-- **Stand:** 2026-06-06 (nach Aufgabe 52D — Submit-Page/Kontaktformular-Cleanup)
-- **Letzte angewendete Migration:** `aufgabe_52d_drop_skip_submit_step` (2026-06-06, nach Deploy)
+- **Stand:** 2026-06-10 (nach Aufgabe 57B — Test-Mail-Logging)
+- **Letzte angewendete Migration:** `aufgabe_57b_email_test_logging` (2026-06-10)
 - **Tabellen:** 12 in `public` (alle mit RLS aktiviert)
+
+> **Aufgaben 54–57 Migrationen (2026-06-09/10):**
+> - `aufgabe_54_replace_funnel_content_rpc` (54): RPC `replace_funnel_content(p_funnel_id, p_pages, p_fields)` — atomares Funnel-Speichern mit Page-UUID-Upsert (SECURITY INVOKER, EXECUTE nur authenticated). Plus partial Index `idx_submissions_ip_completed` (Rate-Limiter zählt nur completed).
+> - `aufgabe_54b_advisor_hardening` (54b): EXECUTE auf `rls_auto_enable()` für public/anon/authenticated revoked; `update_updated_at()` mit gepinntem `search_path`.
+> - `aufgabe_56_design_toggles` (56): `funnels` + `show_progress_bar` / `show_step_badge` (boolean NOT NULL DEFAULT true) + `title_alignment` (text NOT NULL DEFAULT 'left', CHECK left/center).
+> - `aufgabe_57a_drop_submit_button_label` (57A): `funnels.submit_button_label` GEDROPPT (tot seit 52D; DOWN mit Snapshot-Restore der 2 Werte).
+> - `aufgabe_57b_email_test_logging` (57B): `email_delivery_attempts.is_test boolean NOT NULL DEFAULT false` — Test-Sends aus dem Editor landen als Row (submission_id NULL, Status terminal) in der Versand-Historie.
 
 > **Aufgabe 52 Migrationen (2026-06-06):**
 > - `aufgabe_52_drop_footer_columns` (52B): `funnels.footer_company_name/email/phone/text` GEDROPPT (Footer abgeschafft).
@@ -324,6 +331,9 @@ Das Widget pro Tenant. Ein Tenant kann mehrere haben. Aktuell 12 Zeilen.
 | `privacy_text` | text | YES | — |
 | `privacy_policy_url` | text | YES | — |
 | `show_answers_overview` | bool | NO | `false` (Aufgabe 51) |
+| `show_progress_bar` | bool | NO | `true` (Aufgabe 56: Anzeige-Schalter) |
+| `show_step_badge` | bool | NO | `true` (Aufgabe 56: Anzeige-Schalter) |
+| `title_alignment` | text | NO | `'left'` (Aufgabe 56, CHECK `left`/`center`) |
 | `redirect_url` | text | YES | — (Aufgabe 39: Redirect nach Submit statt Success-Page) |
 | `meta_pixel_id` | text | YES | — (Aufgabe 43: Conversion-Tracking) |
 | `google_ads_conversion` | text | YES | — (Aufgabe 43: Conversion-Tracking) |
