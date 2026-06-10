@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ExternalLink, Monitor, Smartphone, Play, Pencil, EyeOff, ListPlus, TriangleAlert } from "lucide-react";
+import { ExternalLink, Monitor, Smartphone, Play, Pencil, EyeOff, ListPlus, TriangleAlert, Info, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { Funnel } from "@/components/funnel";
 import { buildTheme, buildFunnelConfig, buildQuestions } from "@/lib/editorUtils";
@@ -28,6 +28,9 @@ interface Props {
   onAddCustomFieldRequest?: () => void;
   // Aufgabe 56: Slug fuer den "Live"-Button (nur Edit-Modus — neue Funnels haben noch keinen).
   liveSlug?: string;
+  // Aufgabe 57D: Kontaktierbarkeits-Warnung quittierbar (persistiert pro Funnel).
+  hideContactWarning: boolean;
+  onToggleContactWarning: (hidden: boolean) => void;
 }
 
 export function CenterCanvas({
@@ -45,6 +48,8 @@ export function CenterCanvas({
   onDeleteOption,
   onAddCustomFieldRequest,
   liveSlug,
+  hideContactWarning,
+  onToggleContactWarning,
 }: Props) {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -60,18 +65,24 @@ export function CenterCanvas({
   const rawPageBg = (state.pageBackgroundColor ?? "").trim();
   const stageBg = rawPageBg && rawPageBg !== "transparent" ? rawPageBg : null;
 
-  // Aufgabe 56: Kontaktierbarkeits-Check — existiert mindestens ein sichtbares
-  // PFLICHT-Feld vom Typ E-Mail oder Telefon auf einer sichtbaren Karte? Wenn nein,
-  // zeigt die Bühne eine Warnung (Leads erscheinen zwar im Posteingang, sind aber
-  // nicht kontaktierbar — die "Stavros-Falle" vom 2026-06-10).
-  const hasContactChannel = state.questions.some(
-    (q) =>
-      q.kind === "custom" &&
-      q.visible !== false &&
-      (q.customFields ?? []).some(
-        (f) => (f.type === "email" || f.type === "tel") && f.visible && f.required,
+  // Aufgabe 56: Kontaktierbarkeits-Check — die "Stavros-Falle" vom 2026-06-10
+  // (Leads erscheinen im Posteingang, sind aber nicht kontaktierbar).
+  // Aufgabe 57D: zwei Stufen statt einer Vollwarnung:
+  //   "hard" = gar kein sichtbares E-Mail-/Telefon-Feld → amber Warnung
+  //   "soft" = Feld vorhanden, aber keins Pflicht → dezenter Hinweis
+  //   null   = sichtbares Pflichtfeld existiert → nichts
+  const visibleContactFields = state.questions
+    .filter((q) => q.kind === "custom" && q.visible !== false)
+    .flatMap((q) =>
+      (q.customFields ?? []).filter(
+        (f) => (f.type === "email" || f.type === "tel") && f.visible,
       ),
-  );
+    );
+  const contactWarningTier: "hard" | "soft" | null = visibleContactFields.some((f) => f.required)
+    ? null
+    : visibleContactFields.length > 0
+      ? "soft"
+      : "hard";
 
   // initialStep berechnen — mapped die Selection auf den Widget-Step.
   // Widget-Steps: 0..N-1 = Fragen/Karten, danach intern Success (Submit am Funnel-Ende).
@@ -167,6 +178,24 @@ export function CenterCanvas({
               <Smartphone size={14} />
             </button>
           </div>
+
+          {/* Aufgabe 57D: quittierte Kontaktierbarkeits-Warnung → dezenter Erinnerungs-Marker.
+              Klick blendet das Banner wieder ein (Toggle, persistiert pro Funnel). */}
+          {!isTestMode && contactWarningTier && hideContactWarning && (
+            <button
+              type="button"
+              onClick={() => onToggleContactWarning(false)}
+              title={
+                contactWarningTier === "hard"
+                  ? "Kein E-Mail-/Telefon-Feld im Funnel — Leads sind nicht kontaktierbar. Klick zeigt den Hinweis wieder an."
+                  : "E-Mail/Telefon ist optional — nicht jeder Lead wird kontaktierbar. Klick zeigt den Hinweis wieder an."
+              }
+              aria-label="Kontaktierbarkeits-Hinweis wieder anzeigen"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-amber-500 shadow-lg ring-1 ring-black/5 transition-colors hover:bg-amber-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800"
+            >
+              <TriangleAlert size={15} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -191,18 +220,46 @@ export function CenterCanvas({
           }
         }}
       >
-        {!isTestMode && !hasContactChannel && (
+        {!isTestMode && contactWarningTier && !hideContactWarning && (
           <div
             className="mx-auto mb-4 w-full shrink-0"
             style={{ maxWidth: isMobile ? "375px" : state.maxWidth || "720px" }}
           >
-            <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-800 shadow-sm dark:border-amber-700/40 dark:bg-amber-900/20 dark:text-amber-300">
-              <TriangleAlert size={14} className="mt-0.5 shrink-0" />
-              <span>
-                <strong>Kein E-Mail-/Telefon-Pflichtfeld im Funnel.</strong>{" "}
-                Leads erscheinen im Posteingang, sind aber nicht kontaktierbar. Füge z.&nbsp;B.
-                eine Kontaktdaten-Karte hinzu („+ Frage hinzufügen").
+            <div
+              className={
+                contactWarningTier === "hard"
+                  ? "flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-800 shadow-sm dark:border-amber-700/40 dark:bg-amber-900/20 dark:text-amber-300"
+                  : "flex items-start gap-2.5 rounded-xl border border-gray-200 bg-white px-4 py-3 text-xs leading-relaxed text-gray-600 shadow-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400"
+              }
+            >
+              {contactWarningTier === "hard" ? (
+                <TriangleAlert size={14} className="mt-0.5 shrink-0" />
+              ) : (
+                <Info size={14} className="mt-0.5 shrink-0" />
+              )}
+              <span className="flex-1">
+                {contactWarningTier === "hard" ? (
+                  <>
+                    <strong>Kein E-Mail-/Telefon-Feld im Funnel.</strong>{" "}
+                    Leads erscheinen im Posteingang, sind aber nicht kontaktierbar. Füge z.&nbsp;B.
+                    eine Kontaktdaten-Karte hinzu („+ Frage hinzufügen").
+                  </>
+                ) : (
+                  <>
+                    <strong>E-Mail/Telefon ist optional.</strong>{" "}
+                    Nur Leads, die das Feld ausfüllen, sind kontaktierbar.
+                  </>
+                )}
               </span>
+              <button
+                type="button"
+                onClick={() => onToggleContactWarning(true)}
+                title="Hinweis für diesen Funnel ausblenden"
+                aria-label="Hinweis für diesen Funnel ausblenden"
+                className="-m-1 shrink-0 rounded-md p-1 opacity-60 transition-opacity hover:opacity-100"
+              >
+                <X size={14} />
+              </button>
             </div>
           </div>
         )}

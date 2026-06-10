@@ -53,6 +53,9 @@ export default async function EditFunnelPage({ params }: Props) {
       initialState={initialState}
       originalSlug={slug}
       companyName={tenant.company_name ?? ""}
+      initialHideContactWarning={Boolean(
+        (funnelRow as { hide_contact_warning?: boolean | null }).hide_contact_warning,
+      )}
     />
   );
 }
