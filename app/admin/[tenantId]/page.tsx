@@ -97,28 +97,50 @@ export default async function AdminWorkspaceDetailPage({ params }: { params: Pro
                     <Badge variant={st.variant}>{st.label}</Badge>
                     <ChevronDown size={16} className="shrink-0 text-gray-300 transition-transform group-open:rotate-180" />
                   </summary>
-                  <div className="grid grid-cols-1 gap-6 border-t border-gray-100 bg-gray-50/60 px-5 py-5 dark:border-gray-800 dark:bg-gray-800/40 sm:grid-cols-2">
-                    <div>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Kontakt</p>
-                      <div className="space-y-1.5 text-sm">
-                        {l.anrede && <p><span className="text-gray-400">Anrede:</span> {l.anrede}</p>}
-                        {l.name && <p><span className="text-gray-400">Name:</span> {l.name}</p>}
-                        {l.email && <p><span className="text-gray-400">E-Mail:</span> {l.email}</p>}
-                        {l.phone && <p><span className="text-gray-400">Telefon:</span> {l.phone}</p>}
-                        {extraContact.map(([k, v]) => v ? <p key={k}><span className="text-gray-400">{k}:</span> {v}</p> : null)}
+                  {/* Aufgabe 59: Detail-Layout = exakt das Muster der Leads-Liste im Dashboard
+                      (LeadDetailBody): zwei graue rounded-xl-Boxen, Label über Wert gestapelt —
+                      statt der vorherigen flachen „Label: Wert"-Zeilen (wirkten verzogen). */}
+                  <div className="border-t border-primary/20 bg-white px-5 py-5 dark:bg-gray-900">
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                      <div className="space-y-3 rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Kontakt</p>
+                        {[
+                          { label: 'Anrede', value: l.anrede },
+                          { label: 'Name', value: l.name },
+                          { label: 'E-Mail', value: l.email },
+                          { label: 'Telefon', value: l.phone },
+                        ].map(({ label, value }) =>
+                          value ? (
+                            <div key={label}>
+                              <p className="text-xs text-gray-400 dark:text-gray-500">{label}</p>
+                              <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{value}</p>
+                            </div>
+                          ) : null
+                        )}
+                        {extraContact.map(([k, v]) =>
+                          v ? (
+                            <div key={k}>
+                              <p className="text-xs text-gray-400 dark:text-gray-500">{k}</p>
+                              <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{v}</p>
+                            </div>
+                          ) : null
+                        )}
                       </div>
-                    </div>
-                    <div>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Antworten</p>
-                      {Object.keys(l.answers ?? {}).length === 0 ? (
-                        <p className="text-sm text-gray-400 dark:text-gray-500">Keine Antworten.</p>
-                      ) : (
-                        <div className="space-y-1.5 text-sm">
-                          {Object.entries(l.answers ?? {}).map(([k, v]) => (
-                            <p key={k}><span className="text-gray-400">{k}:</span> {v}</p>
-                          ))}
-                        </div>
-                      )}
+                      <div className="rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+                        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Antworten</p>
+                        {Object.keys(l.answers ?? {}).length === 0 ? (
+                          <p className="text-sm text-gray-400 dark:text-gray-500">Keine Antworten.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {Object.entries(l.answers ?? {}).map(([k, v]) => (
+                              <div key={k}>
+                                <p className="text-xs text-gray-400 dark:text-gray-500">{k}</p>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{v}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </details>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, ChevronUp, Search, Check, List, Columns3, X } from 'lucide-react'
 import {
@@ -622,10 +622,13 @@ export default function TenantLeadsTable({
     )
   }
 
-  function renderToolbar({ showSort }: { showSort: boolean }) {
+  // Aufgabe 59 (Stavros-Review): `compact` + `trailing` für die Board-Ansicht — dort gibt es
+  // keine Status-Tabs, also wird ALLES eine Zeile: kompakte Suche + Filter links, View-Umschalter
+  // rechts. Die Liste behält ihre vollbreite Suche unter der Tab-Zeile (abgenommen).
+  function renderToolbar({ showSort, compact = false, trailing }: { showSort: boolean; compact?: boolean; trailing?: ReactNode }) {
     return (
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <div className="relative min-w-0 flex-1">
+        <div className={compact ? 'relative w-full sm:w-72' : 'relative min-w-0 flex-1'}>
           <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
@@ -671,6 +674,7 @@ export default function TenantLeadsTable({
             Zurücksetzen
           </button>
         )}
+        {trailing && <div className="sm:ml-auto">{trailing}</div>}
       </div>
     )
   }
@@ -695,10 +699,13 @@ export default function TenantLeadsTable({
 
   return (
     <div>
-      {/* Kopfzeile: Status-Tabs (nur Liste) + View-Umschalter — eine Zeile */}
-      <div className={`mb-4 flex flex-wrap items-center justify-between gap-2 ${view === 'list' ? 'border-b border-gray-200 dark:border-gray-700' : ''}`}>
+      {/* Kopfzeile: Status-Tabs + View-Umschalter — nur in der Liste. Das Board hat keine
+          Tabs (die Spalten SIND der Status) und packt den Umschalter in seine Toolbar-Zeile
+          (Aufgabe 59 — vorher: fast leere Zeile + vollbreite Solo-Suche). */}
+      {view === 'list' && (
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 dark:border-gray-700">
         <div className="flex flex-wrap items-center gap-1">
-          {view === 'list' && TABS.map((t) => {
+          {TABS.map((t) => {
             const active = statusTab === t.key
             return (
               <button
@@ -729,11 +736,12 @@ export default function TenantLeadsTable({
           {renderViewToggle()}
         </div>
       </div>
+      )}
 
       {view === 'board' ? (
         /* ─── Board-Ansicht ─── */
         <div>
-          {renderToolbar({ showSort: false })}
+          {renderToolbar({ showSort: false, compact: true, trailing: renderViewToggle() })}
           {renderCustomDates()}
           {rows.length === 0 ? (
             <p className="py-6 text-center text-sm text-gray-400">Noch keine Leads eingegangen.</p>
@@ -745,7 +753,8 @@ export default function TenantLeadsTable({
               onDragEnd={handleDragEnd}
               onDragCancel={handleDragCancel}
             >
-              <div className="flex gap-3 overflow-x-auto pb-2">
+              {/* mt-6: klare Trennung zwischen Filter-Zeile und Board (Stavros-Review, Runde 2) */}
+              <div className="mt-6 flex gap-3 overflow-x-auto pb-2">
                 {STATUS_ORDER.map((st) => (
                   <KanbanColumn
                     key={st}

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { MoreHorizontal, Mail, Power, ExternalLink, Search, Check, Copy } from 'lucide-react'
 import StatTile from '@/components/ui/StatTile'
+import { ConfirmModal } from '@/components/admin/WorkspaceDangerZone'
 import type { WorkspaceRow } from '@/lib/admin/queries'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -68,6 +69,8 @@ function RowActions({ w, busy, onPlan, onToggleActive }: {
   onToggleActive: () => void
 }) {
   const [open, setOpen] = useState(false)
+  // Aufgabe 59: gestyltes Bestätigungs-Modal statt window.confirm (Design-System-Angleich).
+  const [confirmDeactivate, setConfirmDeactivate] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!open) return
@@ -115,14 +118,28 @@ function RowActions({ w, busy, onPlan, onToggleActive }: {
             type="button"
             className={item}
             onClick={() => {
-              if (w.isActive && !window.confirm('Workspace deaktivieren? Alle Funnels gehen offline — eingebettete iFrames zeigen dann nichts mehr.')) return
               setOpen(false)
-              onToggleActive()
+              if (w.isActive) setConfirmDeactivate(true)
+              else onToggleActive()
             }}
           >
             <Power size={14} className="text-gray-400" /> {w.isActive ? 'Deaktivieren' : 'Reaktivieren'}
           </button>
         </div>
+      )}
+      {confirmDeactivate && (
+        <ConfirmModal
+          title="Workspace deaktivieren?"
+          message="Alle Funnels dieses Workspaces gehen offline — eingebettete iFrames auf Kundenseiten zeigen dann nichts mehr. Lässt sich jederzeit rückgängig machen."
+          confirmLabel="Deaktivieren"
+          danger
+          busy={busy}
+          onClose={() => setConfirmDeactivate(false)}
+          onConfirm={() => {
+            setConfirmDeactivate(false)
+            onToggleActive()
+          }}
+        />
       )}
     </div>
   )
@@ -197,8 +214,8 @@ export default function WorkspacesCockpit({ workspaces, myEmail }: {
         <StatTile value={kpi.leads} label="Leads" />
       </div>
 
-      {/* Tabelle */}
-      <div className="rounded-2xl border border-gray-100 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+      {/* Tabelle — Karten-Look wie <Card> (rounded-2xl + shadow-sm, design-system.md §4) */}
+      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-sm font-bold text-gray-900 dark:text-white">Workspaces</h2>
           <div className="flex flex-col gap-2 sm:flex-row">

@@ -48,7 +48,9 @@ export function DeleteFunnelButton({
           type="button"
           onClick={() => setShowModal(true)}
           title="Funnel löschen"
-          className="flex items-center justify-center w-8 h-8 rounded-lg border border-red-200 dark:border-gray-700 text-red-400 dark:text-red-400 cursor-pointer"
+          // Aufgabe 59: Hover-Feedback fehlte komplett (Stavros-Befund) — dezente rote
+          // Tönung nach dem Danger-Trigger-System (Voll-Rot nur im Bestätigungs-Dialog).
+          className="flex items-center justify-center w-8 h-8 rounded-lg border border-red-200 dark:border-red-900/40 text-red-400 dark:text-red-400 cursor-pointer transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-300"
         >
           <Trash2 size={14} />
         </button>
@@ -56,7 +58,7 @@ export function DeleteFunnelButton({
         <button
           type="button"
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border shrink-0 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700/40 text-red-600 dark:text-red-400 cursor-pointer"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border shrink-0 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700/40 text-red-600 dark:text-red-400 cursor-pointer transition-colors hover:bg-red-100 hover:border-red-300 dark:hover:bg-red-900/40"
         >
           <Trash2 size={12} />
           Löschen

@@ -97,6 +97,7 @@ EditorWorld [label: "② Funnel-Editor v2 (Auth + RLS)", icon: edit, color: blue
   WebhooksPanel [label: "WebhooksPanel + AddModal", icon: react]
   EmailsPanel [label: "EmailsPanel + email/EmailEditor (TipTap)", icon: react]
   SharePanel [label: "SharePanel (Einbinden + Tracking)", icon: react]
+  LogicPanel [label: "LogicMapPanel (Logik-Übersicht) + LogicRuleModal", icon: react]
 }
 
 DashWorld [label: "③ Dashboard (Agentur, Auth + RLS)", icon: grid, color: green] {
@@ -118,7 +119,7 @@ API [label: "API-Routes (runtime = nodejs)", icon: server, color: orange] {
   trackProg [label: "/api/track-progress", icon: nextjs]
   trackView [label: "/api/track-view", icon: nextjs]
   funnelCrud [label: "/api/tenant/funnels (+[slug])", icon: nextjs]
-  resCrud [label: ".../webhooks · emails · tracking · preview-leads", icon: nextjs]
+  resCrud [label: ".../webhooks · emails · tracking · preview-leads · logic", icon: nextjs]
   leadsApi [label: "/api/leads/[id]", icon: nextjs]
   stripeApi [label: "/api/stripe/{checkout,portal,webhook}", icon: stripe]
   cronApi [label: "/api/cron/webhook-retry", icon: clock]
@@ -132,6 +133,7 @@ Lib [label: "lib/ (Server-Logik)", icon: code, color: purple] {
   emailsLib [label: "emails.ts (Queue · Sender · Backoff)", icon: file]
   emailTpl [label: "emailTemplates.ts + resolveAnswer.ts", icon: file]
   validateLib [label: "validateContactField.ts", icon: file]
+  logicLib [label: "funnelLogic.ts (Auswertung) + logicDisplay.ts (Lesefassung)", icon: file]
   billingLib [label: "billing.ts + stripe.ts", icon: file]
   sbClients [label: "supabase/{server,client,admin}.ts", icon: file]
 }
@@ -156,11 +158,15 @@ EditorShell > ThemePanel
 EditorShell > WebhooksPanel
 EditorShell > EmailsPanel
 EditorShell > SharePanel
+EditorShell > LogicPanel
 CenterCanvas > FunnelCmp: editMode-Vorschau
 EditorShell > funnelCrud: Speichern (PUT)
 WebhooksPanel > resCrud
 EmailsPanel > resCrud
 SharePanel > resCrud
+LogicPanel > resCrud: GET /logic · PUT /logic/[pageId]
+FunnelCmp > logicLib: Sprünge (Runtime)
+submitR > logicLib: computePath (Pflichtfeld-Backstop)
 funnelCrud > editorUtils: editorStateToPagesAndFields (schreiben)
 dashLayout > sbClients: Tenant via tenant_members
 funnelsList > sbClients

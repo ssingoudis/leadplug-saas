@@ -118,7 +118,9 @@ export default function WorkspaceDangerZone({ tenantId, companyName, isActive, f
 
 // ── Modale ───────────────────────────────────────────────────────────────────
 
-function ConfirmModal({ title, message, confirmLabel, danger, busy, onClose, onConfirm }: {
+// Aufgabe 59: exportiert — WorkspacesCockpit nutzt dasselbe Modal statt window.confirm
+// (native Browser-Dialoge sind im Rest der App längst durch gestylte Modals ersetzt).
+export function ConfirmModal({ title, message, confirmLabel, danger, busy, onClose, onConfirm }: {
   title: string; message: string; confirmLabel: string; danger: boolean; busy: boolean; onClose: () => void; onConfirm: () => void
 }) {
   useEffect(() => {

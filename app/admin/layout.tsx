@@ -13,8 +13,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!isSuperadmin(user?.email)) notFound()
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-background" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      <header className="sticky top-0 z-20 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+    // Aufgabe 59: Design-System-Angleich — kein Inline-fontFamily mehr (Admin lief auf
+    // system-ui statt App-Font Inter und wirkte dadurch fremd); Header trägt die
+    // border-b-2-primary-Signatur des Dashboards (context/design-system.md §5).
+    <div className="min-h-screen bg-gray-100 dark:bg-background">
+      <header className="sticky top-0 z-20 border-b-2 border-primary bg-white dark:bg-gray-900">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-8">
           <div className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400">
