@@ -109,6 +109,14 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
+## Aufgabe 57 — Restposten-Sprint (2026-06-10, laufend)
+
+Plan: Block A Hygiene → Block B Test-Mails in Versand-Historie → Block C Karten-Felder im Canvas verkabeln. Danach Block D (Demo-Templates / Logik-Tab / Config-Cache) als je eigene Aufgaben.
+
+- **Block A — `funnels.submit_button_label` gedroppt** (Branch `feature/aufgabe-57a-drop-submit-button-label`): Code war seit dem 56er-Deploy referenzfrei (in 56 Runde 4 entfernt), Migration `aufgabe_57a_drop_submit_button_label` nach Verifikation direkt auf Prod appliziert (mit User-Go, skip_submit_step-Pattern). Datenlage beim Drop: nur 2 Funnels mit Wert (beide Standard-Label) — exakter Snapshot-Restore im DOWN-File. Prod-Widget nach Drop verifiziert (200). Doku bereinigt: `supabase-schema.md`, `architektur-diagramme.md` (ER), `architecture.md` (EditorState-Liste), `Anleitungen/Funnel-Konfigurationsreferenz.md`. **Befund nebenbei:** die Funnel-Konfigurationsreferenz in `Anleitungen/` ist insgesamt veraltet (beschreibt Vor-52D-Kontaktformular-Felder) — Kandidat für Doku-Cleanup.
+
+---
+
 ## Aufgabe 56 — Dark-Mode-Sweep: Flächen-Kanon vereinheitlicht (2026-06-10)
 
 **Status:** Branch `feature/aufgabe-56-dark-mode-sweep`, Type-Check + Build grün, visuelles Review durch Stavros ausstehend.

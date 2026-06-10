@@ -318,7 +318,6 @@ Das Widget pro Tenant. Ein Tenant kann mehrere haben. Aktuell 12 Zeilen.
 | `funnel_name` | text | YES | — |
 | `contact_form_title` | text | YES | — |
 | `contact_form_subtitle` | text | YES | — |
-| `submit_button_label` | text | YES | — |
 | `success_message` | text | YES | — |
 | `response_message` | text | YES | — |
 | `answers_overview_label` | text | YES | — |
