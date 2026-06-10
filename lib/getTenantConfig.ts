@@ -5,7 +5,6 @@ const SLUG_PATTERN = /^[a-z0-9][a-z0-9-_]*$/
 
 const TEXT_DEFAULTS = {
   funnelTitle:           'Jetzt kostenloses Angebot anfordern',
-  submitButtonLabel:     'Anfrage absenden',
   successMessage:        'Vielen Dank! Wir melden uns in Kürze bei Ihnen.',
   responseMessage:       'Wir melden uns so schnell wie möglich bei Ihnen.',
   contactFormSubtitle:   'Wer soll das Angebot erhalten?',
@@ -217,7 +216,6 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
     },
     funnel: {
       title:               row.contact_form_title      ?? TEXT_DEFAULTS.funnelTitle,
-      submitButtonLabel:   row.submit_button_label    ?? TEXT_DEFAULTS.submitButtonLabel,
       successMessage:      row.success_message        || 'Vielen Dank für Ihre Anfrage!',  // Aufgabe 51: Titel nie leer (nacktes Häkchen reicht nicht). Sauberer Editor-Default → Plan.
       responseMessage:     row.response_message       ?? '',  // Aufgabe 51: optional — leer = ausgeblendet (kein Default-Fallback)
       contactFormSubtitle: row.contact_form_subtitle  ?? TEXT_DEFAULTS.contactFormSubtitle,
@@ -225,6 +223,9 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
       privacyText:         row.privacy_text           ?? TEXT_DEFAULTS.privacyText,
       answersOverviewLabel: row.answers_overview_label ?? '',  // Aufgabe 52: Editor-Default, kein Render-Fallback
       showAnswersOverview: row.show_answers_overview ?? false,
+      showProgressBar: row.show_progress_bar ?? true,
+      showStepBadge: row.show_step_badge ?? true,
+      titleAlignment: row.title_alignment === 'center' ? 'center' : 'left',
     },
     billingModel:         tenant.billing_model,
     leadPrice:    Number(tenant.lead_price ?? 0),
@@ -258,9 +259,10 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
     .from('funnels')
     .select(`
       id, slug, is_active,
-      contact_form_title, submit_button_label, success_message,
+      contact_form_title, success_message,
       response_message, contact_form_subtitle, privacy_policy_url,
       privacy_text, answers_overview_label, show_answers_overview,
+      show_progress_bar, show_step_badge, title_alignment,
       email_sender_local, notification_email,
       redirect_url,
       meta_pixel_id, google_ads_conversion,

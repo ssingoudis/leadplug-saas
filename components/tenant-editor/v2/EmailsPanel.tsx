@@ -425,7 +425,6 @@ function buildPreviewConfig(state: EditorState, funnelSlug: string): TenantConfi
     },
     funnel: {
       title:                state.funnelTitle,
-      submitButtonLabel:    state.submitButtonLabel,
       successMessage:       state.successMessage,
       responseMessage:      state.responseMessage,
       contactFormSubtitle:  state.contactFormSubtitle,
@@ -433,6 +432,9 @@ function buildPreviewConfig(state: EditorState, funnelSlug: string): TenantConfi
       privacyPolicyUrl:     state.privacyPolicyUrl || undefined,
       answersOverviewLabel: state.answersOverviewLabel || "Angaben im Überblick",
       showAnswersOverview:  state.showAnswersOverview,
+      showProgressBar:      state.showProgressBar,
+      showStepBadge:        state.showStepBadge,
+      titleAlignment:       state.titleAlignment,
     },
     billingModel:    "per_month",
     leadPrice:       0,
@@ -746,7 +748,7 @@ export function EmailsPanel({ funnelSlug, state }: Props) {
         </div>
       )}
       <div
-        className="grid min-h-0 flex-1 bg-gray-50 dark:bg-background"
+        className="grid min-h-0 flex-1 bg-gray-100 dark:bg-background"
         style={{ gridTemplateColumns: `${EDITOR_LEFT_COL} minmax(0, 1fr) 6px ${rightWidth}px` }}
       >
         {/* LEFT: Liste */}
@@ -880,7 +882,7 @@ export function EmailsPanel({ funnelSlug, state }: Props) {
               </select>
             }
           />
-          <div className="flex-1 overflow-y-auto bg-gray-100 dark:bg-gray-950 p-4">
+          <div className="flex-1 overflow-y-auto bg-gray-100 dark:bg-background p-4">
             {selected && draft ? (
               <PreviewPane
                 subject={draft.subject}
@@ -1019,7 +1021,7 @@ function SelectedEditor({ subId, draft, onDraftChange, dirty, saving, onSave, on
               placeholder="ohne Namen"
               aria-label="Name dieser E-Mail (zum Bearbeiten klicken)"
               title="Klick zum Umbenennen"
-              className="min-w-0 rounded border border-transparent bg-transparent px-1.5 py-0.5 text-sm font-bold text-gray-900 dark:text-white outline-none transition-colors hover:border-gray-200 dark:hover:border-gray-700 focus:border-primary focus:bg-white dark:focus:bg-gray-950"
+              className="min-w-0 rounded border border-transparent bg-transparent px-1.5 py-0.5 text-sm font-bold text-gray-900 dark:text-white outline-none transition-colors hover:border-gray-200 dark:hover:border-gray-700 focus:border-primary focus:bg-white dark:focus:bg-gray-800"
               style={{ width: `${nameWidth}ch` }}
             />
             <button
@@ -1177,11 +1179,11 @@ function SelectedEditor({ subId, draft, onDraftChange, dirty, saving, onSave, on
           </div>
 
           {/* Test-Mail (collapsible) */}
-          <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+          <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
             <button
               type="button"
               onClick={() => setTestOpen((v) => !v)}
-              className="flex w-full items-center justify-between px-4 py-2.5 text-left"
+              className={`flex w-full items-center justify-between px-4 py-2.5 text-left transition-colors ${testOpen ? "bg-gray-100 dark:bg-gray-800" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"}`}
             >
               <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Test-Mail senden</span>
               {testOpen ? <ChevronDown size={14} className="text-gray-400" /> : <ChevronRight size={14} className="text-gray-400" />}
@@ -1190,11 +1192,11 @@ function SelectedEditor({ subId, draft, onDraftChange, dirty, saving, onSave, on
           </div>
 
           {/* Logs (collapsible) */}
-          <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+          <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
             <button
               type="button"
               onClick={() => setLogsOpen((v) => !v)}
-              className="flex w-full items-center justify-between px-4 py-2.5 text-left"
+              className={`flex w-full items-center justify-between px-4 py-2.5 text-left transition-colors ${logsOpen ? "bg-gray-100 dark:bg-gray-800" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"}`}
             >
               <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Versand-Historie</span>
               {logsOpen ? <ChevronDown size={14} className="text-gray-400" /> : <ChevronRight size={14} className="text-gray-400" />}
@@ -1481,7 +1483,7 @@ function LogsSection({ funnelSlug, subId, demoMode }: { funnelSlug: string; subI
                 {openLogId === log.id && log.last_error && (
                   <div className="mt-2 ml-6">
                     <p className="text-[10px] uppercase text-gray-500">Fehler</p>
-                    <pre className="rounded bg-gray-50 dark:bg-gray-950 px-2 py-1 text-[11px] text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-all">{log.last_error}</pre>
+                    <pre className="rounded-lg bg-code-surface px-2 py-1 font-mono text-[11px] text-slate-300 ring-1 ring-white/10 whitespace-pre-wrap break-all">{log.last_error}</pre>
                   </div>
                 )}
               </li>

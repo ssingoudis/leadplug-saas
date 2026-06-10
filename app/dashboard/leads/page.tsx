@@ -67,8 +67,10 @@ async function getLeadsData(): Promise<{ submissions: TenantSubmission[]; funnel
   }
 
   // Aufgabe 46: Mini-CRM. Bucket-Klassifikation entfällt — eine Liste, neueste oben.
-  // Türsteher: nur kontaktierbare Leads (E-Mail oder Telefon vorhanden) landen im CRM,
-  // kontaktlose Tracking-Spuren werden ausgeblendet (zählen nur in der Statistik).
+  // Gate (gelockert in Aufgabe 56): COMPLETED Submissions erscheinen IMMER (wer das
+  // Formular abschickt, ist ein Lead — auch ohne Kontaktdaten, z.B. anonyme Quiz-Funnels).
+  // Abbrecher (completed_at NULL) erscheinen weiterhin nur mit E-Mail/Telefon —
+  // kontaktlose Tracking-Spuren zählen nur in der Statistik.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const enriched: TenantSubmission[] = ((submissions ?? []) as any[])
     .map((s) => {
@@ -92,7 +94,7 @@ async function getLeadsData(): Promise<{ submissions: TenantSubmission[]; funnel
         questions: questionsByFunnel.get(s.funnel_slug as string) ?? [],
       }
     })
-    .filter((s) => s.contact_email || s.contact_phone)
+    .filter((s) => s.completed_at || s.contact_email || s.contact_phone)
 
   const funnels: FunnelOption[] = (funnelRows ?? []).map(
     (f) => ({ slug: (f as { slug: string }).slug, name: funnelNameMap[(f as { slug: string }).slug] ?? (f as { slug: string }).slug })

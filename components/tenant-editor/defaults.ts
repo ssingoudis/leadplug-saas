@@ -181,8 +181,10 @@ export const DEFAULT_EDITOR_STATE: EditorState = {
   borderRadius: "0.5rem",
   maxWidth: "720px",
   contactFormSubtitle: "Wer soll das Angebot erhalten?",
-  submitButtonLabel: "Anfrage absenden",
   successMessage: "Vielen Dank für Ihre Anfrage!",
+  showProgressBar: true,
+  showStepBadge: true,
+  titleAlignment: "left",
   responseMessage: "Wir melden uns in Kürze bei Ihnen.",
   privacyText:
     "Mit dem Absenden stimme ich zu, per E-Mail und Telefon zu meiner Anfrage kontaktiert zu werden.",

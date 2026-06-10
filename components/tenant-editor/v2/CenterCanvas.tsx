@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Monitor, Smartphone, Play, Pencil, EyeOff, ListPlus } from "lucide-react";
+import { ExternalLink, Monitor, Smartphone, Play, Pencil, EyeOff, ListPlus, TriangleAlert } from "lucide-react";
 import { motion } from "framer-motion";
 import { Funnel } from "@/components/funnel";
 import { buildTheme, buildFunnelConfig, buildQuestions } from "@/lib/editorUtils";
@@ -26,6 +26,8 @@ interface Props {
   onDeleteOption: (idx: number) => void;
   // Polish: leere Custom-Karte zeigt Inline-"+"-Button → bubble nach EditorShell
   onAddCustomFieldRequest?: () => void;
+  // Aufgabe 56: Slug fuer den "Live"-Button (nur Edit-Modus — neue Funnels haben noch keinen).
+  liveSlug?: string;
 }
 
 export function CenterCanvas({
@@ -42,6 +44,7 @@ export function CenterCanvas({
   onDuplicateOption,
   onDeleteOption,
   onAddCustomFieldRequest,
+  liveSlug,
 }: Props) {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -56,6 +59,19 @@ export function CenterCanvas({
   // Editor-Default-Bühne mit Punktraster (unten). Hex/benannte Farben werden 1:1 gesetzt.
   const rawPageBg = (state.pageBackgroundColor ?? "").trim();
   const stageBg = rawPageBg && rawPageBg !== "transparent" ? rawPageBg : null;
+
+  // Aufgabe 56: Kontaktierbarkeits-Check — existiert mindestens ein sichtbares
+  // PFLICHT-Feld vom Typ E-Mail oder Telefon auf einer sichtbaren Karte? Wenn nein,
+  // zeigt die Bühne eine Warnung (Leads erscheinen zwar im Posteingang, sind aber
+  // nicht kontaktierbar — die "Stavros-Falle" vom 2026-06-10).
+  const hasContactChannel = state.questions.some(
+    (q) =>
+      q.kind === "custom" &&
+      q.visible !== false &&
+      (q.customFields ?? []).some(
+        (f) => (f.type === "email" || f.type === "tel") && f.visible && f.required,
+      ),
+  );
 
   // initialStep berechnen — mapped die Selection auf den Widget-Step.
   // Widget-Steps: 0..N-1 = Fragen/Karten, danach intern Success (Submit am Funnel-Ende).
@@ -89,7 +105,7 @@ export function CenterCanvas({
   }
 
   return (
-    <div className="relative flex h-full flex-col bg-gray-50 dark:bg-[#0d1117]">
+    <div className="relative flex h-full flex-col bg-gray-100 dark:bg-background">
       {/* Aufgabe 50: Test-Toggle + Geräte-Umschalter schweben über der Bühne — nur Schatten,
           kein umschließender Kasten. */}
       <div className="pointer-events-none absolute inset-x-0 top-4 z-20 flex justify-center px-4">
@@ -107,6 +123,21 @@ export function CenterCanvas({
             {isTestMode ? <Pencil size={14} /> : <Play size={14} fill="currentColor" />}
             {isTestMode ? "Zurück zum Editor" : "Funnel testen"}
           </button>
+
+          {/* Aufgabe 56: Live-Preview direkt an der Buehne — oeffnet den echten Funnel
+              (gespeicherter Stand) in neuem Tab, zaehlt keinen Aufruf (?preview=1). */}
+          {liveSlug && (
+            <a
+              href={`/${liveSlug}?preview=1`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Live ansehen (gespeicherter Stand — zählt keinen Aufruf)"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-semibold text-gray-700 shadow-lg ring-1 ring-black/5 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+            >
+              <ExternalLink size={13} />
+              Live
+            </a>
+          )}
 
           <div className="inline-flex items-center gap-1 rounded-xl border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-900">
             <button
@@ -160,6 +191,21 @@ export function CenterCanvas({
           }
         }}
       >
+        {!isTestMode && !hasContactChannel && (
+          <div
+            className="mx-auto mb-4 w-full shrink-0"
+            style={{ maxWidth: isMobile ? "375px" : state.maxWidth || "720px" }}
+          >
+            <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-800 shadow-sm dark:border-amber-700/40 dark:bg-amber-900/20 dark:text-amber-300">
+              <TriangleAlert size={14} className="mt-0.5 shrink-0" />
+              <span>
+                <strong>Kein E-Mail-/Telefon-Pflichtfeld im Funnel.</strong> Leads erscheinen im
+                Posteingang, sind aber nicht kontaktierbar. Füge z.&nbsp;B. eine Kontaktdaten-Karte
+                hinzu („+ Frage hinzufügen").
+              </span>
+            </div>
+          </div>
+        )}
         <div
           className="mx-auto my-auto w-full transition-[max-width] duration-300"
           style={{ maxWidth: isMobile ? "375px" : state.maxWidth || "720px" }}

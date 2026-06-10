@@ -69,17 +69,27 @@ Jede Hintergrundfarbe und jede Textfarbe braucht eine `dark:`-Variante:
 <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
 ```
 
-### Graustufen-Hierarchie im Dark Mode
+### Graustufen-Hierarchie im Dark Mode (verbindlich seit Aufgabe 56)
+
+**Das Dashboard ist die Referenz.** Es gibt genau diese Flächen — neue Komponenten wählen aus dieser Tabelle, nie ad hoc:
 
 | Rolle | Tailwind | Hex |
 |---|---|---|
-| Seiten-Hintergrund | `dark:bg-[#0d1117]` (hardcoded) | `#0d1117` |
-| Karten / Panels | `dark:bg-gray-900` | `#111827` |
-| Erhöhte Elemente (Sub-Panels) | `dark:bg-gray-800` | `#1f2937` |
-| Hover-State | `dark:hover:bg-gray-800` | `#1f2937` |
+| Seiten-/Bühnen-Hintergrund | `bg-gray-100 dark:bg-background` | `#f3f4f6` / `#0f172a` |
+| Karten / Panels | `bg-white dark:bg-gray-900` + `border-gray-100 dark:border-gray-800` + `shadow-sm` | `#111827` |
+| Inputs, Insets, erhöhte Elemente | `dark:bg-gray-800` | `#1f2937` |
+| Hover-State | `hover:bg-gray-50 dark:hover:bg-gray-800` (oder `/50`) | `#1f2937` |
 | Noch höher (Chips, Tags) | `dark:bg-gray-700` | `#374151` |
+| **Code-Flächen** (Snippets, JSON, Logs) | `bg-code-surface ring-1 ring-white/10` + `font-mono` + `text-slate-200/300` | `#0b1220`, immer dunkel (light + dark) |
+| Modal-/Overlay-Scrim | `bg-black/50` bzw. `dark:bg-black/40` | bewusst schwarz-transparent |
 
-> **Wichtig:** Seiten-Hintergrund ist `dark:bg-[#0d1117]` (hardcoded), nicht `dark:bg-background` — das ist bewusst, weil `#0d1117` dunkler ist als slate-900 und mehr Tiefe gibt.
+> **Code-Flächen** (Aufgabe 56): immer dunkler Block — auch im Light Mode. Der Token `--color-code-surface` (#0b1220, [`globals.css`](../app/globals.css)) ist bewusst dunkler als Karte (#111827) UND Seiten-BG (#0f172a) — beide Nachbarwerte tarnten Code-Blöcke. Die `ring-1 ring-white/10`-Kante ist Pflicht; Full-bleed-Blöcke (CodeBlock im SectionCard) nutzen `border-y border-white/10` statt Ring.
+>
+> **Aufklapp-Zustand** (Akkordeons/Collapsibles, Vorbild = Leads-Tabelle): offener Header bekommt `bg-gray-100 dark:bg-gray-800` (bei `<details>` via `group-open:`, bei State-Toggles conditional), geschlossen `hover:bg-gray-50 dark:hover:bg-gray-800/50`. „Offen" muss ohne Hinsehen erkennbar sein.
+>
+> **Verbote:** Kein `dark:bg-[#…]`-Hex-Hardcoding für Flächen (Aufgabe 56 hat alle `#0d1117`-Vorkommen auf den Token migriert — die frühere „mehr Tiefe"-Ausnahme ist aufgehoben, das Dashboard hat sie nie benutzt). Kein `dark:bg-gray-950`. Keine Inline-`style`-Hintergründe für Flächen. Fokus-Hintergründe von Inline-Rename-Inputs: `dark:focus:bg-gray-800`.
+>
+> **Ausnahme bleibt das Widget** (`components/funnel.tsx`): Farben kommen pro Funnel aus der DB (Tenant-Theme), nicht aus dieser Tabelle.
 
 ### Textfarben im Dark Mode
 

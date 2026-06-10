@@ -64,8 +64,10 @@ export function CodeBlock({ code }: { code: string }) {
   const tokens = tokenize(code)
   return (
     <pre
-      className="overflow-x-auto px-5 py-4 text-[13px] leading-6"
-      style={{ backgroundColor: '#0f172a', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, monospace' }}
+      // Aufgabe 56: Code-Kanon = bg-code-surface (Token, globals.css) + white/10-Kante.
+      // Dunkler als Karte UND Seiten-BG, damit Code als eigene Fläche lesbar ist.
+      className="overflow-x-auto border-y border-white/10 bg-code-surface px-5 py-4 text-[13px] leading-6"
+      style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, monospace' }}
     >
       {tokens.map((tok, idx) => (
         <span key={idx} style={{ color: tokenColor[tok.type] }}>{tok.text}</span>

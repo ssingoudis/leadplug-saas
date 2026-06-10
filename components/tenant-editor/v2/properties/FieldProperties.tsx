@@ -705,8 +705,8 @@ export function FieldKeyEditor({
  *  Default kollabiert; klick öffnet den FieldKeyEditor und mögliche weitere Zukunfts-Features. */
 export function AdvancedFieldSection({ children }: { children: React.ReactNode }) {
   return (
-    <details className="mt-2 rounded-lg border border-gray-200 bg-gray-50/50 dark:border-gray-800 dark:bg-gray-950/30">
-      <summary className="cursor-pointer select-none px-3 py-2 text-xs font-medium text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
+    <details className="group mt-2 overflow-hidden rounded-lg border border-gray-200 bg-gray-50/50 dark:border-gray-800 dark:bg-gray-800/40">
+      <summary className="cursor-pointer select-none px-3 py-2 text-xs font-medium text-gray-600 transition-colors hover:text-gray-900 group-open:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:group-open:bg-gray-800">
         Erweitert
       </summary>
       <div className="space-y-3 border-t border-gray-200 px-3 py-3 dark:border-gray-800">

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Pencil, Redo2, Save, TriangleAlert, Undo2 } from "lucide-react";
+import { ArrowLeft, Check, ExternalLink, Pencil, Redo2, Save, TriangleAlert, Undo2 } from "lucide-react";
 import type { EditorState, EditorQuestion, ContactFieldConfig, QuestionType } from "@/types";
 import { TopTabs, type TopTabKey } from "./TopTabs";
 import { StepList } from "./StepList";
@@ -687,6 +687,15 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
           handlePatchQuestion(qIdx, { subtitle: newText });
           return;
         }
+        // Aufgabe 56: neue Inline-Edit-Ziele
+        if (fieldRef === "welcome_button_label") {
+          handlePatchQuestion(qIdx, { welcomeButtonLabel: newText });
+          return;
+        }
+        if (fieldRef === "checkbox_label") {
+          handlePatchQuestion(qIdx, { checkboxLabel: newText });
+          return;
+        }
       }
 
       // Aufgabe 52D: Submit-Page-Canvas-Edit-Felder (contact_form_title/subtitle, submit_button)
@@ -699,6 +708,10 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
       }
       if (fieldRef === "response_message") {
         handlePatch({ responseMessage: newText });
+        return;
+      }
+      if (fieldRef === "answers_overview_label") {
+        handlePatch({ answersOverviewLabel: newText });
         return;
       }
 
@@ -869,7 +882,7 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
       )}
 
       <div
-        className="fixed inset-y-0 right-0 left-0 lg:left-16 flex flex-col bg-gray-50 dark:bg-[#0d1117]"
+        className="fixed inset-y-0 right-0 left-0 lg:left-16 flex flex-col bg-gray-100 dark:bg-background"
       >
         {/* Top-Bar: EINE Zeile — links Back+Name · Mitte Tabs (zentriert) · rechts Status+Speichern.
             Test/Geräte-Controls schweben im Canvas (CenterCanvas) statt als eigener Balken. */}
@@ -896,7 +909,7 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
                 placeholder="Neuer Funnel"
                 aria-label="Funnel-Name (zum Bearbeiten klicken)"
                 title="Klick zum Umbenennen"
-                className="min-w-0 rounded-md border border-transparent bg-transparent px-1.5 py-0.5 text-sm font-semibold text-gray-900 outline-none transition-colors hover:border-gray-200 focus:border-primary focus:bg-white dark:text-white dark:hover:border-gray-700 dark:focus:bg-gray-950"
+                className="min-w-0 rounded-md border border-transparent bg-transparent px-1.5 py-0.5 text-sm font-semibold text-gray-900 outline-none transition-colors hover:border-gray-200 focus:border-primary focus:bg-white dark:text-white dark:hover:border-gray-700 dark:focus:bg-gray-800"
                 style={{ width: `${Math.min(Math.max((state.funnelName || "Neuer Funnel").length, 8) + 2, 36)}ch` }}
               />
               <button
@@ -910,6 +923,21 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
               </button>
             </div>
             <SaveStatus status={nameSave.status} className="shrink-0" />
+            {/* Aufgabe 56: Live-Preview — öffnet den echten Funnel in neuem Tab, OHNE den
+                Aufruf-Zähler zu erhöhen (?preview=1, Skip in TenantFunnelClient). Submits
+                bleiben echt → voller End-to-End-Test möglich. Zeigt den GESPEICHERTEN Stand. */}
+            {mode === "edit" && originalSlug && (
+              <a
+                href={`/${originalSlug}?preview=1`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Live ansehen (gespeicherter Stand — zählt keinen Aufruf)"
+                aria-label="Live ansehen"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+              >
+                <ExternalLink size={15} />
+              </a>
+            )}
           </div>
 
           {/* Mitte: Tabs */}
@@ -982,7 +1010,7 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
             weil Webhook-Config keine Page-Selection braucht. */}
         {activeTab === "webhooks" ? (
           mode === "create" || !originalSlug ? (
-            <div className="flex flex-1 items-center justify-center bg-gray-50 dark:bg-background p-8">
+            <div className="flex flex-1 items-center justify-center bg-gray-100 dark:bg-background p-8">
               <div className="max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 text-center">
                 <p className="text-base font-semibold text-gray-900 dark:text-white">Funnel zuerst speichern</p>
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
@@ -1000,7 +1028,7 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
           )
         ) : activeTab === "emails" ? (
           mode === "create" || !originalSlug ? (
-            <div className="flex flex-1 items-center justify-center bg-gray-50 dark:bg-background p-8">
+            <div className="flex flex-1 items-center justify-center bg-gray-100 dark:bg-background p-8">
               <div className="max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 text-center">
                 <p className="text-base font-semibold text-gray-900 dark:text-white">Funnel zuerst speichern</p>
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
@@ -1014,7 +1042,7 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
           )
         ) : activeTab === "share" ? (
           mode === "create" || !originalSlug ? (
-            <div className="flex flex-1 items-center justify-center bg-gray-50 dark:bg-background p-8">
+            <div className="flex flex-1 items-center justify-center bg-gray-100 dark:bg-background p-8">
               <div className="max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 text-center">
                 <p className="text-base font-semibold text-gray-900 dark:text-white">Funnel zuerst speichern</p>
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
@@ -1063,6 +1091,7 @@ export function EditorShell({ initialState, mode, originalSlug, companyName }: P
               onDuplicateOption={handleDuplicateOption}
               onDeleteOption={handleDeleteOption}
               onAddCustomFieldRequest={() => setCanvasFieldPickerOpen(true)}
+              liveSlug={mode === "edit" ? originalSlug : undefined}
             />
             <div className="flex min-h-0 flex-col">
               {/* Aufgabe 45: Inspektor-Umschalter Inhalt | Design (rechte Spalte des Bearbeiten-Tabs).

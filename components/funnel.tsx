@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import { ChevronLeft, Check, GripVertical, Plus, Trash2, Copy } from "lucide-react";
+import { ChevronLeft, Check, CircleAlert, GripVertical, Plus, Trash2, Copy } from "lucide-react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 
 // Lazy-loaded Inline-Kalender — Bundle wird nur geladen wenn der Funnel ein date-Feld hat.
@@ -361,6 +361,20 @@ export function Funnel({
   const [isSubmitted, setIsSubmitted] = useState(initialSubmitted ?? false);
   const [honeypot,    setHoneypot]    = useState("");
 
+  // Aufgabe 56: dezentes Validierungs-Feedback in Karten (Stavros: "subtil, Ausrufezeichen
+  // rechts"). Ein Feld gilt als berührt, sobald es einmal den Fokus verlor — erst DANN
+  // zeigt ein invalides Feld das Icon (frisch geöffnete Karte bleibt ruhig). Beim
+  // Korrigieren verschwindet das Icon live; die Meldung steckt als Tooltip im title.
+  const [touchedKeys, setTouchedKeys] = useState<Set<string>>(new Set());
+  const markTouched = useCallback((key: string) => {
+    setTouchedKeys((prev) => {
+      if (prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
+  }, []);
+
   // ---------------------------------------------------------------------------
   // Derived state
   // ---------------------------------------------------------------------------
@@ -398,6 +412,22 @@ export function Funnel({
         {field.label}{!field.required && <span className="opacity-60"> (optional)</span>}
       </label>
     );
+
+  // Aufgabe 56: Ausrufezeichen rechts im Feld, wenn berührt + invalide (editMode: nie).
+  const fieldErrorHint = (field: ContactFieldConfig, value: string, align: "center" | "top" = "center") => {
+    if (editMode || !touchedKeys.has(field.key)) return null;
+    const err = validateContactField(field, value);
+    if (!err) return null;
+    return (
+      <span
+        title={err}
+        aria-label={err}
+        className={`absolute right-0 text-amber-500 ${align === "top" ? "top-2.5" : "top-1/2 -translate-y-1/2"}`}
+      >
+        <CircleAlert size={15} strokeWidth={2} />
+      </span>
+    );
+  };
 
   // Custom-Step ist disabled bis alle required Fields gültig sind.
   const isCustomStepValid = visibleCustomFields
@@ -733,13 +763,16 @@ export function Funnel({
               className="rounded-lg text-left text-sm p-4"
               style={{ backgroundColor: theme.inputBgColor, borderLeft: `4px solid ${theme.primaryColor}` }}
             >
-              <p
+              <EditableText
+                as="p"
+                editMode={editMode}
+                fieldRef="answers_overview_label"
+                initial={funnel.answersOverviewLabel}
+                placeholder="Überschrift der Antworten-Box…"
+                onCommit={onTextChange}
                 className="font-semibold mb-3"
-                data-edit-field="answers_overview_label"
                 style={{ color: theme.textColor, ...editCursor, ...hl("answers_overview_label") }}
-              >
-                {funnel.answersOverviewLabel}
-              </p>
+              />
               {visibleQuestions.map((q) => {
                 const display = resolveAnswer(q, answers);
                 if (!display) return null;
@@ -791,13 +824,15 @@ export function Funnel({
           ...hlEdge("primary_color", "text_color", "background_color", "font", "border_radius", "max_width"),
         }}
       >
-        {/* Progress-Bar 1px oben — Typeform-Pattern */}
-        <div className="h-0.5 w-full" style={{ backgroundColor: `color-mix(in srgb, ${theme.textColor} 8%, transparent)` }}>
-          <div
-            className="h-full transition-[width] duration-300"
-            style={{ width: `${progress}%`, backgroundColor: theme.primaryColor }}
-          />
-        </div>
+        {/* Progress-Bar 1px oben — Typeform-Pattern. Aufgabe 56: per Design-Schalter abschaltbar. */}
+        {funnel.showProgressBar && (
+          <div className="h-0.5 w-full" style={{ backgroundColor: `color-mix(in srgb, ${theme.textColor} 8%, transparent)` }}>
+            <div
+              className="h-full transition-[width] duration-300"
+              style={{ width: `${progress}%`, backgroundColor: theme.primaryColor }}
+            />
+          </div>
+        )}
         {/* Floating-Nav existiert nicht mehr (siehe BackButton-Bar am Content-Ende),
             also gleichmäßiges Padding ohne übergroßen Bottom-Buffer. */}
         <div className="p-4 @md:p-8 overflow-hidden">
@@ -829,9 +864,11 @@ export function Funnel({
                 Question step (Kontaktformular-Zweig in Aufgabe 52D entfernt)
             -------------------------------------------------------------- */}
               <div>
-                {/* Aufgabe 39: Welcome-Step hat keinen Step-Counter (Intro-Step vor dem eigentlichen Flow) */}
-                {!isWelcomeStep && (
-                  <div className="mb-3 flex items-center gap-2 font-mono text-xs" style={{ color: theme.primaryColor }}>
+                {/* Aufgabe 39: Welcome-Step hat keinen Step-Counter (Intro-Step vor dem eigentlichen Flow).
+                    Aufgabe 56: Badge per Design-Schalter abschaltbar — die Zeile rendert dann nur noch,
+                    wenn der Zurück-Pfeil (Single-Choice-Steps ab Schritt 2) sie braucht. */}
+                {!isWelcomeStep && (funnel.showStepBadge || (!editMode && !showWeiterButton && currentStep > 0)) && (
+                  <div className={`mb-3 flex items-center gap-2 font-mono text-xs ${funnel.titleAlignment === "center" ? "justify-center" : ""}`} style={{ color: theme.primaryColor }}>
                     {!editMode && !showWeiterButton && currentStep > 0 && (
                       <button
                         type="button"
@@ -850,14 +887,16 @@ export function Funnel({
                         <ChevronLeft size={11} strokeWidth={2.5} />
                       </button>
                     )}
-                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded px-1.5 text-[11px] font-semibold" style={{ backgroundColor: theme.primaryColor, color: "#ffffff" }}>
-                      {/* Aufgabe 51: nur Fragen/Cards zählen — Welcome-Step nicht mitnummerieren (1. Frage = 1) */}
-                      {visibleQuestions.slice(0, currentStep + 1).filter((q) => q.kind !== "welcome").length}
-                    </span>
+                    {funnel.showStepBadge && (
+                      <span className="inline-flex h-5 min-w-5 items-center justify-center rounded px-1.5 text-[11px] font-semibold" style={{ backgroundColor: theme.primaryColor, color: "#ffffff" }}>
+                        {/* Aufgabe 51: nur Fragen/Cards zählen — Welcome-Step nicht mitnummerieren (1. Frage = 1) */}
+                        {visibleQuestions.slice(0, currentStep + 1).filter((q) => q.kind !== "welcome").length}
+                      </span>
+                    )}
                   </div>
                 )}
 
-                <div className="mb-6 @lg:mb-8">
+                <div className="group/title mb-6 @lg:mb-8">
                   <EditableText
                     as="h1"
                     editMode={editMode}
@@ -865,7 +904,7 @@ export function Funnel({
                     initial={currentQuestion.title || (onFieldClick && !editMode ? "Ihre Frage?" : "")}
                     placeholder="Frage-Titel eingeben…"
                     onCommit={onTextChange}
-                    className="font-light leading-snug text-left text-balance"
+                    className={`font-light leading-snug text-balance ${funnel.titleAlignment === "center" ? "text-center" : "text-left"}`}
                     style={{
                       // Fluid Typography: skaliert smooth zwischen 24px (schmale Cards) und 36px (breite Cards).
                       // cqw = % der Container-Width (Card hat @container) — kein abrupter Breakpoint-Sprung.
@@ -876,10 +915,10 @@ export function Funnel({
                       ...hl("question_title"),
                     }}
                   />
-                  {/* Subtitle wird nur gerendert wenn Content existiert oder gerade editiert wird.
-                      Empty-Editor-Slot mit "Untertitel (optional)" entfernt — Right-Panel-Input ist die
-                      Edit-Quelle, doppelte Affordance schafft nur Rauschen im Canvas. */}
-                  {(currentQuestion.subtitle || previewHighlight === "question_subtitle") && (
+                  {/* Aufgabe 56: Untertitel ohne Content = unsichtbarer Hover-Ghost-Slot im editMode
+                      (opacity 0 → 60% bei Hover auf den Titel-Block, 100% bei Fokus). Schliesst die
+                      tote Zone "kein Klick-Ziel ohne Untertitel", ohne im Ruhezustand zu rauschen. */}
+                  {(currentQuestion.subtitle || previewHighlight === "question_subtitle" || editMode) && (
                     <EditableText
                       as="p"
                       editMode={editMode}
@@ -887,7 +926,11 @@ export function Funnel({
                       initial={currentQuestion.subtitle ?? ""}
                       placeholder="Untertitel (optional)"
                       onCommit={onTextChange}
-                      className="mt-2 font-light leading-relaxed text-left"
+                      className={`mt-2 font-light leading-relaxed ${funnel.titleAlignment === "center" ? "text-center" : "text-left"} ${
+                        editMode && !currentQuestion.subtitle
+                          ? "opacity-0 transition-opacity focus-within:opacity-100 group-hover/title:opacity-60"
+                          : ""
+                      }`}
                       style={{
                         fontSize: "clamp(0.875rem, 2.5cqw, 1.125rem)",
                         color: theme.textColorMuted,
@@ -1032,8 +1075,12 @@ export function Funnel({
                               onChange={(e) =>
                                 setAnswers((prev) => ({ ...prev, [field.key]: e.target.value }))
                               }
-                              className="w-full cursor-pointer accent-primary"
-                              style={{ accentColor: theme.primaryColor }}
+                              // Aufgabe 56-Polish: gleiche .funnel-slider-Optik wie der Frage-Slider
+                              // (vorher nativer accent-color-Slider — anderes Styling im selben Widget).
+                              className="funnel-slider"
+                              style={{
+                                "--slider-fill": `${Math.min(100, Math.max(0, ((current - min) / Math.max(1, max - min)) * 100))}%`,
+                              } as React.CSSProperties}
                             />
                             <div className="mt-1 flex justify-between text-[11px] font-light" style={{ color: theme.textColorMuted }}>
                               <span>{min}{field.sliderUnit ? ` ${field.sliderUnit}` : ""}</span>
@@ -1091,18 +1138,21 @@ export function Funnel({
                         return (
                           <div key={field.key}>
                             {customFieldLabel(field)}
-                            <textarea
-                              placeholder={field.placeholder ?? ""}
-                              value={fieldValue}
-                              rows={3}
-                              onChange={(e) =>
-                                setAnswers((prev) => ({ ...prev, [field.key]: e.target.value }))
-                              }
-                              className="w-full bg-transparent border-b text-base @md:text-lg py-2 outline-none transition-colors resize-none font-light"
-                              style={{ borderColor: theme.underlineColor, color: theme.textColor }}
-                              onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
-                              onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
-                            />
+                            <div className="relative">
+                              <textarea
+                                placeholder={field.placeholder ?? ""}
+                                value={fieldValue}
+                                rows={3}
+                                onChange={(e) =>
+                                  setAnswers((prev) => ({ ...prev, [field.key]: e.target.value }))
+                                }
+                                className="w-full bg-transparent border-b text-base @md:text-lg py-2 pr-7 outline-none transition-colors resize-none font-light"
+                                style={{ borderColor: theme.underlineColor, color: theme.textColor }}
+                                onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
+                                onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; markTouched(field.key); }}
+                              />
+                              {fieldErrorHint(field, fieldValue, "top")}
+                            </div>
                           </div>
                         );
                       }
@@ -1112,18 +1162,21 @@ export function Funnel({
                         return (
                           <div key={field.key}>
                             {customFieldLabel(field)}
-                            <input
-                              type="number"
-                              placeholder={field.placeholder ?? ""}
-                              value={fieldValue}
-                              onChange={(e) =>
-                                setAnswers((prev) => ({ ...prev, [field.key]: e.target.value }))
-                              }
-                              className="w-full bg-transparent border-b text-base @md:text-lg py-2 outline-none transition-colors font-light"
-                              style={{ borderColor: theme.underlineColor, color: theme.textColor }}
-                              onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
-                              onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
-                            />
+                            <div className="relative">
+                              <input
+                                type="number"
+                                placeholder={field.placeholder ?? ""}
+                                value={fieldValue}
+                                onChange={(e) =>
+                                  setAnswers((prev) => ({ ...prev, [field.key]: e.target.value }))
+                                }
+                                className="w-full bg-transparent border-b text-base @md:text-lg py-2 pr-7 outline-none transition-colors font-light"
+                                style={{ borderColor: theme.underlineColor, color: theme.textColor }}
+                                onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
+                                onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; markTouched(field.key); }}
+                              />
+                              {fieldErrorHint(field, fieldValue)}
+                            </div>
                           </div>
                         );
                       }
@@ -1224,21 +1277,24 @@ export function Funnel({
                       return (
                         <div key={field.key}>
                           {customFieldLabel(field)}
-                          <input
-                            type={inputType}
-                            placeholder={field.placeholder || defaultPlaceholder}
-                            value={fieldValue}
-                            onChange={(e) =>
-                              setAnswers((prev) => ({ ...prev, [field.key]: e.target.value }))
-                            }
-                            className="w-full bg-transparent border-b text-base @md:text-lg py-2 outline-none transition-colors font-light"
-                            style={{
-                              borderColor: theme.underlineColor,
-                              color: theme.textColor,
-                            }}
-                            onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
-                            onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
-                          />
+                          <div className="relative">
+                            <input
+                              type={inputType}
+                              placeholder={field.placeholder || defaultPlaceholder}
+                              value={fieldValue}
+                              onChange={(e) =>
+                                setAnswers((prev) => ({ ...prev, [field.key]: e.target.value }))
+                              }
+                              className="w-full bg-transparent border-b text-base @md:text-lg py-2 pr-7 outline-none transition-colors font-light"
+                              style={{
+                                borderColor: theme.underlineColor,
+                                color: theme.textColor,
+                              }}
+                              onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
+                              onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; markTouched(field.key); }}
+                            />
+                            {fieldErrorHint(field, fieldValue)}
+                          </div>
                         </div>
                       );
                     })}
@@ -1438,6 +1494,10 @@ export function Funnel({
                           setAnswers((prev) => ({ ...prev, [currentQuestion.id]: e.target.value }))
                         }
                         className="funnel-slider"
+                        // Brand-Fill bis zum Daumen (CSS-Var, siehe .funnel-slider in globals.css)
+                        style={{
+                          "--slider-fill": `${Math.min(100, Math.max(0, ((sliderVal - sliderConfig.min) / Math.max(1, sliderConfig.max - sliderConfig.min)) * 100))}%`,
+                        } as React.CSSProperties}
                       />
                     </div>
 
@@ -1646,6 +1706,7 @@ export function Funnel({
                   const isChecked = answers[currentQuestion.id] === "true";
                   return (
                     <label
+                      onClick={(e) => { if (editMode) e.preventDefault(); }}
                       className="mb-3 flex items-center gap-3 cursor-pointer px-3 py-3 border transition-colors"
                       data-edit-field="text_input"
                       style={{
@@ -1677,9 +1738,16 @@ export function Funnel({
                         }
                         className="sr-only"
                       />
-                      <span className="text-sm @md:text-base leading-snug font-light" style={{ color: theme.textColor }}>
-                        {cbCfg.label || "Ich stimme zu"}
-                      </span>
+                      <EditableText
+                        as="span"
+                        editMode={editMode}
+                        fieldRef="checkbox_label"
+                        initial={cbCfg.label || "Ich stimme zu"}
+                        placeholder="Checkbox-Text…"
+                        onCommit={onTextChange}
+                        className="text-sm @md:text-base leading-snug font-light"
+                        style={{ color: theme.textColor, ...hl("checkbox_label") }}
+                      />
                     </label>
                   );
                 })()}
@@ -1697,15 +1765,22 @@ export function Funnel({
                 <button
                   type="button"
                   onClick={handleNext}
-                  disabled={isWeiterDisabled || editMode}
+                  disabled={!editMode && isWeiterDisabled}
                   className="inline-flex items-center px-5 py-2 text-sm font-medium text-white shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                   style={{ backgroundColor: theme.primaryColor, borderRadius: theme.borderRadius }}
                   onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.backgroundColor = theme.primaryColorHover; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = theme.primaryColor; }}
                 >
-                  {isWelcomeStep
-                    ? (currentQuestion?.config as { buttonLabel?: string })?.buttonLabel || "Los geht's →"
-                    : isLastQuestion ? "Absenden" : "OK"}
+                  {isWelcomeStep ? (
+                    <EditableText
+                      as="span"
+                      editMode={editMode}
+                      fieldRef="welcome_button_label"
+                      initial={(currentQuestion?.config as { buttonLabel?: string })?.buttonLabel || "Los geht's →"}
+                      placeholder="Button-Text…"
+                      onCommit={onTextChange}
+                    />
+                  ) : isLastQuestion ? "Absenden" : "OK"}
                 </button>
               </div>
             )}
