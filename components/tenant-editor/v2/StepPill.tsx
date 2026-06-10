@@ -1,6 +1,6 @@
 "use client";
 
-import { GripVertical, EyeOff, Webhook } from "lucide-react";
+import { Copy, GripVertical, EyeOff, Trash2, Webhook } from "lucide-react";
 import type { FieldMeta } from "./fieldMeta";
 
 interface Props {
@@ -17,6 +17,9 @@ interface Props {
   webhookCount?: number;
   onClick: () => void;
   onWebhookBadgeClick?: () => void;
+  /** Aufgabe 55: Hover-Quick-Actions. Ohne Confirm — Undo/Redo ist das Sicherheitsnetz. */
+  onDuplicate?: () => void;
+  onDelete?: () => void;
   /** dnd-kit refs (drag handle + draggable wrapper). Wird auf das ganze Pill gelegt,
       damit der Drag überall am Pill startet. Click vs Drag löst die activationConstraint
       des Sensors (distance: 4) automatisch — kurzer Klick = onClick, Bewegung > 4px = Drag. */
@@ -33,6 +36,8 @@ export function StepPill({
   webhookCount = 0,
   onClick,
   onWebhookBadgeClick,
+  onDuplicate,
+  onDelete,
   dragHandleProps,
 }: Props) {
   return (
@@ -58,7 +63,9 @@ export function StepPill({
       <button
         type="button"
         onClick={onClick}
-        className="flex flex-1 items-center gap-2 px-2.5 py-2 text-left"
+        // min-w-0: ohne das weigert sich der Flex-Button bei langen Titeln zu schrumpfen
+        // (min-width:auto) und schiebt die Hover-Actions aus dem overflow-hidden-Pill.
+        className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-2 text-left"
       >
         <span
           className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border text-xs font-bold ${meta.pillClass}`}
@@ -76,7 +83,9 @@ export function StepPill({
                 : "font-medium text-gray-700 dark:text-gray-200"
             } ${hidden ? "opacity-50" : ""}`}
           >
-            {title || <span className="italic text-gray-400 dark:text-gray-500">Ohne Titel</span>}
+            {/* Aufgabe 55: neutraler Fallback statt kursivem „Ohne Titel" (wirkte wie ein Bug).
+                StepList liefert vorher schon Auto-Titel aus dem Inhalt (Options/Feld-Labels). */}
+            {title || <span className="text-gray-400 dark:text-gray-500">Unbenannt</span>}
           </span>
         </div>
         {hidden && (
@@ -85,6 +94,41 @@ export function StepPill({
           </span>
         )}
       </button>
+
+      {/* Aufgabe 55: Hover-Quick-Actions (Duplizieren/Löschen) — sichtbar nur bei Hover,
+          damit die Liste ruhig bleibt. stopPropagation: kein Step-Select beim Klick. */}
+      {(onDuplicate || onDelete) && (
+        <span className="my-auto flex shrink-0 items-center gap-0.5 pr-1 opacity-0 transition-opacity group-hover:opacity-100">
+          {onDuplicate && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDuplicate();
+              }}
+              aria-label="Schritt duplizieren"
+              title="Duplizieren"
+              className="inline-flex h-6 w-6 items-center justify-center rounded text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+            >
+              <Copy size={12} />
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              aria-label="Schritt löschen"
+              title="Löschen (Strg+Z macht's rückgängig)"
+              className="inline-flex h-6 w-6 items-center justify-center rounded text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-gray-500 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+            >
+              <Trash2 size={12} />
+            </button>
+          )}
+        </span>
+      )}
 
       {webhookCount > 0 && (
         <button

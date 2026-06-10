@@ -648,6 +648,9 @@ function Toggle({
   );
 }
 
+// Aufgabe 55: Typ-Wahl als Icon-Galerie-Popover statt nacktem <select> — nutzt dieselben
+// Typ-Chips (Icon + Pill-Farbe) wie StepList/FieldRow, damit der Tenant die Typen visuell
+// wiedererkennt. Verhalten identisch: Auswahl ruft onChange(questionType).
 function TypeSelect({
   value,
   onChange,
@@ -655,27 +658,79 @@ function TypeSelect({
   value: QuestionType;
   onChange: (t: QuestionType) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const current = questionMeta(value);
+  const options = QUESTION_TYPE_OPTIONS
+    // Aufgabe 40 Polish: Name-Field-Types nicht als eigenständige Question-Type
+    // anbieten — die gehören nur in Multi-Field-Karten.
+    .filter((o) => o.value !== "first_name" && o.value !== "last_name" && o.value !== "full_name");
+
   return (
     <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value as QuestionType)}
-        className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pr-9 text-sm text-gray-900 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className="flex w-full items-center gap-2 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 outline-none transition hover:border-gray-400 focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:hover:border-gray-600"
       >
-        {QUESTION_TYPE_OPTIONS
-          // Aufgabe 40 Polish: Name-Field-Types nicht als eigenständige Question-Type
-          // anbieten — die gehören nur in Multi-Field-Karten + Submit-Page-Kontaktformular.
-          .filter((o) => o.value !== "first_name" && o.value !== "last_name" && o.value !== "full_name")
-          .map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-      </select>
-      <ChevronDown
-        size={14}
-        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
-      />
+        <span
+          className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border text-xs font-bold ${current.pillClass}`}
+        >
+          {current.icon}
+        </span>
+        <span className="flex-1 text-left">{current.label}</span>
+        <ChevronDown
+          size={14}
+          className={`text-gray-400 transition-transform dark:text-gray-500 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <>
+          {/* Outside-Click-Fänger */}
+          <button
+            type="button"
+            aria-label="Typ-Auswahl schließen"
+            tabIndex={-1}
+            className="fixed inset-0 z-20 cursor-default"
+            onClick={() => setOpen(false)}
+          />
+          <div
+            role="listbox"
+            className="absolute left-0 right-0 z-30 mt-1 grid grid-cols-2 gap-1 rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl dark:border-gray-700 dark:bg-gray-900"
+          >
+            {options.map((o) => {
+              const m = questionMeta(o.value);
+              const active = o.value === value;
+              return (
+                <button
+                  key={o.value}
+                  type="button"
+                  role="option"
+                  aria-selected={active}
+                  onClick={() => {
+                    onChange(o.value);
+                    setOpen(false);
+                  }}
+                  className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs font-medium transition-colors ${
+                    active
+                      ? "bg-primary/10 text-primary"
+                      : "text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  <span
+                    className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border text-xs font-bold ${m.pillClass}`}
+                  >
+                    {m.icon}
+                  </span>
+                  <span className="truncate">{o.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }

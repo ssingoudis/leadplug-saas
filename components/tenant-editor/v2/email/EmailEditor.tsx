@@ -105,7 +105,7 @@ export function EmailEditor({ value, onChange, singleLine = false, placeholder, 
 
   if (!editor) {
     return (
-      <div className="rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-400">
+      <div className="rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-400">
         Lade Editor…
       </div>
     );
@@ -114,7 +114,7 @@ export function EmailEditor({ value, onChange, singleLine = false, placeholder, 
   if (singleLine) {
     // Aufgabe 53: Betreff bekommt jetzt auch einen Variablen-Picker (z.B. „Hallo {{Vorname}}").
     return (
-      <div className="rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 overflow-hidden">
+      <div className="rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
         <div className="flex items-center border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 px-2 py-1">
           <InsertVariableDropdown editor={editor} groups={variableGroups} />
         </div>
@@ -124,7 +124,7 @@ export function EmailEditor({ value, onChange, singleLine = false, placeholder, 
   }
 
   return (
-    <div className="rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 overflow-visible">
+    <div className="rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-visible">
       <BodyToolbar editor={editor} groups={variableGroups} />
       <EditorContent editor={editor} />
     </div>
@@ -338,7 +338,7 @@ function LinkButton({ editor }: { editor: Editor }) {
                 if (e.key === "Escape") { e.preventDefault(); setOpen(false); }
               }}
               placeholder="example.com oder https://…"
-              className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-2 py-1.5 text-xs text-gray-900 dark:text-gray-100 focus:border-primary focus:outline-none"
+              className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-xs text-gray-900 dark:text-gray-100 focus:border-primary focus:outline-none"
             />
           </div>
           {!editing && !hadSelection && (
@@ -350,7 +350,7 @@ function LinkButton({ editor }: { editor: Editor }) {
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); apply(); } }}
                 placeholder="z.B. Hier klicken (leer = URL)"
-                className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-2 py-1.5 text-xs text-gray-900 dark:text-gray-100 focus:border-primary focus:outline-none"
+                className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-xs text-gray-900 dark:text-gray-100 focus:border-primary focus:outline-none"
               />
             </div>
           )}

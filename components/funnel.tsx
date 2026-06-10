@@ -578,6 +578,42 @@ export function Funnel({
     }
   }, [currentStep, isSubmitted, onStepChange]);
 
+  // Aufgabe 55: Slider zeigen immer einen Wert an (Default bzw. Min) — der muss auch als
+  // Antwort gelten, wenn der User ihn unverändert akzeptiert und weiterklickt. Vorher
+  // entstand die Antwort nur onChange → "Default akzeptiert" wurde nie übermittelt.
+  // Beim Anzeigen eines Steps werden fehlende Slider-Werte einmalig committed — exakt
+  // mit derselben Fallback-Kette, die auch die Anzeige nutzt (Wert == Anzeige garantiert).
+  // editMode: aus (Editor-Preview soll answers nicht anfassen). isSubmitted: aus.
+  useEffect(() => {
+    if (editMode || isSubmitted || !currentQuestion) return;
+    const updates: Record<string, string> = {};
+    if (
+      currentQuestion.kind !== "custom" &&
+      currentQuestion.kind !== "welcome" &&
+      currentQuestion.questionType === "slider"
+    ) {
+      const cfg = currentQuestion.config as SliderConfig;
+      if ((answers[currentQuestion.id] ?? "") === "") {
+        updates[currentQuestion.id] = String(cfg.default ?? cfg.min ?? 0);
+      }
+    }
+    if (currentQuestion.kind === "custom") {
+      for (const f of currentQuestion.customFields ?? []) {
+        if (!f.visible || f.type !== "slider") continue;
+        if ((answers[f.key] ?? "") !== "") continue;
+        const min = f.sliderMin ?? 0;
+        const max = f.sliderMax ?? 100;
+        updates[f.key] = String(f.sliderDefault ?? Math.floor((min + max) / 2));
+      }
+    }
+    if (Object.keys(updates).length > 0) {
+      setAnswers((prev) => ({ ...prev, ...updates }));
+    }
+    // Bewusst NUR bei Step-Wechsel — answers in den Deps würde den Effect bei jedem
+    // Tastendruck neu laufen lassen (der Guard oben macht ihn idempotent, aber unnötig).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, editMode, isSubmitted]);
+
   // Partial-Submissions: feuere debounced 600ms nach jeder Antwort-Änderung den onAnswersChange-Callback.
   // In editMode oder ohne Callback: No-Op. Submitted-State auch No-Op (dort wird /api/submit aufgerufen).
   useEffect(() => {
