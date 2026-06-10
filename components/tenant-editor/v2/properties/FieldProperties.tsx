@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Trash2, Plus, Eye, EyeOff, Pencil, AlertTriangle, Lock } from "lucide-react";
 import type { EditorQuestion, EditorOption, ContactFieldConfig, OptionMarker } from "@/types";
 import { OptionsEditor } from "./OptionsEditor";
+import { SelMark } from "./selection";
 import { validateFieldKey, toKey } from "@/lib/editorUtils";
 
 type FieldPropertiesProps =
@@ -62,11 +63,13 @@ function QuestionFieldProps({
       {isText && (
         <>
           <Field label="Platzhalter">
-            <TextInput
-              value={question.placeholder}
-              onChange={(v) => onPatch({ placeholder: v })}
-              placeholder="z. B. Gib hier deinen Text ein…"
-            />
+            <SelMark refKey="text_input">
+              <TextInput
+                value={question.placeholder}
+                onChange={(v) => onPatch({ placeholder: v })}
+                placeholder="z. B. Gib hier deinen Text ein…"
+              />
+            </SelMark>
           </Field>
           <Field label="Maximale Zeichenanzahl (optional)">
             <TextInput
@@ -80,11 +83,15 @@ function QuestionFieldProps({
 
       {isOptionBased && (
         <>
+          {/* Dropdown rendert im Canvas EIN Select (data-edit-field="text_input") —
+              Klick darauf markiert hier die Options-Liste (ohne die Beschriftung). */}
           <Field label="Antwortoptionen">
-            <OptionsEditor
-              value={question.options}
-              onChange={(next: EditorOption[]) => onPatch({ options: next })}
-            />
+            <SelMark refKey={type === "dropdown" ? "text_input" : null}>
+              <OptionsEditor
+                value={question.options}
+                onChange={(next: EditorOption[]) => onPatch({ options: next })}
+              />
+            </SelMark>
           </Field>
           <Field label="Nummerierung der Optionen">
             <MarkerStyleControl
@@ -98,16 +105,24 @@ function QuestionFieldProps({
       {isSlider && (
         <div className="grid grid-cols-2 gap-2">
           <Field label="Minimum">
-            <TextInput value={question.sliderMin} onChange={(v) => onPatch({ sliderMin: v })} placeholder="0" />
+            <SelMark refKey="slider_min">
+              <TextInput value={question.sliderMin} onChange={(v) => onPatch({ sliderMin: v })} placeholder="0" />
+            </SelMark>
           </Field>
           <Field label="Maximum">
-            <TextInput value={question.sliderMax} onChange={(v) => onPatch({ sliderMax: v })} placeholder="100" />
+            <SelMark refKey="slider_max">
+              <TextInput value={question.sliderMax} onChange={(v) => onPatch({ sliderMax: v })} placeholder="100" />
+            </SelMark>
           </Field>
           <Field label="Schrittweite">
-            <TextInput value={question.sliderStep} onChange={(v) => onPatch({ sliderStep: v })} placeholder="1" />
+            <SelMark refKey="slider_step">
+              <TextInput value={question.sliderStep} onChange={(v) => onPatch({ sliderStep: v })} placeholder="1" />
+            </SelMark>
           </Field>
           <Field label="Standardwert">
-            <TextInput value={question.sliderDefault} onChange={(v) => onPatch({ sliderDefault: v })} placeholder="0" />
+            <SelMark refKey="slider_default">
+              <TextInput value={question.sliderDefault} onChange={(v) => onPatch({ sliderDefault: v })} placeholder="0" />
+            </SelMark>
           </Field>
           <div className="col-span-2">
             <Field label="Einheit (optional)">
@@ -120,7 +135,9 @@ function QuestionFieldProps({
       {isNumber && (
         <div className="grid grid-cols-2 gap-2">
           <Field label="Minimum">
-            <TextInput value={question.numberMin} onChange={(v) => onPatch({ numberMin: v })} placeholder="0" />
+            <SelMark refKey="text_input">
+              <TextInput value={question.numberMin} onChange={(v) => onPatch({ numberMin: v })} placeholder="0" />
+            </SelMark>
           </Field>
           <Field label="Maximum">
             <TextInput value={question.numberMax} onChange={(v) => onPatch({ numberMax: v })} placeholder="(leer = unbegrenzt)" />
@@ -142,7 +159,9 @@ function QuestionFieldProps({
       {isDate && (
         <div className="grid grid-cols-2 gap-2">
           <Field label="Frühestes Datum (optional)">
-            <TextInput value={question.dateMin} onChange={(v) => onPatch({ dateMin: v })} placeholder="YYYY-MM-DD" />
+            <SelMark refKey="text_input">
+              <TextInput value={question.dateMin} onChange={(v) => onPatch({ dateMin: v })} placeholder="YYYY-MM-DD" />
+            </SelMark>
           </Field>
           <Field label="Spätestes Datum (optional)">
             <TextInput value={question.dateMax} onChange={(v) => onPatch({ dateMax: v })} placeholder="YYYY-MM-DD" />
@@ -157,11 +176,13 @@ function QuestionFieldProps({
 
       {isCheckbox && (
         <Field label="Beschriftung neben Checkbox">
-          <TextInput
-            value={question.checkboxLabel}
-            onChange={(v) => onPatch({ checkboxLabel: v })}
-            placeholder="z. B. Ich stimme der [Datenschutzerklärung](https://…) zu"
-          />
+          <SelMark refKey="checkbox_label">
+            <TextInput
+              value={question.checkboxLabel}
+              onChange={(v) => onPatch({ checkboxLabel: v })}
+              placeholder="z. B. Ich stimme der [Datenschutzerklärung](https://…) zu"
+            />
+          </SelMark>
           <span className="mt-1 block text-[10px] leading-snug text-gray-400 dark:text-gray-500">
             Link einfügen mit <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">[Text](https://…)</code> — z. B. für die Datenschutzerklärung.
           </span>

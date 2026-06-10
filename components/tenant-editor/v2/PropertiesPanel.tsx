@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Trash2, ChevronDown, Plus } from "lucide-react";
 import {
   DndContext,
@@ -32,12 +32,16 @@ import {
 import { FieldRow } from "./properties/FieldRow";
 import { FieldProperties } from "./properties/FieldProperties";
 import { AddContactFieldPicker } from "./properties/AddContactFieldPicker";
+import { SelectedFieldRefContext, SelMark } from "./properties/selection";
 import { PanelShell, PanelHeader, Section, Field } from "./ui/Panel";
 import { ConfirmModal } from "./ui/ConfirmModal";
 
 interface Props {
   state: EditorState;
   selected: SelectedStep;
+  // Aufgabe 57C: Canvas-Selektion (data-edit-field-Ref aus funnel.tsx). Karten-Feld-Klicks
+  // ("card_field_<id>") klappen rechts die passende Feld-Zeile auf.
+  selectedFieldRef?: string;
   onPatch: (patch: Partial<EditorState>) => void;
   onPatchQuestion: (index: number, patch: Partial<EditorQuestion>) => void;
   onDeleteQuestion: (index: number) => void;
@@ -51,6 +55,7 @@ interface Props {
 export function PropertiesPanel({
   state,
   selected,
+  selectedFieldRef,
   onPatch,
   onPatchQuestion,
   onDeleteQuestion,
@@ -64,7 +69,20 @@ export function PropertiesPanel({
   const isCustomPage = currentStep?.kind === "custom";
   const isWelcomePage = currentStep?.kind === "welcome";
 
+  // Aufgabe 57C: markiertes Ziel-Element bei Selektions-Wechsel ins Sichtfeld scrollen.
+  // data-sel-target setzen SelMark + die Karten-Feld-Rows. globalThis.CSS: das nackte
+  // `CSS` ist hier der dnd-kit-Import (Shadowing).
+  useEffect(() => {
+    if (!selectedFieldRef) return;
+    requestAnimationFrame(() => {
+      document
+        .querySelector(`[data-sel-target="${globalThis.CSS.escape(selectedFieldRef)}"]`)
+        ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+  }, [selectedFieldRef]);
+
   return (
+    <SelectedFieldRefContext.Provider value={selectedFieldRef ?? ""}>
     <PanelShell>
       {selected.kind === "question" && isWelcomePage ? (
         <WelcomeProps
@@ -77,6 +95,7 @@ export function PropertiesPanel({
         <CustomPageProps
           state={state}
           index={selected.questionIndex}
+          selectedFieldRef={selectedFieldRef}
           onPatchQuestion={onPatchQuestion}
           onDelete={() => onDeleteQuestion(selected.questionIndex)}
           onPatchCustomField={(clientId, patch) => onPatchCustomField(selected.questionIndex, clientId, patch)}
@@ -95,6 +114,7 @@ export function PropertiesPanel({
         <SuccessProps state={state} onPatch={onPatch} />
       )}
     </PanelShell>
+    </SelectedFieldRefContext.Provider>
   );
 }
 
@@ -129,18 +149,22 @@ function QuestionProps({ state, index, onPatchQuestion, onDelete }: QuestionProp
           />
         </Field>
         <Field label="Titel">
-          <TextInput
-            value={q.title}
-            onChange={(v) => onPatchQuestion(index, { title: v })}
-            placeholder="z. B. Welche Heizung haben Sie?"
-          />
+          <SelMark refKey="question_title">
+            <TextInput
+              value={q.title}
+              onChange={(v) => onPatchQuestion(index, { title: v })}
+              placeholder="z. B. Welche Heizung haben Sie?"
+            />
+          </SelMark>
         </Field>
         <Field label="Untertitel (optional)">
-          <TextInput
-            value={q.subtitle}
-            onChange={(v) => onPatchQuestion(index, { subtitle: v })}
-            placeholder="z. B. Bitte wähle eine Option."
-          />
+          <SelMark refKey="question_subtitle">
+            <TextInput
+              value={q.subtitle}
+              onChange={(v) => onPatchQuestion(index, { subtitle: v })}
+              placeholder="z. B. Bitte wähle eine Option."
+            />
+          </SelMark>
         </Field>
         <Toggle
           label="Sichtbar im Funnel"
@@ -191,6 +215,7 @@ function QuestionProps({ state, index, onPatchQuestion, onDelete }: QuestionProp
 function CustomPageProps({
   state,
   index,
+  selectedFieldRef,
   onPatchQuestion,
   onDelete,
   onPatchCustomField,
@@ -200,6 +225,7 @@ function CustomPageProps({
 }: {
   state: EditorState;
   index: number;
+  selectedFieldRef?: string;
   onPatchQuestion: (index: number, patch: Partial<EditorQuestion>) => void;
   onDelete: () => void;
   onPatchCustomField: (clientId: string, patch: Partial<ContactFieldConfig>) => void;
@@ -212,6 +238,21 @@ function CustomPageProps({
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Aufgabe 40 Polish: expanded-State trackt jetzt _clientId statt key (stabil bei key-Edit).
   const [expandedClientId, setExpandedClientId] = useState<string | null>(null);
+
+  // Aufgabe 57C: Canvas-Klick auf ein Karten-Feld klappt die passende Feld-Zeile auf.
+  // Der Ref-Suffix IST die Row-Identität (_clientId ?? key — selbes Konstrukt wie cid unten);
+  // matcht nichts, klappt nichts auf. Bewusst NUR selectedFieldRef als Dependency: manuelles
+  // Zuklappen bleibt möglich, solange die Selektion unverändert ist.
+  // selectedCardFieldId zusätzlich abgeleitet (nicht nur im Effect): markiert die Row mit
+  // einem Selektions-Ring, solange die Canvas-Selektion auf ihr steht.
+  const selectedCardFieldId = selectedFieldRef?.startsWith("card_field_")
+    ? selectedFieldRef.slice("card_field_".length)
+    : null;
+  useEffect(() => {
+    if (!selectedFieldRef?.startsWith("card_field_")) return;
+    setExpandedClientId(selectedFieldRef.slice("card_field_".length));
+    // Scroll übernimmt der generische data-sel-target-Effect im PropertiesPanel.
+  }, [selectedFieldRef]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -238,18 +279,22 @@ function CustomPageProps({
 
       <Section title="Seite">
         <Field label="Überschrift">
-          <TextInput
-            value={page.title}
-            onChange={(v) => onPatchQuestion(index, { title: v })}
-            placeholder="z. B. Adresse eingeben"
-          />
+          <SelMark refKey="question_title">
+            <TextInput
+              value={page.title}
+              onChange={(v) => onPatchQuestion(index, { title: v })}
+              placeholder="z. B. Adresse eingeben"
+            />
+          </SelMark>
         </Field>
         <Field label="Untertitel (optional)">
-          <TextInput
-            value={page.subtitle}
-            onChange={(v) => onPatchQuestion(index, { subtitle: v })}
-            placeholder="z. B. Wir benötigen deine Anschrift für ein Angebot."
-          />
+          <SelMark refKey="question_subtitle">
+            <TextInput
+              value={page.subtitle}
+              onChange={(v) => onPatchQuestion(index, { subtitle: v })}
+              placeholder="z. B. Wir benötigen deine Anschrift für ein Angebot."
+            />
+          </SelMark>
         </Field>
         <Toggle
           label="Sichtbar im Funnel"
@@ -272,6 +317,7 @@ function CustomPageProps({
                     key={cid}
                     field={f}
                     expanded={expandedClientId === cid}
+                    highlighted={selectedCardFieldId === cid}
                     onToggle={() => setExpandedClientId((prev) => (prev === cid ? null : cid))}
                     onPatch={(patch) => onPatchCustomField(cid, patch)}
                     onDelete={() => onDeleteCustomField(cid)}
@@ -329,12 +375,15 @@ function CustomPageProps({
 function SortableContactFieldRow({
   field,
   expanded,
+  highlighted,
   onToggle,
   onPatch,
   onDelete,
 }: {
   field: ContactFieldConfig;
   expanded: boolean;
+  // Aufgabe 57C: Canvas-Selektion zeigt auf dieses Feld → Selektions-Ring
+  highlighted?: boolean;
   onToggle: () => void;
   onPatch: (patch: Partial<ContactFieldConfig>) => void;
   onDelete: () => void;
@@ -389,13 +438,15 @@ function SortableContactFieldRow({
   const pillClass = pillByType[field.type] ?? TEXT_PILL;
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
+    // data-sel-target: Scroll-Anker für die Canvas-Klick-Selektion (Aufgabe 57C)
+    <div ref={setNodeRef} style={style} data-sel-target={`card_field_${field._clientId ?? field.key}`} {...attributes}>
       <FieldRow
         icon={icon}
         pillClass={pillClass}
         label={field.label || field.key}
         typeLabel={typeLabel}
         expanded={expanded}
+        highlighted={highlighted}
         onToggle={onToggle}
         dragHandleProps={{ ref: setActivatorNodeRef, ...listeners }}
         onDelete={onDelete}
@@ -434,25 +485,31 @@ function WelcomeProps({
 
       <Section title="Seite">
         <Field label="Überschrift">
-          <TextInput
-            value={page.title}
-            onChange={(v) => onPatchQuestion(index, { title: v })}
-            placeholder="z. B. Willkommen!"
-          />
+          <SelMark refKey="question_title">
+            <TextInput
+              value={page.title}
+              onChange={(v) => onPatchQuestion(index, { title: v })}
+              placeholder="z. B. Willkommen!"
+            />
+          </SelMark>
         </Field>
         <Field label="Untertitel (optional)">
-          <TextInput
-            value={page.subtitle}
-            onChange={(v) => onPatchQuestion(index, { subtitle: v })}
-            placeholder="z. B. In den nächsten 2 Minuten…"
-          />
+          <SelMark refKey="question_subtitle">
+            <TextInput
+              value={page.subtitle}
+              onChange={(v) => onPatchQuestion(index, { subtitle: v })}
+              placeholder="z. B. In den nächsten 2 Minuten…"
+            />
+          </SelMark>
         </Field>
         <Field label="Button-Text">
-          <TextInput
-            value={page.welcomeButtonLabel ?? "Los geht's →"}
-            onChange={(v) => onPatchQuestion(index, { welcomeButtonLabel: v })}
-            placeholder="z. B. Los geht's →"
-          />
+          <SelMark refKey="welcome_button_label">
+            <TextInput
+              value={page.welcomeButtonLabel ?? "Los geht's →"}
+              onChange={(v) => onPatchQuestion(index, { welcomeButtonLabel: v })}
+              placeholder="z. B. Los geht's →"
+            />
+          </SelMark>
         </Field>
         <Toggle
           label="Sichtbar im Funnel"
@@ -524,20 +581,24 @@ function SuccessProps({
 
       <Section title="Seite">
         <Field label="Erfolgs-Überschrift">
-          <TextInput
-            value={state.successMessage}
-            onChange={(v) => onPatch({ successMessage: v })}
-            placeholder="z. B. Vielen Dank für deine Anfrage!"
-          />
+          <SelMark refKey="success_message">
+            <TextInput
+              value={state.successMessage}
+              onChange={(v) => onPatch({ successMessage: v })}
+              placeholder="z. B. Vielen Dank für deine Anfrage!"
+            />
+          </SelMark>
         </Field>
         {/* Aufgabe 51: Antwort-Text ist optional. Standard ist vorausgefüllt; leer lassen =
             zweite Zeile wird im Widget nicht angezeigt (kein erzwungener Default beim Rendern). */}
         <Field label="Antwort-Text (optional)">
-          <TextInput
-            value={state.responseMessage}
-            onChange={(v) => onPatch({ responseMessage: v })}
-            placeholder="z. B. Wir melden uns in den nächsten 24 Stunden."
-          />
+          <SelMark refKey="response_message">
+            <TextInput
+              value={state.responseMessage}
+              onChange={(v) => onPatch({ responseMessage: v })}
+              placeholder="z. B. Wir melden uns in den nächsten 24 Stunden."
+            />
+          </SelMark>
         </Field>
         <p className="px-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
           Leer lassen, wenn du keine zweite Zeile willst — dann wird sie nicht angezeigt.
@@ -552,11 +613,13 @@ function SuccessProps({
         />
         {state.showAnswersOverview && (
           <Field label="Überschrift">
-            <TextInput
-              value={state.answersOverviewLabel}
-              onChange={(v) => onPatch({ answersOverviewLabel: v })}
-              placeholder="z. B. Deine Angaben im Überblick:"
-            />
+            <SelMark refKey="answers_overview_label">
+              <TextInput
+                value={state.answersOverviewLabel}
+                onChange={(v) => onPatch({ answersOverviewLabel: v })}
+                placeholder="z. B. Deine Angaben im Überblick:"
+              />
+            </SelMark>
           </Field>
         )}
         <p className="px-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">

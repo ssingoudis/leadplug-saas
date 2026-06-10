@@ -2,6 +2,7 @@
 
 import { ChevronDown, ChevronRight, GripVertical, Trash2, Eye, EyeOff } from "lucide-react";
 import type { ReactNode } from "react";
+import { selRing } from "./selection";
 
 interface Props {
   /** Linkes Icon + Pill-Farbe (kommt aus fieldMeta). */
@@ -26,6 +27,9 @@ interface Props {
   /** Aufgabe 39 Polish: Sichtbarkeit-Toggle (Auge) als Inline-Action. */
   visible?: boolean;
   onToggleVisible?: () => void;
+  /** Aufgabe 57C: Canvas-Selektion zeigt auf diese Row → kräftiger Ring in Markenfarbe
+      (wandert mit der Selektion, verschwindet mit Esc/Deselect — symmetrisch zum Canvas-Highlight). */
+  highlighted?: boolean;
   /** Inhalt im expandierten Zustand (FieldProperties). */
   children?: ReactNode;
 }
@@ -42,15 +46,16 @@ export function FieldRow({
   onDelete,
   visible = true,
   onToggleVisible,
+  highlighted = false,
   children,
 }: Props) {
   return (
     <div
-      className={`rounded-xl border transition-colors ${
+      className={`rounded-xl border transition-all ${
         expanded
           ? "border-primary bg-primary/5 dark:border-primary dark:bg-primary/10"
           : "border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600"
-      } ${!visible ? "opacity-60" : ""}`}
+      } ${selRing(highlighted)} ${!visible ? "opacity-60" : ""}`}
     >
       <div className="flex items-center gap-1.5 px-1.5 py-1.5">
         {dragHandleProps && (
