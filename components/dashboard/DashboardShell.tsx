@@ -10,7 +10,9 @@ import { Sidebar, MobileNav } from './Sidebar'
 //    Vollbild-Takeover mehr — die Nav verschwindet nicht.
 
 function isEditorRoute(pathname: string): boolean {
-  return pathname.endsWith('/edit') || pathname === '/dashboard/funnels/new'
+  // Aufgabe 62: /dashboard/funnels/new ist jetzt die Vorlagen-Galerie (normale
+  // Dashboard-Seite) — der leere Editor-Start lebt unter /new/blank.
+  return pathname.endsWith('/edit') || pathname === '/dashboard/funnels/new/blank'
 }
 
 export default function DashboardShell({

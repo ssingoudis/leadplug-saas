@@ -1,9 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { Plus, Zap } from "lucide-react";
 import Card from "@/components/ui/Card";
 import { FunnelCard } from "@/components/dashboard/FunnelCard";
+import { NewFunnelButton } from "@/components/dashboard/NewFunnelModal";
+import {
+  mapTemplateRows,
+  TEMPLATE_GALLERY_SELECT,
+  type TemplateItem,
+} from "@/components/dashboard/templates";
 
 interface FunnelItem {
   slug: string;
@@ -74,8 +79,18 @@ async function getFunnels(): Promise<FunnelItem[]> {
   }));
 }
 
+// Vorlagen-Metadaten fürs „Neuer Funnel"-Modal (Aufgabe 62 Runde 2) — kleine Query, keine definition.
+async function getTemplates(): Promise<TemplateItem[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("funnel_templates")
+    .select(TEMPLATE_GALLERY_SELECT)
+    .order("sort_order", { ascending: true });
+  return mapTemplateRows(data);
+}
+
 export default async function FunnelsPage() {
-  const funnels = await getFunnels();
+  const [funnels, templates] = await Promise.all([getFunnels(), getTemplates()]);
 
   return (
     <div className="space-y-6">
@@ -91,13 +106,13 @@ export default async function FunnelsPage() {
               : `${funnels.length} Funnel${funnels.length !== 1 ? "s" : ""}`}
           </p>
         </div>
-        <Link
-          href="/dashboard/funnels/new"
+        <NewFunnelButton
+          templates={templates}
           className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover transition-colors"
         >
           <Plus size={16} />
           Neuer Funnel
-        </Link>
+        </NewFunnelButton>
       </div>
 
       {/* Leerer Zustand */}
@@ -113,13 +128,13 @@ export default async function FunnelsPage() {
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-xs">
               Den ersten Funnel erstellen und auf der Website einbinden.
             </p>
-            <Link
-              href="/dashboard/funnels/new"
+            <NewFunnelButton
+              templates={templates}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover transition-colors"
             >
               <Plus size={16} />
               Ersten Funnel erstellen
-            </Link>
+            </NewFunnelButton>
           </div>
         </Card>
       )}
@@ -130,15 +145,15 @@ export default async function FunnelsPage() {
           {funnels.map((funnel) => (
             <FunnelCard key={funnel.slug} funnel={funnel} />
           ))}
-          <Link
-            href="/dashboard/funnels/new"
+          <NewFunnelButton
+            templates={templates}
             className="group flex min-h-44 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-gray-200 text-gray-400 transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary dark:border-gray-700"
           >
             <span className="flex h-11 w-11 items-center justify-center rounded-full bg-gray-100 transition-colors group-hover:bg-primary/10 dark:bg-gray-800">
               <Plus size={20} />
             </span>
             <span className="text-sm font-semibold">Neuen Funnel anlegen</span>
-          </Link>
+          </NewFunnelButton>
         </div>
       )}
     </div>

@@ -3,6 +3,8 @@ import { Plus, ArrowRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import Card from '@/components/ui/Card'
 import Sparkline from '@/components/dashboard/Sparkline'
+import { NewFunnelButton } from '@/components/dashboard/NewFunnelModal'
+import { mapTemplateRows, TEMPLATE_GALLERY_SELECT } from '@/components/dashboard/templates'
 
 type LeadStatus = 'offen' | 'kontaktiert' | 'abgeschlossen'
 
@@ -167,19 +169,32 @@ function KpiCard({
   )
 }
 
+// Vorlagen-Metadaten fürs „Neuer Funnel"-Modal (Aufgabe 62 Runde 2) — kleine Query, keine definition.
+async function getTemplates() {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('funnel_templates')
+    .select(TEMPLATE_GALLERY_SELECT)
+    .order('sort_order', { ascending: true })
+  return mapTemplateRows(data)
+}
+
 export default async function DashboardPage() {
-  const {
-    funnelNameMap,
-    statusCounts,
-    recent,
-    leads30,
-    views30,
-    conversion30,
-    leadSpark,
-    viewSpark,
-    funnelStats,
-    activeFunnels,
-  } = await getData()
+  const [
+    {
+      funnelNameMap,
+      statusCounts,
+      recent,
+      leads30,
+      views30,
+      conversion30,
+      leadSpark,
+      viewSpark,
+      funnelStats,
+      activeFunnels,
+    },
+    templates,
+  ] = await Promise.all([getData(), getTemplates()])
 
   const topFunnels = funnelStats.slice(0, 4)
 
@@ -191,13 +206,13 @@ export default async function DashboardPage() {
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">Willkommen zurück</h1>
           <p className="text-sm text-gray-400 dark:text-gray-500">Überblick der letzten 30 Tage.</p>
         </div>
-        <Link
-          href="/dashboard/funnels/new"
+        <NewFunnelButton
+          templates={templates}
           className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover"
         >
           <Plus size={16} strokeWidth={2.5} />
           Neuer Funnel
-        </Link>
+        </NewFunnelButton>
       </div>
 
       {/* KPIs — klickbar, mit Mini-Trend */}

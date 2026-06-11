@@ -91,9 +91,8 @@ leadplug-saas/
 │   ├── TenantFunnelClient.tsx      # Live-Wrapper um funnel.tsx (sessionId, postMessage)
 │   ├── tenant-editor/
 │   │   ├── defaults.ts             # DEFAULT_EDITOR_STATE + Factories (makeDefault*)
-│   │   ├── DeleteFunnelButton.tsx
 │   │   └── v2/                     # 🌟 DER BUILDER (3-Pane, ~3500 LOC verteilt)
-│   ├── dashboard/                  # Cards, Charts, FunnelCard etc.
+│   ├── dashboard/                  # Cards, Charts, FunnelCard, Vorlagen (TemplateShowcase/NewFunnelModal/DeleteFunnelModal) etc.
 │   └── ui/                         # Design-System (Card, Badge, Button, Input, …)
 ├── lib/
 │   ├── supabase/{server,client,admin}.ts  # 3 Supabase-Clients (User + Anon + Service)
