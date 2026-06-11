@@ -28,7 +28,7 @@ export default async function AdminWorkspaceDetailPage({ params }: { params: Pro
   return (
     <div className="flex flex-col gap-6">
       <Link
-        href="/admin"
+        href="/dashboard/admin"
         className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
       >
         <ArrowLeft size={15} /> Alle Workspaces
@@ -89,7 +89,8 @@ export default async function AdminWorkspaceDetailPage({ params }: { params: Pro
               return (
                 <details key={l.id} className={`group bg-white dark:bg-gray-900 ${idx < leads.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''}`}>
                   <summary className="flex cursor-pointer list-none items-center gap-4 px-5 py-4 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <div className="w-28 shrink-0 text-xs text-gray-400">{fmtDateTime(l.createdAt)}</div>
+                    {/* Aufgabe 60: Datum erst ab sm — auf dem Phone gehört die Breite dem Namen. */}
+                    <div className="hidden w-28 shrink-0 text-xs text-gray-400 sm:block">{fmtDateTime(l.createdAt)}</div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{[l.anrede, l.name].filter(Boolean).join(' ') || '—'}</p>
                       <p className="truncate text-xs text-gray-400">{l.email || l.phone}</p>

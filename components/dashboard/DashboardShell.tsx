@@ -30,6 +30,10 @@ export default function DashboardShell({
     return (
       <>
         <Sidebar userName={userName} userEmail={userEmail} isSuperadmin={isSuperadmin} forceCollapsed />
+        {/* Aufgabe 60: unter lg ist die Icon-Sidebar versteckt — ohne MobileNav hätte der
+            Editor dort gar keine Navigation. MobileNav ist selbst lg:hidden (Desktop
+            unverändert) und nutzt guardedClick → Ungespeichert-Dialog greift. */}
+        <MobileNav userName={userName} isSuperadmin={isSuperadmin} />
         {children}
       </>
     )

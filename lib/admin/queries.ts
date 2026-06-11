@@ -1,11 +1,24 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
+import { isSuperadmin } from '@/lib/auth/superadmin'
 
-// Cross-Tenant Reads für das Admin-Cockpit. AUSSCHLIESSLICH server-seitig + erst NACH dem
-// Superadmin-Gate aufrufen (app/admin/layout.tsx). Service-Key bypasst RLS — daher hier
-// keine Tenant-Scoping-Annahmen, sondern bewusste plattformweite Sicht.
+// Cross-Tenant Reads für das Admin-Cockpit. AUSSCHLIESSLICH server-seitig. Service-Key
+// bypasst RLS — daher hier keine Tenant-Scoping-Annahmen, sondern bewusste plattformweite
+// Sicht. Aufgabe 60: Superadmin-Gate zusätzlich IN den Queries (Defense-in-Depth) — das
+// Layout-Gate (app/dashboard/admin/layout.tsx) bleibt die UX-Schicht (404), aber Next
+// rendert Layout und Page parallel; die Queries verteidigen sich seither selbst und
+// können nirgendwo versehentlich ungegated aufgerufen werden.
 //
 // Bewusst JS-Assembly statt SQL-RPC: keine Migration, auth.users via auth.admin-API.
 // Datenmengen sind klein; bei Wachstum auf paginierte/aggregierte Queries umstellen.
+
+async function assertSuperadmin(): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!isSuperadmin(user?.email)) {
+    throw new Error('[admin/queries] Zugriff ohne Superadmin-Gate blockiert')
+  }
+}
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -26,6 +39,7 @@ export type WorkspaceRow = {
 }
 
 export async function getWorkspaces(): Promise<WorkspaceRow[]> {
+  await assertSuperadmin()
   const admin = createAdminClient()
 
   const [tenantsRes, membersRes, funnelsRes, subsRes, viewsRes, usersRes] = await Promise.all([
@@ -116,6 +130,7 @@ export type WorkspaceDetail = {
 }
 
 export async function getWorkspaceDetail(tenantId: string): Promise<WorkspaceDetail | null> {
+  await assertSuperadmin()
   const admin = createAdminClient()
 
   const { data: tenant } = await admin

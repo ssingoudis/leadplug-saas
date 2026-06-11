@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { MoreHorizontal, Mail, Power, ExternalLink, Search, Check, Copy } from 'lucide-react'
+import { MoreHorizontal, Mail, Power, ExternalLink, Search, Check, Copy, TriangleAlert, X } from 'lucide-react'
 import StatTile from '@/components/ui/StatTile'
 import { ConfirmModal } from '@/components/admin/WorkspaceDangerZone'
 import type { WorkspaceRow } from '@/lib/admin/queries'
@@ -95,7 +95,7 @@ function RowActions({ w, busy, onPlan, onToggleActive }: {
       </button>
       {open && (
         <div className="absolute right-0 top-full z-30 mt-1 w-52 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-900">
-          <Link href={`/admin/${w.tenantId}`} className={item} onClick={() => setOpen(false)}>
+          <Link href={`/dashboard/admin/${w.tenantId}`} className={item} onClick={() => setOpen(false)}>
             <ExternalLink size={14} className="text-gray-400" /> Details öffnen
           </Link>
           {w.ownerEmail && (
@@ -155,6 +155,8 @@ export default function WorkspacesCockpit({ workspaces, myEmail }: {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState('created')
   const [busyId, setBusyId] = useState<string | null>(null)
+  // Aufgabe 60: Inline-Fehlerbanner statt alert() (letzter nativer Browser-Dialog der App).
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const kpi = useMemo(() => ({
     activeWorkspaces: rows.filter((w) => w.isActive).length,
@@ -180,6 +182,7 @@ export default function WorkspacesCockpit({ workspaces, myEmail }: {
   async function patch(id: string, body: Record<string, unknown>, optimistic: (w: WorkspaceRow) => WorkspaceRow) {
     const snapshot = rows
     setBusyId(id)
+    setActionError(null)
     setRows((rs) => rs.map((w) => (w.tenantId === id ? optimistic(w) : w)))
     try {
       const res = await fetch(`/api/admin/workspaces/${id}`, {
@@ -190,7 +193,7 @@ export default function WorkspacesCockpit({ workspaces, myEmail }: {
       if (!res.ok) throw new Error()
     } catch {
       setRows(snapshot)
-      alert('Aktion fehlgeschlagen.')
+      setActionError('Aktion fehlgeschlagen — die Änderung wurde zurückgenommen. Bitte erneut versuchen.')
     } finally {
       setBusyId(null)
     }
@@ -206,6 +209,21 @@ export default function WorkspacesCockpit({ workspaces, myEmail }: {
 
   return (
     <div className="flex flex-col gap-6">
+      {actionError && (
+        <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-700/40 dark:bg-red-900/10 dark:text-red-400">
+          <TriangleAlert size={15} className="mt-0.5 shrink-0" />
+          <span className="flex-1">{actionError}</span>
+          <button
+            type="button"
+            onClick={() => setActionError(null)}
+            aria-label="Fehlermeldung schließen"
+            className="-m-1 shrink-0 rounded-md p-1 opacity-60 transition-opacity hover:opacity-100"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Kennzahlen */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile value={kpi.activeWorkspaces} label="Aktive Workspaces" />
@@ -241,9 +259,13 @@ export default function WorkspacesCockpit({ workspaces, myEmail }: {
           </div>
         </div>
 
-        <div className="min-w-220">
+        {/* Aufgabe 60: x-scrollbar statt Seiten-Overflow — auf schmalen Screens scrollt die
+            Tabelle innerhalb der Karte (-mx-4/px-4 nutzt das Card-Padding als Scroll-Rand).
+            whitespace-nowrap im Kopf: Überschriften brechen nie zweizeilig um. */}
+        <div className="-mx-4 overflow-x-auto px-4">
+          <div className="min-w-220">
           {/* Kopf */}
-          <div className="flex items-center gap-3 border-b border-gray-100 px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:border-gray-800 dark:text-gray-500">
+          <div className="flex items-center gap-3 whitespace-nowrap border-b border-gray-100 px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:border-gray-800 dark:text-gray-500">
             <span className="w-64">Workspace</span>
             <span className="flex-1">Owner</span>
             <span className="w-28">Status</span>
@@ -251,7 +273,7 @@ export default function WorkspacesCockpit({ workspaces, myEmail }: {
             <span className="w-14 text-right">Funnels</span>
             <span className="w-12 text-right">Leads</span>
             <span className="w-20 text-right">Login</span>
-            <span className="w-20 text-right">Letzter Lead</span>
+            <span className="w-24 text-right">Letzter Lead</span>
             <span className="w-10" />
           </div>
 
@@ -268,7 +290,7 @@ export default function WorkspacesCockpit({ workspaces, myEmail }: {
                   className={`flex items-center gap-3 border-b border-gray-50 px-2 py-3 dark:border-gray-800/60 ${busyId === w.tenantId ? 'opacity-50' : ''}`}
                 >
                   <span className="w-64 min-w-0">
-                    <Link href={`/admin/${w.tenantId}`} title={w.companyName ?? ''} className="flex items-center gap-2 truncate text-sm font-medium text-gray-900 hover:text-primary dark:text-white">
+                    <Link href={`/dashboard/admin/${w.tenantId}`} title={w.companyName ?? ''} className="flex items-center gap-2 truncate text-sm font-medium text-gray-900 hover:text-primary dark:text-white">
                       <span className="truncate">{w.companyName || '—'}</span>
                       {isMe && <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">du</span>}
                     </Link>
@@ -289,7 +311,7 @@ export default function WorkspacesCockpit({ workspaces, myEmail }: {
                   <span className="w-14 text-right text-sm text-gray-600 dark:text-gray-300">{w.funnelCount}</span>
                   <span className="w-12 text-right text-sm font-semibold text-gray-900 dark:text-white">{w.leadCount}</span>
                   <span className="w-20 text-right text-sm text-gray-500 dark:text-gray-400">{fmtRelative(w.lastSignInAt)}</span>
-                  <span className="w-20 text-right text-sm text-gray-500 dark:text-gray-400">{fmtRelative(w.lastLeadAt)}</span>
+                  <span className="w-24 text-right text-sm text-gray-500 dark:text-gray-400">{fmtRelative(w.lastLeadAt)}</span>
                   <span className="flex w-10 justify-end">
                     <RowActions
                       w={w}
@@ -302,6 +324,7 @@ export default function WorkspacesCockpit({ workspaces, myEmail }: {
               )
             })
           )}
+          </div>
         </div>
       </div>
     </div>

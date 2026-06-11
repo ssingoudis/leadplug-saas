@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Check, ExternalLink, Pencil, Redo2, Save, TriangleAlert, Undo2 } from "lucide-react";
+import { ArrowLeft, Check, ExternalLink, Monitor, Redo2, Save, TriangleAlert, Undo2 } from "lucide-react";
 import type { EditorState, EditorQuestion, ContactFieldConfig, QuestionType, LogicRule } from "@/types";
 import { TopTabs, type TopTabKey } from "./TopTabs";
 import { StepList } from "./StepList";
@@ -168,7 +168,6 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
   // Aufgabe 55: useHistoryState statt useState — Drop-in (identische set-Signatur),
   // alle ~30 Handler unten bleiben unverändert. history liefert Undo/Redo + applyToAll.
   const [state, setState, history] = useHistoryState<EditorState>(initialState);
-  const nameInputRef = useRef<HTMLInputElement>(null);
   const nameSave = useSaveStatus();
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -986,13 +985,69 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
 
   return (
     <>
-      {showNamePrompt && <NamePromptModal pendingName={pendingName} setPendingName={setPendingName} onConfirm={confirmNamePrompt} onCancel={cancelNamePrompt} />}
+      {/* Aufgabe 60: Name-Prompt unter lg verstecken — dort greift der Small-Screen-Guard,
+          eine Namens-Abfrage ohne nutzbaren Editor dahinter wäre eine Sackgasse. */}
+      {showNamePrompt && (
+        <div className="hidden lg:contents">
+          <NamePromptModal pendingName={pendingName} setPendingName={setPendingName} onConfirm={confirmNamePrompt} onCancel={cancelNamePrompt} />
+        </div>
+      )}
+      {/* ExitModal bleibt auf ALLEN Breiten sichtbar — der Guard-Zurück-Button läuft über
+          handleBack und braucht den Dialog bei ungespeicherten Änderungen. */}
       {showExitModal && (
         <ExitModal onCancel={handleCancelExit} onDiscard={handleDiscardAndLeave} onSave={() => { setShowExitModal(false); handleSave({ leaveAfter: true }); }} />
       )}
 
+      {/* Aufgabe 60: Small-Screen-Guard — der 3-Pane-Editor braucht ≥1024px (lg). Darunter:
+          freundlicher Hinweis statt zerquetschtem Layout. Rein CSS (kein matchMedia) → kein
+          Hydration-Flicker, reagiert live auf Resize/Tablet-Drehung; der Editor-State bleibt
+          erhalten, weil der Editor nur versteckt wird, nicht unmounted. Fixed unterhalb des
+          MobileNav (h-14 → top-14), wie der Editor-Container selbst — füllt damit garantiert
+          den Rest-Viewport; Karte via m-auto zentriert (degradiert zu Scroll bei sehr
+          niedrigen Fenstern). */}
+      <div className="fixed inset-x-0 bottom-0 top-14 flex overflow-y-auto bg-gray-100 p-6 dark:bg-background lg:hidden">
+        <div className="m-auto w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center dark:border-gray-800 dark:bg-gray-900">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Monitor size={22} />
+          </div>
+          {state.funnelName && (
+            <p className="mt-4 truncate text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+              {state.funnelName}
+            </p>
+          )}
+          <p className="mt-1 text-base font-semibold text-gray-900 dark:text-white">
+            Bearbeitung nur am großen Bildschirm
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
+            Der Funnel-Editor braucht mehr Platz, als dieser Bildschirm bietet. Bitte öffne
+            diesen Funnel an einem Laptop oder Desktop.
+          </p>
+          <div className="mt-6 flex flex-col gap-2">
+            {mode === "edit" && originalSlug && (
+              <a
+                href={`/${originalSlug}?preview=1`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
+              >
+                <ExternalLink size={14} />
+                Funnel ansehen
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={handleBack}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              <ArrowLeft size={14} />
+              Zurück zur Übersicht
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div
-        className="fixed inset-y-0 right-0 left-0 lg:left-16 flex flex-col bg-gray-100 dark:bg-background"
+        className="fixed inset-y-0 right-0 left-0 lg:left-16 hidden lg:flex flex-col bg-gray-100 dark:bg-background"
       >
         {/* Top-Bar: EINE Zeile — links Back+Name · Mitte Tabs (zentriert) · rechts Status+Speichern.
             Test/Geräte-Controls schweben im Canvas (CenterCanvas) statt als eigener Balken. */}
@@ -1008,9 +1063,18 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
             >
               <ArrowLeft size={16} />
             </button>
-            <div className="group flex min-w-0 items-center gap-1">
+            {/* Aufgabe 60 (Stavros-Review): Stift-Button entfernt (redundant — Klick auf den
+                Namen editiert direkt, Hover zeigt Rahmen + Tooltip) und die ch-Schätzbreite
+                durch einen unsichtbaren Spiegel-Span ersetzt: das Feld ist exakt so breit wie
+                der Text, der Live-Vorschau-Button rückt direkt neben den Namen. */}
+            <div className="inline-grid min-w-0 max-w-72 overflow-hidden">
+              <span
+                aria-hidden="true"
+                className="invisible col-start-1 row-start-1 whitespace-pre border border-transparent px-1.5 py-0.5 text-sm font-semibold"
+              >
+                {state.funnelName || "Neuer Funnel"}
+              </span>
               <input
-                ref={nameInputRef}
                 type="text"
                 value={state.funnelName}
                 onChange={(e) => handlePatch({ funnelName: e.target.value })}
@@ -1019,18 +1083,12 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
                 placeholder="Neuer Funnel"
                 aria-label="Funnel-Name (zum Bearbeiten klicken)"
                 title="Klick zum Umbenennen"
-                className="min-w-0 rounded-md border border-transparent bg-transparent px-1.5 py-0.5 text-sm font-semibold text-gray-900 outline-none transition-colors hover:border-gray-200 focus:border-primary focus:bg-white dark:text-white dark:hover:border-gray-700 dark:focus:bg-gray-800"
-                style={{ width: `${Math.min(Math.max((state.funnelName || "Neuer Funnel").length, 8) + 2, 36)}ch` }}
+                // size={1}: killt die Browser-Default-Eigenbreite von Inputs (size=20 ≈ 170px),
+                // die sonst im Grid als Mindest-Spaltenbreite zählt — erst damit bestimmt
+                // allein der Spiegel-Span die Feldbreite.
+                size={1}
+                className="col-start-1 row-start-1 w-full min-w-0 rounded-md border border-transparent bg-transparent px-1.5 py-0.5 text-sm font-semibold text-gray-900 outline-none transition-colors hover:border-gray-200 focus:border-primary focus:bg-white dark:text-white dark:hover:border-gray-700 dark:focus:bg-gray-800"
               />
-              <button
-                type="button"
-                onClick={() => nameInputRef.current?.focus()}
-                title="Funnel umbenennen"
-                aria-label="Funnel umbenennen"
-                className="shrink-0 text-gray-300 opacity-0 transition-opacity hover:text-gray-600 group-hover:opacity-100 dark:hover:text-gray-300"
-              >
-                <Pencil size={13} />
-              </button>
             </div>
             <SaveStatus status={nameSave.status} className="shrink-0" />
             {/* Aufgabe 56: Live-Preview — öffnet den echten Funnel in neuem Tab, OHNE den

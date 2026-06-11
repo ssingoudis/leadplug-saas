@@ -162,15 +162,15 @@ export function Sidebar({
           )
         })}
 
-        {/* Superadmin-only: Plattform-Admin */}
+        {/* Superadmin-only: Plattform-Admin (lebt seit Aufgabe 60 unter /dashboard/admin) */}
         {isSuperadmin && (
           <Link
-            href="/admin"
-            onClick={(e) => guardedClick(e, '/admin')}
+            href="/dashboard/admin"
+            onClick={(e) => guardedClick(e, '/dashboard/admin')}
             title={collapsed ? 'Admin' : undefined}
             className={`mt-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors ${
-              collapsed ? 'justify-center' : ''
-            }`}
+              pathname.startsWith('/dashboard/admin') ? 'bg-amber-500/10' : ''
+            } ${collapsed ? 'justify-center' : ''}`}
           >
             <ShieldCheck size={17} />
             {!collapsed && <span className="truncate">Admin</span>}
@@ -345,8 +345,8 @@ export function MobileNav({ userName, isSuperadmin = false }: { userName?: strin
             })}
             {isSuperadmin && (
               <Link
-                href="/admin"
-                onClick={(e) => { guardedClick(e, '/admin'); setOpen(false) }}
+                href="/dashboard/admin"
+                onClick={(e) => { guardedClick(e, '/dashboard/admin'); setOpen(false) }}
                 className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors"
               >
                 <ShieldCheck size={15} />

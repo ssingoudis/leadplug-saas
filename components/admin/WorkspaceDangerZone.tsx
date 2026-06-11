@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Power, Trash2, TriangleAlert, Loader2 } from 'lucide-react'
+import { Power, Trash2, TriangleAlert, Loader2, X } from 'lucide-react'
 
 // Gefahrenzone in der Workspace-Einsicht: Deaktivieren/Reaktivieren + Löschen,
 // beide mit Popup-Warnung. Löschen verlangt zusätzlich das Tippen des Namens.
@@ -18,9 +18,13 @@ export default function WorkspaceDangerZone({ tenantId, companyName, isActive, f
   const [busy, setBusy] = useState(false)
   const [showToggle, setShowToggle] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
+  // Aufgabe 60: Inline-Fehlerbanner statt alert(). Bei Fehler schließt das Modal —
+  // das Banner in der Karte erklärt, was passiert ist (Modal würde es verdecken).
+  const [actionError, setActionError] = useState<string | null>(null)
 
   async function toggleActive() {
     setBusy(true)
+    setActionError(null)
     try {
       const res = await fetch(`/api/admin/workspaces/${tenantId}`, {
         method: 'PATCH',
@@ -31,7 +35,8 @@ export default function WorkspaceDangerZone({ tenantId, companyName, isActive, f
       setShowToggle(false)
       router.refresh()
     } catch {
-      alert('Aktion fehlgeschlagen.')
+      setShowToggle(false)
+      setActionError('Aktion fehlgeschlagen. Bitte erneut versuchen.')
     } finally {
       setBusy(false)
     }
@@ -39,12 +44,14 @@ export default function WorkspaceDangerZone({ tenantId, companyName, isActive, f
 
   async function del() {
     setBusy(true)
+    setActionError(null)
     try {
       const res = await fetch(`/api/admin/workspaces/${tenantId}`, { method: 'DELETE' })
       if (!res.ok) throw new Error()
-      router.push('/admin')
+      router.push('/dashboard/admin')
     } catch {
-      alert('Löschen fehlgeschlagen.')
+      setShowDelete(false)
+      setActionError('Löschen fehlgeschlagen. Der Workspace wurde nicht verändert — bitte erneut versuchen.')
       setBusy(false)
     }
   }
@@ -54,6 +61,20 @@ export default function WorkspaceDangerZone({ tenantId, companyName, isActive, f
   return (
     <div className="rounded-2xl border border-red-200 bg-red-50/40 p-5 dark:border-red-900/40 dark:bg-red-900/10">
       <h2 className="text-sm font-bold text-red-700 dark:text-red-400">Gefahrenzone</h2>
+      {actionError && (
+        <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm text-red-700 dark:border-red-700/40 dark:bg-gray-900 dark:text-red-400">
+          <TriangleAlert size={15} className="mt-0.5 shrink-0" />
+          <span className="flex-1">{actionError}</span>
+          <button
+            type="button"
+            onClick={() => setActionError(null)}
+            aria-label="Fehlermeldung schließen"
+            className="-m-1 shrink-0 rounded-md p-1 opacity-60 transition-opacity hover:opacity-100"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
       <div className="mt-3 flex flex-col gap-3">
         <div className={rowBox}>
           <div>
