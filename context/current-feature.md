@@ -17,11 +17,12 @@ Kuratierter Font-Enum: `FunnelFont = "system" | "inter" | "poppins" | "roboto"`.
 - `per_year`: `lead_price` = `0`; Jahrespreis in `tenants.billing_price`
 - `billing_model` ist PostgreSQL-Enum `billing_model_type`, Default `per_month`
 
-### Tenant-Struktur (DB-Stand)
+### Tenant-Struktur (DB-Stand 2026-06-11)
 
-Nur noch 2 aktive Tenants:
-- `demo` → alle Demo-Funnels: `demo`, `demo-solar`, `demo-waermepumpe`, `demo-bad`, `demo-klima`, `demo-dach`, `demo-fenster`, `demo-wallbox`, `demo-klartext`
-- `leadplug` → `leadplug` (echter Produktiv-Funnel)
+3 Tenants, alle Funnels leben in Stavros' Konto (`f64b2227-…`), die 2 anderen Tenants sind leer (Signup-Tests):
+- `leadplug` (Test-Funnel Stavros) + 2 Wegwerf-Tests (`mpqqqjcg`, `kwyliuev`)
+- Demo-/Template-Funnels seit D.3 (10 Stück): `agenturen` (Dogfood-Akquise), `demo-solar`, `demo-immobilien`, `demo-recruiting`, `demo-waermepumpe`, `demo-baufinanzierung`, `demo-pkv`, `demo-anwalt`, `demo-coaching`, `demo-autoankauf`
+- Die alten Demo-Funnels (`demo-solar` v1, `demo-waermepumpe`, …) + der `demo`-Tenant wurden zuvor gelöscht
 
 ---
 
@@ -106,6 +107,83 @@ Direkt in Supabase (Admin-Client oder SQL):
 UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 ```
 → Kein Stripe-Check, voller Funktionsumfang, keine Abrechnung.
+
+---
+
+## Aufgabe 62 — Vorlagen-Galerie + Funnel-Duplizieren (2026-06-11)
+
+**Status:** Branch `feature/aufgabe-62-vorlagen-galerie`, Type-Check + Build grün. **Migration auf Produktion angewendet** (mit Stavros-Go), RPCs SQL-seitig getestet (Instanziierung + Duplikat erzeugt, Regeln korrekt auf neue Page-UUIDs gemappt, Test-Funnels danach gelöscht). 9 Templates veröffentlicht. **Manueller UI-Test durch Stavros ausstehend.**
+
+**Warum:** Stavros verkauft die Demo-Funnels (Aufgabe 61) auch als Templates — dafür fehlte jeder Duplizier-/Vorlagen-Mechanismus. Architektur-Entscheide (abgefragt): **Snapshot-Tabelle** statt Live-Verweis (Demo-Edits ändern Templates NICHT — Veröffentlichen ist ein bewusster Schritt), Duplizieren für eigene Funnels gleich mit (Agentur kopiert Funnel je Endkunde), Drip-Mails Teil des Templates, Webhooks + Tracking-IDs werden NIE mitkopiert (kundenspezifisch).
+
+**Migration** (`aufgabe_62_funnel_templates`, additiv, DOWN vorhanden — erst Code zurückrollen, dann droppen):
+- **Tabelle `funnel_templates`**: `slug (unique) · name · description · category · preview_funnel_slug · definition jsonb · sort_order · is_active` + updated_at-Trigger. RLS: SELECT für `authenticated` (nur aktive), **keine Write-Policies** (Pflege nur Owner/Service). Definition-Format: `{funnel: {Theme+Texte}, pages: [{…, fields}], logic_rules: [Index-Referenzen], emails}` — Seiten via Array-Index, bei Instanziierung → frische UUIDs.
+- **RPC `snapshot_funnel_to_template(funnel_slug, template_slug, name, description, category, sort_order)`**: veröffentlicht einen Live-Funnel als Vorlage (Upsert). EXECUTE für authenticated/anon revoked — Owner-only.
+- **RPC `create_funnel_from_template(template_slug, tenant_id, notification_email)`**: instanziiert atomar (Funnel+Pages+Fields+Logik+Mails, eine Transaktion). SECURITY INVOKER — RLS-INSERT-Policies erzwingen den eigenen Tenant. Verwaiste Logik-Ziele werden übersprungen.
+- **RPC `duplicate_funnel(source_slug)`**: Kopie im selben Tenant („Kopie von X", neuer Random-Slug). SECURITY INVOKER — RLS-SELECT blendet fremde Funnels aus → cross-tenant unmöglich. Kopiert auch `email_sender_local`/`redirect_url`/`hide_contact_warning`; NICHT `meta_pixel_id`/`google_ads_conversion` (falsches Pixel auf der Kopie wäre schädlich).
+
+**Code:**
+- [app/api/tenant/funnels/from-template/route.ts](../app/api/tenant/funnels/from-template/route.ts) — POST `{template}` → RPC → `{slug}`.
+- [app/api/tenant/funnels/[slug]/duplicate/route.ts](../app/api/tenant/funnels/%5Bslug%5D/duplicate/route.ts) — POST → RPC → `{slug}`.
+- **`/dashboard/funnels/new` = Vorlagen-Galerie** ([page.tsx](../app/dashboard/funnels/new/page.tsx) + [TemplateGallery.tsx](../components/dashboard/TemplateGallery.tsx)): „Leer starten"-Karte (dashed) + 9 Template-Karten (Brand-Farb-Chip, Kategorie-Badge, „Vorschau" → Live-Demo im neuen Tab, „Verwenden" → erstellt + springt in den Editor). Galerie lädt nur Metadaten + `definition->funnel->>primary_color` (nicht die volle definition).
+- **Leerer Editor-Start nach `/dashboard/funnels/new/blank`** verschoben ([blank/page.tsx](../app/dashboard/funnels/new/blank/page.tsx)); `isEditorRoute` in [DashboardShell.tsx](../components/dashboard/DashboardShell.tsx) angepasst — die Galerie bekommt normales Dashboard-Chrome.
+- **FunnelCard „Duplizieren"** ([FunnelCard.tsx](../components/dashboard/FunnelCard.tsx)): CopyPlus-Icon in der Hover-Aktionsreihe, Pending-Spinner, Fehler als rotes Icon (3 s, kein alert) — Erfolg refresht die Liste („Kopie von X" erscheint).
+
+**Veröffentlichte Templates (9):** solar · waermepumpe · immobilienbewertung · baufinanzierung · pkv · anwalt-arbeitsrecht · coaching · recruiting-handwerk · autoankauf — Quelle = die Demo-Funnels, `preview_funnel_slug` zeigt auf die Live-Demos. Republish nach Demo-Polish: `SELECT snapshot_funnel_to_template('demo-solar','solar','Solar & Photovoltaik','…','Energie',10);` etc.
+
+**Offen:** Admin-Button „Als Vorlage veröffentlichen" (heute via SQL-Funktion, Owner-only) · Monetarisierung der Templates (Beta: alle kostenlos enthalten).
+
+**Runde 2 (Stavros-Review, 2026-06-11) — Vorlagen-Schaufenster + Funnel-Verwaltung:**
+- **Eigener Menüpunkt „Vorlagen"** (`/dashboard/vorlagen`, [navItems.ts](../components/dashboard/navItems.ts) + [vorlagen/page.tsx](../app/dashboard/vorlagen/page.tsx) + [TemplateShowcase.tsx](../components/dashboard/TemplateShowcase.tsx)): große **Hero-Karten** (Brand-Farbverlauf via color-mix + Branchen-Icon-Wasserzeichen + Kategorie-Eyebrow — bewusst CSS statt Bild-Assets; echte Bilder können später ergänzt werden, Stavros-Konsens). **Vorschau-Modal** mit dark-blurred Backdrop und dem ECHTEN, durchspielbaren Funnel im iframe (`/{previewSlug}?preview=1` → zählt keinen Aufruf); „Vorlage verwenden" direkt im Modal.
+- **„Neuer Funnel" = Modal mit Dark-Blur** ([NewFunnelModal.tsx](../components/dashboard/NewFunnelModal.tsx), Stavros: Erstellen ist eine „externe Aktion"): „Leer starten" prominent + kompakte Vorlagen-Schnellwahl + Link „Alle Vorlagen ansehen". Alle 4 CTAs (Dashboard-Kopf, Funnels-Kopf, Empty-State, Dashed-Karte) auf `NewFunnelButton` umgestellt. Die alte Galerie-Route `/dashboard/funnels/new` = Redirect auf `/dashboard/vorlagen` (TemplateGallery.tsx gelöscht); `isEditorRoute` matcht jetzt `/new/blank`.
+- **Funnel-Karte: ⋯-Menü** ([FunnelCard.tsx](../components/dashboard/FunnelCard.tsx), Stavros-Befund „Deaktivieren/Löschen nicht auffindbar"): immer sichtbarer ⋯-Button (nicht hover-gated) mit beschrifteten Punkten **Duplizieren · Aktivieren/Deaktivieren · Löschen**. Löschen jetzt für ALLE Funnels (vorher nur inaktive) — der Dialog warnt bei aktiven explizit vor dem sterbenden öffentlichen Link. Neue PATCH-Route [active/route.ts](../app/api/tenant/funnels/%5Bslug%5D/active/route.ts) (User-Client + RLS, Muster contact-warning). [DeleteFunnelButton.tsx](../components/tenant-editor/DeleteFunnelButton.tsx) refactored: `DeleteFunnelModal` als eigener Export (Menü schließt sich beim Klick — ein im Menü gerenderter Trigger würde sein Modal mit abräumen). Geteiltes Vokabular in [templates.ts](../components/dashboard/templates.ts) (TemplateItem, Row-Mapper, Select-String, Fetch-Helper).
+- **Entscheide aus dem Review:** Calculator abgelehnt (post-Beta) · File-Upload verschoben (post-Beta) — beide bewusst nicht Beta-Scope.
+
+**Runde 3 (Stavros-Review mit Screenshots, 2026-06-11) — 4 Fixes:**
+- **z-index ⋯-Menü:** Aktions-Container `z-10` → `z-20` — der Titel-Link (z-10, später im DOM) malte sich sonst ÜBER das aufgeklappte Menü ([FunnelCard.tsx](../components/dashboard/FunnelCard.tsx)).
+- **Aufruf-Zähler beim Eigen-Ansehen:** „Funnel ansehen" auf der Karte verlinkt jetzt `/{slug}?preview=1` (Skip in TenantFunnelClient) — Betreiber-Blicke zählen keine Aufrufe mehr.
+- **Vorschau-Modal in echter Funnel-Größe:** statt starrem `h-[70vh]` (leerer weißer Kasten) folgt die iframe-Höhe live der `funnel-resize`-postMessage des Widgets (dieselbe Mechanik wie `embed.js`, Source-gecheckt auf das eigene iframe, geclampt auf 260px–90vh, animiert).
+- **Namens-Abfrage vor „Vorlage verwenden"** (Stavros: gleiche UX wie beim leeren Funnel): neuer [CreateFromTemplateDialog.tsx](../components/dashboard/CreateFromTemplateDialog.tsx) (spiegelt das NamePromptModal des Editors, Name vorbefüllt mit Vorlagen-Name, z-60 über den Modals) — genutzt vom Showcase, vom Vorschau-Modal und vom Neuer-Funnel-Modal (Esc dort gated, solange die Abfrage offen ist). **Migration `aufgabe_62_template_funnel_name`** (auf Prod, mit Test + DOWN): `create_funnel_from_template` um optionalen `p_funnel_name` erweitert (Signatur-Wechsel: alte 3-Param-Fassung gedroppt, Grants neu); leer → Fallback Vorlagen-Name.
+
+**Runde 4 (Stavros-Screenshot-Review, 2026-06-11) — Lösch-Dialog war eine Sackgasse:**
+Der DELETE-Endpoint blockt aktive Funnels (bewusster Server-Schutz) — das Modal aus Runde 2 bot aktiven Funnels aber einen „Dauerhaft löschen"-Button an, der nie funktionieren konnte; die Server-Fehlermeldung ging im Rot unter, dazu hässliche Umbrüche in der Konsequenzen-Liste. Fix (statt Stavros' Alternative „Modal bei aktiv gar nicht öffnen" — die würde 3 Aktionen erzwingen):
+- **Neues [DeleteFunnelModal.tsx](../components/dashboard/DeleteFunnelModal.tsx)** (umgezogen aus `tenant-editor/DeleteFunnelButton.tsx`, ungenutzter Button-Wrapper gelöscht): bei aktiven Funnels erklärt ein **AMBER-Block** den Zwischenschritt (Zustand ≠ Konsequenz — hebt sich vom Rot ab) und der Primär-Button heißt **„Deaktivieren und löschen"** — führt PATCH `active=false` + DELETE nacheinander aus; der Server-Guard bleibt Backstop. Schlägt DELETE nach erfolgreicher Deaktivierung fehl, refresht die Karte auf den echten Stand.
+- Konsequenzen-Liste als `<ul>` mit hängendem Einzug (Bullet + Text getrennt, kein Umbruch unters „—"), nicht mehr fett; Fehler als richtiger Banner mit Icon statt Mini-Zentrumstext.
+
+**Runde 5 (Stavros, 2026-06-11) — Type-to-confirm im Lösch-Dialog:** Sicherheitsabfrage nach GitHub-Muster — der **Funnel-Name muss eingetippt werden** (bestätigt Absicht UND Ziel; Name statt „löschen"-Wort gewählt, damit bei vielen Karten der richtige Funnel bestätigt wird), Groß-/Kleinschreibung egal, Lösch-Button bis dahin disabled, Enter im Feld löst bei Übereinstimmung aus ([DeleteFunnelModal.tsx](../components/dashboard/DeleteFunnelModal.tsx)).
+
+**Runde 6 (Stavros, 2026-06-11) — Dark-Mode-Kanon-Sweep + Vorlagen-Kochbuch:**
+- **Design-System-Kanon nachgezogen** (Stavros-Befund „Standard-Dark-Mode vergessen"): Showcase-Karten bekommen die Dashboard-Hover-Tönung (`hover:bg-gray-50 dark:hover:bg-gray-800`), alle neuen Modal-Scrims auf Kanon `bg-black/50 dark:bg-black/40`, Inputs auf Input-Standard (`border-gray-300 dark:border-gray-600`, Placeholder `gray-300/gray-600`), erhöhte Hover IN gehoverter Karte auf `dark:hover:bg-gray-700` (Kanon „Noch höher").
+- **[`vorlagen-kochbuch.md`](vorlagen-kochbuch.md)** geschrieben (+ CLAUDE.md §6-Eintrag): reproduzierbarer 6-Schritte-Prozess für die nächsten Vorlagen (Recherche-Strategien + Troll-Filter, Design-Regeln, SQL-DO-Block-Muster, exakte Datenshape-Referenz, Verifikations-SQL, snapshot-Publishing, Kandidaten-Liste). **Ziel: 25 Vorlagen, Stand 9** — die nächsten 16 baut ein frischer Chat nach dem Kochbuch.
+
+---
+
+## Aufgabe 61 — Demo-Funnels (D.3): Dogfood + 9 Branchen-Demos live in der DB (2026-06-11)
+
+**Status:** **Live auf Produktion** (reine Daten-Inserts, kein Code-Change, kein Schema-Change — deshalb kein Branch). Alle 10 Widget-URLs verifiziert (SSR lädt sauber). **Editor-Review durch Stavros ausstehend.** Stavros-Entscheid nach Runde 1: die Demos werden später auch **als Templates verkauft** — deshalb out-of-the-box-tauglich gebaut.
+
+**Was:** Die Verkaufswaffe für Direct-Sales an DACH-Agenturen — 10 vollständige Funnels in Stavros' Konto, direkt per SQL angelegt (Stavros-Entscheid; Vorgehen + Konto + Anrede vorab abgefragt). Branchen-Wahl in 2 Web-Recherche-Runden: Runde 1 **Solar/PV** (größter DACH-Lead-Markt, 20–120 €/Lead), **Immobilienbewertung** (DER klassische Quiz-Funnel), **Recruiting Handwerk** (Perspectives Flaggschiff-Use-Case). Runde 2 (Erweiterung 4→10): **Wärmepumpe** (50–120 €/Lead, Förder-Welle), **Baufinanzierung + PKV** (Kern-Verticals der Finanz-Lead-Gen), **Anwalt Arbeitsrecht/Abfindung**, **Business-Coaching** (Termin-Funnel), **Autoankauf** (Bewertungs-Pattern wie Immobilien).
+
+| Slug | Brand | Inhalt / Showcase |
+|---|---|---|
+| `agenturen` | LeadPlug selbst (Dogfood, **per Du**) | Welcome → Rolle → Tool → Bewertung (Rating) → Schmerz → Multi-Choice → Kontakt. Logik: „Noch gar nicht" überspringt Rating+Schmerz. Grün/Inter/zentriert |
+| `demo-solar` | „Sonnkraft Solar" (Sie) | Gebäude → Eigentümer → Dachform → Verbrauch (Slider 1000–10000 kWh) → Zusatzinteresse (Multi) → Zeitraum → Kontakt (Name/E-Mail/Tel/PLZ). Logik: Mieter springen direkt zu Kontakt. Antworten-Übersicht AN. Orange/Poppins |
+| `demo-immobilien` | „Wertblick Immobilien" (Sie) | Art → Wohnfläche (Number m²) → Baujahr → Zustand → Anlass (Dropdown) → Zeithorizont → Kontakt. **2 Logik-Regeln**: Grundstück überspringt Fläche/Baujahr/Zustand; Anlass ≠ Verkauf überspringt Zeithorizont (`neq`-Op). Blau/Inter |
+| `demo-recruiting` | „Elektro Schneider" (**per Du** — Branchen-Norm im Handwerk-Recruiting) | Erfahrung → Vorerfahrung (Multi) → Führerschein → Starttermin (Date) → Kontakt (Tel Pflicht, E-Mail optional). **2 Regeln auf einem Step** (beide Ausgelernt-Werte überspringen Vorerfahrung). Rot/Roboto/zentriert |
+| `demo-waermepumpe` | „WärmeWerk Haustechnik" (Sie) | Gebäudetyp → Eigentümer → Heizung → Wohnfläche (Slider) → Dämmung → **Förder-Checkbox (optional)** → Kontakt. Logik: Mieter → Kontakt. Teal/Inter |
+| `demo-baufinanzierung` | „FinanzKompass" (Sie) | Vorhaben (Dropdown) → Kaufpreis (Number €) → Eigenkapital (Slider €) → Dringlichkeit → Kontakt. Logik: „suche noch Objekt" überspringt Kaufpreis+Eigenkapital. Grün/Inter |
+| `demo-pkv` | „VersichertPro" (Sie) | Beruf → Alter (Number) → Einkommen → Status → Kontakt. **2 Regeln: Student (eq) + Alter ≥ 55 (`gte`, numerische Op!)** → direkt Kontakt. Indigo/Inter |
+| `demo-anwalt` | „Kanzlei Berger Arbeitsrecht" (Sie) | Situation → Wann → Betriebszugehörigkeit (Number Jahre) → Betriebsgröße → **Fallbeschreibung (Long-Text, optional, maxLength 1000)** → Kontakt. 2 Regeln auf Step 1 („droht"/„anderes" überspringen je passende Fragen). Gold/Inter |
+| `demo-coaching` | „Skala Business-Coaching" (**per Du** — Branchen-Norm) | Status → Umsatz → Themen (Multi) → **Dringlichkeit (Scale 0–10)** → **Statement-Step** („Coaching ist Arbeit") → Kontakt. Logik: Scale ≥ 8 (`gte`) überspringt Statement. Violett/Poppins/zentriert |
+| `demo-autoankauf` | „AutoFair Ankauf" (Sie) | Marke (Dropdown 8) → Erstzulassung (Number) → km-Stand (Slider) → Zustand → Zeitpunkt → Kontakt (+PLZ Abholung). **2 Regeln: Erstzulassung ≤ 1999 (`lte`) + Unfall (eq)** → direkt Kontakt. Cyan/Roboto/zentriert |
+
+**Pro Funnel zusätzlich:** 2 aktive Drip-Mails (Lead-/Bewerber-Benachrichtigung an `tenant` + Bestätigung an `customer`, beide delay 0, mit `contact.*`-Chips + `answers_overview`-Magic-Section) — im Sales-Call zeigt der E-Mails-Tab damit echten Inhalt. **Feldtyp-Abdeckung über alle 10 jetzt komplett:** single/multi_choice, slider, number, date, dropdown, rating, **scale, statement, checkbox, long_text**, short_text, full_name/email/tel/plz, welcome — und **15 Logik-Regeln** (eq, neq, **gte, lte**; Skip-, Fast-Track- und Disqualifikations-Patterns).
+
+**Rollback:** `DELETE FROM funnels WHERE slug IN ('agenturen','demo-solar','demo-immobilien','demo-recruiting','demo-waermepumpe','demo-baufinanzierung','demo-pkv','demo-anwalt','demo-coaching','demo-autoankauf');` (pages/fields/rules/emails hängen per CASCADE dran; keine Submissions vorhanden).
+
+**Strategie-Hinweis Templates:** Zum „als Template verkaufen" fehlt produktseitig noch ein **Funnel-Duplizier-/Vorlagen-Mechanismus** (Funnel in ein anderes Konto kopieren bzw. Vorlagen-Galerie beim Erstellen) — heute existieren Vorlagen nur auf Karten-Ebene (Kontakt/Adresse/Ja-Nein). Eigene Aufgabe, braucht Stavros-Go.
+
+**Offen:** Stavros-Review im Editor (Texte/Farben nachpolieren); Landingpage für den Dogfood-Funnel existiert noch nicht (`app/page.tsx` redirectet zu `/dashboard`) — Funnel ist solange direkt via `app.leadplug.de/agenturen` verlinkbar; Vorschlag: Wegwerf-Funnels `mpqqqjcg`/`kwyliuev` löschen.
 
 ---
 
