@@ -156,6 +156,9 @@ Der DELETE-Endpoint blockt aktive Funnels (bewusster Server-Schutz) — das Moda
 - **Design-System-Kanon nachgezogen** (Stavros-Befund „Standard-Dark-Mode vergessen"): Showcase-Karten bekommen die Dashboard-Hover-Tönung (`hover:bg-gray-50 dark:hover:bg-gray-800`), alle neuen Modal-Scrims auf Kanon `bg-black/50 dark:bg-black/40`, Inputs auf Input-Standard (`border-gray-300 dark:border-gray-600`, Placeholder `gray-300/gray-600`), erhöhte Hover IN gehoverter Karte auf `dark:hover:bg-gray-700` (Kanon „Noch höher").
 - **[`vorlagen-kochbuch.md`](vorlagen-kochbuch.md)** geschrieben (+ CLAUDE.md §6-Eintrag): reproduzierbarer 6-Schritte-Prozess für die nächsten Vorlagen (Recherche-Strategien + Troll-Filter, Design-Regeln, SQL-DO-Block-Muster, exakte Datenshape-Referenz, Verifikations-SQL, snapshot-Publishing, Kandidaten-Liste). **Ziel: 25 Vorlagen, Stand 9** — die nächsten 16 baut ein frischer Chat nach dem Kochbuch.
 
+**Runde 7 (Stavros, 2026-06-11) — Demo-Funnels verschicken keine Mails mehr:**
+Vorschau-Submits sind ECHT (Leads landen gewollt in Stavros' Posteingang, `?preview=1` skippt nur den Aufruf-Zähler) — aber Vorschau-Spieler sollen keine Mails von fiktiven Firmen bekommen. **Alle 18 `email_subscriptions` der 9 `demo-*`-Funnels auf `is_active = false`** (per SQL, vor MCP-Ausfall verifiziert via RETURNING); `agenturen` (Dogfood) bleibt scharf. Die veröffentlichten Vorlagen-Snapshots sind entkoppelt und tragen die Mails aktiv → „Vorlage verwenden" liefert weiterhin scharfe Drip-Mails. Kochbuch ergänzt: Schritt 5b (Deaktivieren nach Publish) + **Republish-Falle** dokumentiert (snapshot kopiert `is_active` — vor Republish kurz aktivieren, ODER offene Härtung: snapshot publiziert Mails immer als aktiv; Umsetzung durch Supabase-MCP-Ausfall vertagt).
+
 ---
 
 ## Aufgabe 61 — Demo-Funnels (D.3): Dogfood + 9 Branchen-Demos live in der DB (2026-06-11)

@@ -26,6 +26,15 @@ Dazu: `agenturen` = Dogfood-Akquise-Funnel für LeadPlug selbst (per Du, **kein 
 Alle leben in Stavros' Konto, `tenant_id = 'f64b2227-2fbb-4746-83fa-9d71bf8af26f'`,
 `notification_email = 'stavrossingoudis@gmail.com'`.
 
+> ⚠️ **Demo-Funnels verschicken KEINE Mails (Stavros-Entscheid 2026-06-11).**
+> Die Vorlagen-Vorschau lädt die Demo-Funnels live — Submits dort sind ECHT
+> (Leads landen gewollt in Stavros' Posteingang; `?preview=1` unterdrückt nur den
+> Aufruf-Zähler). Damit Vorschau-Spieler aber keine Mails von fiktiven Firmen
+> bekommen, sind die `email_subscriptions` aller `demo-*`-Funnels auf
+> `is_active = false` gesetzt. **Beim Verwenden einer Vorlage müssen die Mails
+> dagegen AKTIV ankommen** — die Snapshots tragen sie aktiv (entkoppelt).
+> Ausnahme: `agenturen` (Dogfood) behält aktive Mails — echte Akquise.
+
 ---
 
 ## 1. Prozess in 6 Schritten
@@ -153,6 +162,23 @@ Upsert: nach Demo-Polish einfach erneut aufrufen (Republish). Die Snapshot-Funkt
 (EXECUTE für authenticated revoked) — Aufruf via MCP/Service. Neue Kategorie ⇒ in
 [`TemplateShowcase.tsx`](../components/dashboard/TemplateShowcase.tsx) `CATEGORY_ICONS` ein lucide-Icon ergänzen (Fallback: Sparkles).
 
+**Schritt 5b — Demo-Mails deaktivieren (Pflicht, NACH dem Veröffentlichen):**
+```sql
+UPDATE email_subscriptions e SET is_active = false
+FROM funnels f
+WHERE f.id = e.funnel_id AND f.slug = 'demo-<branche>';
+```
+Reihenfolge ist wichtig: **erst snapshotten (Mails aktiv) → dann deaktivieren.**
+
+> ⚠️ **Republish-Falle:** `snapshot_funnel_to_template` kopiert `e.is_active` mit in die
+> Definition. Ein Republish NACH der Deaktivierung würde die Vorlage mit inaktiven Mails
+> ausliefern — Kunden bekämen dann keine Drip-Mails! Vor jedem Republish die Demo-Mails
+> kurz auf `is_active = true` setzen, snapshotten, wieder deaktivieren.
+> **Geplante Härtung (offen, Stand 2026-06-11):** `snapshot_funnel_to_template` so ändern,
+> dass Mails in der Definition IMMER als `is_active: true` publiziert werden — dann entfällt
+> das manuelle Hin-und-her. (Umsetzung war durch MCP-Ausfall blockiert; wer das liest und
+> die Funktion noch unverändert vorfindet: kleine CREATE-OR-REPLACE-Migration nachholen.)
+
 ### Schritt 6 — Doku
 
 Eintrag in [`current-feature.md`](current-feature.md) (Tabelle erweitern: Slug · Brand · Inhalt/Showcase · Logik · Theme) + Memory-Update (Restplan: Zähler X/25).
@@ -232,6 +258,7 @@ Pro Kandidat in der Recherche klären: Lead-Preis/Markt-Beleg, 4–6 fachlich ko
 - [ ] 2 Drip-Mails (tenant + customer, Chips + answers_overview)
 - [ ] Verifikation: Counts + Forward-Check + Live-URL lädt
 - [ ] `snapshot_funnel_to_template` mit Kategorie + fortlaufendem sort_order
+- [ ] **NACH dem Veröffentlichen: Demo-Mails deaktivieren** (Schritt 5b — Vorschau darf keine Mails verschicken)
 - [ ] Doku-Eintrag current-feature.md + Memory-Zähler
 
 **Harte Regeln aus CLAUDE.md:** `components/funnel.tsx` NIE anfassen · DB-Writes mit User-Go ·
