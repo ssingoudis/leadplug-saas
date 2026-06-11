@@ -14,6 +14,15 @@ import { renderEmail, RECIPIENT_ME, type TemplateContext } from "@/lib/emailTemp
 import type { EditorState, TenantConfig, QuestionConfig } from "@/types";
 import { EmptyState, EDITOR_LEFT_COL, PanelListHeader } from "./ui/Panel";
 import { EditorButton, TextInput, Select, Toggle } from "./ui/Controls";
+import { useMinWidth } from "@/lib/useMinWidth";
+
+// Aufgabe 60: Editor + Live-Vorschau nebeneinander. Die Vorschau ist fluid (Mail-Card
+// max. 600px, schmaler = Mobil-Darstellung — die echte Mail ist genauso fluid, siehe
+// DynamicEmail.tsx maxWidth) und wird per Grid auf den verfügbaren Platz geclampt;
+// der Editor behält min. 360px. Untergrenze fürs Side-by-Side: Icon-Sidebar 64 +
+// Liste 280 + Editor 360 + Handle 6 + Vorschau ~440 ≈ 1150 → 1200 mit Luft.
+// Darunter wird die Vorschau zum Umschalter „Bearbeiten | Vorschau".
+const SPLIT_PREVIEW_MIN_WIDTH = 1200;
 
 // =============================================================================
 // DEMO-MODE: bei API-Fehler (z.B. Tabelle existiert nicht) fallen wir in einen
@@ -488,9 +497,17 @@ export function EmailsPanel({ funnelSlug, state }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
-  // Resizable Preview-Pane — Default 680 damit die 600px-Mail-Card mit etwas Whitespace
-  // drumherum gut sitzt. Min 632 damit die Card nicht gequetscht wird.
+  // Resizable Preview-Pane — Default 680 zeigt die 600px-Mail-Card (Desktop-Breite) mit
+  // etwas Whitespace. Aufgabe 60: Min 440 statt 632 — die Card ist fluid (w-full max-w-150),
+  // schmaler entspricht der Mobil-Darstellung der Mail. Das Grid clampt zusätzlich auf den
+  // verfügbaren Platz (minmax), damit der Editor nie unter 360px gedrückt wird.
   const [rightWidth, setRightWidth] = useState(680);
+
+  // Aufgabe 60: unter SPLIT_PREVIEW_MIN_WIDTH gibt es keine Side-by-Side-Vorschau mehr —
+  // die Arbeitsfläche zeigt Editor ODER Vorschau (paneView-Umschalter). Der Editor bleibt
+  // beim Umschalten gemountet (nur display:none), damit TipTap Cursor/Undo nicht verliert.
+  const wideEnoughForSplit = useMinWidth(SPLIT_PREVIEW_MIN_WIDTH);
+  const [paneView, setPaneView] = useState<"edit" | "preview">("edit");
 
   // Preview-Datenquelle: null = Mock, sonst lead-id aus previewLeads
   const [previewLeads, setPreviewLeads] = useState<PreviewLead[]>([]);
@@ -728,7 +745,7 @@ export function EmailsPanel({ funnelSlug, state }: Props) {
     const startWidth = rightWidth;
     function onMove(ev: MouseEvent) {
       const dx = startX - ev.clientX;
-      setRightWidth(Math.max(632, Math.min(1100, startWidth + dx)));
+      setRightWidth(Math.max(440, Math.min(1100, startWidth + dx)));
     }
     function onUp() {
       document.removeEventListener("mousemove", onMove);
@@ -740,7 +757,49 @@ export function EmailsPanel({ funnelSlug, state }: Props) {
     document.addEventListener("mouseup", onUp);
   }
 
-  // 3-Pane Layout mit resizable Vorschau
+  // Aufgabe 60: Vorschau-Inhalt (Header mit Lead-Auswahl + gerenderte Mail) als Fragment —
+  // landet wide in der rechten Spalte, narrow in der Arbeitsfläche (Umschalter). Es wird
+  // immer nur EINE Instanz gerendert.
+  const previewColumn = (
+    <>
+      <PanelListHeader
+        title="Vorschau"
+        right={
+          <select
+            value={previewLeadId ?? ""}
+            onChange={(e) => setPreviewLeadId(e.target.value || null)}
+            className="max-w-[60%] rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-[11px] text-gray-700 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+            title="Datenquelle für die Vorschau"
+          >
+            <option value="">Mock-Lead (Max Mustermann)</option>
+            {previewLeads.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.display_name} · {new Date(l.completed_at ?? l.created_at).toLocaleDateString("de-DE")}
+              </option>
+            ))}
+          </select>
+        }
+      />
+      <div className="flex-1 overflow-y-auto bg-gray-100 dark:bg-background p-4">
+        {selected && draft ? (
+          <PreviewPane
+            subject={draft.subject}
+            bodyHtml={draft.body_html}
+            recipientType={draft.recipient_type}
+            recipientValue={draft.recipient_value}
+            state={state}
+            funnelSlug={funnelSlug}
+            previewLead={previewLead}
+          />
+        ) : (
+          <p className="mt-8 text-center text-xs text-gray-400">Keine E-Mail ausgewählt.</p>
+        )}
+      </div>
+    </>
+  );
+
+  // 3-Pane Layout mit resizable Vorschau (ab SPLIT_PREVIEW_MIN_WIDTH) —
+  // darunter 2-Pane mit „Bearbeiten | Vorschau"-Umschalter (Aufgabe 60).
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {demoMode && (
@@ -752,7 +811,13 @@ export function EmailsPanel({ funnelSlug, state }: Props) {
       )}
       <div
         className="grid min-h-0 flex-1 bg-gray-100 dark:bg-background"
-        style={{ gridTemplateColumns: `${EDITOR_LEFT_COL} minmax(0, 1fr) 6px ${rightWidth}px` }}
+        style={{
+          // Aufgabe 60: Vorschau-Spalte minmax(0, rightWidth) — sie nimmt ihre Wunschbreite,
+          // gibt aber nach, bevor der Editor (min 360px) gequetscht wird. CSS clampt, kein JS.
+          gridTemplateColumns: wideEnoughForSplit
+            ? `${EDITOR_LEFT_COL} minmax(360px, 1fr) 6px minmax(0, ${rightWidth}px)`
+            : `${EDITOR_LEFT_COL} minmax(0, 1fr)`,
+        }}
       >
         {/* LEFT: Liste */}
         <aside className="flex min-h-0 flex-col overflow-hidden border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
@@ -814,93 +879,99 @@ export function EmailsPanel({ funnelSlug, state }: Props) {
           </div>
         </aside>
 
-        {/* CENTER: Editor */}
+        {/* CENTER: Arbeitsfläche — wide: immer Editor · narrow: Editor ODER Vorschau */}
         <section className="flex min-h-0 flex-col overflow-hidden">
-          {selected && draft ? (
-            <SelectedEditor
-              key={selected.id}
-              subId={selected.id}
-              draft={draft}
-              onDraftChange={patchDraft}
-              dirty={dirty}
-              saving={saving}
-              onSave={handleSave}
-              onDelete={() => deleteSub(selected.id)}
-              funnelSlug={funnelSlug}
-              demoMode={demoMode}
-              tenantNotificationEmail={state.notificationEmail}
-              variables={mailVariables}
-            />
-          ) : (
-            <div className="flex flex-1 items-center justify-center p-8">
-              <EmptyState
-                icon={<Mail size={22} />}
-                title={subs.length === 0 ? "Noch keine E-Mail" : "E-Mail auswählen"}
-                description={
-                  subs.length === 0
-                    ? "Lege links deine erste automatische Follow-up-Mail an."
-                    : "Wähle links eine E-Mail, um sie zu bearbeiten."
-                }
-                action={
-                  subs.length === 0 ? (
-                    <EditorButton variant="primary" onClick={handleAdd} loading={creating}>
-                      <Plus size={15} strokeWidth={2.5} />
-                      Erste E-Mail anlegen
-                    </EditorButton>
-                  ) : undefined
-                }
+          {/* Stavros-Review: Optik wie der Inhalt|Design-Inspektor-Umschalter (Bearbeiten-Tab),
+              NICHT wie die TopTabs — zwei identische Segmented-Controls übereinander sahen
+              nach doppelter Navigation aus. h-14 fluchtet mit dem Listen-Header links. */}
+          {!wideEnoughForSplit && (
+            <div className="flex h-14 shrink-0 items-center justify-center gap-1 border-b border-gray-200 bg-white px-2 dark:border-gray-800 dark:bg-gray-900">
+              {(["edit", "preview"] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setPaneView(v)}
+                  className={`rounded-md px-4 py-1.5 text-xs font-semibold transition-colors ${
+                    paneView === v
+                      ? "bg-primary/10 text-primary"
+                      : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                  }`}
+                >
+                  {v === "edit" ? "Bearbeiten" : "Vorschau"}
+                </button>
+              ))}
+            </div>
+          )}
+          {/* Editor bleibt im Vorschau-Modus gemountet (nur versteckt) — TipTap behält
+              Cursor, Fokus-Historie und Undo-Stack über das Umschalten hinweg. */}
+          <div
+            className={`min-h-0 flex-1 flex-col overflow-hidden ${
+              !wideEnoughForSplit && paneView === "preview" ? "hidden" : "flex"
+            }`}
+          >
+            {selected && draft ? (
+              <SelectedEditor
+                key={selected.id}
+                subId={selected.id}
+                draft={draft}
+                onDraftChange={patchDraft}
+                dirty={dirty}
+                saving={saving}
+                onSave={handleSave}
+                onDelete={() => deleteSub(selected.id)}
+                funnelSlug={funnelSlug}
+                demoMode={demoMode}
+                tenantNotificationEmail={state.notificationEmail}
+                variables={mailVariables}
               />
+            ) : (
+              <div className="flex flex-1 items-center justify-center p-8">
+                <EmptyState
+                  icon={<Mail size={22} />}
+                  title={subs.length === 0 ? "Noch keine E-Mail" : "E-Mail auswählen"}
+                  description={
+                    subs.length === 0
+                      ? "Lege links deine erste automatische Follow-up-Mail an."
+                      : "Wähle links eine E-Mail, um sie zu bearbeiten."
+                  }
+                  action={
+                    subs.length === 0 ? (
+                      <EditorButton variant="primary" onClick={handleAdd} loading={creating}>
+                        <Plus size={15} strokeWidth={2.5} />
+                        Erste E-Mail anlegen
+                      </EditorButton>
+                    ) : undefined
+                  }
+                />
+              </div>
+            )}
+          </div>
+          {!wideEnoughForSplit && paneView === "preview" && (
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white dark:bg-gray-900">
+              {previewColumn}
             </div>
           )}
         </section>
 
-        {/* RESIZE-HANDLE zwischen Editor und Vorschau */}
-        <div
-          role="separator"
-          aria-orientation="vertical"
-          onMouseDown={handleResizeStart}
-          className="group relative flex cursor-col-resize items-center justify-center border-x border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-gray-900 hover:bg-primary/10"
-          title="Vorschau-Breite anpassen"
-        >
-          <GripVertical size={12} className="text-gray-400 group-hover:text-primary" />
-        </div>
+        {wideEnoughForSplit && (
+          <>
+            {/* RESIZE-HANDLE zwischen Editor und Vorschau */}
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              onMouseDown={handleResizeStart}
+              className="group relative flex cursor-col-resize items-center justify-center border-x border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-gray-900 hover:bg-primary/10"
+              title="Vorschau-Breite anpassen"
+            >
+              <GripVertical size={12} className="text-gray-400 group-hover:text-primary" />
+            </div>
 
-        {/* RIGHT: Live-Vorschau */}
-        <aside className="flex min-h-0 flex-col overflow-hidden bg-white dark:bg-gray-900">
-          <PanelListHeader
-            title="Vorschau"
-            right={
-              <select
-                value={previewLeadId ?? ""}
-                onChange={(e) => setPreviewLeadId(e.target.value || null)}
-                className="max-w-[60%] rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-[11px] text-gray-700 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
-                title="Datenquelle für die Vorschau"
-              >
-                <option value="">Mock-Lead (Max Mustermann)</option>
-                {previewLeads.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.display_name} · {new Date(l.completed_at ?? l.created_at).toLocaleDateString("de-DE")}
-                  </option>
-                ))}
-              </select>
-            }
-          />
-          <div className="flex-1 overflow-y-auto bg-gray-100 dark:bg-background p-4">
-            {selected && draft ? (
-              <PreviewPane
-                subject={draft.subject}
-                bodyHtml={draft.body_html}
-                recipientType={draft.recipient_type}
-                recipientValue={draft.recipient_value}
-                state={state}
-                funnelSlug={funnelSlug}
-                previewLead={previewLead}
-              />
-            ) : (
-              <p className="mt-8 text-center text-xs text-gray-400">Keine E-Mail ausgewählt.</p>
-            )}
-          </div>
-        </aside>
+            {/* RIGHT: Live-Vorschau */}
+            <aside className="flex min-h-0 flex-col overflow-hidden bg-white dark:bg-gray-900">
+              {previewColumn}
+            </aside>
+          </>
+        )}
       </div>
 
       {pendingSwitchTo && (
@@ -1313,10 +1384,8 @@ function PreviewPane({
       {/* eslint-disable-next-line react/no-unknown-property */}
       <style>{previewStyleTag}</style>
 
-      {/* Realistische Breite (= 600px wie in DynamicEmail.tsx maxWidth) + Mock-Info */}
-      <p className="text-center text-[10px] uppercase tracking-wide text-gray-400">Vorschau-Breite max. 600 px (Mail-Container)</p>
-
-      {/* Mail-Header-Meta */}
+      {/* Mail-Header-Meta — die Card selbst ist fluid (max. 600px = DynamicEmail.tsx maxWidth,
+          schmaler entspricht der Mobil-Darstellung); Hinweis-Zeile dazu auf Stavros-Wunsch entfernt. */}
       <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2 text-[11px] text-gray-500 dark:text-gray-400 space-y-0.5">
         <div><span className="text-gray-400">An:</span> <strong className="text-gray-900 dark:text-gray-100">{recipient}</strong></div>
         <div><span className="text-gray-400">Betreff:</span> <strong className="text-gray-900 dark:text-gray-100">{subject || "(leer)"}</strong></div>

@@ -4,7 +4,7 @@
 >
 > **Interaktive Datei (Eraser):** https://app.eraser.io/workspace/9pKfAsoxoczc5HQCf9Vw
 >
-> **Stand:** 2026-06-07 · gebaut aus echtem Code + Live-DB-Introspektion (nicht aus den `context/`-Docs). Bei Architektur-Änderungen hier **und** in Eraser nachziehen.
+> **Stand:** 2026-06-11 · gebaut aus echtem Code + Live-DB-Introspektion (nicht aus den `context/`-Docs). Bei Architektur-Änderungen hier **und** in Eraser nachziehen. Letzter Abgleich: Aufgaben 58–60 (Logik-Sprünge + funnel_logic_rules · Logic-Map · Admin unter /dashboard/admin · Rate-Limit-Korrektur).
 >
 > **Begriffe in den Diagrammen:** *Kunde* = Agentur/zahlender Account (Code/DB: `tenant`) · *Endkunde* = Betrieb hinter dem Funnel · *Lead* = Person, die den Funnel ausfüllt (Code: `recipient_type='customer'`). ⚠️ Code-`customer` = Lead, Code-`tenant` = Kunde — Begriff und Code laufen gegenläufig.
 
@@ -110,8 +110,8 @@ DashWorld [label: "③ Dashboard (Agentur, Auth + RLS)", icon: grid, color: gree
   billingPage [label: "Billing", icon: nextjs]
 }
 
-AdminWorld [label: "Super-Admin (Platform-Owner)", icon: shield, color: red] {
-  adminPage [label: "app/admin/* (lib/auth/superadmin)", icon: nextjs]
+AdminWorld [label: "Super-Admin (im Dashboard, Gate: superadmin.ts)", icon: shield, color: red] {
+  adminPage [label: "app/dashboard/admin/* (Cockpit + Workspace-Detail)", icon: nextjs]
 }
 
 API [label: "API-Routes (runtime = nodejs)", icon: server, color: orange] {
@@ -123,6 +123,7 @@ API [label: "API-Routes (runtime = nodejs)", icon: server, color: orange] {
   leadsApi [label: "/api/leads/[id]", icon: nextjs]
   stripeApi [label: "/api/stripe/{checkout,portal,webhook}", icon: stripe]
   cronApi [label: "/api/cron/webhook-retry", icon: clock]
+  adminApi [label: "/api/admin/workspaces/[id] (Superadmin-Gate)", icon: shield]
 }
 
 Lib [label: "lib/ (Server-Logik)", icon: code, color: purple] {
@@ -135,6 +136,7 @@ Lib [label: "lib/ (Server-Logik)", icon: code, color: purple] {
   validateLib [label: "validateContactField.ts", icon: file]
   logicLib [label: "funnelLogic.ts (Auswertung) + logicDisplay.ts (Lesefassung)", icon: file]
   billingLib [label: "billing.ts + stripe.ts", icon: file]
+  adminQueries [label: "admin/queries.ts (Service-Key-Reads, eigenes Superadmin-Gate)", icon: file]
   sbClients [label: "supabase/{server,client,admin}.ts", icon: file]
 }
 
@@ -186,6 +188,10 @@ funnelCrud > sbClients
 resCrud > sbClients
 leadsApi > sbClients
 stripeApi > billingLib
+adminPage > adminQueries: Cross-Tenant-Reads
+adminPage > adminApi: Plan / Aktiv / Löschen
+adminApi > sbClients
+adminQueries > sbClients
 getCfg > sbClients
 editorUtils > sbClients
 trackingLib > sbClients
@@ -222,7 +228,7 @@ Widget > API: POST /api/track-view
 API > DB: INSERT funnel_view_logs
 
 loop [bei jeder Antwort · 600ms debounced] {
-  Besucher > Widget: Antwort / Page-Advance
+  Besucher > Widget: Antwort / Page-Advance (Logik-Regeln wählen den nächsten Schritt)
   Widget > API: POST /api/track-progress
   API > DB: UPSERT submissions (session_id · completed_at = NULL)
   opt [after_page-Webhook konfiguriert] {
@@ -235,13 +241,13 @@ Widget > EmbedJS: postMessage funnel-submit (slug · meta · google — PII-frei
 EmbedJS > AdPlat: dataLayer leadplug_lead · fbq Lead · gtag conversion
 Widget > API: POST /api/submit
 
-alt [Honeypot gefüllt ODER Rate-Limit 3/IP/10min] {
+alt [Honeypot gefüllt ODER Rate-Limit (10 completed/IP/10min, eigene Session zählt nicht)] {
   API > DB: logHoneypot (nur bei Bot)
   API --> Widget: 200 {success:true} — kein Lead
 }
 
 API > DB: getTenantConfig (Service-Key JOIN funnels+tenants+pages+fields)
-API > API: deriveContactFromAnswers · Card-Backstop-Validierung · lead_price
+API > API: deriveContactFromAnswers · pfad-sensitiver Card-Backstop (computePath) · lead_price
 API > DB: UPSERT submissions (completed_at = NOW)
 API --> Widget: 200 {success:true}
 
@@ -281,7 +287,7 @@ Legende_Account [icon: lock, color: blue, label: "LEGENDE: Account / Auth (blau)
   Tabellen tenants,tenant_members,auth_users
 }
 Legende_Funnel [icon: filter, color: green, label: "LEGENDE: Funnel-Inhalt (grün)"] {
-  Tabellen funnels,pages,fields
+  Tabellen funnels,pages,fields,funnel_logic_rules
 }
 Legende_Leads [icon: inbox, color: orange, label: "LEGENDE: Leads / Tracking (orange)"] {
   Tabellen submissions,funnel_view_logs,honeypot_triggers
@@ -331,6 +337,10 @@ funnels [icon: filter, color: green] {
   response_message text
   answers_overview_label text
   show_answers_overview bool
+  show_progress_bar bool
+  show_step_badge bool
+  title_alignment text
+  hide_contact_warning bool
   privacy_text text
   privacy_policy_url text
   notification_email text
@@ -370,6 +380,19 @@ fields [icon: list, color: green] {
   sort_order int
   options jsonb
   config jsonb
+  created_at timestamptz
+  updated_at timestamptz
+}
+funnel_logic_rules [icon: git-branch, color: green] {
+  id uuid pk
+  funnel_id uuid fk
+  tenant_id uuid fk
+  source_page_id uuid fk
+  sort_order int
+  is_fallback bool
+  conditions jsonb
+  target_type text
+  target_page_id uuid fk
   created_at timestamptz
   updated_at timestamptz
 }
@@ -460,6 +483,7 @@ email_delivery_attempts [icon: send, color: red] {
   last_error text
   next_retry_at timestamptz
   delivered_at timestamptz
+  is_test bool
   created_at timestamptz
 }
 
@@ -468,6 +492,10 @@ tenant_members.auth_user_id > auth_users.id
 funnels.tenant_id > tenants.id
 pages.funnel_id > funnels.id
 fields.page_id > pages.id
+funnel_logic_rules.funnel_id > funnels.id
+funnel_logic_rules.tenant_id > tenants.id
+funnel_logic_rules.source_page_id > pages.id
+funnel_logic_rules.target_page_id > pages.id
 submissions.tenant_id > tenants.id
 funnel_view_logs.funnel_id > funnels.id
 funnel_view_logs.tenant_id > tenants.id
@@ -512,6 +540,8 @@ save [shape: oval, label: "Zwischenstand wird laufend gespeichert (track-progres
 abandon [label: "Lead bricht ab / schließt Tab", color: red]
 cron [label: "Cron nach 10 Min: zählt als Abbrecher-Lead; abandoned-Webhook nur wenn E-Mail/Telefon erfasst", color: red]
 
+logik [shape: diamond, label: "Logik-Regel am Schritt erfüllt? (erste passende gewinnt)", color: gray]
+jump [label: "Sprung VORWÄRTS — zu einem späteren Schritt oder direkt ans Ende", color: green]
 last [shape: diamond, label: "War das der letzte Schritt?", color: gray]
 submit [label: "Absenden / autoFinish am Funnel-Ende", icon: send, color: blue]
 conv [label: "Conversion an Werbe-Plattform melden (Meta · Google · GTM, PII-frei)", color: blue]
@@ -533,7 +563,11 @@ auto > save
 weiter > save
 statement > save
 card > save
-save > last
+save > logik
+logik > jump: ja
+logik > last: nein — der Reihe nach
+jump > qtype: Ziel = späterer Schritt
+jump > submit: Ziel = Ende
 last > qtype: nein — nächster Schritt
 last > submit: ja
 submit > conv > server > after
@@ -561,7 +595,7 @@ Kunde [icon: briefcase, color: blue, label: "KUNDE — Agentur / Marketer (zahle
 Endkunde [icon: store, color: gray, label: "ENDKUNDE — Betrieb, für den der Funnel ist (z.B. Solar)"]
 Lead [icon: user, color: orange, label: "LEAD — die Person, die den Funnel ausfüllt"]
 
-Builder [icon: edit, color: blue, label: "1. Funnel bauen — Fragen · Design · Webhooks · Mails · Tracking"]
+Builder [icon: edit, color: blue, label: "1. Funnel bauen — Fragen · Logik · Design · Webhooks · Mails · Tracking"]
 Embed [icon: code, color: green, label: "2. Einbetten — embed.js / iFrame auf der Website"]
 Fill [icon: pencil, color: orange, label: "3. Funnel ausfüllen → ein Lead entsteht"]
 
@@ -595,7 +629,7 @@ Billing > LeadPlug: Umsatz
 
 ## 7. Capability-Map (Funktionsbereiche & Schnittstellen)
 
-Das Programm in 10 Sektionen zerlegt; jede Karte = 1 Fähigkeit mit Schnittstelle + eigenen Tabellen.
+Das Programm in 11 Sektionen zerlegt; jede Karte = 1 Fähigkeit mit Schnittstelle + eigenen Tabellen.
 🔗 https://app.eraser.io/workspace/9pKfAsoxoczc5HQCf9Vw?diagram=QPN64XoCj0orymsRcOM0
 
 ```
@@ -613,6 +647,10 @@ Builder [icon: edit, color: blue, label: "Funnel-Builder — Editor & Funnel-Def
 Widget [icon: monitor, color: green, label: "Widget / Runtime — Funnel rendern & ausfüllen"] {
   Widget_if [label: "Schnittstelle: TenantConfig · postMessage · /api/submit + track-*"]
   Widget_db [icon: database, label: "schreibt: submissions"]
+}
+Logic [icon: git-branch, color: green, label: "Logik-Sprünge — Verzweigungen im Funnel-Fluss (vorwärts-only)"] {
+  Logic_if [label: "Schnittstelle: LogicRuleModal + Logic-Map · /api/…/logic · funnelLogic.ts (Runtime + computePath)"]
+  Logic_db [icon: database, label: "Tabelle: funnel_logic_rules"]
 }
 Inbox [icon: inbox, color: blue, label: "Lead-Inbox / CRM — Leads ansehen & bearbeiten"] {
   Inbox_if [label: "Schnittstelle: /api/leads/[id] · Status offen → kontaktiert → abgeschlossen"]
@@ -638,15 +676,17 @@ Analytics [icon: bar-chart, color: orange, label: "Analytics & Bot-Schutz — Vi
   Analytics_if [label: "Schnittstelle: /api/track-view · Honeypot-Check · Rate-Limit"]
   Analytics_db [icon: database, label: "Tabellen: funnel_view_logs · honeypot_triggers"]
 }
-Admin [icon: shield, color: gray, label: "Platform-Admin — Owner-Tools (Stavros)"] {
-  Admin_if [label: "Schnittstelle: app/admin · superadmin.ts"]
-  Admin_db [icon: database, label: "Zugriff: alle Tenants (Service-Key)"]
+Admin [icon: shield, color: gray, label: "Platform-Admin — Owner-Tools (Stavros, im Dashboard)"] {
+  Admin_if [label: "Schnittstelle: /dashboard/admin · superadmin.ts · /api/admin/workspaces/[id]"]
+  Admin_db [icon: database, label: "Zugriff: alle Tenants (Service-Key, doppelt gegated)"]
 }
 
 Auth_if > Builder_if: berechtigt
 Auth_if > Inbox_if: berechtigt
 Auth_if > Billing_if: Abo
 Builder_if > Widget_if: Funnel-Config
+Builder_if > Logic_if: definiert Regeln
+Logic_if > Widget_if: steuert Pfad
 Widget_if > Inbox_if: Lead
 Widget_if > Webhook_if: triggert
 Widget_if > Email_if: triggert
