@@ -22,7 +22,7 @@ const MAX_WIDTH_PRESETS = [
 ];
 
 const FONT_OPTIONS: Array<{ value: FunnelFont; label: string }> = [
-  { value: "system", label: "System (kein Download)" },
+  { value: "system", label: "System (lädt schneller)" },
   { value: "inter", label: "Inter" },
   { value: "poppins", label: "Poppins" },
   { value: "roboto", label: "Roboto" },
@@ -33,24 +33,24 @@ export function ThemePanel({ state, onPatch }: Props) {
 
   return (
     <PanelShell>
-      <Section title="Markenfarbe">
+      <Section title="Farben">
         <ColorField
-          label="Brand-Farbe"
+          label="Hauptfarbe"
           value={state.primaryColor}
           onChange={(v) => onPatch({ primaryColor: v })}
-          hint="Buttons, Highlights, Auswahl-Indikator."
+          hint="Farbe für Buttons und Auswahl."
         />
         <ColorField
-          label="Text-Farbe"
+          label="Textfarbe"
           value={state.textColor}
           onChange={(v) => onPatch({ textColor: v })}
-          hint="Standard #1f2937. Bei Dark-Theme heller wählen."
+          hint="Im dunklen Modus heller wählen."
         />
         <ColorField
-          label="Hintergrund Card"
+          label="Funnel-Hintergrund"
           value={state.backgroundColor}
           onChange={(v) => onPatch({ backgroundColor: v })}
-          hint="Hintergrund des Widget-Kastens. Default Weiß."
+          hint="Standard: Weiß."
         />
         <PageBackgroundField
           value={state.pageBackgroundColor}
@@ -106,13 +106,13 @@ export function ThemePanel({ state, onPatch }: Props) {
           label="Fortschrittsbalken"
           enabled={state.showProgressBar}
           onToggle={(v) => onPatch({ showProgressBar: v })}
-          hint="Dünner Balken oben an der Card."
+          hint="Dünner Balken oben am Funnel."
         />
         <ToggleField
           label="Schritt-Nummer"
           enabled={state.showStepBadge}
           onToggle={(v) => onPatch({ showStepBadge: v })}
-          hint="Kleines Nummern-Badge über der Frage."
+          hint="Zeigt die Nummer der aktuellen Frage."
         />
         {/* Aufgabe 59: aus „Überschriften-Ausrichtung" wurde ein Layout-Modus der ganzen Karte
             (zentriert zusätzlich Rating/Skala + Button-Zeile; vollbreite Elemente bleiben). */}
@@ -235,8 +235,8 @@ function PageBackgroundField({
       )}
       <FieldHint>
         {isTransparent
-          ? "Die Einbett-Seite scheint durch — ideal beim Einbetten."
-          : "Eigene Hintergrundfarbe hinter der Card."}
+          ? "Die Seite hinter dem Funnel scheint durch."
+          : "Eigene Farbe hinter dem Funnel."}
       </FieldHint>
     </Field>
   );

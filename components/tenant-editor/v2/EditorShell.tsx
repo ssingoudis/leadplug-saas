@@ -113,13 +113,13 @@ function cardTitleForField(type: ContactFieldConfig["type"]): string {
     case "full_name":
     case "first_name":
     case "last_name":
-      return "Wie heißt du?";
+      return "Wie ist Ihr Name?";
     case "email":
-      return "Wie lautet deine E-Mail-Adresse?";
+      return "Wie lautet Ihre E-Mail-Adresse?";
     case "tel":
-      return "Wie lautet deine Telefonnummer?";
+      return "Wie lautet Ihre Telefonnummer?";
     case "plz":
-      return "Wie lautet deine Postleitzahl?";
+      return "Wie lautet Ihre Postleitzahl?";
     default:
       return "";
   }
@@ -820,7 +820,7 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
   // Edit-URL des neuen Slugs gewechselt werden MUSS (sonst POSTet der nächste Save ein Duplikat).
   async function handleSave({ leaveAfter = false }: { leaveAfter?: boolean } = {}) {
     if (!state.funnelName) {
-      setSaveError("Bitte gib einen Funnel-Namen ein.");
+      setSaveError("Bitte einen Funnel-Namen eingeben.");
       return;
     }
     // Snapshot dessen, was wir tatsächlich senden — damit savedSnapshot exakt der gespeicherte
@@ -1185,8 +1185,8 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
               <div className="max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 text-center">
                 <p className="text-base font-semibold text-gray-900 dark:text-white">Funnel zuerst speichern</p>
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  Logik-Regeln brauchen gespeicherte Schritte. Bitte speichere den Funnel einmal,
-                  dann siehst du hier den Ablauf deines Funnels als Übersicht.
+                  Logik-Regeln brauchen gespeicherte Schritte. Bitte den Funnel einmal speichern —
+                  danach erscheint hier der Ablauf des Funnels als Übersicht.
                 </p>
               </div>
             </div>
@@ -1212,8 +1212,8 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
               <div className="max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 text-center">
                 <p className="text-base font-semibold text-gray-900 dark:text-white">Funnel zuerst speichern</p>
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  Webhooks sind funnel-spezifisch. Bitte speichere den Funnel einmal, dann kannst du hier
-                  deine ersten Webhook-Endpoints anlegen.
+                  Webhooks sind funnel-spezifisch. Bitte den Funnel einmal speichern — danach lassen sich
+                  hier die ersten Webhooks anlegen.
                 </p>
               </div>
             </div>
@@ -1230,8 +1230,8 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
               <div className="max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 text-center">
                 <p className="text-base font-semibold text-gray-900 dark:text-white">Funnel zuerst speichern</p>
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  E-Mail-Aktionen sind funnel-spezifisch. Bitte speichere den Funnel einmal, dann kannst du hier
-                  deine ersten E-Mails anlegen.
+                  E-Mail-Aktionen sind funnel-spezifisch. Bitte den Funnel einmal speichern — danach lassen sich
+                  hier die ersten E-Mails anlegen.
                 </p>
               </div>
             </div>
@@ -1244,8 +1244,8 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
               <div className="max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 text-center">
                 <p className="text-base font-semibold text-gray-900 dark:text-white">Funnel zuerst speichern</p>
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  Der Einbett-Code und das Conversion-Tracking sind funnel-spezifisch. Bitte speichere den Funnel
-                  einmal, dann findest du hier deinen Code und die Tracking-Einstellungen.
+                  Einbett-Code und Conversion-Tracking sind funnel-spezifisch. Bitte den Funnel einmal
+                  speichern — danach erscheinen hier der Code und die Tracking-Einstellungen.
                 </p>
               </div>
             </div>
@@ -1410,7 +1410,7 @@ function NamePromptModal({
       onClose={onCancel}
       dismissible={false}
       scope="Neuer Funnel"
-      title="Wie soll dein neuer Funnel heißen?"
+      title="Wie soll der neue Funnel heißen?"
       maxWidth="max-w-md"
       footer={
         <>
@@ -1433,7 +1433,7 @@ function NamePromptModal({
       }
     >
       <p className="mb-4 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
-        Der Name ist nur für dich zur Wiedererkennung. Endkunden sehen ihn nicht. Du kannst ihn später jederzeit ändern.
+        Der Name dient nur zur Wiedererkennung — Endkunden sehen ihn nicht. Er lässt sich jederzeit ändern.
       </p>
       <input
         type="text"

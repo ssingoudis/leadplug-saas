@@ -292,7 +292,7 @@ export function LogicMapPanel({ questions, rules, selected, onSelectStep, onOpen
             <EmptyState
               icon={<ListPlus size={22} />}
               title="Noch keine Schritte"
-              description={'Füge im Tab „Bearbeiten" Fragen hinzu — danach siehst du hier den Ablauf deines Funnels.'}
+              description={'Im Tab „Bearbeiten" Fragen hinzufügen — danach erscheint hier der Ablauf des Funnels.'}
             />
           </div>
         </div>
@@ -304,8 +304,8 @@ export function LogicMapPanel({ questions, rules, selected, onSelectStep, onOpen
               <div className="pointer-events-auto flex items-start gap-2.5 rounded-xl border border-gray-200 bg-white px-4 py-3 text-xs leading-relaxed text-gray-600 shadow-lg ring-1 ring-black/5 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
                 <Info size={14} className="mt-0.5 shrink-0 text-primary" />
                 <span>
-                  <strong>Noch keine Sprung-Regeln</strong> — dein Funnel läuft Schritt für Schritt von links nach rechts.
-                  Klicke auf einen Schritt, um die erste Regel anzulegen (z.&nbsp;B. „bei Antwort B direkt zu Schritt 5").
+                  <strong>Noch keine Sprung-Regeln</strong> — der Funnel läuft Schritt für Schritt von links nach rechts.
+                  Auf einen Schritt klicken, um die erste Regel anzulegen (z.&nbsp;B. „bei Antwort B direkt zu Schritt 5").
                 </span>
               </div>
             </div>

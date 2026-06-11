@@ -175,7 +175,7 @@ function QuestionProps({ state, index, logicRules, onOpenLogicEditor, onPatchQue
             <TextInput
               value={q.subtitle}
               onChange={(v) => onPatchQuestion(index, { subtitle: v })}
-              placeholder="z. B. Bitte wähle eine Option."
+              placeholder="z. B. Bitte eine Option wählen."
             />
           </SelMark>
         </Field>
@@ -317,7 +317,7 @@ function CustomPageProps({
             <TextInput
               value={page.subtitle}
               onChange={(v) => onPatchQuestion(index, { subtitle: v })}
-              placeholder="z. B. Wir benötigen deine Anschrift für ein Angebot."
+              placeholder="z. B. Wir benötigen Ihre Anschrift für ein Angebot."
             />
           </SelMark>
         </Field>
@@ -601,7 +601,7 @@ function WelcomeProps({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const page = state.questions[index];
   if (!page || page.kind !== "welcome") {
-    return <div className="p-6 text-sm text-gray-500 dark:text-gray-400">Kein Welcome-Step ausgewählt.</div>;
+    return <div className="p-6 text-sm text-gray-500 dark:text-gray-400">Keine Begrüßung ausgewählt.</div>;
   }
   return (
     <div className="flex flex-col">
@@ -649,7 +649,7 @@ function WelcomeProps({
           className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-900/20"
         >
           <Trash2 size={14} />
-          Welcome-Screen löschen
+          Begrüßung löschen
         </button>
       </Section>
 
@@ -657,8 +657,8 @@ function WelcomeProps({
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}
         onConfirm={onDelete}
-        title="Welcome-Screen löschen?"
-        message="Der Intro-Screen wird entfernt. Diese Aktion kann nur durch Verwerfen ungespeicherter Änderungen rückgängig gemacht werden."
+        title="Begrüßung löschen?"
+        message="Die Begrüßung wird entfernt. Diese Aktion kann nur durch Verwerfen ungespeicherter Änderungen rückgängig gemacht werden."
       />
     </div>
   );
@@ -683,23 +683,23 @@ function SuccessProps({
 
       <Section title="Modus">
         <Toggle
-          label="Nach Submit auf URL weiterleiten"
+          label="Nach dem Absenden weiterleiten"
           enabled={isRedirectMode}
           onToggle={(next) => onPatch({ redirectUrl: next ? "https://" : "" })}
         />
         {isRedirectMode && (
-          <Field label="Redirect-URL">
+          <Field label="Ziel-URL">
             <TextInput
               value={state.redirectUrl}
               onChange={(v) => onPatch({ redirectUrl: v })}
-              placeholder="https://deine-seite.de/danke"
+              placeholder="https://beispiel.de/danke"
             />
           </Field>
         )}
         <p className="px-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
           {isRedirectMode
-            ? "Widget zeigt die Erfolgsseite kurz an (~1.5s, damit Tracking-Pixel feuern) und leitet danach auf die URL um."
-            : "Widget zeigt die Erfolgsseite mit den Texten unten."}
+            ? "Der Funnel zeigt kurz die Erfolgsseite (~1,5 s, damit Tracking-Pixel feuern) und leitet dann zur URL weiter."
+            : "Der Funnel zeigt die Erfolgsseite mit den Texten unten."}
         </p>
       </Section>
 
@@ -709,7 +709,7 @@ function SuccessProps({
             <TextInput
               value={state.successMessage}
               onChange={(v) => onPatch({ successMessage: v })}
-              placeholder="z. B. Vielen Dank für deine Anfrage!"
+              placeholder="z. B. Vielen Dank für Ihre Anfrage!"
             />
           </SelMark>
         </Field>
@@ -725,7 +725,7 @@ function SuccessProps({
           </SelMark>
         </Field>
         <p className="px-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-          Leer lassen, wenn du keine zweite Zeile willst — dann wird sie nicht angezeigt.
+          Leer lassen — dann wird keine zweite Zeile angezeigt.
         </p>
       </Section>
 
@@ -741,13 +741,13 @@ function SuccessProps({
               <TextInput
                 value={state.answersOverviewLabel}
                 onChange={(v) => onPatch({ answersOverviewLabel: v })}
-                placeholder="z. B. Deine Angaben im Überblick:"
+                placeholder="z. B. Ihre Angaben im Überblick:"
               />
             </SelMark>
           </Field>
         )}
         <p className="px-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-          Aus = cleaner Dank-Screen ohne Antworten. An = der Lead sieht seine Angaben nochmal.
+          Aus = schlichter Dank ohne Antworten. An = der Lead sieht seine Angaben noch einmal.
         </p>
       </Section>
 

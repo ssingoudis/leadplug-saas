@@ -129,7 +129,7 @@ export function StepList({
           <SectionHeading>Start</SectionHeading>
           <StepPill
             number={null}
-            title={state.questions[welcomeIndex].title || "Welcome-Screen"}
+            title={state.questions[welcomeIndex].title || "Begrüßung"}
             meta={WELCOME_META}
             selected={isSameStep(selected, { kind: "question", questionIndex: welcomeIndex })}
             hidden={state.questions[welcomeIndex].visible === false}

@@ -67,8 +67,8 @@ export function SharePanel({ funnelSlug, funnelName }: Props) {
       <div className="mx-auto flex max-w-5xl flex-col gap-6 p-6">
         {/* Embed-Code */}
         <SectionCard
-          title="Funnel einbetten"
-          description="Kopiere diese zwei Zeilen und füge sie auf deiner Website dort ein, wo der Funnel erscheinen soll. Das Script lädt sich von uns — Updates kommen automatisch, du musst nie neu kopieren."
+          title="Funnel einbinden"
+          description="Diese zwei Zeilen kopieren und auf der Website einfügen, wo der Funnel erscheinen soll. Der Code aktualisiert sich automatisch — einmal einbinden, nie wieder kopieren."
           padded={false}
         >
           <div className="px-5 pb-2 pt-1">
@@ -83,7 +83,7 @@ export function SharePanel({ funnelSlug, funnelName }: Props) {
             onClick={() => setShowFallback((s) => !s)}
             className={`flex w-full cursor-pointer items-center justify-between border-t border-gray-100 px-4 py-2.5 text-xs text-gray-500 transition-colors dark:border-gray-800 dark:text-gray-400 ${showFallback ? "bg-gray-100 dark:bg-gray-800" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"}`}
           >
-            <span>Klassische iFrame-Einbettung (ohne Tracking)</span>
+            <span>Klassische Einbindung per iFrame (ohne Tracking)</span>
             {showFallback ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
           </button>
           {showFallback && (
@@ -117,7 +117,7 @@ export function SharePanel({ funnelSlug, funnelName }: Props) {
           </summary>
           <div className="px-5 pb-5 pt-1 flex flex-col gap-4 border-t border-gray-100 dark:border-gray-800">
             <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mt-3">
-              Statt der Felder oben kannst du dein Tracking auch selbst am Event andocken. Bei jedem Lead wird in den <code className="font-mono text-[12px] text-primary">dataLayer</code> gepusht:
+              Das Tracking lässt sich auch selbst am Event andocken. Bei jedem Lead wird in den <code className="font-mono text-[12px] text-primary">dataLayer</code> geschrieben:
             </p>
             <pre className="overflow-x-auto rounded-xl bg-code-surface px-4 py-3 font-mono text-[12px] leading-5 text-slate-300 ring-1 ring-white/10">
 {`window.dataLayer.push({ event: "leadplug_lead", funnel: "${funnelSlug}" })`}
@@ -133,9 +133,9 @@ export function SharePanel({ funnelSlug, funnelName }: Props) {
 
         {/* Plattform-Anleitungen */}
         <section>
-          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-1">Anleitung für deine Plattform</h3>
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-1">Anleitung für die Plattform</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-3">
-            Wo du den Code einfügst — wähle deine Plattform:
+            Wohin der Code kommt — Plattform wählen:
           </p>
           <PlatformGuides />
         </section>

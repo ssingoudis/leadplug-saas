@@ -69,10 +69,10 @@ export default function SignupPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-5">
             Wir haben einen Bestätigungslink an<br />
             <span className="font-semibold text-gray-700 dark:text-gray-200">{email}</span><br />
-            geschickt. Klicke auf den Link um dein Konto zu aktivieren.
+            geschickt. Über den Link wird das Konto aktiviert.
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500">
-            Kein E-Mail erhalten? Prüfe deinen Spam-Ordner.
+            Keine E-Mail erhalten? Bitte den Spam-Ordner prüfen.
           </p>
         </div>
       </div>
@@ -85,7 +85,7 @@ export default function SignupPage() {
       style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
     >
       <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-lg w-full max-w-sm px-10 py-10">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-1 text-center">Leadplug</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-1 text-center">LeadPlug</h1>
         <p className="text-sm text-gray-400 dark:text-gray-500 text-center mb-8">Konto erstellen</p>
 
         {error && (
@@ -132,7 +132,7 @@ export default function SignupPage() {
         <p className="text-center text-sm text-gray-400 dark:text-gray-500 mt-6">
           Bereits registriert?{' '}
           <a href="/login" className="text-primary font-medium hover:underline">
-            Einloggen
+            Anmelden
           </a>
         </p>
       </div>

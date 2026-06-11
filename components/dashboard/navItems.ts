@@ -11,7 +11,7 @@ export type NavItem = {
 
 export const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard',     href: '/dashboard',             icon: LayoutDashboard },
-  { label: 'Meine Funnels', href: '/dashboard/funnels',     icon: Layers },
+  { label: 'Funnels',       href: '/dashboard/funnels',     icon: Layers },
   { label: 'Leads',         href: '/dashboard/leads',       icon: Inbox },
   { label: 'Statistiken',   href: '/dashboard/statistiken', icon: BarChart2 },
   { label: 'Abrechnung',    href: '/dashboard/billing',     icon: CreditCard },

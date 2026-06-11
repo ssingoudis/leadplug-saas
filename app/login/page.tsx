@@ -59,7 +59,7 @@ function LoginForm() {
       style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
     >
       <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-lg w-full max-w-sm px-10 py-10">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-1 text-center">Leadplug</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-1 text-center">LeadPlug</h1>
         <p className="text-sm text-gray-400 dark:text-gray-500 text-center mb-8">Anmelden</p>
 
         {error && (
@@ -91,7 +91,7 @@ function LoginForm() {
             disabled={loading}
             className="w-full rounded-2xl bg-primary px-5 py-4 text-base font-semibold text-primary-foreground hover:bg-primary-hover active:bg-primary-hover transition-colors tracking-wide cursor-pointer disabled:opacity-60"
           >
-            {loading ? 'Wird angemeldet…' : 'Einloggen'}
+            {loading ? 'Wird angemeldet…' : 'Anmelden'}
           </button>
         </form>
 

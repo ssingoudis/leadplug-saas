@@ -134,10 +134,10 @@ export function WebhookAddModal({ open, onClose, questions, onCreate }: Props) {
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://dein-crm.example.com/webhook"
+            placeholder="https://crm.example.com/webhook"
           />
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Die URL deines CRMs (Zapier, Make, Pipedream, n8n, eigener Endpoint).
+            Die URL des CRMs (Zapier, Make, Pipedream, n8n, eigener Endpoint).
           </p>
         </div>
 
@@ -173,7 +173,7 @@ export function WebhookAddModal({ open, onClose, questions, onCreate }: Props) {
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   {savedPages.length === 0
                     ? "Bitte zuerst speichern um Schritte auswählen zu können."
-                    : "Lead-Qualifizierung mitten im Funnel — z.B. Email + Telefon übertragen, bevor die letzte Frage durch ist."}
+                    : "Lead-Qualifizierung mitten im Funnel — z. B. E-Mail + Telefon übertragen, bevor die letzte Frage durch ist."}
                 </p>
               </div>
             </label>

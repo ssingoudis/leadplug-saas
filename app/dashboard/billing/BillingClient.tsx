@@ -72,9 +72,9 @@ export default function BillingClient({
         <div className="flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 p-4 text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">
           <Sparkles size={18} className="mt-0.5 shrink-0" />
           <div className="text-sm">
-            <p className="font-semibold">Open Beta: LeadPlug ist für dich kostenlos.</p>
+            <p className="font-semibold">Offene Beta: LeadPlug ist kostenlos.</p>
             <p className="mt-0.5 text-green-700/90 dark:text-green-300/80">
-              Du hast vollen Zugriff auf alle Funktionen — ohne Kosten und ohne Kreditkarte. Leg einfach los.
+              Voller Zugriff auf alle Funktionen — ohne Kosten, ohne Kreditkarte.
             </p>
           </div>
         </div>
@@ -90,7 +90,7 @@ export default function BillingClient({
       {canceledParam && (
         <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-sm font-medium">
           <AlertCircle size={18} className="shrink-0" />
-          Checkout abgebrochen. Du kannst jederzeit ein Abo starten.
+          Bezahlung abgebrochen — ein Abo lässt sich jederzeit starten.
         </div>
       )}
 
@@ -119,7 +119,7 @@ export default function BillingClient({
             'Unbegrenzte Funnels',
             'Lead-Verwaltung & Statistiken',
             'Eigener Funnel-Editor',
-            'Auf jeder Website einbettbar',
+            'Auf jeder Website einbindbar',
           ].map((f) => (
             <li key={f} className="flex items-center gap-2">
               <CheckCircle2 size={14} className="text-primary shrink-0" />
@@ -152,7 +152,7 @@ export default function BillingClient({
           )}
           {status === 'free' && (
             <p className="text-xs text-gray-400 dark:text-gray-500 self-center">
-              Während der offenen Beta brauchst du nichts weiter zu tun.
+              Während der offenen Beta ist nichts weiter zu tun.
             </p>
           )}
         </div>

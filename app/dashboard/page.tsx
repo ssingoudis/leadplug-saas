@@ -189,7 +189,7 @@ export default async function DashboardPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">Willkommen zurück</h1>
-          <p className="text-sm text-gray-400 dark:text-gray-500">Dein Überblick der letzten 30 Tage.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">Überblick der letzten 30 Tage.</p>
         </div>
         <Link
           href="/dashboard/funnels/new"
@@ -284,7 +284,7 @@ export default async function DashboardPage() {
             </div>
           </Card>
 
-          <Card title="Deine Funnels">
+          <Card title="Funnels">
             {topFunnels.length === 0 ? (
               <p className="py-6 text-center text-sm text-gray-400 dark:text-gray-500">Noch keine aktiven Funnels.</p>
             ) : (

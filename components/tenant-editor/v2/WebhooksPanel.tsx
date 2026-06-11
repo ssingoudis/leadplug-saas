@@ -229,7 +229,7 @@ export function WebhooksPanel({ funnelSlug, questions, onSubsChanged }: Props) {
                 title={subs.length === 0 ? "Noch kein Webhook" : "Webhook auswählen"}
                 description={
                   subs.length === 0
-                    ? "Leg deinen ersten Webhook an, um Leads automatisch an dein CRM zu schicken."
+                    ? "Ersten Webhook anlegen, um Leads automatisch ans CRM zu schicken."
                     : "Wähle links einen Webhook, um ihn zu bearbeiten."
                 }
                 action={
@@ -274,11 +274,11 @@ function SecretRevealBanner({ secret, onDismiss }: { secret: string; onDismiss: 
         <CircleAlert className="mt-0.5 text-amber-600 dark:text-amber-400" size={18} />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-            Dein Webhook-Secret — kopiere es jetzt!
+            Webhook-Secret — jetzt kopieren!
           </p>
           <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-300">
-            Aus Sicherheitsgründen zeigen wir es nur dieses eine Mal. Verloren? Du kannst es jederzeit
-            neu generieren — alte Endpoints müssen dann das neue Secret bekommen.
+            Aus Sicherheitsgründen zeigen wir es nur dieses eine Mal. Verloren? Es lässt sich jederzeit
+            neu erzeugen — alte Webhooks brauchen dann das neue Secret.
           </p>
           <div className="mt-2 flex items-center gap-2">
             <code className="flex-1 break-all rounded border border-amber-200 bg-white px-2 py-1.5 font-mono text-xs text-gray-900 dark:border-amber-700/50 dark:bg-gray-900 dark:text-gray-100">
@@ -605,7 +605,7 @@ function buildExamplePayload(questions: EditorQuestion[]): Record<string, unknow
     delivery_id: "8f1c2d3e-…-uuid",
     delivered_at: "2026-06-08T10:15:30.000Z",
     tenant_id: "a3f29b10-…-uuid",
-    funnel: { id: "c91b77a4-…-uuid", slug: "<dein-funnel-slug>", name: "Deine Agentur" },
+    funnel: { id: "c91b77a4-…-uuid", slug: "mein-funnel", name: "Müller Marketing" },
     submission: {
       id: "d72e5f81-…-uuid",
       session_id: "11ab33cd-…-uuid",
@@ -694,8 +694,8 @@ function ExamplePayloadSection({ questions }: { questions: EditorQuestion[] }) {
     <>
       <SectionCard title="Beispiel-Daten">
         <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-          So sehen die Daten aus, die wir bei jedem Lead an deine URL senden — mit den Feldern
-          dieses Funnels. Ideal zum Zuordnen in Make, Zapier, n8n oder deinem CRM.
+          So sehen die Daten aus, die bei jedem Lead an die URL gesendet werden — mit den Feldern
+          dieses Funnels. Ideal zum Zuordnen in Make, Zapier, n8n oder im CRM.
         </p>
         <div className="mt-3">
           <EditorButton variant="secondary" onClick={() => setOpen(true)}>
@@ -762,7 +762,7 @@ function TestSection({ funnelSlug, subId }: { funnelSlug: string; subId: string 
   return (
     <SectionCard title="Test senden">
       <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-        Schickt eine Mock-Nachricht mit Beispiel-Daten an deine URL — du siehst direkt, ob dein
+        Schickt eine Test-Nachricht mit Beispiel-Daten an die URL — so zeigt sich direkt, ob der
         Endpoint korrekt verdrahtet ist.
       </p>
       <div className="mt-3">

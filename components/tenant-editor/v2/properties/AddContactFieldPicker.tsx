@@ -51,8 +51,8 @@ export function AddContactFieldPicker({ open, onClose, onSelect }: Props) {
     <EditorModal
       open={open}
       onClose={onClose}
-      scope="Kontaktformular"
-      title="Welches Feld möchtest du hinzufügen?"
+      scope="Feld"
+      title="Feld hinzufügen"
       maxWidth="max-w-2xl"
     >
       <div className="flex flex-col gap-5">

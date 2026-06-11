@@ -148,7 +148,7 @@ export default function AccountPage() {
       window.location.href = '/login'
     } catch {
       setDeleting(false)
-      setDeleteError('Account konnte nicht gelöscht werden. Bitte versuche es erneut.')
+      setDeleteError('Konto konnte nicht gelöscht werden. Bitte erneut versuchen.')
     }
   }
 
@@ -163,15 +163,15 @@ export default function AccountPage() {
   return (
     <div className="flex flex-col gap-6 max-w-2xl">
 
-      <Card title="Mein Account">
+      <Card title="Mein Konto">
         <div className="flex flex-col gap-4">
           <Field label="E-Mail" value={email} readOnly />
           <Field
-            label="Workspace-Name"
+            label="Kontoname"
             value={displayName}
             onChange={setDisplayName}
             onBlur={saveProfile}
-            placeholder="z. B. Deine Agentur"
+            placeholder="z. B. Müller Marketing"
           />
           <div className="flex h-5 items-center justify-end">
             <SaveStatus status={profileSave.status} />
@@ -192,9 +192,9 @@ export default function AccountPage() {
 
       {/* Danger Zone */}
       <div className="rounded-2xl border border-red-200 bg-red-50/50 p-6 dark:border-red-900/40 dark:bg-red-900/10">
-        <h2 className="text-base font-bold text-red-700 dark:text-red-400">Account löschen</h2>
+        <h2 className="text-base font-bold text-red-700 dark:text-red-400">Konto löschen</h2>
         <p className="mt-1 text-sm text-red-700/80 dark:text-red-300/80">
-          Löscht deinen Account, alle Funnels, Leads und Daten unwiderruflich. Das kann nicht rückgängig gemacht werden.
+          Löscht das Konto mit allen Funnels, Leads und Daten — unwiderruflich.
         </p>
         <button
           type="button"
@@ -202,7 +202,7 @@ export default function AccountPage() {
           // Aufgabe 59: Lösch-Trigger hovern dezent getönt — Voll-Rot nur im Bestätigungs-Dialog.
           className="mt-4 rounded-xl border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 dark:border-red-800 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-900/20"
         >
-          Account löschen
+          Konto löschen
         </button>
       </div>
 
@@ -217,11 +217,11 @@ export default function AccountPage() {
             className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-base font-bold text-gray-900 dark:text-white">Account wirklich löschen?</h3>
+            <h3 className="text-base font-bold text-gray-900 dark:text-white">Konto wirklich löschen?</h3>
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
               Alle Funnels, Leads und Daten werden{' '}
-              <strong className="text-red-600 dark:text-red-400">unwiderruflich</strong> gelöscht. Tippe zur Bestätigung{' '}
-              <strong className="text-gray-800 dark:text-gray-200">{confirmPhrase}</strong> ein.
+              <strong className="text-red-600 dark:text-red-400">unwiderruflich</strong> gelöscht. Zur Bestätigung{' '}
+              <strong className="text-gray-800 dark:text-gray-200">{confirmPhrase}</strong> eingeben.
             </p>
             <input
               type="text"

@@ -931,7 +931,7 @@ export function EmailsPanel({ funnelSlug, state }: Props) {
                   title={subs.length === 0 ? "Noch keine E-Mail" : "E-Mail auswählen"}
                   description={
                     subs.length === 0
-                      ? "Lege links deine erste automatische Follow-up-Mail an."
+                      ? "Links die erste automatische Follow-up-Mail anlegen."
                       : "Wähle links eine E-Mail, um sie zu bearbeiten."
                   }
                   action={
@@ -1215,7 +1215,7 @@ function SelectedEditor({ subId, draft, onDraftChange, dirty, saving, onSave, on
                 <Inbox size={16} className={draft.recipient_type !== "customer" ? "text-primary mt-0.5 shrink-0" : "text-gray-400 mt-0.5 shrink-0"} />
                 <div className="min-w-0">
                   <p className={`text-sm font-medium ${draft.recipient_type !== "customer" ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-300"}`}>An feste Adresse(n)</p>
-                  <p className="text-[11px] text-gray-500 truncate">dein Postfach, Kollegen, Vertrieb …</p>
+                  <p className="text-[11px] text-gray-500 truncate">Postfach, Kollegen, Vertrieb …</p>
                 </div>
               </button>
             </div>
@@ -1247,7 +1247,7 @@ function SelectedEditor({ subId, draft, onDraftChange, dirty, saving, onSave, on
             <EmailEditor
               value={draft.body_html}
               onChange={(v) => onDraftChange({ body_html: v })}
-              placeholder="Schreibe deine Mail. Variablen + Bausteine über die Toolbar einfügen."
+              placeholder="Mail schreiben. Variablen + Bausteine über die Leiste einfügen."
               variables={variables}
             />
           </div>

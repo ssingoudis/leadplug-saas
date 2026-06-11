@@ -109,7 +109,7 @@ export default function UserMenu({ userName, userEmail }: Props) {
             className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
             <Settings size={14} className="text-gray-400" />
-            Account-Einstellungen
+            Konto-Einstellungen
           </a>
           <div className="border-t border-gray-100 dark:border-gray-800" />
           <a

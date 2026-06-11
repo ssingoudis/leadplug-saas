@@ -33,7 +33,7 @@ const STATEMENT_PILL =
 
 const QUESTION_META: Record<QuestionType, FieldMeta> = {
   short_text: { label: "Text", category: "text", pillClass: TEXT_PILL, icon: "T" },
-  long_text: { label: "Lang-Text", category: "text", pillClass: TEXT_PILL, icon: "¶" },
+  long_text: { label: "Langer Text", category: "text", pillClass: TEXT_PILL, icon: "¶" },
   single_choice: { label: "Einfachauswahl", category: "choice", pillClass: CHOICE_PILL, icon: "◉" },
   multi_choice: { label: "Mehrfachauswahl", category: "choice", pillClass: CHOICE_PILL, icon: "☑" },
   dropdown: { label: "Dropdown", category: "dropdown", pillClass: DROPDOWN_PILL, icon: "▽" },
@@ -42,9 +42,9 @@ const QUESTION_META: Record<QuestionType, FieldMeta> = {
   date: { label: "Datum", category: "numeric", pillClass: NUMERIC_PILL, icon: "▦" },
   checkbox: { label: "Checkbox", category: "numeric", pillClass: NUMERIC_PILL, icon: "☑" },
   // Aufgabe 39
-  rating: { label: "Sterne-Rating", category: "numeric", pillClass: RATING_PILL, icon: "★" },
-  scale: { label: "Skala (0-N)", category: "numeric", pillClass: RATING_PILL, icon: "⊢" },
-  statement: { label: "Info-Block", category: "text", pillClass: STATEMENT_PILL, icon: "ⓘ" },
+  rating: { label: "Sterne-Bewertung", category: "numeric", pillClass: RATING_PILL, icon: "★" },
+  scale: { label: "Skala", category: "numeric", pillClass: RATING_PILL, icon: "⊢" },
+  statement: { label: "Infotext", category: "text", pillClass: STATEMENT_PILL, icon: "ⓘ" },
   // Aufgabe 40 Polish — Name-Field-Types
   first_name: { label: "Vorname", category: "text", pillClass: TEXT_PILL, icon: "👤" },
   last_name: { label: "Nachname", category: "text", pillClass: TEXT_PILL, icon: "👤" },
@@ -84,7 +84,7 @@ export const CUSTOM_META: FieldMeta = {
 const WELCOME_PILL =
   "bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800";
 export const WELCOME_META: FieldMeta = {
-  label: "Welcome",
+  label: "Begrüßung",
   category: "custom",
   pillClass: WELCOME_PILL,
   icon: "▷",
@@ -98,14 +98,14 @@ export function contactFieldTypeLabel(type: ContactFieldConfig["type"]): string 
     case "email":        return "E-Mail";
     case "tel":          return "Telefon";
     case "plz":          return "PLZ";
-    case "long_text":    return "Lang-Text";
+    case "long_text":    return "Langer Text";
     case "number":       return "Zahl";
     case "date":         return "Datum";
     case "checkbox":     return "Checkbox";
     case "dropdown":     return "Dropdown";
     case "slider":       return "Slider";
     case "multi_choice": return "Mehrfachauswahl";
-    case "rating":       return "Sterne-Rating";
+    case "rating":       return "Sterne-Bewertung";
     case "scale":        return "Skala";
     // Aufgabe 40 Polish
     case "first_name":   return "Vorname";

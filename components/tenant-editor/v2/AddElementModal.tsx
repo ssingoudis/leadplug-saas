@@ -70,7 +70,7 @@ export function AddElementModal({
     <EditorModal
       open={open}
       onClose={onClose}
-      title="Was möchtest du hinzufügen?"
+      title="Element hinzufügen"
       maxWidth="max-w-2xl"
     >
       {/* Frage — eigenständige, immersive Schritte (ein Element pro Bildschirm) */}
@@ -112,7 +112,7 @@ export function AddElementModal({
             icon={CUSTOM_META.icon}
             pillClass={CUSTOM_META.pillClass}
             title="Eigene Karte"
-            desc="Leere Karte — füge beliebige Felder hinzu."
+            desc="Leere Karte für beliebige Felder."
             onClick={() => { onSelectCustomPage(); onClose(); }}
           />
         </div>
@@ -135,13 +135,13 @@ export function AddElementModal({
 
       {/* Start — optionaler Welcome-Screen */}
       {!hideWelcome && (
-        <Section title="Start" hint="Optionaler Intro-Bildschirm am Anfang.">
+        <Section title="Start" hint="Optionale Begrüßung am Anfang.">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <BigCard
               icon="▷"
               pillClass="bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800"
-              title="Welcome-Screen"
-              desc="Intro-Step am Anfang mit Titel + Button."
+              title="Begrüßung"
+              desc="Erster Bildschirm mit Titel + Button."
               onClick={() => { onSelectWelcome(); onClose(); }}
             />
           </div>

@@ -83,11 +83,11 @@ export default async function FunnelsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-base font-bold text-gray-900 dark:text-white">
-            Meine Funnels
+            Funnels
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
             {funnels.length === 0
-              ? "Erstelle deinen ersten Funnel."
+              ? "Noch keinen Funnel angelegt."
               : `${funnels.length} Funnel${funnels.length !== 1 ? "s" : ""}`}
           </p>
         </div>
@@ -111,7 +111,7 @@ export default async function FunnelsPage() {
               Noch kein Funnel
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-xs">
-              Erstelle deinen ersten Funnel und bette ihn auf deiner Website ein.
+              Den ersten Funnel erstellen und auf der Website einbinden.
             </p>
             <Link
               href="/dashboard/funnels/new"

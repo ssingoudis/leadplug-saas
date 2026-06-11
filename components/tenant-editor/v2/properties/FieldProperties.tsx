@@ -67,7 +67,7 @@ function QuestionFieldProps({
               <TextInput
                 value={question.placeholder}
                 onChange={(v) => onPatch({ placeholder: v })}
-                placeholder="z. B. Gib hier deinen Text ein…"
+                placeholder="z. B. Hier Text eingeben…"
               />
             </SelMark>
           </Field>
@@ -668,7 +668,7 @@ export function FieldKeyEditor({
           </span>
         </button>
         <p className="mt-1 text-[10px] leading-snug text-gray-400 dark:text-gray-500">
-          So heißt das Feld in Zapier, Make oder deinem CRM. Klick auf „Ändern" zum Bearbeiten.
+          So heißt das Feld in Zapier, Make oder im CRM. Über „Ändern" bearbeiten.
         </p>
       </div>
     );

@@ -222,6 +222,8 @@ Beispiele: `feature/aufgabe-25-schema-refactor`, `feature/aufgabe-26-pages-field
 
 Enthält: Design-Token (Light + Dark Mode), Komponenten-API, Dark-Mode-Implementierung, Layout-Patterns, Verbote.
 
+**Für jeden nutzer-sichtbaren Text gilt der [`context/wording-styleguide.md`](context/wording-styleguide.md)** — Single Source of Truth für Copy: Begriffs-Glossar (Funnel, Lead, Konto/Kontoname, Aufrufe, Anmelden …), **neutrale Anrede als Default** (kein du/Sie im App-UI; **Funnel-Widget = „Sie"**), schlichte Formulierung (sagt, was es tut), keine Hybrid-Wörter, keine Doppel-Benennung. **Begriffe NICHT verbrauchen:** „Workspace" ist für ein späteres Whitelabel-Feature reserviert; ein Tenant heißt im UI „Konto" (kann Agentur, Firma **oder Einzelperson** sein → nie „Firmenname").
+
 ### Kurzübersicht Komponenten
 
 | Komponente                                          | Verwendung                             |
