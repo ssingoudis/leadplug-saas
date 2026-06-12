@@ -151,12 +151,24 @@
 
 /* ── Funnel widget animations ───────────────────────────────────────────── */
 
-@keyframes funnel-step-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0);   }
+/* Aufgabe 64: Folien-Übergang als reine CSS-Animation statt JS-getriebenem
+   framer-motion-Spring. JS-Animationen laufen auf dem Main-Thread und ruckelten
+   in Firefox + auf schwachen Mobilgeräten; CSS-Animationen von transform/opacity
+   laufen auf dem Compositor (GPU) — butterweich in jedem Browser. Muster: alte
+   Folie verschwindet sofort (Schnitt), die neue gleitet richtungsabhängig rein. */
+@keyframes funnel-step-fwd {
+  from { opacity: 0; transform: translateY(40px); }
+  to   { opacity: 1; transform: translateY(0);    }
 }
-.funnel-step-enter {
-  animation: funnel-step-in 180ms ease forwards;
+@keyframes funnel-step-back {
+  from { opacity: 0; transform: translateY(-40px); }
+  to   { opacity: 1; transform: translateY(0);     }
+}
+.funnel-step-enter-fwd  { animation: funnel-step-fwd  600ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.funnel-step-enter-back { animation: funnel-step-back 600ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .funnel-step-enter-fwd,
+  .funnel-step-enter-back { animation: none; }
 }
 
 /* C.1c Builder-Edit-Mode: leerer contenteditable zeigt Placeholder via ::before-Pseudo */

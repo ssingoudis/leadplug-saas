@@ -110,6 +110,23 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
+## Aufgabe 64 — Widget-Performance: GPU-Folienübergang + Browser-Zurück + Bundle-Diät (2026-06-12)
+
+**Status:** Branch `feature/aufgabe-64-slide-smoothness`, Build grün, Playwright-verifiziert (Production-Build), Stavros-Sichttest in Chrome/Firefox/VSCode bestanden.
+
+**Anlass (Beta-Optimierungs-Sprint, Punkt 1):** Folienübergang ruckelte in Firefox + war „ok, nicht perfekt" in Chrome, ultra-smooth nur im VSCode-Browser — klassisches Muster von JS-Main-Thread-Animation (framer-motion berechnet jeden Frame per JS). 
+
+**Inhalt:**
+- **Folienübergang = reine CSS-Animation** ([globals.css](../app/globals.css) `.funnel-step-enter-fwd/-back`): alte Folie verschwindet im Schnitt, neue gleitet richtungsabhängig rein (600ms — Stavros-Wahl nach Stufen-Test 300/450/600, `cubic-bezier(0.22,1,0.36,1)`, 40px Weg, `prefers-reduced-motion` respektiert). transform/opacity laufen auf dem Compositor → lagfrei in jedem Browser inkl. Mobile. Kein Slide beim Initial-Render (`hasNavigatedRef` = Ersatz für `initial={false}`). Zwischenstand „AnimatePresence popLayout + LazyMotion" wurde verworfen — auch überlappende framer-Springs bleiben Main-Thread.
+- **framer-motion komplett raus aus [funnel.tsx](../components/funnel.tsx)** (~30 KB weniger Widget-Bundle; Editor/Dashboard nutzen es weiter in CenterCanvas + TenantLeadsTable).
+- **embed.js: iFrame-Höhe animiert** (`height 250ms ease`) — aktiviert erst NACH dem ersten Sizing (Doppel-rAF), damit der initiale 500px→Ist-Sprung nicht sichtbar „wächst". Beseitigt den Host-Seiten-Reflow-Ruck mitten im Folienwechsel.
+- **DateInlinePicker-Preload**: Funnels mit Datumsfeld laden den react-day-picker-Chunk 800ms nach Mount — nie mehr Chunk-Nachladen + Skeleton mitten in der Slide-Animation. Funnels ohne Datum laden weiterhin nichts.
+- **Browser-Zurück = eine Frage zurück** (Stavros-Wunsch, Typeform-Parität): pro Step-Advance ein `history.pushState` mit gemergtem Next-Router-State (URL unverändert), `popstate` führt den Schritt aus (vorwärts wie rückwärts, nur bereits besuchte = validierte Steps). Widget-Zurück-Pfeil läuft im Live-Modus ebenfalls über `history.back()` — EIN Pfad, Browser/Geste/Widget bleiben synchron. Funktioniert im iFrame-Embed (geteilte Session-History). Guards: Builder-Canvas/Test-Modus/read-only-Preview fassen die History nie an (`historyEnabled = !editMode && !onFieldClick && !onStepChange`); nach Submit bleibt der Success-Screen stehen.
+
+([components/funnel.tsx](../components/funnel.tsx) · [public/embed.js](../public/embed.js) · [app/globals.css](../app/globals.css))
+
+---
+
 ## Aufgabe 63 — Vorlagen-Chargen 2–6 (29 Branchen) + Snapshot-Härtung (2026-06-11 vorbereitet, **2026-06-12 angewendet**)
 
 **Status:** Branch `feature/aufgabe-63-vorlagen-charge2`. Recherche für 29 Branchen abgeschlossen (Stavros-Auftrag mehrfach erweitert — Ziel jetzt 38 Vorlagen), alles anwendungsfertig vorbereitet. **Transfer-Session 2026-06-12 (mit Stavros-Go für alle DB-Writes): KOMPLETT auf Produktion angewendet** — Migration `aufgabe_63_snapshot_mails_active` via apply_migration, danach Chargen 2–6 je Datei als ein execute_sql-Call. Alle Verify-Soll-Werte exakt getroffen (Pages/Fields/Rules/Emails-Counts + alle Logik-Sprünge vorwärts), alle 29 Live-URLs `https://app.leadplug.de/demo-*` per SSR geprüft (laden mit korrektem Titel), 29 Templates publiziert (sort_order 100–380), Demo-Mails aller 29 Funnels deaktiviert (Gegenprobe: 0 aktive Subscriptions). Finale Gegenprobe über alle 38 Templates: `definition->emails[*].is_active` überall `[true, true]`. Ablauf-Tabelle: [`supabase/demo-funnels/README.md`](../supabase/demo-funnels/README.md).

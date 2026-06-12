@@ -170,6 +170,19 @@
       var h = parseInt(event.data.height, 10);
       if (!h || h < 100 || h > 10000) return;     // Clamp gegen scrollHeight-Ausreißer
       m.iframe.style.height = h + "px";
+      // Aufgabe 64: Höhenänderungen NACH dem ersten Sizing sanft animieren — beim
+      // Folien-Wechsel springt die Widget-Höhe sonst hart und die Host-Seite reflowt
+      // mitten in der Slide-Animation. Der erste Resize (500px-Platzhalter → Ist-Höhe)
+      // bleibt bewusst ohne Transition. Doppel-rAF: Transition erst aktivieren, nachdem
+      // die erste Höhe gemalt wurde, sonst animiert schon der initiale Sprung.
+      if (!m.sized) {
+        m.sized = true;
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            m.iframe.style.transition = "height 250ms ease";
+          });
+        });
+      }
       return;
     }
 
