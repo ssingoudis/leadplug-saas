@@ -1,7 +1,7 @@
 # Vorlagen-Kochbuch — Funnel-Templates bauen wie in Aufgabe 61/62
 
 > **Zweck:** Reproduzierbare Anleitung, wie die LeadPlug-Funnel-Vorlagen entstanden sind
-> und wie die nächsten gebaut werden. **Ziel: 25 Vorlagen** (Stand 2026-06-11: **9 live**).
+> und wie die nächsten gebaut werden. **Ziel: 25 Vorlagen — übertroffen** (Stand 2026-06-12: **37 live**, Chargen 2–6 in Aufgabe 63 angewendet; Haartransplantation nach Stavros-Review wieder entfernt, siehe Hinweis unter der Tabelle).
 > Qualitätsanspruch (Stavros): **keine Troll-Vorlagen** — nur fundierte Funnel-Typen, die es
 > so konkret in der Realität gibt und die ein Tenant out-of-the-box verkaufen/einsetzen könnte.
 > **In-depth Web-Recherche ist pro Branche Pflicht, bevor gebaut wird.**
@@ -12,19 +12,54 @@
 
 | Template-Slug | Demo-Funnel | Kategorie | Besonderheit |
 |---|---|---|---|
-| `solar` | `demo-solar` | Energie | Mieter-Logik, Slider kWh, Antworten-Übersicht an |
-| `waermepumpe` | `demo-waermepumpe` | Energie | Checkbox-Frage (Förder-Check), Mieter-Logik |
+| `solar` | `demo-solar` | Energie | Gewerbe→Projektberatung (kWh-Slider passt nur privat), Eigentums-Frage als letzte Quali, Slider kWh |
+| `waermepumpe` | `demo-waermepumpe` | Energie | Checkbox-Frage (Förder-Check), Gewerbe→Projektberatung, Eigentums-Frage als letzte Quali |
 | `immobilienbewertung` | `demo-immobilien` | Immobilien | 2 Regeln (Grundstück-Skip, `neq` Verkaufsanlass), Number m², Dropdown |
-| `baufinanzierung` | `demo-baufinanzierung` | Finanzen | Number €, Slider €, Objektsuche-Skip |
-| `pkv` | `demo-pkv` | Finanzen | **numerische `gte`-Regel** (Alter ≥ 55) + Studenten-Regel |
-| `anwalt-arbeitsrecht` | `demo-anwalt` | Recht | Long-Text-Fallbeschreibung, 2 Regeln auf Step 1 |
+| `baufinanzierung` | `demo-baufinanzierung` | Finanzen | Number €, Slider €, Objektsuche überspringt nur die Kaufpreis-Frage |
+| `pkv` | `demo-pkv` | Finanzen | Studenten-Regel als Cross-Step (überspringt nur die Einkommens-Frage) |
+| `anwalt-arbeitsrecht` | `demo-anwalt` | Recht | Long-Text-Fallbeschreibung, 2 Skip-Regeln auf Step 1 (Ziel ≠ Kontakt) |
 | `coaching` | `demo-coaching` | Coaching | **Scale 0–10 + Statement-Step**, `gte`-Fast-Track, per Du |
 | `recruiting-handwerk` | `demo-recruiting` | Recruiting | Date-Feld, 2 Regeln auf einem Step, per Du, Tel Pflicht |
-| `autoankauf` | `demo-autoankauf` | Auto | `lte`-Regel (Erstzulassung), Unfall-Regel, Dropdown Marke |
+| `autoankauf` | `demo-autoankauf` | Auto | Unfall-Regel (Sonderbewertung, spät), Dropdown Marke |
+| `badsanierung` | `demo-badsanierung` | Handwerk | `neq`-Regel (≠barrierefrei→Pflegegrad-Skip), Eigentums-Frage als letzte Quali, Number m² |
+| `treppenlift` | `demo-treppenlift` | Handwerk | Dringend→Fast-Track, Pflegegrad-Zuschuss-Strecke, Dropdown Etagen |
+| `umzug` | `demo-umzug` | Dienstleistung | **2 Multi-Field-Karten** (Route, Wohnsituation), date + checkbox, Firmenumzug→Kontakt |
+| `pflege-recruiting` | `demo-pflege-recruiting` | Recruiting | Quereinsteiger→Erfahrungs-Skip, per Du, Overview aus |
+| `bu-versicherung` | `demo-bu` | Finanzen | Vorerkrankung→Risiko-Beratung (überspringt nur den Renten-Slider), BU-Renten-Slider |
+| `zahnimplantate` | `demo-zahnimplantate` | Gesundheit | Ganzer Kiefer überspringt die Bestandsdauer-Frage, optionales long_text |
+| `dachsanierung` | `demo-dachsanierung` | Handwerk | Reparatur→Form/Fläche-Skip, Eigentums-Frage als letzte Quali |
+| `fenster` | `demo-fenster` | Handwerk | Defekte Fenster überspringen die Terminfrage, Eigentums-Frage als letzte Quali |
+| `hoergeraete` | `demo-hoergeraete` | Gesundheit | Folgeversorgung→HNO-Skip, multi_choice Hörsituationen |
+| `24h-betreuung` | `demo-betreuung` | Pflege | `neq`-Regel (≠24h→Zimmer-Skip), dringend→Kontakt, Pflegegrad-Dropdown |
+| `kuechenplanung` | `demo-kueche` | Handwerk | Budget ≥ 35.000 € (`gte`, Slider)→Premium-Planer |
+| `gartenbau` | `demo-galabau` | Handwerk | Pflege-Dauerauftrag→Flächen-Skip, Eigentums-Frage als letzte Quali |
+| `mpu-beratung` | `demo-mpu` | Dienstleistung | **Cross-Step-Condition** (anlass-Feld am Folgestep ausgewertet), Termin steht→Kontakt |
+| `steuerberater` | `demo-steuerberater` | Dienstleistung | Privatperson→Skip von Unternehmens-Fragen UND Leistungs-Auswahl (Lohn/Buchhaltung passen privat nicht) |
+| `kfz-versicherung` | `demo-kfz-versicherung` | Finanzen | Erstfahrzeug→SF-Skip |
+| `personal-training` | `demo-personal-training` | Coaching | Bewusst regelfrei (keine echte Branchen-Weiche), per Du, Tel optional |
+| `nachhilfe` | `demo-nachhilfe` | Bildung | Cross-Step-Regel: Prüfungsvorbereitung überspringt nur die Starttermin-Frage (Start = sofort), Eltern-Zielgruppe „Sie" |
+| `scheidung-familienrecht` | `demo-scheidung` | Recht | Scheidung eingereicht→sofort Vertretung, optionale multi_choice Themen |
+| `webdesign` | `demo-webdesign` | Dienstleistung | Budget ≥ 15.000 € (`gte`, Slider)→Konzeptgespräch |
+| `fertighaus` | `demo-fertighaus` | Handwerk | „Erst informieren"→schlanke Kataloganfrage, Budget-Slider 200–800k |
+| `augenlasern` | `demo-augenlasern` | Gesundheit | Alter ≥ 50 (`gte`) + instabile Sehstärke→ärztl. Beratung |
+| `entruempelung` | `demo-entruempelung` | Dienstleistung | Express-Räumung überspringt nur die Anlass-Frage — Fläche/Füllgrad bleiben (Festpreis braucht sie) |
+| `alarmanlage` | `demo-alarmanlage` | Handwerk | Einbruch passiert→Fast-Track, multi_choice Schutzziele |
+| `wintergarten` | `demo-wintergarten` | Handwerk | Bauart unklar→verkürzte Beratungs-Strecke, Eigentums-Frage als letzte Quali |
+| `gebaeudereinigung` | `demo-gebaeudereinigung` | Dienstleistung | Fläche ≥ 5.000 m² (`gte`, Number)→Besichtigung, B2B |
+| `privatkredit` | `demo-privatkredit` | Finanzen | Selbstständig→Kontakt, Schufa→Kontakt, Summen-Slider |
+| `bestattungsvorsorge` | `demo-bestattungsvorsorge` | Dienstleistung | Akuter Trauerfall→Sofortkontakt, würdevoller Ton |
+| `schaedlingsbekaempfung` | `demo-schaedlingsbekaempfung` | Dienstleistung | Dringlichkeit VOR Objekt-Frage (Gastro-Leads behalten die Notfall-Info), Notfall + Gastro/HACCP→Sofortkontakt |
 
 Dazu: `agenturen` = Dogfood-Akquise-Funnel für LeadPlug selbst (per Du, **kein Template**).
 Alle leben in Stavros' Konto, `tenant_id = 'f64b2227-2fbb-4746-83fa-9d71bf8af26f'`,
 `notification_email = 'stavrossingoudis@gmail.com'`.
+
+> 🗑️ **Gelöscht nach Stavros-Review (2026-06-12): `haartransplantation`** (Template + Demo-Funnel,
+> war Charge 3 / Nr. 18). Lektion für den Troll-Filter: Die Branche lebt von **Bild-Selbsteinschätzung**
+> (Norwood-Skala = Picture-Choice, das LeadPlug bewusst nicht hat) und Preis-/Türkei-Vergleich —
+> ein Text-Funnel kann die echten Markt-Qualifizierer nicht abbilden. **Vor dem Bauen prüfen:
+> Funktioniert die Vorqualifizierung dieser Branche ohne Bilder/Uploads?** Wenn nein: lassen.
+> Rollback/Wiederaufbau: `charge3_03_demo_haartransplantation.sql` + Publish-Snippet in `charge3_07`.
 
 > ⚠️ **Demo-Funnels verschicken KEINE Mails (Stavros-Entscheid 2026-06-11).**
 > Die Vorlagen-Vorschau lädt die Demo-Funnels live — Submits dort sind ECHT
@@ -55,10 +90,13 @@ WebSearch-Strategien, die in Runde 1+2 funktioniert haben:
 - **Welcome:** Nutzenversprechen + Zeitangabe + Unverbindlichkeits-Signal („6 kurze Fragen … kostenlos und unverbindlich"), Button mit Pfeil („Jetzt prüfen →").
 - **Anrede:** Endkunden-Funnels = **„Sie"** (Wording-Styleguide-Default). Ausnahmen mit Branchen-Norm per Du: Recruiting/Bewerber, Coaching/Info-Marketing. Jede Du-Entscheidung im Doku-Eintrag begründen.
 - **Alle Texte nach [`wording-styleguide.md`](wording-styleguide.md)** (sachlich, keine Ausrufezeichen-Inflation, „Anfrage" für die Endkunden-Aktion).
-- **Logik:** Jede Vorlage bekommt mind. 1 fachlich sinnvolle Regel (Skip / Fast-Track / Sonderfall-zur-Kontaktkarte). NUR Vorwärts-Sprünge. Ops: `eq|neq` (alle), `contains` (Freitext), `includes` (multi_choice), `gt|gte|lt|lte` (Slider/Zahl/Rating/Skala). Bewährte Muster: „Mieter → direkt Kontakt", „Alter ≥ X → persönliche Beratung", „kein Objekt → Zahlen-Fragen überspringen".
+- **Logik:** Regeln nur wo fachlich echt — **0 Regeln sind erlaubt** (keine Logik um der Logik willen; Personal-Training ist bewusst regelfrei). NUR Vorwärts-Sprünge. Ops: `eq|neq` (alle), `contains` (Freitext), `includes` (multi_choice), `gt|gte|lt|lte` (Slider/Zahl/Rating/Skala). **Drei Regel-Typen (Realitäts-Review 2026-06-12):**
+  1. **Skip-Regeln** (irrelevante Fragen überspringen, Ziel ≠ Kontaktkarte): immer gut — „Reparatur → Flächen-Fragen überspringen", „Student → Einkommens-Frage überspringen".
+  2. **Fast-Track zur Kontaktkarte** NUR wenn (a) der **Nutzer** abkürzen will (akuter Bedarf: Trauerfall, Notfall, „Scheidung eingereicht", „so schnell wie möglich") oder (b) das Formular für seinen Fall nicht passt (B2B/anderes Produkt: Firmenumzug, Gewerbe-PV — der Privat-Slider endet bei 10.000 kWh).
+  3. **Disqualifikations-Weichen (Mieter, Privatperson, Sonderfahrzeug …) NIE als frühen Sprung zur Kontaktkarte.** Die Kontaktabfrage ist die teuerste Frage des Funnels und braucht aufgebautes Commitment — ein Sprung nach Frage 1–2 heißt: höchste Hürde bei null Investition, plus ein fast leerer Lead. Stattdessen: **Weichen-Frage als LETZTE Frage direkt vor der Kontaktkarte** stellen — jeder durchläuft die volle Strecke, der Lead kommt vollständig mit Flag an, der Betrieb entscheidet selbst. (Das frühere „bewährte Muster ‚Mieter → direkt Kontakt'" aus Aufgabe 61 war ein Anti-Pattern und wurde 2026-06-12 in 14 Funnels zurückgebaut.)
 - **Feldtypen:** realistisch einsetzen, nicht zwanghaft — aber die Bandbreite über das Gesamt-Portfolio streuen (alle 9 Typen + rating/scale/statement/checkbox + Kontakt-Typen sind bereits abgedeckt; Wiederholung ist ok).
 - **Kontakt-Karte:** Feldtypen `full_name`/`email`/`tel`/`plz` benutzen (NICHT short_text!) — nur diese mappt `deriveContactFromAnswers` auf die Lead-Kontaktdaten. Telefon Pflicht bei Branchen mit Telefon-Vertrieb (Solar, Baufi, Auto), optional bei E-Mail-Lastigem (Coaching). PLZ wo regional vermittelt wird.
-- **Theme pro Vorlage:** eigene `primary_color` (Brand-Gefühl der Branche, keine Dopplung mit §0-Tabelle: vergeben sind #f97316, #0d9488, #1d4ed8, #047857, #4f46e5, #b45309, #7c3aed, #dc2626, #0891b2, #22c55e), Font aus `system|inter|poppins|roboto`, Radius `0.5rem|0.75rem`, `title_alignment` left/center mischen. Fiktiver, glaubwürdiger Brand-Name (z. B. „Sonnkraft Solar").
+- **Theme pro Vorlage:** eigene `primary_color` (Brand-Gefühl der Branche, keine Dopplung mit bereits vergebenen Farben — bei 38 Vorlagen vor dem Bauen per `SELECT slug, definition->'funnel'->>'primary_color' FROM funnel_templates` prüfen; die Theme-Spalten in [`supabase/demo-funnels/README.md`](../supabase/demo-funnels/README.md) listen die Chargen 2–6), Font aus `system|inter|poppins|roboto`, Radius `0.5rem|0.75rem`, `title_alignment` left/center mischen. Fiktiver, glaubwürdiger Brand-Name (z. B. „Sonnkraft Solar").
 - **2 Drip-Mails pro Funnel:** (1) `tenant`-Benachrichtigung mit Kontakt-Chips + `answers_overview`, (2) `customer`-Bestätigung in der Funnel-Anrede mit 24h-Versprechen. `show_answers_overview = true` bei beratungsartigen Funnels.
 
 ### Schritt 3 — Anlage per SQL (DO-Block-Muster)
@@ -155,7 +193,7 @@ SELECT snapshot_funnel_to_template(
   '<Anzeigename>',         -- Galerie-Titel
   '<1-Zeilen-Pitch: was qualifiziert der Funnel, welche Mechanik>',  -- Beschreibung
   '<Kategorie>',           -- bestehende: Energie · Immobilien · Finanzen · Recht · Coaching · Recruiting · Auto (neue sparsam ergänzen + Icon-Map in TemplateShowcase.tsx erweitern!)
-  <sort_order>             -- 10er-Schritte; bestehende enden bei 90 → weiter mit 100, 110, …
+  <sort_order>             -- 10er-Schritte; bestehende enden bei 380 → weiter mit 390, 400, …
 );
 ```
 Upsert: nach Demo-Polish einfach erneut aufrufen (Republish). Die Snapshot-Funktion ist Owner-only
@@ -168,16 +206,12 @@ UPDATE email_subscriptions e SET is_active = false
 FROM funnels f
 WHERE f.id = e.funnel_id AND f.slug = 'demo-<branche>';
 ```
-Reihenfolge ist wichtig: **erst snapshotten (Mails aktiv) → dann deaktivieren.**
-
-> ⚠️ **Republish-Falle:** `snapshot_funnel_to_template` kopiert `e.is_active` mit in die
-> Definition. Ein Republish NACH der Deaktivierung würde die Vorlage mit inaktiven Mails
-> ausliefern — Kunden bekämen dann keine Drip-Mails! Vor jedem Republish die Demo-Mails
-> kurz auf `is_active = true` setzen, snapshotten, wieder deaktivieren.
-> **Geplante Härtung (offen, Stand 2026-06-11):** `snapshot_funnel_to_template` so ändern,
-> dass Mails in der Definition IMMER als `is_active: true` publiziert werden — dann entfällt
-> das manuelle Hin-und-her. (Umsetzung war durch MCP-Ausfall blockiert; wer das liest und
-> die Funktion noch unverändert vorfindet: kleine CREATE-OR-REPLACE-Migration nachholen.)
+> ✅ **Republish-Falle behoben (Aufgabe 63, Migration `aufgabe_63_snapshot_mails_active`,
+> angewendet 2026-06-12):** `snapshot_funnel_to_template` schreibt `is_active` in der
+> emails-Sektion der Definition jetzt IMMER als `true` — der Demo-Betriebszustand
+> (Mails aus für die Vorschau) ist kein Template-Inhalt mehr. Ein Republish ist damit
+> jederzeit gefahrlos möglich; das frühere „Mails an → snapshotten → Mails aus" entfällt.
+> Schritt 5b (Demo-Mails deaktivieren) bleibt als Hygiene trotzdem Pflicht.
 
 ### Schritt 6 — Doku
 

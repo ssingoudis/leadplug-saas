@@ -6,9 +6,14 @@
 > Für architektonisches Verständnis und Zweck der Tabellen: siehe [`architecture.md`](architecture.md) §4.
 > Bei jeder neuen Migration: dieses File neu regenerieren.
 
-- **Stand:** 2026-06-11 (nach Aufgabe 58 — Logik-Sprünge)
-- **Letzte angewendete Migration:** `aufgabe_58_funnel_logic_rules` (2026-06-11)
-- **Tabellen:** 13 in `public` (alle mit RLS aktiviert)
+- **Stand:** 2026-06-12 (nach Aufgabe 63 — Vorlagen-System + Snapshot-Härtung; Nachtrag unten)
+- **Letzte angewendete Migration:** `aufgabe_63_snapshot_mails_active` (2026-06-12)
+- **Tabellen:** 14 in `public` (alle mit RLS aktiviert)
+
+> **Aufgaben 62–63 Migrationen (2026-06-11/12):**
+> - `aufgabe_62_funnel_templates` (62): **neue Tabelle `funnel_templates`** (`id, slug unique, name, description, category, preview_funnel_slug, definition jsonb, sort_order, is_active, created_at/updated_at` +Trigger) — kuratierte Vorlagen als jsonb-Snapshot (entkoppelt von den Demo-Funnels). RLS: SELECT für authenticated (nur aktive), KEINE Write-Policies (Pflege Owner/Service). Plus 3 RPCs: `snapshot_funnel_to_template(text,text,text,text,text,int)` (Owner-only, EXECUTE für public/anon/authenticated revoked), `create_funnel_from_template` (SECURITY INVOKER, atomare Instanziierung Funnel+Pages+Fields+Logik+Mails), `duplicate_funnel(text)` (SECURITY INVOKER, Kopie im eigenen Tenant; Webhooks + Tracking-IDs nie mitkopiert).
+> - `aufgabe_62_template_funnel_name` (62 R3): `create_funnel_from_template` um optionalen `p_funnel_name` erweitert (Signatur-Wechsel: 3-Param-Fassung gedroppt, Grants neu).
+> - `aufgabe_63_snapshot_mails_active` (63, 2026-06-12): `snapshot_funnel_to_template` schreibt die emails-Sektion der Definition IMMER mit `is_active: true` (Demo-Betriebszustand „Mails aus für die Vorschau" ist kein Template-Inhalt — Republish-Falle konstruktiv weg). CREATE OR REPLACE, DOWN-File stellt die 62er-Fassung wieder her.
 
 > **Aufgaben 54–57 Migrationen (2026-06-09/10):**
 > - `aufgabe_54_replace_funnel_content_rpc` (54): RPC `replace_funnel_content(p_funnel_id, p_pages, p_fields)` — atomares Funnel-Speichern mit Page-UUID-Upsert (SECURITY INVOKER, EXECUTE nur authenticated). Plus partial Index `idx_submissions_ip_completed` (Rate-Limiter zählt nur completed).
@@ -27,7 +32,7 @@
 > **Aufgabe 46 Migration `aufgabe_46_submissions_notes` (2026-06-01):** `submissions.notes text NULL` — freie interne CRM-Notiz pro Lead. Additiv, kein Backfill, kein CHECK (Längen-Cap app-seitig). Status-Workflow (`submissions.status`) unverändert, nur UI-Relabel auf Neu/Kontaktiert/Erledigt.
 > _(Hinweis: Header-Migrationsliste in §5 ist nicht lückenlos nachgepflegt — `aufgabe_43_funnel_tracking` + dieses 46 sind in den Tabellen-Sektionen erfasst.)_
 - **Enums:** 4 (`billing_model_type`, `page_type`, `field_type`, `tenant_member_role`)
-- **Functions:** 5 — **Triggers:** 7 — **Views:** 0
+- **Functions:** 9 — **Triggers:** 9 — **Views:** 0 _(Stand 2026-06-12, inkl. der 3 Template-RPCs aus Aufgabe 62)_
 
 > **Aufgabe 41 Polish-Migration `aufgabe_41_custom_recipient` (2026-05-31 abends):**
 > - `email_subscriptions.recipient_type` CHECK-Constraint erweitert auf `IN ('customer','tenant','custom')`.

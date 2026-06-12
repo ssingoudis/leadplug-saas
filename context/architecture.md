@@ -498,10 +498,11 @@ DB (pages + fields)
 - ✅ **Aufgaben 44–50 (Editor-/Dashboard-Uplift, 2026-05-31 → 06-06)** — Side-Nav-Shell + Vollbild-Editor, Editor-Design-System (`ui/Panel.tsx`), Mini-CRM (Lead-Notizen), Autosave-Pattern, Karten-Model, „Bearbeiten"-Tab (Inhalt + Design vereint), Webhook-Namen.
 - ✅ **Aufgaben 51–53 (Go-live-Politur, 2026-06-06)** — Submit-Page/Kontaktformular abgeschafft (51) + restlos rausgerissen (52D) inkl. `skip_submit_step`/Footer-Drop; dynamische Mail-Variablen aus Funnel-Feldern + Empfänger-Modi + Dark-Mode (53).
 
+- ✅ **Aufgaben 58–59 (Logic Jumps + Logic-Map, 2026-06-11)** — Regeln pro Step (`funnel_logic_rules`, nur Vorwärts-Sprünge) + read-only Logic-Map-Tab. Details: CLAUDE.md §5.
+- ✅ **Aufgaben 61–63 (Vorlagen-System, 2026-06-11/12)** — `funnel_templates` (jsonb-Snapshots) + 3 RPCs, Galerie `/dashboard/vorlagen` mit Kategorie-Filter, **37 kuratierte Vorlagen live**. Prozess + Regel-Design: [`vorlagen-kochbuch.md`](vorlagen-kochbuch.md).
+
 **Offen vor Launch:**
 - D.1 Stripe Test→Live (aufgeschoben, Testkunden `free`-Tier)
-- D.3 3-5 Demo-Funnel-Templates (Content)
-- C.4 Logic Jumps (optional / v1.1)
 
 ## 13. Action-Element-Architektur (Aufgabe 40)
 

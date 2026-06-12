@@ -119,7 +119,7 @@ LeadPlug ist „eine Art Typeform-Klon". **Alle Output-Mechanismen sind dynamisc
 
 **Builder-Final-Sprint** ✅ abgeschlossen + gemerged (Aufgaben 35–37 + C.1d + C.2). Danach gebaut + gemerged: Aufgabe 38 (Custom Multi-Field-Pages), 39 (Welcome/End-Screen + Rating/Scale/Statement), 40 (Webhooks), 41 (E-Mail-Drip), 42 (Conversion-Tracking, oben).
 
-**Offen bis Launch (Phase D-Rest):** D.3 3-5 Demo-Funnel-Templates (Content, Stavros-Entscheid: nach der Logik) → D.1 Stripe Test→Live (~1 Tag, aufgeschoben — Testkunden bekommen `free`-Tier). Danach: Launch + Direct-Sales. (C.4 Logic Jumps Stufe 1 ✅ Aufgabe 58 · Logic-Map Stufe 2 ✅ Aufgabe 59.)
+**Offen bis Launch (Phase D-Rest):** nur noch D.1 Stripe Test→Live (~1 Tag, aufgeschoben — Testkunden bekommen `free`-Tier). Danach: Launch + Direct-Sales. (C.4 Logic Jumps Stufe 1 ✅ Aufgabe 58 · Logic-Map Stufe 2 ✅ Aufgabe 59 · D.3 ✅ Aufgaben 61–63: **37 kuratierte Funnel-Vorlagen live** — Galerie `/dashboard/vorlagen` mit Kategorie-Filter; Regel-Design nach dem Kochbuch-Prinzip „Drei Regel-Typen", siehe [`context/vorlagen-kochbuch.md`](context/vorlagen-kochbuch.md).)
 
 **Bewusst gestrichen** (nicht mehr im Plan):
 
@@ -145,7 +145,7 @@ LeadPlug ist „eine Art Typeform-Klon". **Alle Output-Mechanismen sind dynamisc
 - [`context/email-drip-architektur.md`](context/email-drip-architektur.md) — **E-Mail-Drip-Subsystem vollständig** (Aufgabe 41): DB-Schema, Code-Layout (Sender, Queue, Cron), TipTap-Editor + Custom-Nodes, Template-Substitutions-Regex, UI-Architektur (3-Pane mit Draft-Lift), Sequence-Diagramme (immediate/delayed/retry/test). **Erste Anlaufstelle für „wie funktioniert der E-Mail-Drip-Sender".**
 - [`context/conversion-tracking.md`](context/conversion-tracking.md) — **Conversion-Tracking + `embed.js`-Script-Loader vollständig** (Aufgabe 42 / D.2): postMessage-Bridge (iFrame→Parent), `embed.js`-Loader, Code-Layout, Tenant-Einbettung, 3 Abgreif-Wege (GTM-`dataLayer` / data-Attribute / `onLead`-Callback), Sicherheits-/PII-Modell. **Erste Anlaufstelle für „wie kommen Funnel-Leads als Conversion zu Meta/Google".**
 - [`context/architecture.html`](context/architecture.html) — **dieselbe Architektur visuell** (vom Stavros gepflegt) — 3-Worlds-Map, DB-Tree, Page-Flow, Field-Types-Grid, Komponenten-Baum, Decisions-Legend.
-- [`context/vorlagen-kochbuch.md`](context/vorlagen-kochbuch.md) — **Funnel-Vorlagen bauen** (Aufgabe 61/62): Recherche-Prozess, Design-Regeln, SQL-Anlage-Muster, Datenshape-Referenz, Veröffentlichen via `snapshot_funnel_to_template`, Kandidaten-Liste. **Erste Anlaufstelle für „neue Vorlagen erstellen" (Ziel: 25).**
+- [`context/vorlagen-kochbuch.md`](context/vorlagen-kochbuch.md) — **Funnel-Vorlagen bauen** (Aufgaben 61–63): Recherche-Prozess + Troll-Filter, Design-Regeln inkl. **„Drei Regel-Typen"** (Skips immer · Fast-Track nur bei Nutzer-Absicht/B2B · Disqualifikations-Weiche als letzte Frage vor der Kontaktkarte, nie als früher Sprung), SQL-Anlage-Muster, Veröffentlichen via `snapshot_funnel_to_template`. **Erste Anlaufstelle für „neue Vorlagen erstellen" (Stand: 37 live, Ziel 25 übertroffen).**
 - [`context/supabase-schema.md`](context/supabase-schema.md) — vollständige technische DB-Referenz (Enums, Tables, RLS, Indices, Functions)
 - [`context/current-feature.md`](context/current-feature.md) — laufende Arbeit + Aufgaben-History (chronologisch)
 - [`context/history-archive.md`](context/history-archive.md) — ältere Aufgaben (archiviert)
@@ -363,7 +363,10 @@ Klare Trennung — keine Override-Hierarchien zwischen Tabellen:
 
 - `aufgabe_62_template_funnel_name` (Runde 3): `create_funnel_from_template` um optionalen `p_funnel_name` erweitert (UI fragt den Namen vor dem Erstellen ab; leer → Vorlagen-Name). Signatur-Wechsel: 3-Param-Fassung gedroppt, 4-Param-Fassung mit neu gesetzten Grants. Direkt auf Produktion appliziert, SQL-getestet, DOWN-File stellt die 3-Param-Fassung wieder her (erst Code zurückrollen).
 
-**Nächste DB-Arbeit:** keine offen — `footer_*`, orphaned Submit-Pages, `skip_submit_step`, `submit_button_label` sind weg (52B/52D/57A), tote funnel.*-Chips gestrippt (53), Funnel-Save atomar via RPC (54), Advisor-Härtung (54b), Test-Mail-Logging (57B), Warnungs-Quittierung (57D), Logik-Regeln (58), Vorlagen-System (62).
+**Aufgabe 63 Migration (2026-06-12):**
+- `aufgabe_63_snapshot_mails_active`: `snapshot_funnel_to_template` schreibt die emails-Sektion der Template-Definition jetzt IMMER mit `is_active: true` — der Demo-Betriebszustand (Mails aus, damit Vorschau-Spieler keine Mails fiktiver Firmen bekommen) ist kein Template-Inhalt; die Republish-Falle aus dem Kochbuch ist konstruktiv weg. CREATE OR REPLACE, direkt auf Produktion appliziert (mit User-Go), DOWN-File stellt die 62er-Fassung wieder her. Dazu in Aufgabe 63 (reine Daten, keine Schema-Änderung): 29 Demo-Funnels (Chargen 2–6) + 29 Template-Snapshots angelegt → nach Stavros-Realitäts-Review 37 Vorlagen live (Haartransplantation gelöscht, 14 Funnels umgebaut: Disqualifikations-Weichen ans Strecken-Ende statt früher Kontakt-Sprünge — Prinzip „Drei Regel-Typen" im Kochbuch).
+
+**Nächste DB-Arbeit:** keine offen — `footer_*`, orphaned Submit-Pages, `skip_submit_step`, `submit_button_label` sind weg (52B/52D/57A), tote funnel.*-Chips gestrippt (53), Funnel-Save atomar via RPC (54), Advisor-Härtung (54b), Test-Mail-Logging (57B), Warnungs-Quittierung (57D), Logik-Regeln (58), Vorlagen-System (62), Snapshot-Härtung (63).
 
 ---
 
