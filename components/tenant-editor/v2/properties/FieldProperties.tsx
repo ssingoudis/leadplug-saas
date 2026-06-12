@@ -153,6 +153,11 @@ function QuestionFieldProps({
               <TextInput value={question.numberUnit} onChange={(v) => onPatch({ numberUnit: v })} placeholder="kWh, Stück, …" />
             </Field>
           </div>
+          <div className="col-span-2">
+            <Field label="Platzhalter (optional)">
+              <TextInput value={question.placeholder} onChange={(v) => onPatch({ placeholder: v })} placeholder="z. B. 120" />
+            </Field>
+          </div>
         </div>
       )}
 

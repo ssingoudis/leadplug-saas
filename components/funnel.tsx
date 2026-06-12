@@ -1266,7 +1266,7 @@ export function Funnel({
                         );
                       }
 
-                      // Aufgabe 39 Polish: Number
+                      // Aufgabe 39 Polish: Number (ohne native Spinner — Typeform-Look)
                       if (field.type === "number") {
                         return (
                           <div key={field.key} data-edit-field={cardFieldRef} style={{ ...editCursor, ...hl(cardFieldRef) }}>
@@ -1274,12 +1274,13 @@ export function Funnel({
                             <div className="relative">
                               <input
                                 type="number"
+                                inputMode="numeric"
                                 placeholder={field.placeholder ?? ""}
                                 value={fieldValue}
                                 onChange={(e) =>
                                   setAnswers((prev) => ({ ...prev, [field.key]: e.target.value }))
                                 }
-                                className="w-full bg-transparent border-b text-base @md:text-lg py-2 pr-7 outline-none transition-colors font-light"
+                                className="w-full bg-transparent border-b text-base @md:text-lg py-2 pr-7 outline-none transition-colors font-light [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                 style={{ borderColor: theme.underlineColor, color: theme.textColor }}
                                 onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
                                 onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; markTouched(field.key); }}
@@ -1383,7 +1384,10 @@ export function Funnel({
                       const defaultPlaceholder =
                         field.type === "first_name" ? "Vorname" :
                         field.type === "last_name"  ? "Nachname" :
-                        field.type === "full_name"  ? "Voller Name" :
+                        field.type === "full_name"  ? "Vor- und Nachname" :
+                        field.type === "email"      ? "name@beispiel.de" :
+                        field.type === "tel"        ? "0151 23456789" :
+                        field.type === "plz"        ? "z. B. 10115" :
                         "";
                       return (
                         <div key={field.key} data-edit-field={cardFieldRef} style={{ ...editCursor, ...hl(cardFieldRef) }}>
@@ -1711,14 +1715,19 @@ export function Funnel({
                   );
                 })()}
 
-                {/* number — HTML5 native input, Underline-only + Unit-Suffix rechts */}
+                {/* number — Underline-only, ohne native Spinner (Typeform-Look). Die Einheit
+                    klebt direkt an der Zahl: wo field-sizing unterstützt wird, ist das Input
+                    nur so breit wie sein Inhalt; ältere Browser fallen auf volle Breite zurück.
+                    <label> als Wrapper: Klick irgendwo auf der Zeile fokussiert das Feld. */}
                 {currentQuestion.questionType === "number" && (() => {
                   const numCfg = currentQuestion.config as NumberConfig;
                   const value = answers[currentQuestion.id] ?? (numCfg.default != null ? String(numCfg.default) : "");
                   return (
-                    <div className="mb-3 flex items-baseline gap-2 border-b transition-colors" style={{ borderColor: theme.underlineColor }}>
+                    <label className="mb-3 flex cursor-text items-baseline gap-2 border-b transition-colors" style={{ borderColor: theme.underlineColor }}>
                       <input
                         type="number"
+                        inputMode="numeric"
+                        placeholder={numCfg.placeholder ?? ""}
                         value={value}
                         min={numCfg.min}
                         max={numCfg.max}
@@ -1733,7 +1742,7 @@ export function Funnel({
                           }
                         }}
                         data-edit-field="text_input"
-                        className="flex-1 bg-transparent text-xl @md:text-2xl py-3 outline-none font-light"
+                        className="flex-1 bg-transparent text-xl @md:text-2xl py-3 outline-none font-light [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none supports-[field-sizing:content]:flex-none supports-[field-sizing:content]:field-sizing-content supports-[field-sizing:content]:min-w-[3ch] supports-[field-sizing:content]:max-w-full"
                         style={{
                           color: theme.textColor,
                           ...hl("text_input"),
@@ -1744,7 +1753,7 @@ export function Funnel({
                           {numCfg.unit}
                         </span>
                       )}
-                    </div>
+                    </label>
                   );
                 })()}
 

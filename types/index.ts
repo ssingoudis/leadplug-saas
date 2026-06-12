@@ -66,6 +66,7 @@ export interface NumberConfig {
   step?: number
   unit?: string
   default?: number
+  placeholder?: string
   required?: boolean
 }
 

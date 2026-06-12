@@ -289,6 +289,7 @@ function buildQuestionConfig(q: EditorQuestion): Record<string, unknown> {
         ...(q.numberStep ? { step: Number(q.numberStep) } : {}),
         ...(q.numberDefault ? { default: Number(q.numberDefault) } : {}),
         ...(q.numberUnit ? { unit: q.numberUnit } : {}),
+        ...(q.placeholder ? { placeholder: q.placeholder } : {}),
         required: q.required,
       };
     case "checkbox":
@@ -606,7 +607,8 @@ export function editorStateToPagesAndFields(
       q.questionType === "checkbox";
 
     // Types die placeholder als top-level Spalte nutzen (Suchhilfe für API-Filter etc.).
-    const hasPlaceholder = TEXTISH_TYPES.has(q.questionType);
+    // number seit Platzhalter-Politur 2026-06-12 (config trägt ihn zusätzlich, s. buildQuestionConfig).
+    const hasPlaceholder = TEXTISH_TYPES.has(q.questionType) || q.questionType === "number";
 
     // Aufgabe 40 Polish: Existing keys IMMER behalten (Backward-Compat).
     // Nur leere keys werden aus Title generiert. Konflikt-Resolution via Suffix.
