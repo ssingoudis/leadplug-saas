@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Briefcase,
   Car,
+  GraduationCap,
   HardHat,
+  HeartHandshake,
+  HeartPulse,
   Home,
   Landmark,
   Scale,
   Sparkles,
   Target,
+  Wrench,
   X,
   Zap,
 } from "lucide-react";
@@ -35,6 +40,11 @@ const CATEGORY_ICONS: Record<string, React.ComponentType<{ size?: number; classN
   Coaching: Target,
   Recruiting: HardHat,
   Auto: Car,
+  Handwerk: Wrench,
+  Dienstleistung: Briefcase,
+  Gesundheit: HeartPulse,
+  Pflege: HeartHandshake,
+  Bildung: GraduationCap,
 };
 
 function heroBackground(color: string | null): React.CSSProperties {
@@ -48,6 +58,27 @@ function heroBackground(color: string | null): React.CSSProperties {
 export function TemplateShowcase({ templates }: { templates: TemplateItem[] }) {
   const [previewTemplate, setPreviewTemplate] = useState<TemplateItem | null>(null);
   const [namingTemplate, setNamingTemplate] = useState<TemplateItem | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+
+  // Kategorien mit Anzahl, größte Auswahl zuerst: die vorderen Chip-Plätze bekommen
+  // die höchste Trefferchance (Handwerk/Dienstleistung = Kern der Zielgruppe), die
+  // absteigenden Zahlen lesen sich als natürliche Hierarchie, und die 1er-Nischen
+  // wandern ans Ende. Bei Gleichstand alphabetisch — deterministisch statt
+  // Build-Chronologie. Pflegt sich selbst, wenn Vorlagen dazukommen.
+  const categories = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const t of templates) {
+      if (!t.category) continue;
+      counts.set(t.category, (counts.get(t.category) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort(
+      (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "de"),
+    );
+  }, [templates]);
+
+  const visibleTemplates = activeCategory
+    ? templates.filter((t) => t.category === activeCategory)
+    : templates;
 
   function startNaming(t: TemplateItem) {
     setPreviewTemplate(null);
@@ -56,8 +87,33 @@ export function TemplateShowcase({ templates }: { templates: TemplateItem[] }) {
 
   return (
     <div className="space-y-4">
+      {/* Kategorie-Filter — bei ~37 Vorlagen die Orientierungshilfe gegen die Scrollwand.
+          Mobil als EINE horizontal scrollbare Zeile (12 Chips würden sonst 5 Zeilen
+          stapeln und die Karten unter die Falte drücken), ab sm mit Umbruch. */}
+      {categories.length > 1 && (
+        <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible">
+          <FilterChip
+            label={`Alle (${templates.length})`}
+            active={activeCategory === null}
+            onClick={() => setActiveCategory(null)}
+          />
+          {categories.map(([category, count]) => {
+            const Icon = CATEGORY_ICONS[category] ?? Sparkles;
+            return (
+              <FilterChip
+                key={category}
+                label={`${category} (${count})`}
+                icon={<Icon size={14} />}
+                active={activeCategory === category}
+                onClick={() => setActiveCategory(activeCategory === category ? null : category)}
+              />
+            );
+          })}
+        </div>
+      )}
+
       <div className="grid gap-6 md:grid-cols-2">
-        {templates.map((t) => {
+        {visibleTemplates.map((t) => {
           const Icon = CATEGORY_ICONS[t.category] ?? Sparkles;
           return (
             <div
@@ -142,6 +198,36 @@ export function TemplateShowcase({ templates }: { templates: TemplateItem[] }) {
   );
 }
 
+// ─────────────────────────── Filter-Chip ───────────────────────────
+
+function FilterChip({
+  label,
+  icon,
+  active,
+  onClick,
+}: {
+  label: string;
+  icon?: React.ReactNode;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={
+        active
+          ? "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-primary px-3.5 py-1.5 text-sm font-semibold text-white"
+          : "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-gray-200 px-3.5 py-1.5 text-sm font-semibold text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+      }
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
 // ─────────────────────────── Vorschau-Modal ───────────────────────────
 // Der echte Funnel, durchspielbar im iframe (?preview=1 → kein Aufruf gezählt).
 // Höhe folgt live dem Funnel: das Widget postet nach jedem Render
@@ -200,30 +286,42 @@ function TemplatePreviewModal({
         aria-modal="true"
         aria-label={`Vorschau: ${template.name}`}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-5 py-3.5 dark:border-gray-800">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-gray-900 dark:text-white">{template.name}</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500">
-              Durchspielbar — genau so sieht der Funnel nach dem Übernehmen aus.
-            </p>
+        {/* Mobil ist neben dem Titel kein Platz: Zeile 1 = Name + X, der CTA bekommt
+            eine eigene volle Zeile, der erklärende Untertitel entfällt (ab sm wieder
+            das einzeilige Layout mit Untertitel + Inline-Button). */}
+        <div className="border-b border-gray-100 px-5 py-3.5 dark:border-gray-800">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-bold text-gray-900 dark:text-white">{template.name}</p>
+              <p className="hidden text-xs text-gray-400 dark:text-gray-500 sm:block">
+                Durchspielbar — genau so sieht der Funnel nach dem Übernehmen aus.
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={onUse}
+                className="hidden items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-hover sm:inline-flex"
+              >
+                Vorlage verwenden
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Vorschau schließen"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+              >
+                <X size={16} />
+              </button>
+            </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={onUse}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
-            >
-              Vorlage verwenden
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Vorschau schließen"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
-            >
-              <X size={16} />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onUse}
+            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-hover sm:hidden"
+          >
+            Vorlage verwenden
+          </button>
         </div>
         <iframe
           ref={iframeRef}
