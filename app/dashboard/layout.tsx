@@ -3,6 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { Power } from 'lucide-react'
 import DashboardShell from '@/components/dashboard/DashboardShell'
+import BetaFeedback from '@/components/dashboard/BetaFeedback'
+import OnboardingNameModal from '@/components/dashboard/OnboardingNameModal'
 import { isSuperadmin } from '@/lib/auth/superadmin'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -38,10 +40,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
     if (user.email) {
       // Auto-Tenant-Anlage beim ersten Login
       // (RLS würde blockieren — User hat noch keine Membership)
+      // Aufgabe 67: bewusst OHNE Verlegenheits-Namen aus dem E-Mail-Localpart —
+      // das Onboarding-Modal fragt den Kontonamen ab. company_name ist NOT NULL
+      // (supabase-schema.md), daher Leerstring als „noch kein Name"-Sentinel;
+      // der Modal-Trigger unten prüft falsy (!company_name) und greift bei '' UND null.
       const { data: inserted, error: insertError } = await admin
         .from('tenants')
         .insert({
-          company_name: user.email.split('@')[0],
+          company_name: '',
           billing_model: 'free',
           is_active: true,
         })
@@ -93,6 +99,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
       >
         {children}
       </DashboardShell>
+      {/* Aufgabe 67: Beta-Feedback-Widget (blendet sich im Vollbild-Editor selbst aus).
+          E-Mail + Kontoname füllen die WhatsApp-Nachricht vor (sichtbar + editierbar). */}
+      <BetaFeedback userEmail={user.email ?? ''} accountName={tenant.company_name ?? ''} />
+      {/* Aufgabe 67: Erst-Login-Onboarding — solange kein Kontoname gesetzt ist. */}
+      {!tenant.company_name && <OnboardingNameModal tenantId={tenant.id} />}
     </div>
   )
 }

@@ -110,6 +110,40 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
+## Aufgabe 67 — Beta-Kontaktkanal: Feedback-Widget + WhatsApp + Signup-Politur (2026-06-12)
+
+**Status:** gebaut, Build grün, Stavros-Test bestanden (Mail + WhatsApp kamen an). **Feedback ist NUR-Mail** — eine DB-Archiv-Tabelle (`beta_feedback`) wurde vorgeschlagen und von Stavros **abgelehnt** (2026-06-12); die vorbereiteten Migrations-Dateien wurden wieder entfernt, die Route hat bewusst keinen DB-Schreibzugriff. Nicht erneut vorschlagen.
+
+**Inhalt (Beta-Optimierungs-Sprint, Punkt 7):**
+- **Feedback-Widget** ([BetaFeedback.tsx](../components/dashboard/BetaFeedback.tsx)): Floating-Button unten rechts im Dashboard → Panel „Feedback" mit Kategorie (Feedback/Problem/Frage) + Nachricht + optionalem WhatsApp-Link. Blendet sich im Vollbild-Editor (`/edit`) selbst aus. Eingehängt in [app/dashboard/layout.tsx](../app/dashboard/layout.tsx). Copy nach Stavros-Review: neutraler Support-Ton („Nachricht angekommen / Wir melden uns zeitnah."), kein Bedanken, keine Platzhaltertexte.
+- **API `/api/feedback`** ([route.ts](../app/api/feedback/route.ts)): Auth via User-Client, Validierung (Kategorie-Whitelist, 1–5000 Zeichen), dann Resend-Mail an `SUPPORT_EMAIL` mit reply-to = Absender (direkt antwortbar), From `noreply@EMAIL_DOMAIN_PLATFORM`. Tenant-Name nur lesend für den Mail-Kontext.
+- **Env:** `SUPPORT_EMAIL` (server-side) + `NEXT_PUBLIC_SUPPORT_WHATSAPP` (internationale Ziffern ohne `+`; leer = kein Link). In `.env.example` dokumentiert, in `.env.local` gesetzt — **in Vercel noch eintragen**.
+- **Signup-Bestätigungsseite poliert** ([app/signup/page.tsx](../app/signup/page.tsx)): E-Mail-Adresse bricht nie mittendrin um (inline-block + nowrap), Hinweis dass der Link direkt ins Dashboard führt, „Zurück zur Anmeldung" als Primary-Button (einzige Aktion der Seite). Bewusst Seite statt Modal/Login-Redirect (nächstes Ziel des Users ist sein Postfach; der Mail-Link loggt ohnehin direkt ein).
+- **Erst-Login-Onboarding: Kontoname-Modal** ([OnboardingNameModal.tsx](../components/dashboard/OnboardingNameModal.tsx)): Die Auto-Tenant-Anlage setzt KEINEN Verlegenheits-Namen mehr aus dem E-Mail-Localpart (`company_name` bleibt NULL); solange kein Name gesetzt ist, rendert das Layout ein nicht wegklickbares, geblurrtes Modal („Kontoname festlegen", min. 2 Zeichen, Enter speichert, Hinweis „jederzeit änderbar"). Speicherpfad identisch zur Konto-Seite (UPDATE tenants via User-Client/RLS) + `router.refresh()`. Begriff bewusst „Konto", NICHT „Workspace" — der ist laut Wording-Styleguide fürs Whitelabel-Feature reserviert (Stavros' „Workspace"-Wunsch entsprechend übersteuert, mit Hinweis). Bestands-Tenants mit Auto-Namen sehen das Modal nicht. WhatsApp-Prefill seit dieser Runde neutral: nur `(Konto: X · E-Mail: Y)` + Leerzeile.
+- **Polish-Runden nach Stavros-Tests:** Feedback-Panel → **zentriertes Standard-Modal** (Scrim dunkel + Blur, Button öffnet nur noch, Schließen via X/Scrim/„Schließen"); Titel „Nachricht senden" (kein doppeltes „Feedback", kein „an LeadPlug"); Copy strikt neutral (kein Danke, keine Platzhalter — Wording-Styleguide, 3× korrigiert → Memory `wording-neutral-kein-gruss`); **Feedback-Mail formatiert** (Kategorie-Badge, Meta-Tabelle Von/Konto/Seite/**Gesendet** in Europe/Berlin, mailto-Link, Nachricht-Box); **WhatsApp-Prefill** `(Konto: X · E-Mail: Y)` + Leerzeile (wa.me ?text=, sichtbar/editierbar; Business-Konto = nur Nummer tauschen); Signup-Bestätigung auf Standard-Text zurück („Über den Link wird das Konto aktiviert."); **Admin-UI Workspace→Konto** (Übersicht + Detail + Gefahrenzone + Modals — Styleguide: „Workspace" bleibt fürs Whitelabel reserviert, Stavros bestätigt).
+- **Kalender-Farb-Bug gefixt (wichtigster Fund des Sprints)** ([DateInlinePicker.tsx](../components/funnel/DateInlinePicker.tsx)): Die Theme-CSS-Variablen lagen auf einem Wrapper-Div, aber react-day-picker deklariert dieselben Variablen in seinem Stylesheet direkt auf `.rdp-root` — direkte Deklaration schlägt Vererbung, der Kalender war daher IMMER im Bibliotheks-Blau (fiel nie auf, weil die Test-Funnels blau/indigo waren; entdeckt durch Stavros' Orange-Test). Fix: Variablen als Inline-Style auf das DayPicker-Root (`style`-Prop). Dazu: ausgewählter Tag als **gefüllter Kreis** in Funnel-Farbe mit weißer Zahl (Google-Pattern, `.lp-daypicker`-Overrides in globals.css) statt Outline-Ring, und **heutiger Tag wird beim Anzeigen als Antwort committed** (Slider-Muster aus Aufgabe 55, geklemmt auf min/max, Editor-Default hat Vorrang) → Kreis sichtbar ab dem ersten Render, OK sofort aktiv. Farb-verifiziert via Playwright auf demo-recruiting (rot): OK-Button und Kalender-Kreis pixelidentisch `#dc2626`.
+
+---
+
+## Aufgabe 66 — Font-Ausbau: 6 neue Familien, 10 gesamt (2026-06-12)
+
+**Status:** gebaut, Build grün. Kein DB-Change.
+
+**Inhalt (Beta-Optimierungs-Sprint, Punkt 5):** Da `@font-face` lazy lädt (nur die im Funnel gewählte Familie wird heruntergeladen), kostet mehr Auswahl keine Ladezeit — Stavros-Go für 6 neue self-hosted Familien (gwfh, latin, DSGVO-konform wie gehabt): **Montserrat v31 · Open Sans v44 · Lato v25 · Nunito v32 · DM Sans v17 · Merriweather v33** (die Serife im Set, eigener Georgia-Fallback-Stack). Je regular/500/600/700 — außer Lato (hat kein 500/600; Browser mappt 500→400, 600→700). Bewusst KEINE 300er-Weights (würden Bestands-Funnels sichtbar dünner machen — `font-light` mappt weiter auf 400). Touchpoints: 22 woff2 in [public/fonts/](../public/fonts/) + `@font-face` in [globals.css](../app/globals.css) + `FunnelFont` ([types/index.ts](../types/index.ts)) + `FONT_STACKS` ([funnel.tsx](../components/funnel.tsx)) + `FONT_OPTIONS` alphabetisch ([ThemePanel.tsx](../components/tenant-editor/v2/ThemePanel.tsx)) + [fonts/README.md](../public/fonts/README.md) (inkl. neuem Schritt 5).
+
+---
+
+## Aufgabe 65 — Widget-Polish: Kalender im Mittig-Layout + Checkbox-Marker (2026-06-12)
+
+**Status:** Branch `feature/aufgabe-65-widget-polish`, Build grün, Stavros-Sichttest im Editor bestanden.
+
+**Inhalt (Beta-Optimierungs-Sprint, Punkte 1+3):**
+- **Kalender folgt dem „Mittig"-Layout** ([funnel.tsx](../components/funnel.tsx)): DateInlinePicker ist ein kompaktes Inline-Element wie Rating/Skala und wird bei `title_alignment='center'` jetzt zentriert — in BEIDEN Render-Zweigen (Einzelfrage + Karten-Feld; der Karten-Zweig ist seit dem Karten-Modell der Standard-Pfad und war zunächst übersehen). War ein Versäumnis aus Aufgabe 59.
+- **Kein Feld-Label überm Kalender** (Stavros-Entscheid): „Datum" über einem Kalender ist redundant — Label im Karten-Zweig entfernt, Kontext liefert der Karten-Titel. (Trade-off dokumentiert: „(optional)"-Zusatz entfällt mit.)
+- **Vierter Marker-Stil `checkbox`** ([types/index.ts](../types/index.ts) `OptionMarker`): leere Box, die bei Auswahl einen Haken in Brand-Farbe bekommt (Tally-Pattern). Gilt für single_choice UND multi_choice (ersetzt dort die bisherige Zusatz-Box — keine Doppelung); im editMode übernimmt die Box die Drag-Handle-Rolle des Letter-Chips. Editor-UI: Sektion heißt jetzt „Markierung der Optionen" (statt „Nummerierung"), 4 Stile in [FieldProperties.tsx](../components/tenant-editor/v2/properties/FieldProperties.tsx) (`MarkerStyleControl`, SquareCheck-Icon). Lese-Whitelists in [editorUtils.ts](../lib/editorUtils.ts) + [getTenantConfig.ts](../lib/getTenantConfig.ts) erweitert; Persistenz im config-jsonb wie gehabt (alles ≠ letters wird geschrieben) — **kein DB-Change**, Bestands-Funnels unberührt (Default letters). Tastatur-Auswahl (A–Z/1–9) unabhängig vom Marker-Stil.
+
+---
+
 ## Aufgabe 64 — Widget-Performance: GPU-Folienübergang + Browser-Zurück + Bundle-Diät (2026-06-12)
 
 **Status:** Branch `feature/aufgabe-64-slide-smoothness`, Build grün, Playwright-verifiziert (Production-Build), Stavros-Sichttest in Chrome/Firefox/VSCode bestanden.

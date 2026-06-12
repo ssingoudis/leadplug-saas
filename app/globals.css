@@ -88,6 +88,171 @@
   src: url('/fonts/roboto/roboto-v51-latin-700.woff2') format('woff2');
 }
 
+/* Aufgabe 66: 6 weitere Widget-Fonts (Stavros-Auswahl). @font-face lädt lazy —
+   nur die im Funnel gewählte Familie (und nur genutzte Gewichte) wird heruntergeladen,
+   mehr Auswahl kostet keine Ladezeit. Lato hat kein 500/600 (Browser mappt 500→400,
+   600→700). Merriweather ist die Serife im Set. */
+
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/montserrat/montserrat-v31-latin-regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/montserrat/montserrat-v31-latin-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/montserrat/montserrat-v31-latin-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/montserrat/montserrat-v31-latin-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/open-sans/open-sans-v44-latin-regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/open-sans/open-sans-v44-latin-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/open-sans/open-sans-v44-latin-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/open-sans/open-sans-v44-latin-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/lato/lato-v25-latin-regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/lato/lato-v25-latin-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/nunito/nunito-v32-latin-regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/nunito/nunito-v32-latin-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/nunito/nunito-v32-latin-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/nunito/nunito-v32-latin-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/dm-sans/dm-sans-v17-latin-regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/dm-sans/dm-sans-v17-latin-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/dm-sans/dm-sans-v17-latin-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/dm-sans/dm-sans-v17-latin-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Merriweather';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/merriweather/merriweather-v33-latin-regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Merriweather';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/merriweather/merriweather-v33-latin-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Merriweather';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/merriweather/merriweather-v33-latin-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Merriweather';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/merriweather/merriweather-v33-latin-700.woff2') format('woff2');
+}
+
 @custom-variant dark (&:is(.dark *));
 
 /* ── Design tokens ───────────────────────────────────────────────────────── */
@@ -217,6 +382,23 @@
   cursor: pointer;
   border: none;
   box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 3px 10px rgba(0,0,0,0.18), 0 0 0 4px color-mix(in srgb, var(--funnel-primary) 20%, transparent);
+}
+
+/* Funnel-Datums-Kalender (react-day-picker im DateInlinePicker) — ausgewählter Tag
+   als gefüllter Kreis in Funnel-Farbe mit weißer Zahl (Google-Date-Picker-Pattern,
+   Stavros-Vorgabe Aufgabe 67-Polish), statt des rdp-Default-Outline-Rings. */
+.lp-daypicker .rdp-selected {
+  font-size: inherit;
+}
+.lp-daypicker .rdp-selected .rdp-day_button {
+  background-color: var(--rdp-accent-color);
+  border: none;
+  border-radius: 9999px;
+  color: #ffffff;
+  font-weight: 600;
+}
+.lp-daypicker .rdp-day_button {
+  border-radius: 9999px;
 }
 
 @layer base {

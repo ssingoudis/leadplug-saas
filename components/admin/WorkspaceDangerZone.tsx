@@ -51,7 +51,7 @@ export default function WorkspaceDangerZone({ tenantId, companyName, isActive, f
       router.push('/dashboard/admin')
     } catch {
       setShowDelete(false)
-      setActionError('Löschen fehlgeschlagen. Der Workspace wurde nicht verändert — bitte erneut versuchen.')
+      setActionError('Löschen fehlgeschlagen. Das Konto wurde nicht verändert — bitte erneut versuchen.')
       setBusy(false)
     }
   }
@@ -78,7 +78,7 @@ export default function WorkspaceDangerZone({ tenantId, companyName, isActive, f
       <div className="mt-3 flex flex-col gap-3">
         <div className={rowBox}>
           <div>
-            <p className="text-sm font-medium text-gray-900 dark:text-white">{isActive ? 'Workspace deaktivieren' : 'Workspace reaktivieren'}</p>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">{isActive ? 'Konto deaktivieren' : 'Konto reaktivieren'}</p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {isActive ? 'Alle Funnels gehen offline — eingebettete iFrames zeigen nichts mehr.' : 'Funnels gehen wieder online.'}
             </p>
@@ -95,8 +95,8 @@ export default function WorkspaceDangerZone({ tenantId, companyName, isActive, f
 
         <div className={rowBox}>
           <div>
-            <p className="text-sm font-medium text-gray-900 dark:text-white">Workspace löschen</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Entfernt Workspace, Funnels & Leads unwiderruflich.</p>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">Konto löschen</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Entfernt Konto, Funnels & Leads unwiderruflich.</p>
           </div>
           <button
             type="button"
@@ -111,10 +111,10 @@ export default function WorkspaceDangerZone({ tenantId, companyName, isActive, f
 
       {showToggle && (
         <ConfirmModal
-          title={isActive ? 'Workspace deaktivieren?' : 'Workspace reaktivieren?'}
+          title={isActive ? 'Konto deaktivieren?' : 'Konto reaktivieren?'}
           message={isActive
-            ? 'Alle Funnels dieses Workspaces gehen offline. Eingebettete iFrames auf Kundenseiten zeigen dann nichts mehr. Lässt sich jederzeit rückgängig machen.'
-            : 'Die Funnels dieses Workspaces gehen wieder online.'}
+            ? 'Alle Funnels dieses Kontos gehen offline. Eingebettete iFrames auf Kundenseiten zeigen dann nichts mehr. Lässt sich jederzeit rückgängig machen.'
+            : 'Die Funnels dieses Kontos gehen wieder online.'}
           confirmLabel={isActive ? 'Deaktivieren' : 'Reaktivieren'}
           danger={isActive}
           busy={busy}
@@ -194,7 +194,7 @@ function TypeNameModal({ name, funnelCount, leadCount, busy, onClose, onConfirm 
               <TriangleAlert size={18} className="text-red-500" />
             </div>
             <div className="min-w-0">
-              <h3 className="mb-1 text-sm font-bold text-gray-900 dark:text-white">Workspace unwiderruflich löschen?</h3>
+              <h3 className="mb-1 text-sm font-bold text-gray-900 dark:text-white">Konto unwiderruflich löschen?</h3>
               <p className="text-sm leading-relaxed text-gray-500 dark:text-gray-400">
                 <span className="font-semibold text-gray-700 dark:text-gray-300">{name}</span> wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
               </p>

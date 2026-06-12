@@ -23,7 +23,13 @@ const MAX_WIDTH_PRESETS = [
 
 const FONT_OPTIONS: Array<{ value: FunnelFont; label: string }> = [
   { value: "system", label: "System (lädt schneller)" },
+  { value: "dm-sans", label: "DM Sans" },
   { value: "inter", label: "Inter" },
+  { value: "lato", label: "Lato" },
+  { value: "merriweather", label: "Merriweather (Serife)" },
+  { value: "montserrat", label: "Montserrat" },
+  { value: "nunito", label: "Nunito" },
+  { value: "open-sans", label: "Open Sans" },
   { value: "poppins", label: "Poppins" },
   { value: "roboto", label: "Roboto" },
 ];

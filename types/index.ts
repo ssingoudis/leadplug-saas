@@ -1,6 +1,8 @@
 // Self-hosted Fonts unter public/fonts/ (DSGVO-konform, keine Google-Requests).
-// "system" = System-Font-Stack ohne Download.
-export type FunnelFont = "system" | "inter" | "poppins" | "roboto"
+// "system" = System-Font-Stack ohne Download. Aufgabe 66: +6 Familien (merriweather = Serife).
+export type FunnelFont =
+  | "system" | "inter" | "poppins" | "roboto"
+  | "montserrat" | "open-sans" | "lato" | "nunito" | "dm-sans" | "merriweather"
 
 export interface FunnelTheme {
   primaryColor: string         // Markenfarbe (Pflicht). Alle abgeleiteten Farben (Hover, Border, Muted-Text, Input-BG) werden daraus + textColor/backgroundColor berechnet.
@@ -31,7 +33,8 @@ export type QuestionType =
 
 // Aufgabe 50: Marker-Stil der Antwort-Optionen bei single_choice/multi_choice/dropdown.
 // 'letters' = A/B/C/D (Default), 'numbers' = 1/2/3, 'none' = kein Chip.
-export type OptionMarker = 'letters' | 'numbers' | 'none'
+// Aufgabe 65: 'checkbox' = leere Box, die bei Auswahl einen Haken in Brand-Farbe bekommt.
+export type OptionMarker = 'letters' | 'numbers' | 'none' | 'checkbox'
 
 export interface Option {
   label: string
