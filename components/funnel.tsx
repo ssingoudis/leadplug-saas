@@ -49,8 +49,9 @@ import type {
 } from "@/types";
 
 // Aufgabe 50: Marker-String einer Antwort-Option je nach Stil. null = kein Chip rendern.
+// Aufgabe 65: 'checkbox' rendert keinen Text-Chip — die Haken-Box kommt aus renderOptionContent.
 function optionMarkerFor(marker: OptionMarker | undefined, idx: number): string | null {
-  if (marker === "none") return null;
+  if (marker === "none" || marker === "checkbox") return null;
   if (marker === "numbers") return String(idx + 1);
   return String.fromCharCode(65 + idx); // 'letters' (Default)
 }
@@ -131,11 +132,19 @@ const SYSTEM_FONT =
   '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
 // Self-hosted fonts loaded via @font-face in app/globals.css (DSGVO-konform).
+// Aufgabe 66: +6 Familien. Merriweather ist die Serife → eigener Serif-Fallback-Stack.
+const SERIF_FALLBACK = 'Georgia, "Times New Roman", serif';
 const FONT_STACKS: Record<FunnelFont, string> = {
-  system:  SYSTEM_FONT,
-  inter:   `'Inter', ${SYSTEM_FONT}`,
-  poppins: `'Poppins', ${SYSTEM_FONT}`,
-  roboto:  `'Roboto', ${SYSTEM_FONT}`,
+  system:         SYSTEM_FONT,
+  inter:          `'Inter', ${SYSTEM_FONT}`,
+  poppins:        `'Poppins', ${SYSTEM_FONT}`,
+  roboto:         `'Roboto', ${SYSTEM_FONT}`,
+  montserrat:     `'Montserrat', ${SYSTEM_FONT}`,
+  "open-sans":    `'Open Sans', ${SYSTEM_FONT}`,
+  lato:           `'Lato', ${SYSTEM_FONT}`,
+  nunito:         `'Nunito', ${SYSTEM_FONT}`,
+  "dm-sans":      `'DM Sans', ${SYSTEM_FONT}`,
+  merriweather:   `'Merriweather', ${SERIF_FALLBACK}`,
 };
 
 // =============================================================================
@@ -463,7 +472,8 @@ export function Funnel({
   const showWeiterButton = !isChoiceType;
 
   // Aufgabe 59: „Mittig" ist ein Layout-Modus für die ganze Karte, nicht nur die Überschrift.
-  // Zentriert werden kompakte Inline-Gruppen (Rating-Sterne, Skala-Chips) + die Button-Zeile.
+  // Zentriert werden kompakte Inline-Gruppen (Rating-Sterne, Skala-Chips, Kalender — letzterer
+  // seit Aufgabe 65) + die Button-Zeile.
   // Vollbreite Elemente (Optionen, Text-Inputs, Slider, Checkbox-Box) bleiben unverändert —
   // die sind von Natur aus symmetrisch, zentrierter Input-Text wäre UX-Murks.
   const isCenteredLayout = funnel.titleAlignment === "center";
@@ -781,9 +791,16 @@ export function Funnel({
   // entstand die Antwort nur onChange → "Default akzeptiert" wurde nie übermittelt.
   // Beim Anzeigen eines Steps werden fehlende Slider-Werte einmalig committed — exakt
   // mit derselben Fallback-Kette, die auch die Anzeige nutzt (Wert == Anzeige garantiert).
+  // Aufgabe 67-Polish: Datum analog — der heutige Tag (bzw. der konfigurierte Default,
+  // geklemmt auf min/max) wird beim Anzeigen committed → der Kalender zeigt sofort den
+  // gefüllten Kreis und der OK-Button ist konsistent aktiv (Stavros-Vorgabe).
   // editMode: aus (Editor-Preview soll answers nicht anfassen). isSubmitted: aus.
   useEffect(() => {
     if (editMode || isSubmitted || !currentQuestion) return;
+    const todayIso = () => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    };
     const updates: Record<string, string> = {};
     if (
       currentQuestion.kind !== "custom" &&
@@ -795,13 +812,31 @@ export function Funnel({
         updates[currentQuestion.id] = String(cfg.default ?? cfg.min ?? 0);
       }
     }
+    if (
+      currentQuestion.kind !== "custom" &&
+      currentQuestion.kind !== "welcome" &&
+      currentQuestion.questionType === "date"
+    ) {
+      const cfg = currentQuestion.config as DateConfig;
+      if ((answers[currentQuestion.id] ?? "") === "") {
+        // ISO-Strings vergleichen lexikographisch korrekt — kein Date-Parsing nötig.
+        let v = cfg.default || todayIso();
+        if (cfg.min && v < cfg.min) v = cfg.min;
+        if (cfg.max && v > cfg.max) v = cfg.max;
+        updates[currentQuestion.id] = v;
+      }
+    }
     if (currentQuestion.kind === "custom") {
       for (const f of currentQuestion.customFields ?? []) {
-        if (!f.visible || f.type !== "slider") continue;
+        if (!f.visible) continue;
         if ((answers[f.key] ?? "") !== "") continue;
-        const min = f.sliderMin ?? 0;
-        const max = f.sliderMax ?? 100;
-        updates[f.key] = String(f.sliderDefault ?? Math.floor((min + max) / 2));
+        if (f.type === "slider") {
+          const min = f.sliderMin ?? 0;
+          const max = f.sliderMax ?? 100;
+          updates[f.key] = String(f.sliderDefault ?? Math.floor((min + max) / 2));
+        } else if (f.type === "date") {
+          updates[f.key] = todayIso();
+        }
       }
     }
     if (Object.keys(updates).length > 0) {
@@ -1379,19 +1414,25 @@ export function Funnel({
                       }
 
                       // Aufgabe 39 Polish: Date
+                      // Aufgabe 65: Kalender folgt als kompaktes Element dem „Mittig"-Layout —
+                      // auch hier im Karten-Zweig (seit dem Karten-Modell der Standard-Pfad für
+                      // Datumsfragen, 1-Feld-Karte rendert wie Einzelfrage).
                       if (field.type === "date") {
+                        // Kein Feld-Label überm Kalender (Stavros-Entscheid Aufgabe 65):
+                        // ein Kalender ist selbsterklärend, Kontext liefert der Karten-Titel.
                         return (
                           <div key={field.key} data-edit-field={cardFieldRef} style={{ ...editCursor, ...hl(cardFieldRef) }}>
-                            {customFieldLabel(field)}
-                            <DateInlinePicker
-                              value={fieldValue}
-                              onChange={(iso) =>
-                                setAnswers((prev) => ({ ...prev, [field.key]: iso }))
-                              }
-                              primaryColor={theme.primaryColor}
-                              textColor={theme.textColor}
-                              borderRadius={theme.borderRadius}
-                            />
+                            <div className={isCenteredLayout ? "flex justify-center" : undefined}>
+                              <DateInlinePicker
+                                value={fieldValue}
+                                onChange={(iso) =>
+                                  setAnswers((prev) => ({ ...prev, [field.key]: iso }))
+                                }
+                                primaryColor={theme.primaryColor}
+                                textColor={theme.textColor}
+                                borderRadius={theme.borderRadius}
+                              />
+                            </div>
                           </div>
                         );
                       }
@@ -1553,9 +1594,14 @@ export function Funnel({
                         {letter}
                       </span>
                     );
-                    const multiCheckbox = isMultiple ? (
+                    // Aufgabe 65: Marker-Stil 'checkbox' rendert die Haken-Box für ALLE Choice-Typen
+                    // (bei multi_choice ersetzt sie die bisherige Zusatz-Box — keine Doppel-Box).
+                    // Im editMode übernimmt die Box die Drag-Handle-Rolle des Letter-Chips.
+                    const isCheckboxMarker = currentQuestion.optionMarker === "checkbox";
+                    const multiCheckbox = (isMultiple || isCheckboxMarker) ? (
                       <span
-                        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors"
+                        {...(isCheckboxMarker ? (dragListeners ?? {}) : {})}
+                        className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors${isCheckboxMarker && dragListeners ? " cursor-grab active:cursor-grabbing" : ""}`}
                         style={{
                           borderColor: isSelected ? theme.primaryColor : theme.borderColor,
                           backgroundColor: isSelected ? theme.primaryColor : theme.backgroundColor,
@@ -1781,12 +1827,18 @@ export function Funnel({
                   </div>
                 )}
 
-                {/* date — Inline-Kalender via react-day-picker (lazy-loaded) */}
+                {/* date — Inline-Kalender via react-day-picker (lazy-loaded).
+                    Aufgabe 65: der Kalender ist ein kompaktes Inline-Element wie Rating/Skala
+                    und folgt deshalb dem „Mittig"-Layout (war in Aufgabe 59 vergessen worden). */}
                 {currentQuestion.questionType === "date" && (() => {
                   const dateCfg = currentQuestion.config as DateConfig;
                   const value = answers[currentQuestion.id] ?? dateCfg.default ?? "";
                   return (
-                    <div data-edit-field="text_input" style={{ ...hl("text_input") }}>
+                    <div
+                      data-edit-field="text_input"
+                      className={isCenteredLayout ? "flex justify-center" : undefined}
+                      style={{ ...hl("text_input") }}
+                    >
                       <DateInlinePicker
                         value={value}
                         onChange={(iso) =>

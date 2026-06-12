@@ -50,20 +50,25 @@ export default function DateInlinePicker({
   const fromDate = useMemo(() => parseIso(min ?? ""), [min]);
   const toDate = useMemo(() => parseIso(max ?? ""), [max]);
 
-  // CSS-Variablen für react-day-picker overriden — dock an unser Theme an
+  // CSS-Variablen für react-day-picker — MÜSSEN als Inline-Style auf dem DayPicker-
+  // Wurzel-Element (.rdp-root) landen: dessen mitgeliefertes Stylesheet deklariert
+  // dieselben Variablen direkt auf .rdp-root, und direkte Deklaration schlägt
+  // vererbte Werte. Auf einem Wrapper-Div gesetzt griffen sie deshalb NIE — der
+  // Kalender blieb im Bibliotheks-Blau (Stavros-Befund mit orangem Funnel, 2026-06-12).
+  // Ausgewählter Tag = GEFÜLLTER Kreis in Brand-Farbe mit weißer Zahl (Google-Pattern);
+  // der Fill-Override liegt in globals.css unter .lp-daypicker.
   const cssVars = {
     "--rdp-accent-color": primaryColor,
     "--rdp-accent-background-color": `color-mix(in srgb, ${primaryColor} 12%, transparent)`,
-    "--rdp-day_button-border-radius": borderRadius,
-    "--rdp-selected-border": `2px solid ${primaryColor}`,
     "--rdp-range_middle-color": textColor,
     color: textColor,
   } as React.CSSProperties;
 
   return (
     <div className="mb-3 inline-block rounded-lg border p-2" style={{ borderColor: `color-mix(in srgb, ${primaryColor} 25%, transparent)`, borderRadius }}>
-      <div style={cssVars}>
+      <div className="lp-daypicker">
         <DayPicker
+          style={cssVars}
           mode="single"
           selected={selected}
           onSelect={(d) => onChange(d ? toIso(d) : "")}

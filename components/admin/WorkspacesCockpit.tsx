@@ -129,8 +129,8 @@ function RowActions({ w, busy, onPlan, onToggleActive }: {
       )}
       {confirmDeactivate && (
         <ConfirmModal
-          title="Workspace deaktivieren?"
-          message="Alle Funnels dieses Workspaces gehen offline — eingebettete iFrames auf Kundenseiten zeigen dann nichts mehr. Lässt sich jederzeit rückgängig machen."
+          title="Konto deaktivieren?"
+          message="Alle Funnels dieses Kontos gehen offline — eingebettete iFrames auf Kundenseiten zeigen dann nichts mehr. Lässt sich jederzeit rückgängig machen."
           confirmLabel="Deaktivieren"
           danger
           busy={busy}
@@ -226,7 +226,7 @@ export default function WorkspacesCockpit({ workspaces, myEmail }: {
 
       {/* Kennzahlen */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatTile value={kpi.activeWorkspaces} label="Aktive Workspaces" />
+        <StatTile value={kpi.activeWorkspaces} label="Aktive Konten" />
         <StatTile value={kpi.activeFunnels} label="Aktive Formulare" />
         <StatTile value={kpi.views} label="Aufrufe" />
         <StatTile value={kpi.leads} label="Leads" />
@@ -235,7 +235,7 @@ export default function WorkspacesCockpit({ workspaces, myEmail }: {
       {/* Tabelle — Karten-Look wie <Card> (rounded-2xl + shadow-sm, design-system.md §4) */}
       <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-sm font-bold text-gray-900 dark:text-white">Workspaces</h2>
+          <h2 className="text-sm font-bold text-gray-900 dark:text-white">Konten</h2>
           <div className="flex flex-col gap-2 sm:flex-row">
             <div className="relative">
               <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -266,7 +266,7 @@ export default function WorkspacesCockpit({ workspaces, myEmail }: {
           <div className="min-w-220">
           {/* Kopf */}
           <div className="flex items-center gap-3 whitespace-nowrap border-b border-gray-100 px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:border-gray-800 dark:text-gray-500">
-            <span className="w-64">Workspace</span>
+            <span className="w-64">Konto</span>
             <span className="flex-1">Owner</span>
             <span className="w-28">Status</span>
             <span className="w-20 text-center">Plan</span>
@@ -278,7 +278,7 @@ export default function WorkspacesCockpit({ workspaces, myEmail }: {
           </div>
 
           {filtered.length === 0 ? (
-            <p className="px-2 py-8 text-center text-sm text-gray-400">Keine Workspaces gefunden.</p>
+            <p className="px-2 py-8 text-center text-sm text-gray-400">Keine Konten gefunden.</p>
           ) : (
             filtered.map((w) => {
               const isMe = !!w.ownerEmail && w.ownerEmail.toLowerCase() === myEmail

@@ -189,7 +189,9 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
       questionType: fieldTypeToQuestionType(f.field_type),
       visible: f.visible ?? true,
       optionMarker:
-        fcfg.optionMarker === 'numbers' || fcfg.optionMarker === 'none' ? fcfg.optionMarker : 'letters',
+        fcfg.optionMarker === 'numbers' || fcfg.optionMarker === 'none' || fcfg.optionMarker === 'checkbox'
+          ? fcfg.optionMarker
+          : 'letters',
       config: f.config ?? {},
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       options: opts.map((o: Record<string, any>) => ({

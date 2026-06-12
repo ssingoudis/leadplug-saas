@@ -24,7 +24,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </span>
         <div>
           <h1 className="text-base font-bold text-gray-900 dark:text-white">Plattform-Admin</h1>
-          <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Alle Workspaces der Plattform — nur für dich sichtbar.</p>
+          {/* Wording-Styleguide: Tenants heißen im UI „Konto" — „Workspace" ist fürs Whitelabel-Feature reserviert. */}
+          <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Alle Konten der Plattform — nur für dich sichtbar.</p>
         </div>
       </div>
       {children}

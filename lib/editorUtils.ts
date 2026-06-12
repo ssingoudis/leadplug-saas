@@ -944,9 +944,11 @@ export function dbToEditorState(
       scaleMax: questionType === "scale" && cfg.max != null ? String(cfg.max) : "10",
       scaleLabelLeft: questionType === "scale" && typeof cfg.labelLeft === "string" ? cfg.labelLeft : "",
       scaleLabelRight: questionType === "scale" && typeof cfg.labelRight === "string" ? cfg.labelRight : "",
-      // Aufgabe 50: Marker-Stil aus config (Default 'letters' wenn nicht gesetzt).
+      // Aufgabe 50: Marker-Stil aus config (Default 'letters' wenn nicht gesetzt). +'checkbox' seit 65.
       optionMarker:
-        cfg.optionMarker === "numbers" || cfg.optionMarker === "none" ? cfg.optionMarker : "letters",
+        cfg.optionMarker === "numbers" || cfg.optionMarker === "none" || cfg.optionMarker === "checkbox"
+          ? cfg.optionMarker
+          : "letters",
       // Aufgabe 40 Polish: existing key aus DB → kein Auto-Sync mehr (Stabilität)
       _keyTouched: true,
     };

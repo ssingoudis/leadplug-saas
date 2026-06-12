@@ -66,14 +66,23 @@ export default function SignupPage() {
             </svg>
           </div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">E-Mail bestätigen</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-5">
-            Wir haben einen Bestätigungslink an<br />
-            <span className="font-semibold text-gray-700 dark:text-gray-200">{email}</span><br />
-            geschickt. Über den Link wird das Konto aktiviert.
+          {/* Aufgabe 67: Adresse bricht nie mittendrin um (inline-block + nowrap rückt sie
+              notfalls als Ganzes in die nächste Zeile); Login-Rückweg als Primary-Button —
+              einzige Aktion der Seite. */}
+          <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-2">
+            Ein Bestätigungslink ist unterwegs an{' '}
+            <span className="inline-block whitespace-nowrap font-semibold text-gray-700 dark:text-gray-200">{email}</span>.
+            Über den Link wird das Konto aktiviert.
           </p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">
+          <p className="text-xs text-gray-400 dark:text-gray-500 mb-6">
             Keine E-Mail erhalten? Bitte den Spam-Ordner prüfen.
           </p>
+          <a
+            href="/login"
+            className="inline-flex w-full items-center justify-center rounded-2xl bg-primary px-5 py-3.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover transition-colors"
+          >
+            Zurück zur Anmeldung
+          </a>
         </div>
       </div>
     )

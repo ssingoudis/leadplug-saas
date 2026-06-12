@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2, Plus, Eye, EyeOff, Pencil, AlertTriangle, Lock } from "lucide-react";
+import { Trash2, Plus, Eye, EyeOff, Pencil, AlertTriangle, Lock, SquareCheck } from "lucide-react";
 import type { EditorQuestion, EditorOption, ContactFieldConfig, OptionMarker } from "@/types";
 import { OptionsEditor } from "./OptionsEditor";
 import { SelMark } from "./selection";
@@ -93,7 +93,8 @@ function QuestionFieldProps({
               />
             </SelMark>
           </Field>
-          <Field label="Nummerierung der Optionen">
+          {/* Aufgabe 65: vierter Stil „Checkbox" → Label von „Nummerierung" auf „Markierung" verallgemeinert. */}
+          <Field label="Markierung der Optionen">
             <MarkerStyleControl
               value={question.optionMarker ?? "letters"}
               onChange={(m) => onPatch({ optionMarker: m })}
@@ -510,9 +511,11 @@ function MarkerStyleControl({
   value: OptionMarker;
   onChange: (m: OptionMarker) => void;
 }) {
-  const opts: { key: OptionMarker; label: string; title: string }[] = [
+  const opts: { key: OptionMarker; label: React.ReactNode; title: string }[] = [
     { key: "letters", label: "A B C", title: "Buchstaben" },
     { key: "numbers", label: "1 2 3", title: "Zahlen" },
+    // Aufgabe 65: leere Box, die bei Auswahl einen Haken bekommt (Tally-Pattern).
+    { key: "checkbox", label: <SquareCheck size={16} className="mx-auto" />, title: "Checkbox mit Haken" },
     { key: "none", label: "ohne", title: "Kein Marker" },
   ];
   return (
