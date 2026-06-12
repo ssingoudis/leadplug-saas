@@ -3,7 +3,10 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import { ChevronLeft, Check, CircleAlert, GripVertical, Plus, Trash2, Copy } from "lucide-react";
-import { motion, AnimatePresence, type Variants } from "framer-motion";
+// Aufgabe 64: framer-motion ist komplett raus aus dem Widget — der Folien-Übergang
+// ist eine reine CSS-Animation (siehe .funnel-step-enter-* in globals.css). JS-getriebene
+// Springs liefen auf dem Main-Thread und ruckelten in Firefox/Mobile; CSS-transform/opacity
+// animiert der Compositor. Nebeneffekt: ~30 KB weniger Widget-Bundle.
 
 // Lazy-loaded Inline-Kalender — Bundle wird nur geladen wenn der Funnel ein date-Feld hat.
 // ~30KB (react-day-picker + date-fns) bleiben aus dem Initial-Bundle.
@@ -192,15 +195,12 @@ function mix(hex1: string, hex2: string, pct: number): string {
 
 
 // =============================================================================
-// SLIDE-ANIMATION-VARIANTS (Typeform-Stil) — Spring-Slide auf Y-Achse
+// SLIDE-ANIMATION (Typeform-Stil) — Aufgabe 64: reine CSS-Animation.
+// Beim Step-Wechsel remountet der key={`q-${currentStep}`}-Wrapper, die neue Folie
+// gleitet richtungsabhängig rein (.funnel-step-enter-fwd/-back in globals.css),
+// die alte verschwindet im Schnitt. Den harten Höhensprung im Embed glättet die
+// height-Transition in embed.js.
 // =============================================================================
-
-const STEP_SLIDE_VARIANTS: Variants = {
-  enter: (direction: number) => ({ y: direction > 0 ? 80 : -80, opacity: 0 }),
-  center: { y: 0, opacity: 1 },
-  exit: (direction: number) => ({ y: direction > 0 ? -80 : 80, opacity: 0 }),
-};
-const STEP_SLIDE_TRANSITION = { type: "spring" as const, stiffness: 300, damping: 30 };
 
 // =============================================================================
 // COMPONENT
@@ -361,6 +361,9 @@ export function Funnel({
   const [currentStep, setCurrentStep] = useState(initialStep ?? 0);
   // C.1c — Slide-Animations-Richtung (1 = forward/slide-up, -1 = backward/slide-down). In editMode unbenutzt.
   const [slideDirection, setSlideDirection] = useState<1 | -1>(1);
+  // Aufgabe 64: erst ab der ersten Navigation animieren — der initiale Render soll
+  // nicht reinsliden (Äquivalent zum früheren AnimatePresence initial={false}).
+  const hasNavigatedRef = useRef(false);
 
   // Aufgabe 58 — Logik-Sprünge: Regeln nach Quell-Page gruppiert (O(1)-Lookup beim Advance).
   const rulesBySource = useMemo(() => groupRulesBySource(logicRules ?? []), [logicRules]);
@@ -373,6 +376,59 @@ export function Funnel({
 
   const [isSubmitted, setIsSubmitted] = useState(initialSubmitted ?? false);
   const [honeypot,    setHoneypot]    = useState("");
+
+  // Aufgabe 64: Browser-Zurück (Button/Wisch-Geste) geht eine Frage zurück statt aus
+  // dem Funnel raus. Pro Step-Advance wird ein History-Eintrag gepusht (URL unverändert,
+  // Next-Router-State wird gemerged statt ersetzt); popstate führt den Schritt aus.
+  // Funktioniert auch im iFrame-Embed (iFrames teilen die Session-History der Host-Seite).
+  // Live-only — Builder-Canvas (editMode), read-only Preview (onFieldClick) und
+  // Editor-Test-Modus (onStepChange) fassen die Browser-History nicht an.
+  const historyEnabled = !editMode && !onFieldClick && !onStepChange;
+  const currentStepRef = useRef(currentStep);
+  currentStepRef.current = currentStep;
+  const isSubmittedRef = useRef(isSubmitted);
+  isSubmittedRef.current = isSubmitted;
+  const visibleCountRef = useRef(visibleQuestions.length);
+  visibleCountRef.current = visibleQuestions.length;
+
+  const pushStepToHistory = useCallback((idx: number) => {
+    if (!historyEnabled || typeof window === "undefined") return;
+    try {
+      window.history.pushState({ ...window.history.state, lpStep: idx }, "");
+    } catch {
+      // Sandbox/Quota — Browser-Zurück verhält sich dann einfach wie vorher (Seiten-Exit).
+    }
+  }, [historyEnabled]);
+
+  useEffect(() => {
+    if (!historyEnabled || typeof window === "undefined") return;
+    // Basis-Eintrag als Step 0 markieren, damit popstate-Ziele erkennbar sind.
+    try {
+      window.history.replaceState({ ...window.history.state, lpStep: 0 }, "");
+    } catch { /* siehe pushStepToHistory */ }
+    const onPop = (e: PopStateEvent) => {
+      // Nach dem Absenden bleibt der Success-Screen stehen — kein Zurück ins Formular.
+      if (isSubmittedRef.current) return;
+      const state = e.state as { lpStep?: number } | null;
+      const target = typeof state?.lpStep === "number" ? state.lpStep : 0;
+      const cur = currentStepRef.current;
+      if (target === cur) return;
+      hasNavigatedRef.current = true;
+      if (target < cur) {
+        // Wie der interne Zurück-Button: auf den tatsächlich besuchten Step (History-Stack).
+        setSlideDirection(-1);
+        const prev = stepHistoryRef.current.pop();
+        setCurrentStep(prev !== undefined && prev < cur ? prev : Math.max(0, cur - 1));
+      } else {
+        // Vorwärts-Button: Einträge existieren nur für bereits besuchte (= validierte) Steps.
+        stepHistoryRef.current.push(cur);
+        setSlideDirection(1);
+        setCurrentStep(Math.min(target, Math.max(0, visibleCountRef.current - 1)));
+      }
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [historyEnabled]);
 
   // Aufgabe 56: dezentes Validierungs-Feedback in Karten (Stavros: "subtil, Ausrufezeichen
   // rechts"). Ein Feld gilt als berührt, sobald es einmal den Fokus verlor — erst DANN
@@ -559,15 +615,17 @@ export function Funnel({
         if (dest < visibleQuestions.length) {
           const advancingPageId = currentQuestion?.pageId;
           stepHistoryRef.current.push(currentStep);
+          hasNavigatedRef.current = true;
           setSlideDirection(1);
           setCurrentStep(dest);
+          pushStepToHistory(dest);
           if (advancingPageId) {
             onPageAdvanced?.(advancingPageId, { answers: answersSnapshot, contact: {} });
           }
         }
       }, 250);
     },
-    [currentStep, visibleQuestions.length, editMode, isLastQuestion, autoFinish, currentQuestion, onPageAdvanced, answers, resolveAdvanceIndex],
+    [currentStep, visibleQuestions.length, editMode, isLastQuestion, autoFinish, currentQuestion, onPageAdvanced, answers, resolveAdvanceIndex, pushStepToHistory],
   );
 
   // Goes back one step. The zurück button is disabled at step 0.
@@ -576,6 +634,15 @@ export function Funnel({
   const handleBack = () => {
     if (editMode) return;
     if (currentStep > 0) {
+      // Aufgabe 64: im Live-Modus läuft Zurück über die Browser-History (history.back()
+      // → popstate führt den Schritt aus) — EIN Pfad für Widget-Button UND Browser-/
+      // Gesten-Zurück, beide bleiben synchron. currentStep > 0 garantiert, dass ein
+      // lpStep-Eintrag dahinter liegt (jeder Advance pusht einen).
+      if (historyEnabled && typeof window !== "undefined") {
+        window.history.back();
+        return;
+      }
+      hasNavigatedRef.current = true;
       setSlideDirection(-1);
       const prev = stepHistoryRef.current.pop();
       setCurrentStep(prev !== undefined && prev < currentStep ? prev : currentStep - 1);
@@ -599,12 +666,14 @@ export function Funnel({
     }
     const advancingPageId = currentQuestion?.pageId;
     stepHistoryRef.current.push(currentStep);
+    hasNavigatedRef.current = true;
     setSlideDirection(1);
     setCurrentStep(dest);
+    pushStepToHistory(dest);
     if (advancingPageId) {
       onPageAdvanced?.(advancingPageId, { answers, contact: {} });
     }
-  }, [editMode, isLastQuestion, autoFinish, currentQuestion, onPageAdvanced, answers, resolveAdvanceIndex, currentStep]);
+  }, [editMode, isLastQuestion, autoFinish, currentQuestion, onPageAdvanced, answers, resolveAdvanceIndex, currentStep, pushStepToHistory]);
 
   // Multiple-choice: toggles `value` in/out of the comma-separated answer string for `questionId`.
   const handleToggleMultiple = useCallback(
@@ -752,6 +821,22 @@ export function Funnel({
     }, 600);
     return () => window.clearTimeout(timer);
   }, [answers, onAnswersChange, editMode, isSubmitted]);
+
+  // Aufgabe 64: Date-Picker-Chunk vorladen, wenn der Funnel irgendwo ein Datumsfeld hat.
+  // Sonst lädt der Lazy-Chunk (react-day-picker, ~30KB) erst beim Step-Wechsel AUF die
+  // Datums-Folie — mitten in der Slide-Animation (Skeleton-Swap + Ruckler). Idle-Load
+  // nach Mount hält den Initial-Render schlank; Funnels ohne Datum laden weiterhin nichts.
+  useEffect(() => {
+    const hasDateField = questions.some(
+      (q) => q.questionType === "date" || (q.customFields ?? []).some((f) => f.type === "date"),
+    );
+    if (!hasDateField) return;
+    // 800ms nach Mount: nach dem Initial-Render, aber vor dem ersten Step-Wechsel.
+    const t = window.setTimeout(() => {
+      import("./funnel/DateInlinePicker").catch(() => {});
+    }, 800);
+    return () => window.clearTimeout(t);
+  }, [questions]);
 
   // Sends the widget height to the parent frame after every layout change via postMessage.
   // The ResizeObserver re-fires automatically on step transitions and after fonts load.
@@ -948,16 +1033,18 @@ export function Funnel({
             aria-hidden="true"
             style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 0, height: 0 }}
           />
-          <AnimatePresence mode="wait" custom={slideDirection} initial={false}>
-            <motion.div
-              key={`q-${currentStep}`}
-              custom={slideDirection}
-              variants={STEP_SLIDE_VARIANTS}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={STEP_SLIDE_TRANSITION}
-            >
+          {/* Aufgabe 64: key-Remount + CSS-Enter-Animation (richtungsabhängig). Erst ab der
+              ersten Navigation — der Initial-Render steht sofort, ohne reinzusliden. */}
+          <div
+            key={`q-${currentStep}`}
+            className={
+              hasNavigatedRef.current
+                ? slideDirection > 0
+                  ? "funnel-step-enter-fwd"
+                  : "funnel-step-enter-back"
+                : undefined
+            }
+          >
 
             {/* --------------------------------------------------------------
                 Question step (Kontaktformular-Zweig in Aufgabe 52D entfernt)
@@ -1913,8 +2000,7 @@ export function Funnel({
                 </button>
               </div>
             )}
-            </motion.div>
-          </AnimatePresence>
+          </div>
         </div>
 
       </div>
