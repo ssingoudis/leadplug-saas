@@ -50,9 +50,14 @@
 | `bestattungsvorsorge` | `demo-bestattungsvorsorge` | Dienstleistung | Akuter Trauerfall→Sofortkontakt, würdevoller Ton |
 | `schaedlingsbekaempfung` | `demo-schaedlingsbekaempfung` | Dienstleistung | Dringlichkeit VOR Objekt-Frage (Gastro-Leads behalten die Notfall-Info), Notfall + Gastro/HACCP→Sofortkontakt |
 
-Dazu: `agenturen` = Dogfood-Akquise-Funnel für LeadPlug selbst (per Du, **kein Template**).
-Alle leben in Stavros' Konto, `tenant_id = 'f64b2227-2fbb-4746-83fa-9d71bf8af26f'`,
-`notification_email = 'stavrossingoudis@gmail.com'`.
+Dazu: `agenturen` = Dogfood-Akquise-Funnel für LeadPlug selbst (per Du, **kein Template** — lebt
+weiterhin in Stavros' Konto `f64b2227-2fbb-4746-83fa-9d71bf8af26f`).
+
+> 🏠 **Seit Aufgabe 68 (2026-06-12) leben alle `demo-*`-Funnels im eigenen Demo-Konto
+> „LeadPlug Demos"** (demo@leadplug.de), `tenant_id = 'cf2ed310-d5e6-403c-bd90-9a697f5dbea1'` —
+> neue Chargen mit DIESER Tenant-ID anlegen (`v_tenant := 'cf2ed310-…'`), nicht mehr mit Stavros' ID.
+> `notification_email` der Demos bleibt `stavrossingoudis@gmail.com`. Demo-Edits im Editor:
+> Login als demo@leadplug.de.
 
 > 🗑️ **Gelöscht nach Stavros-Review (2026-06-12): `haartransplantation`** (Template + Demo-Funnel,
 > war Charge 3 / Nr. 18). Lektion für den Troll-Filter: Die Branche lebt von **Bild-Selbsteinschätzung**

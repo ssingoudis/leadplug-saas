@@ -110,6 +110,22 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
+## Aufgabe 68 — Demo-Funnels in eigenes Demo-Konto umgezogen (2026-06-12)
+
+**Status: ✅ ausgeführt auf Produktion (mit Stavros-Go), verifiziert. Reine Daten-Verschiebung, KEIN Code, KEIN Schema-Change.**
+
+**Anlass (Beta-Optimierungs-Sprint, Punkt 6):** 37 Demo-Funnels lebten in Stavros' persönlichem Konto — Galerie-Spieler erzeugten Leads/Aufrufe in seinem echten Posteingang/seiner Statistik, versehentliche Edits hätten die öffentliche Galerie-Vorschau verändert. Beratungs-Entscheid: Umzug in separates Konto (Option „Flag + Filter im selben Konto" verworfen — wäre Schema-Change + Filter an jeder Query + löst das Edit-Risiko nicht).
+
+**Ausführung:** Eine atomare DO-Block-Transaktion mit Zeilenzahl-Sicherung (Abbruch bei Abweichung von den vorab gezählten Beständen). Verschoben zu Tenant `cf2ed310-d5e6-403c-bd90-9a697f5dbea1` (demo@leadplug.de, umbenannt in **„LeadPlug Demos"** — erscheint im Funnel-Tab-Titel): **37 funnels** (`slug LIKE 'demo-%'`) · **74 email_subscriptions** · **44 funnel_logic_rules** · **45 submissions** (Demo-Leads) · **30 funnel_view_logs**. Webhooks: 0. **Bei Stavros verblieben:** `agenturen` (Dogfood-Akquise), `leadplug` (TestFunnel), `592053d8`.
+
+**Verifiziert:** Demo-Konto hält exakt 37/74/44, Stavros' Konto 0 Demo-Leads, Prod-Check `https://app.leadplug.de/demo-solar` → 200 + Titel „… – LeadPlug Demos" (Galerie-Vorschau funktioniert, Tenant aktiv).
+
+**Rollback-Pfad (dokumentiert, kein Auto-Script):** identische UPDATEs zurück auf `tenant_id = 'f64b2227-2fbb-4746-83fa-9d71bf8af26f'` (gleiche WHERE-Klauseln: funnels/submissions via `slug/funnel_slug LIKE 'demo-%'`, email_subscriptions/funnel_logic_rules/funnel_view_logs via funnel_id-Subquery) + `tenants.company_name` zurück auf 'demo'.
+
+**Künftige Vorlagen-Chargen:** per SQL direkt mit `v_tenant := 'cf2ed310-…'` anlegen (Kochbuch-Muster, neue Tenant-ID). Demo-Edits: Login als demo@leadplug.de (Tipp: zweites Browser-Profil) oder SQL/MCP.
+
+---
+
 ## Aufgabe 67 — Beta-Kontaktkanal: Feedback-Widget + WhatsApp + Signup-Politur (2026-06-12)
 
 **Status:** gebaut, Build grün, Stavros-Test bestanden (Mail + WhatsApp kamen an). **Feedback ist NUR-Mail** — eine DB-Archiv-Tabelle (`beta_feedback`) wurde vorgeschlagen und von Stavros **abgelehnt** (2026-06-12); die vorbereiteten Migrations-Dateien wurden wieder entfernt, die Route hat bewusst keinen DB-Schreibzugriff. Nicht erneut vorschlagen.
