@@ -75,7 +75,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         className="min-h-screen bg-gray-100 dark:bg-background flex items-center justify-center p-4"
         style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
       >
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm p-8 max-w-sm w-full text-center">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-8 max-w-sm w-full text-center">
           <p className="text-base font-semibold text-gray-900 dark:text-white mb-2">Kein Zugang konfiguriert</p>
           <p className="text-sm text-gray-400 dark:text-gray-500 mb-6">Bitte kontaktiere den Support.</p>
           <a

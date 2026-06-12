@@ -58,7 +58,7 @@ export default function SignupPage() {
         className="min-h-screen bg-primary/5 dark:bg-background flex items-center justify-center p-4"
         style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
       >
-        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-lg w-full max-w-sm px-10 py-10 text-center">
+        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-800 w-full max-w-sm px-10 py-10 text-center">
           <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-5">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
               <rect x="2" y="4" width="20" height="16" rx="2"/>
@@ -93,7 +93,7 @@ export default function SignupPage() {
       className="min-h-screen bg-primary/5 dark:bg-background flex items-center justify-center p-4"
       style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
     >
-      <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-lg w-full max-w-sm px-10 py-10">
+      <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-800 w-full max-w-sm px-10 py-10">
         <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-1 text-center">LeadPlug</h1>
         <p className="text-sm text-gray-400 dark:text-gray-500 text-center mb-8">Konto erstellen</p>
 
