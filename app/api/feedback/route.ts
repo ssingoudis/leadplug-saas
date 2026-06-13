@@ -7,6 +7,8 @@ import { createClient } from '@/lib/supabase/server'
 // Kanal ist AUSSCHLIESSLICH die Mail an SUPPORT_EMAIL (Resend, reply-to = Absender).
 // Eine DB-Archiv-Tabelle wurde vorgeschlagen und von Stavros abgelehnt (2026-06-12)
 // — bewusst KEIN Schreibzugriff auf die Datenbank in dieser Route.
+// Aufgabe 69: optionaler Datei-Anhang (PNG/JPG/PDF, ≤ 3 MB) als Resend-Anhang —
+// weiterhin keine Storage, kein DB-Schreibzugriff.
 
 export const runtime = 'nodejs'
 
@@ -27,6 +29,24 @@ function escapeHtml(s: string): string {
     .replace(/"/g, '&quot;')
 }
 
+// Optionaler Datei-Anhang (Aufgabe 69) — Whitelist serverseitig erzwingen.
+// Bis zu 3 Dateien, zusammen ≤ 4 MB (sicher unter Vercels ~4,5 MB Body-Limit).
+const MAX_FILES = 3
+const MAX_TOTAL_BYTES = 4 * 1024 * 1024 // 4 MB gesamt
+const ALLOWED_TYPES: Record<string, string> = {
+  'image/png': '.png',
+  'image/jpeg': '.jpg',
+  'application/pdf': '.pdf',
+}
+const ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.pdf']
+
+function sanitizeFilename(name: string): string {
+  const base = name.split(/[\\/]/).pop() ?? '' // nur Basename
+  // Whitelist: nur unbedenkliche Zeichen behalten (Buchstaben, Ziffern, . _ - Leerzeichen),
+  // alles andere (Steuerzeichen, Pfad-/Sonderzeichen, Umlaute) → '_'.
+  return base.replace(/[^A-Za-z0-9._ -]/g, '_').slice(0, 100).trim()
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient()
   const {
@@ -36,17 +56,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'Nicht angemeldet.' }, { status: 401 })
   }
 
-  let body: { category?: string; message?: string; pagePath?: string }
+  // Aufgabe 69: FormData statt JSON (der optionale Anhang reist als File mit).
+  let form: FormData
   try {
-    body = await request.json()
+    form = await request.formData()
   } catch {
     return NextResponse.json({ success: false, error: 'Ungültige Anfrage.' }, { status: 400 })
   }
 
-  const category = CATEGORIES.includes(body.category as Category)
-    ? (body.category as Category)
+  const rawCategory = form.get('category')
+  const category = CATEGORIES.includes(rawCategory as Category)
+    ? (rawCategory as Category)
     : 'feedback'
-  const message = (body.message ?? '').trim()
+  const message = (form.get('message')?.toString() ?? '').trim()
   if (!message) {
     return NextResponse.json({ success: false, error: 'Nachricht fehlt.' }, { status: 400 })
   }
@@ -56,7 +78,37 @@ export async function POST(request: Request) {
       { status: 400 },
     )
   }
-  const pagePath = typeof body.pagePath === 'string' ? body.pagePath.slice(0, 300) : null
+  const pagePathRaw = form.get('pagePath')
+  const pagePath = typeof pagePathRaw === 'string' ? pagePathRaw.slice(0, 300) : null
+
+  // Optionale Anhänge — server-seitig erneut prüfen (Client nie vertrauen):
+  // Anzahl, Gesamtgröße sowie MIME-Typ UND Dateiendung jeder Datei.
+  const rawFiles = form.getAll('file').filter((f): f is File => f instanceof File && f.size > 0)
+  if (rawFiles.length > MAX_FILES) {
+    return NextResponse.json(
+      { success: false, error: `Höchstens ${MAX_FILES} Dateien.` },
+      { status: 400 },
+    )
+  }
+  if (rawFiles.reduce((sum, f) => sum + f.size, 0) > MAX_TOTAL_BYTES) {
+    return NextResponse.json(
+      { success: false, error: 'Anhänge zusammen zu groß (max. 4 MB).' },
+      { status: 400 },
+    )
+  }
+  const attachments: { filename: string; content: Buffer }[] = []
+  for (const f of rawFiles) {
+    const ext = ALLOWED_TYPES[f.type]
+    const nameExt = f.name.toLowerCase().match(/\.[a-z0-9]+$/)?.[0] ?? ''
+    if (!ext || !ALLOWED_EXTENSIONS.includes(nameExt)) {
+      return NextResponse.json(
+        { success: false, error: 'Nur PNG, JPG oder PDF erlaubt.' },
+        { status: 400 },
+      )
+    }
+    const safeName = sanitizeFilename(f.name) || `anhang${ext}`
+    attachments.push({ filename: safeName, content: Buffer.from(await f.arrayBuffer()) })
+  }
 
   // Konto-Name für den Mail-Kontext (reines Lesen über die eigene Membership, RLS).
   const { data: membership } = await supabase
@@ -103,6 +155,7 @@ export async function POST(request: Request) {
       to: supportEmail,
       replyTo: user.email ?? undefined,
       subject: `[Beta · ${CATEGORY_LABELS[category]}] ${senderEmail}`,
+      ...(attachments.length > 0 ? { attachments } : {}),
       html: `
         <div style="font-family:-apple-system,'Segoe UI',Roboto,sans-serif;font-size:14px;color:#111827;line-height:1.6;max-width:560px">
           <p style="margin:0 0 4px;font-size:16px;font-weight:700">Neue Nachricht aus der Beta</p>
@@ -114,6 +167,7 @@ export async function POST(request: Request) {
             ${metaRow('Konto', escapeHtml(tenantName))}
             ${metaRow('Seite', escapeHtml(pagePath ?? '—'))}
             ${metaRow('Gesendet', `${sentAt} Uhr`)}
+            ${attachments.length > 0 ? metaRow(attachments.length > 1 ? 'Anhänge' : 'Anhang', escapeHtml(attachments.map((a) => a.filename).join(', '))) : ''}
           </table>
           <div style="background:#f3f4f6;border-left:4px solid #4648d4;border-radius:8px;padding:12px 16px;white-space:pre-wrap;font-size:14px">${escapeHtml(message)}</div>
           <p style="margin:16px 0 0;color:#6b7280;font-size:12px">Direkt auf diese Mail antworten erreicht die Absender-Adresse (reply-to).</p>

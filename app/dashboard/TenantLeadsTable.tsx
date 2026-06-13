@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronDown, ChevronUp, Search, Check, List, Columns3, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Search, Check, List, Columns3, X, Download } from 'lucide-react'
 import {
   DndContext,
   DragOverlay,
@@ -18,6 +18,7 @@ import {
 import { Select } from '@/components/ui/Input'
 import { useSaveStatus } from '@/lib/useSaveStatus'
 import { SaveStatus } from '@/components/ui/SaveStatus'
+import { toCsv, downloadCsv, CSV_EXCEL, CSV_STANDARD, type CsvDialect } from '@/lib/csv'
 
 // ─── Status-Modell (Aufgabe 46) ───────────────────────────────────────────────
 // DB-Werte bleiben offen/kontaktiert/abgeschlossen; das UI labelt sie neu.
@@ -88,6 +89,69 @@ function displayName(s: TenantSubmission): string {
 
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })
+}
+
+function fmtTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+}
+
+// ─── CSV-Export (Aufgabe 69) ──────────────────────────────────────────────────
+// Pro Funnel: jeder Funnel bekommt genau seine Spalten. "Smart" = nur Spalten
+// mit echtem Inhalt; Choice-Slugs werden zu Labels (resolveAnswer wiederverwendet).
+
+const CSV_CONTACT_LABEL: Record<string, string> = {
+  anrede: 'Anrede', name: 'Name', email: 'E-Mail', telefon: 'Telefon',
+  plz: 'PLZ', firstName: 'Vorname', lastName: 'Nachname',
+}
+const CSV_CONTACT_ORDER = ['anrede', 'name', 'email', 'telefon', 'plz']
+
+function buildLeadsMatrix(rows: TenantSubmission[]): string[][] {
+  // Kontaktspalten: Vorzugsreihenfolge zuerst, dann weitere Keys (alphabetisch);
+  // nur die, die in mind. einer Zeile einen nicht-leeren Wert haben.
+  const presentContactKeys = new Set<string>()
+  for (const r of rows) {
+    for (const [k, v] of Object.entries(r.contact ?? {})) {
+      if ((v ?? '').trim()) presentContactKeys.add(k)
+    }
+  }
+  const contactKeys = [
+    ...CSV_CONTACT_ORDER.filter((k) => presentContactKeys.has(k)),
+    ...[...presentContactKeys].filter((k) => !CSV_CONTACT_ORDER.includes(k)).sort(),
+  ]
+
+  // Fragespalten aus den Frage-Metadaten (gleicher Funnel → gleiches Set),
+  // nur Fragen mit mind. einer nicht-leeren Antwort. Answer-Keys ohne Metadaten
+  // (Altbestand) hängen als Fallback hinten an.
+  const answeredKeys = new Set<string>()
+  for (const r of rows) {
+    for (const [k, v] of Object.entries(r.answers ?? {})) {
+      if ((v ?? '').trim()) answeredKeys.add(k)
+    }
+  }
+  const questions = rows[0]?.questions ?? []
+  const knownKeys = new Set(questions.map((q) => q.question_key))
+  const questionCols = questions.filter((q) => answeredKeys.has(q.question_key))
+  const extraAnswerKeys = [...answeredKeys].filter((k) => !knownKeys.has(k))
+
+  const header = [
+    'Datum', 'Uhrzeit', 'Status',
+    ...contactKeys.map((k) => CSV_CONTACT_LABEL[k] ?? k),
+    ...questionCols.map((q) => q.title.replace(/\?\s*$/, '')),
+    ...extraAnswerKeys,
+    'Notiz',
+  ]
+
+  const data = rows.map((r) => [
+    fmtDate(r.created_at),
+    fmtTime(r.created_at),
+    STATUS_LABEL[r.status],
+    ...contactKeys.map((k) => r.contact?.[k] ?? ''),
+    ...questionCols.map((q) => resolveAnswer(q.question_key, r.answers?.[q.question_key] ?? '', r.questions)),
+    ...extraAnswerKeys.map((k) => resolveAnswer(k, r.answers?.[k] ?? '', r.questions)),
+    r.notes ?? '',
+  ])
+
+  return [header, ...data]
 }
 
 // ─── Status-Badge mit Dropdown (in der Zeile) ─────────────────────────────────
@@ -451,6 +515,102 @@ const TABS: Array<{ key: 'alle' | LeadStatus; label: string }> = [
   { key: 'abgeschlossen', label: 'Erledigt' },
 ]
 
+// ─── CSV-Format-Auswahl (Aufgabe 69) ──────────────────────────────────────────
+// „CSV" ist kein einheitlicher Standard — der Nutzer wählt beim Export den Dialekt.
+const EXPORT_FORMATS: Array<{ key: 'excel' | 'standard'; label: string; hint: string }> = [
+  { key: 'excel', label: 'Excel (Deutschland)', hint: 'Semikolon-getrennt — öffnet per Doppelklick in deutschem Excel.' },
+  { key: 'standard', label: 'Standard (Komma)', hint: 'Komma-getrennt (RFC 4180) — für andere Tools & Google Sheets.' },
+]
+
+function ExportFormatModal({
+  count,
+  onExport,
+  onClose,
+}: {
+  count: number
+  onExport: (dialect: CsvDialect) => void
+  onClose: () => void
+}) {
+  const [format, setFormat] = useState<'excel' | 'standard'>('excel')
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm dark:bg-black/40"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="CSV-Format wählen"
+        className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl dark:bg-gray-900"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">CSV-Format wählen</p>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Schließen"
+            className="rounded p-1 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          {EXPORT_FORMATS.map((opt) => {
+            const active = format === opt.key
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setFormat(opt.key)}
+                className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition ${
+                  active
+                    ? 'border-primary bg-primary/5'
+                    : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'
+                }`}
+              >
+                <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${active ? 'border-primary' : 'border-gray-300 dark:border-gray-600'}`}>
+                  {active && <span className="h-2 w-2 rounded-full bg-primary" />}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium text-gray-900 dark:text-white">{opt.label}</span>
+                  <span className="block text-xs text-gray-500 dark:text-gray-400">{opt.hint}</span>
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl px-3 py-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            Abbrechen
+          </button>
+          <button
+            type="button"
+            onClick={() => onExport(format === 'excel' ? CSV_EXCEL : CSV_STANDARD)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"
+          >
+            <Download size={15} />
+            {count} exportieren
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function TenantLeadsTable({
   submissions,
   funnels,
@@ -473,6 +633,7 @@ export default function TenantLeadsTable({
   const [statusTab, setStatusTab]   = useState<'alle' | LeadStatus>(initialStatus)
   const [visibleCount, setVisibleCount] = useState(25)
   const [activeId, setActiveId]     = useState<string | null>(null)
+  const [exportModalOpen, setExportModalOpen] = useState(false)
   const justDragged = useRef(false)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
@@ -597,6 +758,43 @@ export default function TenantLeadsTable({
   const activeLead = activeId ? rows.find((r) => r.id === activeId) ?? null : null
   const detailLead = detailId ? rows.find((r) => r.id === detailId) ?? null : null
 
+  // ─── CSV-Export (Aufgabe 69) ───────────────────────────────────────────────
+  // Bewusst pro Funnel (verschiedene Funnels = verschiedene Spalten) und bewusst OHNE
+  // Einzelauswahl: exportiert wird immer die aktuell gefilterte Liste — die Filter
+  // (Funnel · Status · Zeitraum · Suche) sind die „Auswahl". Einzel-Funnel-Kontext =
+  // ein Funnel im Filter gewählt ODER das Konto hat nur einen.
+  const singleFunnelContext = funnelFilter !== 'alle' || funnels.length === 1
+  const exportFunnelSlug = funnelFilter !== 'alle' ? funnelFilter : (funnels[0]?.slug ?? 'leads')
+  const exportDisabled = !singleFunnelContext || listRows.length === 0
+
+  // Der eigentliche Download — Format (Dialekt) kommt aus dem Auswahl-Modal.
+  function handleExport(dialect: CsvDialect) {
+    if (exportDisabled) return
+    const today = new Date().toISOString().slice(0, 10)
+    downloadCsv(`leads_${exportFunnelSlug}_${today}.csv`, toCsv(buildLeadsMatrix(listRows), dialect))
+    setExportModalOpen(false)
+  }
+
+  const exportButton = (
+    // group/relative: trägt den eigenen Hover-Tooltip (statt nativem title — sofort + im App-Stil).
+    <span className="group relative inline-block">
+      <button
+        type="button"
+        onClick={() => setExportModalOpen(true)}
+        disabled={exportDisabled}
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-300 disabled:hover:text-gray-700 dark:border-gray-600 dark:text-gray-200 dark:hover:border-primary dark:hover:text-primary dark:disabled:hover:border-gray-600 dark:disabled:hover:text-gray-200"
+      >
+        <Download size={15} />
+        Exportieren ({listRows.length})
+      </button>
+      {!singleFunnelContext && (
+        <span className="pointer-events-none absolute right-0 top-full z-30 mt-1.5 hidden whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg group-hover:block dark:bg-gray-700">
+          Zum Export zuerst einen Funnel wählen
+        </span>
+      )}
+    </span>
+  )
+
   function renderViewToggle() {
     return (
       <div className="inline-flex rounded-xl border border-gray-200 p-0.5 dark:border-gray-700">
@@ -627,8 +825,8 @@ export default function TenantLeadsTable({
   // rechts. Die Liste behält ihre vollbreite Suche unter der Tab-Zeile (abgenommen).
   function renderToolbar({ showSort, compact = false, trailing }: { showSort: boolean; compact?: boolean; trailing?: ReactNode }) {
     return (
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <div className={compact ? 'relative w-full sm:w-72' : 'relative min-w-0 flex-1'}>
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className={compact ? 'relative w-full sm:w-72' : 'relative w-full sm:w-64'}>
           <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
@@ -639,13 +837,13 @@ export default function TenantLeadsTable({
           />
         </div>
         {showFunnel && (
-          <Select value={funnelFilter} onChange={setFunnelFilter} options={funnelOptions} className="sm:w-40" />
+          <Select value={funnelFilter} onChange={setFunnelFilter} options={funnelOptions} className="sm:w-52" />
         )}
         <Select
           value={dateRange}
           onChange={setDateRange}
           options={[
-            { value: 'all',    label: 'Alle Zeit' },
+            { value: 'all',    label: 'Jederzeit' },
             { value: 'today',  label: 'Heute' },
             { value: '7d',     label: 'Letzte 7 Tage' },
             { value: '30d',    label: 'Letzte 30 Tage' },
@@ -778,7 +976,7 @@ export default function TenantLeadsTable({
       ) : (
         /* ─── Listen-Ansicht ─── */
         <div>
-          {renderToolbar({ showSort: true })}
+          {renderToolbar({ showSort: true, trailing: exportButton })}
           {renderCustomDates()}
 
           {hasActiveFilters && (
@@ -867,6 +1065,15 @@ export default function TenantLeadsTable({
           onClose={() => setDetailId(null)}
           onStatus={(st) => updateStatus(detailLead.id, st)}
           onNotesSaved={(n) => applyNotes(detailLead.id, n)}
+        />
+      )}
+
+      {/* CSV-Format-Auswahl vor dem Download */}
+      {exportModalOpen && (
+        <ExportFormatModal
+          count={listRows.length}
+          onExport={handleExport}
+          onClose={() => setExportModalOpen(false)}
         />
       )}
     </div>

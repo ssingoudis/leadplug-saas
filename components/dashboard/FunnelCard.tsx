@@ -110,7 +110,11 @@ export function FunnelCard({ funnel }: { funnel: FunnelItem }) {
   return (
     // Hover = App-Standard (Dashboard-Karten): Karte tönt sich + primary-Rahmen + leichter
     // Schatten — kein Lift (Stavros-Review: Dark-Mode-Hover war daneben).
-    <div className="group relative flex flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition hover:border-primary/40 hover:bg-gray-50 hover:shadow dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800">
+    <div
+      className="group relative flex flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition hover:border-primary/40 hover:bg-gray-50 hover:shadow dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800"
+      // Brand-Farb-Akzent am linken Kartenrand (inline → schlägt auch den Hover-Rahmen).
+      style={{ borderLeftWidth: "4px", borderLeftColor: funnel.primaryColor || "#e5e7eb" }}
+    >
       {/* Karten-Klickfläche → Editor. Der Titel-Link unten bleibt der „echte" Link
           (Fokus/Mittelklick); dieses Overlay macht nur die restliche Fläche klickbar.
           Interaktive Elemente liegen mit z-10 darüber. */}
@@ -235,24 +239,17 @@ export function FunnelCard({ funnel }: { funnel: FunnelItem }) {
         </div>
       </div>
 
-      {/* Brand-Farb-Chip + Titel + öffentliche URL */}
-      <div className="mt-2 flex min-w-0 items-start gap-2.5">
-        <span
-          aria-hidden="true"
-          className="mt-1 h-4 w-4 shrink-0 rounded-md border border-black/10 dark:border-white/10"
-          style={{ backgroundColor: funnel.primaryColor || "#e5e7eb" }}
-        />
-        <div className="min-w-0">
-          <Link
-            href={editHref}
-            className="relative z-10 block truncate text-base font-bold text-gray-900 transition-colors hover:text-primary dark:text-white"
-          >
-            {funnel.funnelName}
-          </Link>
-          <p className="truncate font-mono text-xs text-gray-400 dark:text-gray-500">
-            app.leadplug.de/{funnel.slug}
-          </p>
-        </div>
+      {/* Titel + öffentliche URL (Brand-Farbe sitzt jetzt als Akzent am linken Kartenrand) */}
+      <div className="mt-4 min-w-0">
+        <Link
+          href={editHref}
+          className="relative z-10 block truncate text-base font-bold text-gray-900 transition-colors hover:text-primary dark:text-white"
+        >
+          {funnel.funnelName}
+        </Link>
+        <p className="truncate font-mono text-xs text-gray-400 dark:text-gray-500">
+          app.leadplug.de/{funnel.slug}
+        </p>
       </div>
 
       {/* Kennzahlen — Typografie statt Kästen */}

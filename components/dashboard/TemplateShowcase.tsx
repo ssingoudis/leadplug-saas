@@ -261,9 +261,11 @@ function TemplatePreviewModal({
         typeof data.height === "number" &&
         e.source === iframeRef.current?.contentWindow
       ) {
-        // Header (~58px) + Außenabstand vom Viewport abziehen, Rest clampen.
-        const max = Math.max(PREVIEW_MIN_HEIGHT, window.innerHeight * 0.9 - 90);
-        setHeight(Math.min(Math.max(data.height, PREVIEW_MIN_HEIGHT), max));
+        // iframe bekommt die VOLLE gemeldete Funnel-Höhe — nur ein Boden, KEIN Deckel.
+        // Passt der Funnel nicht in die 90vh-Modalbox, scrollt der Modal-Body (siehe unten);
+        // auf großen Schirmen bleibt er ohne Scrollbalken, weil overflow-y-auto nur bei
+        // echtem Überlauf greift.
+        setHeight(Math.max(data.height, PREVIEW_MIN_HEIGHT));
       }
     }
     document.addEventListener("keydown", onKey);
@@ -289,7 +291,7 @@ function TemplatePreviewModal({
         {/* Mobil ist neben dem Titel kein Platz: Zeile 1 = Name + X, der CTA bekommt
             eine eigene volle Zeile, der erklärende Untertitel entfällt (ab sm wieder
             das einzeilige Layout mit Untertitel + Inline-Button). */}
-        <div className="border-b border-gray-100 px-5 py-3.5 dark:border-gray-800">
+        <div className="shrink-0 border-b border-gray-100 px-5 py-3.5 dark:border-gray-800">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate text-sm font-bold text-gray-900 dark:text-white">{template.name}</p>
@@ -323,13 +325,18 @@ function TemplatePreviewModal({
             Vorlage verwenden
           </button>
         </div>
-        <iframe
-          ref={iframeRef}
-          src={`/${template.previewSlug}?preview=1`}
-          title={`Vorschau: ${template.name}`}
-          style={{ height }}
-          className="w-full bg-white transition-[height] duration-300 ease-out"
-        />
+        {/* Scrollbarer Body: sizet auf die iframe-Höhe; nur wenn Header + iframe die
+            90vh-Modalhöhe überschreiten, schrumpft er (min-h-0 + Flex-Shrink) und scrollt.
+            Kein flex-1 — auf kurzen Funnels bleibt er exakt so hoch wie der Inhalt. */}
+        <div className="min-h-0 overflow-y-auto">
+          <iframe
+            ref={iframeRef}
+            src={`/${template.previewSlug}?preview=1`}
+            title={`Vorschau: ${template.name}`}
+            style={{ height }}
+            className="block w-full bg-white transition-[height] duration-300 ease-out"
+          />
+        </div>
       </div>
     </div>
   );
