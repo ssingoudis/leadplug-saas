@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState, type ChangeEvent } from "react";
 import { usePathname } from "next/navigation";
-import { MessageSquare, X, Check, Send } from "lucide-react";
+import { MessageSquare, X, Check, Send, Paperclip } from "lucide-react";
 import Button from "@/components/ui/Button";
 
 // Aufgabe 67: Feedback-Kanal — Floating-Button unten rechts im Dashboard öffnet
@@ -22,6 +22,17 @@ type CategoryKey = (typeof CATEGORIES)[number]["key"];
 // Build-time inlined (NEXT_PUBLIC_) — nur Ziffern behalten, falls formatiert eingetragen.
 const WHATSAPP_DIGITS = (process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? "").replace(/\D/g, "");
 
+// Optionaler Datei-Anhang (Aufgabe 69) — bleibt im Nur-Mail-Modell (Resend-Anhang,
+// keine Storage). Bis zu 3 Dateien, zusammen ≤ 4 MB (sicher unter Vercels ~4,5 MB
+// Body-Limit). Server prüft Anzahl/Typ/Größe erneut.
+const ALLOWED_TYPES: Record<string, string> = {
+  "image/png": ".png",
+  "image/jpeg": ".jpg",
+  "application/pdf": ".pdf",
+};
+const MAX_FILES = 3;
+const MAX_TOTAL_BYTES = 4 * 1024 * 1024; // 4 MB gesamt
+
 interface BetaFeedbackProps {
   // Füllen die WhatsApp-Nachricht vor (wa.me ?text= — der Nutzer sieht den Text
   // vor dem Absenden im Chat und kann ihn ändern; nichts wird heimlich gesendet).
@@ -35,6 +46,9 @@ export default function BetaFeedback({ userEmail = "", accountName = "" }: BetaF
   const [category, setCategory] = useState<CategoryKey>("feedback");
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [files, setFiles] = useState<File[]>([]);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Vollbild-Editor: Button stört die Bottom-Aktionen → ausblenden.
   if (pathname?.endsWith("/edit")) return null;
@@ -47,6 +61,34 @@ export default function BetaFeedback({ userEmail = "", accountName = "" }: BetaF
   function handleClose() {
     setOpen(false);
     setStatus("idle");
+    setFiles([]);
+    setFileError(null);
+  }
+
+  function handleFilesChange(e: ChangeEvent<HTMLInputElement>) {
+    const picked = Array.from(e.target.files ?? []);
+    e.target.value = ""; // erlaubt erneutes Wählen derselben Datei
+    if (picked.length === 0) return;
+    const combined = [...files, ...picked];
+    if (combined.some((f) => !ALLOWED_TYPES[f.type])) {
+      setFileError("Nur PNG, JPG oder PDF.");
+      return;
+    }
+    if (combined.length > MAX_FILES) {
+      setFileError(`Höchstens ${MAX_FILES} Dateien.`);
+      return;
+    }
+    if (combined.reduce((sum, f) => sum + f.size, 0) > MAX_TOTAL_BYTES) {
+      setFileError("Anhänge zusammen zu groß (max. 4 MB).");
+      return;
+    }
+    setFileError(null);
+    setFiles(combined);
+  }
+
+  function removeFile(index: number) {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+    setFileError(null);
   }
 
   async function handleSubmit() {
@@ -54,15 +96,20 @@ export default function BetaFeedback({ userEmail = "", accountName = "" }: BetaF
     if (!text || status === "sending") return;
     setStatus("sending");
     try {
-      const res = await fetch("/api/feedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category, message: text, pagePath: pathname }),
-      });
+      // FormData statt JSON, damit der optionale Anhang mitreist (Browser setzt
+      // den multipart-Boundary selbst — KEIN Content-Type-Header setzen).
+      const form = new FormData();
+      form.append("category", category);
+      form.append("message", text);
+      if (pathname) form.append("pagePath", pathname);
+      for (const f of files) form.append("file", f);
+      const res = await fetch("/api/feedback", { method: "POST", body: form });
       const data = (await res.json().catch(() => null)) as { success?: boolean } | null;
       if (res.ok && data?.success) {
         setStatus("sent");
         setMessage("");
+        setFiles([]);
+        setFileError(null);
       } else {
         setStatus("error");
       }
@@ -87,7 +134,7 @@ export default function BetaFeedback({ userEmail = "", accountName = "" }: BetaF
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
-              {/* Überschrift bewusst ≠ „Feedback" — der Kategorie-Button darunter heißt schon so. */}
+              {/* Titel bleibt — gibt dem Kopf visuelles Gewicht (Stavros-Entscheid). */}
               <p className="text-sm font-semibold text-gray-900 dark:text-white">
                 Nachricht senden
               </p>
@@ -109,10 +156,7 @@ export default function BetaFeedback({ userEmail = "", accountName = "" }: BetaF
                 <p className="text-sm font-medium text-gray-900 dark:text-white">
                   Nachricht angekommen
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Wir melden uns zeitnah.
-                </p>
-                <Button variant="secondary" className="mt-3" onClick={handleClose}>
+                <Button variant="primary" className="mt-3" onClick={handleClose}>
                   Schließen
                 </Button>
               </div>
@@ -142,6 +186,51 @@ export default function BetaFeedback({ userEmail = "", accountName = "" }: BetaF
                   maxLength={5000}
                   autoFocus
                   className="w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                />
+
+                {/* Optionaler Anhang (Aufgabe 69) — bis zu 3 Screenshots/PDFs. */}
+                <div className="mt-2 flex flex-col items-start gap-1.5 text-xs">
+                  {files.map((f, i) => (
+                    <span
+                      key={`${f.name}-${i}`}
+                      className="inline-flex max-w-full items-center gap-1.5 rounded-lg bg-gray-100 px-2 py-1 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                    >
+                      <Paperclip size={12} className="shrink-0" />
+                      <span className="truncate">{f.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeFile(i)}
+                        aria-label="Anhang entfernen"
+                        className="shrink-0 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200"
+                      >
+                        <X size={12} />
+                      </button>
+                    </span>
+                  ))}
+                  {files.length < MAX_FILES && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="inline-flex items-center gap-1.5 font-medium text-gray-500 transition-colors hover:text-primary dark:text-gray-400"
+                      >
+                        <Paperclip size={12} />
+                        Datei anhängen
+                      </button>
+                      <span className="text-gray-400 dark:text-gray-500">PNG, JPG, PDF · bis zu 3, max. 4 MB gesamt</span>
+                    </div>
+                  )}
+                </div>
+                {fileError && (
+                  <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fileError}</p>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/png,image/jpeg,application/pdf,.png,.jpg,.jpeg,.pdf"
+                  onChange={handleFilesChange}
+                  className="hidden"
                 />
 
                 {status === "error" && (
