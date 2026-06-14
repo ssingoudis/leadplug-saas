@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { LogoMark } from '@/components/dashboard/nav/LogoMark'
 
 export default function SignupPage() {
   const [email, setEmail]         = useState('')
@@ -94,6 +95,7 @@ export default function SignupPage() {
       style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
     >
       <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-800 w-full max-w-sm px-10 py-10">
+        <LogoMark className="mx-auto mb-3 block h-11 w-11 text-primary" />
         <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-1 text-center">LeadPlug</h1>
         <p className="text-sm text-gray-400 dark:text-gray-500 text-center mb-8">Konto erstellen</p>
 
