@@ -20,7 +20,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { EditorState, EditorQuestion, ContactFieldConfig, QuestionType, LogicRule } from "@/types";
-import { hiddenPageIdSet, ruleConditionText, ruleTargetLabel, stepNumbersByDbId } from "@/lib/logicDisplay";
+import { hiddenPageIdSet, ruleConditionText, ruleTargetLabel, stepNumbersByDbId } from "@/lib/logic/logicDisplay";
 import type { SelectedStep } from "./types";
 import {
   questionMeta,

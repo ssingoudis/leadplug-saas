@@ -25,8 +25,8 @@ import {
   makeDefaultWelcomePage,
 } from "./defaults";
 import { generateFieldKey, toKey } from "@/lib/editorUtils";
-import { useHistoryState } from "@/lib/useHistoryState";
-import { useSaveStatus } from "@/lib/useSaveStatus";
+import { useHistoryState } from "@/lib/hooks/useHistoryState";
+import { useSaveStatus } from "@/lib/hooks/useSaveStatus";
 import { SaveStatus } from "@/components/ui/SaveStatus";
 
 interface Props {

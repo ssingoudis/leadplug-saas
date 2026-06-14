@@ -1,5 +1,5 @@
 import { Check, Loader2, TriangleAlert } from "lucide-react";
-import type { SaveStatusState } from "@/lib/useSaveStatus";
+import type { SaveStatusState } from "@/lib/hooks/useSaveStatus";
 
 // =============================================================================
 // Aufgabe 50 — Sichtbarer Autosave-Indikator (projektweit).

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { mapLogicRuleRow } from '@/lib/logicRuleMapping'
+import { mapLogicRuleRow } from '@/lib/logic/logicRuleMapping'
 
 // =============================================================================
 // Aufgabe 58 — Logik-Regeln eines Funnels (lesend).

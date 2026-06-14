@@ -110,6 +110,20 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
+## Aufgabe 72 — Ordner-Umbau Schritt 3: `lib/` clustern (Phase B) (2026-06-14)
+
+**Status:** Branch `feature/aufgabe-72-lib-clustern`, Build grün (`tsc --noEmit` + `next build`), kein DB-Change, keine neue Dependency. Plan: [`context/struktur-plan.md`](struktur-plan.md) Phase B. **Damit ist die Ordner-Aufräumung abgeschlossen** (Phase C/funnel.tsx-Umzug bleibt bewusst gestrichen).
+
+**Gemacht (alles `git mv`, von git als Renames erkannt):**
+- **`lib/logic/`** ← funnelLogic.ts · logicDisplay.ts · logicRuleMapping.ts (7 Import-Stellen aktualisiert).
+- **`lib/hooks/`** ← useHistoryState.ts · useMinWidth.ts · useSaveStatus.ts (6 Import-Stellen).
+- **`lib/email/`** ← emails.ts · emailTemplates.ts (8 Stellen; `emails.ts` importiert `emailTemplates` jetzt relativ als `./emailTemplates`).
+- **Eine Zeile in `funnel.tsx`** (Z. 35: `@/lib/funnelLogic` → `@/lib/logic/funnelLogic`) — reiner Import-Pfad, keine Logik, von Stavros ausdrücklich freigegeben (kein „Rumfummeln" an der Datei).
+- Im `lib/`-Wurzel bleiben die „großen Einzelstücke": getTenantConfig · editorUtils · tracking · webhooks · billing · stripe · csv · embedSnippet · resolveAnswer · validateContactField · utils · templates. `supabase/` · `auth/` · `admin/` unverändert.
+- Verifiziert per Grep: 0 verbleibende alte `@/lib/...`-Pfade auf verschobene Module; vor dem Verschieben geprüft, dass die 3 Logik-Dateien/Hooks sich nicht gegenseitig importieren (keine internen Relativ-Brüche).
+
+---
+
 ## Aufgabe 71 — Ordner-Umbau Schritt 2: `dashboard/` aufräumen (Phase A) (2026-06-14)
 
 **Status:** Branch `feature/aufgabe-71-dashboard-aufraeumen`, Build grün (`tsc --noEmit` + `next build`), kein DB-Change, keine neue Dependency, `funnel.tsx` unberührt. **Reiner Struktur-Umbau.** Plan: [`context/struktur-plan.md`](struktur-plan.md) Phase A (A1+A2+A3).

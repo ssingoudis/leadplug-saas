@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Card from '@/components/ui/Card'
-import { useSaveStatus } from '@/lib/useSaveStatus'
+import { useSaveStatus } from '@/lib/hooks/useSaveStatus'
 import { SaveStatus } from '@/components/ui/SaveStatus'
 
 function Field({

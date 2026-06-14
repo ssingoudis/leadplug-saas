@@ -8,9 +8,9 @@ import {
   deriveContactFromAnswers,
 } from '@/lib/tracking'
 import { validateContactField } from '@/lib/validateContactField'
-import { computePath } from '@/lib/funnelLogic'
+import { computePath } from '@/lib/logic/funnelLogic'
 import { triggerOnSubmit, type SubmissionSnapshot } from '@/lib/webhooks'
-import { triggerEmailsOnSubmit, aggregateEmailStatusForSubmission } from '@/lib/emails'
+import { triggerEmailsOnSubmit, aggregateEmailStatusForSubmission } from '@/lib/email/emails'
 
 function getIp(req: Request): string | null {
   const forwarded = req.headers.get('x-forwarded-for')

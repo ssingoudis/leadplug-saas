@@ -1,6 +1,6 @@
 import { Resend } from 'resend'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { renderEmail, RECIPIENT_ME, type TemplateContext } from '@/lib/emailTemplates'
+import { renderEmail, RECIPIENT_ME, type TemplateContext } from './emailTemplates'
 import { DynamicEmail } from '@/emails/DynamicEmail'
 import type { TenantConfig } from '@/types'
 import type { SubmissionSnapshot } from '@/lib/webhooks'

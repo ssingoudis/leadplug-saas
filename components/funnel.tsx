@@ -32,7 +32,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 import { resolveAnswer } from "@/lib/resolveAnswer";
 import { validateContactField } from "@/lib/validateContactField";
-import { groupRulesBySource, resolveNext } from "@/lib/funnelLogic";
+import { groupRulesBySource, resolveNext } from "@/lib/logic/funnelLogic";
 import type {
   FunnelTheme,
   FunnelFont,
