@@ -23,7 +23,7 @@ import {
   makeAddressCustomPage,
   makeContactCard,
   makeDefaultWelcomePage,
-} from "@/components/tenant-editor/defaults";
+} from "./defaults";
 import { generateFieldKey, toKey } from "@/lib/editorUtils";
 import { useHistoryState } from "@/lib/useHistoryState";
 import { useSaveStatus } from "@/lib/useSaveStatus";

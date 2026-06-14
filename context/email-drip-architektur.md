@@ -334,20 +334,20 @@ const dirty = useMemo(
 
 ### 5.3 TipTap Custom Nodes
 
-**`VariableNode`** (`components/tenant-editor/v2/email/VariableNode.ts`):
+**`VariableNode`** (`components/editor/email/VariableNode.ts`):
 - `Node.create({ name: 'variable', group: 'inline', inline: true, atom: true })`
 - `parseHTML` matcht `<span data-variable="...">`
 - `renderHTML` produziert `<span data-variable="<name>">{{<name>}}</span>`
 - `addNodeView` rendert im Editor einen violetten Chip mit human-Label aus `AVAILABLE_TOKENS` (z.B. „Lead-Name" statt `contact.name`). `contentEditable=false` → Atom, wird beim Backspace komplett gelöscht.
 - `addCommands.insertVariable(name)` → `chain().insertContent({ type: 'variable', attrs: { name } }).run()`
 
-**`MagicSectionNode`** (`components/tenant-editor/v2/email/MagicSectionNode.ts`):
+**`MagicSectionNode`** (`components/editor/email/MagicSectionNode.ts`):
 - `Node.create({ name: 'magicSection', group: 'block', atom: true })`
 - `parseHTML` matcht `<div data-magic-section="...">`
 - `renderHTML` produziert `<div data-magic-section="<section>"></div>`
 - `addNodeView` rendert eine dashed Block-Card mit Titel + Description aus `AVAILABLE_TOKENS.magic`. **Plus X-Button oben rechts** (Hover rot) zum Entfernen via `deleteRange(getPos(), getPos() + node.nodeSize)`.
 
-**`CtaButtonNode`** (`components/tenant-editor/v2/email/CtaButtonNode.ts`):
+**`CtaButtonNode`** (`components/editor/email/CtaButtonNode.ts`):
 - `Node.create({ name: 'ctaButton', group: 'block', atom: true, draggable: true })`
 - Attributes: `label` (Text auf dem Button) + `url` (Ziel-Link). Beide editierbar direkt im NodeView via inline `<input>`-Felder.
 - `renderHTML` produziert `<div data-cta-button data-label="..." data-url="..."></div>`
@@ -359,7 +359,7 @@ const dirty = useMemo(
 
 ### 5.4 EmailEditor-Wrapper
 
-`components/tenant-editor/v2/email/EmailEditor.tsx` ist ein TipTap-Wrapper mit zwei Modi:
+`components/editor/email/EmailEditor.tsx` ist ein TipTap-Wrapper mit zwei Modi:
 
 - **`singleLine`** (für Subject): Nur das Eingabefeld, **kein Variable-Dropdown** (bewusst simpel gehalten — Subject wird vom Tenant direkt getippt; existierende `{{vars}}` aus Backfill werden weiter als Chips dargestellt). Enter wird abgefangen (kein Multi-Line).
 - **default** (für Body): volle Toolbar mit Bold/Italic/H2/H3/Listen/Link + „+Variable" + „+Baustein".
@@ -591,13 +591,13 @@ DOWN-Migrationen: `supabase/migrations/*_DOWN.sql` (DROP TABLE CASCADE bzw. Cons
 - [`app/api/tenant/funnels/[slug]/preview-leads/route.ts`](../app/api/tenant/funnels/%5Bslug%5D/preview-leads/route.ts) — Vorschau-Lead-Picker-Quelle
 
 **Frontend:**
-- [`components/tenant-editor/v2/EmailsPanel.tsx`](../components/tenant-editor/v2/EmailsPanel.tsx) — 3-Pane-Container, Draft-State im Parent, Manual-Save, UnsavedChangesModal beim Switch, Resize-Handle, Custom-Recipient-List, Demo-Mode-Fallback
-- [`components/tenant-editor/v2/email/EmailEditor.tsx`](../components/tenant-editor/v2/email/EmailEditor.tsx) — TipTap-Wrapper, Portal-Dropdowns
-- [`components/tenant-editor/v2/email/VariableNode.ts`](../components/tenant-editor/v2/email/VariableNode.ts) — Custom Inline-Atom
-- [`components/tenant-editor/v2/email/MagicSectionNode.ts`](../components/tenant-editor/v2/email/MagicSectionNode.ts) — Custom Block-Atom mit X-Button
-- [`components/tenant-editor/v2/email/CtaButtonNode.ts`](../components/tenant-editor/v2/email/CtaButtonNode.ts) — Custom Block-Atom mit Inline-Label-/URL-Editing + X-Button
-- [`components/tenant-editor/v2/TopTabs.tsx`](../components/tenant-editor/v2/TopTabs.tsx) — E-Mails-Tab aktiv
-- [`components/tenant-editor/v2/EditorShell.tsx`](../components/tenant-editor/v2/EditorShell.tsx) — Tab-Routing
+- [`components/editor/EmailsPanel.tsx`](../components/editor/EmailsPanel.tsx) — 3-Pane-Container, Draft-State im Parent, Manual-Save, UnsavedChangesModal beim Switch, Resize-Handle, Custom-Recipient-List, Demo-Mode-Fallback
+- [`components/editor/email/EmailEditor.tsx`](../components/editor/email/EmailEditor.tsx) — TipTap-Wrapper, Portal-Dropdowns
+- [`components/editor/email/VariableNode.ts`](../components/editor/email/VariableNode.ts) — Custom Inline-Atom
+- [`components/editor/email/MagicSectionNode.ts`](../components/editor/email/MagicSectionNode.ts) — Custom Block-Atom mit X-Button
+- [`components/editor/email/CtaButtonNode.ts`](../components/editor/email/CtaButtonNode.ts) — Custom Block-Atom mit Inline-Label-/URL-Editing + X-Button
+- [`components/editor/TopTabs.tsx`](../components/editor/TopTabs.tsx) — E-Mails-Tab aktiv
+- [`components/editor/EditorShell.tsx`](../components/editor/EditorShell.tsx) — Tab-Routing
 
 **Migration:**
 - [`supabase/migrations/20260531120000_aufgabe_41_email_subscriptions.sql`](../supabase/migrations/20260531120000_aufgabe_41_email_subscriptions.sql)

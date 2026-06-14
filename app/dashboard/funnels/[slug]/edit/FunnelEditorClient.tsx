@@ -1,6 +1,6 @@
 "use client";
 
-import { EditorShell } from "@/components/tenant-editor/v2/EditorShell";
+import { EditorShell } from "@/components/editor/EditorShell";
 import type { EditorState } from "@/types";
 
 interface Props {

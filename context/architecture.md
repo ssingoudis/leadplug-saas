@@ -89,9 +89,9 @@ leadplug-saas/
 ├── components/
 │   ├── funnel.tsx                  # 🌟 DAS WIDGET (Live + Editor-Preview, ~2000 LOC)
 │   ├── TenantFunnelClient.tsx      # Live-Wrapper um funnel.tsx (sessionId, postMessage)
-│   ├── tenant-editor/
+│   ├── editor/                     # 🌟 DER BUILDER (3-Pane, ~3500 LOC verteilt)
 │   │   ├── defaults.ts             # DEFAULT_EDITOR_STATE + Factories (makeDefault*)
-│   │   └── v2/                     # 🌟 DER BUILDER (3-Pane, ~3500 LOC verteilt)
+│   │   └── ui/ properties/ email/  # Editor-Design-System · Field-Props · TipTap-Mail-Nodes
 │   ├── dashboard/                  # Cards, Charts, FunnelCard, Vorlagen (TemplateShowcase/NewFunnelModal/DeleteFunnelModal) etc.
 │   └── ui/                         # Design-System (Card, Badge, Button, Input, …)
 ├── lib/
@@ -179,7 +179,7 @@ text  email  tel  plz  radio  long_text  number  date  checkbox  dropdown  first
 
 ## 6. Der Builder — 3-Pane-Editor (v2)
 
-> Alles unter `components/tenant-editor/v2/`. Aktiv seit Aufgabe 32 (C.1a). v1 wurde in C.1d gelöscht.
+> Alles unter `components/editor/`. Aktiv seit Aufgabe 32 (C.1a). v1 wurde in C.1d gelöscht.
 
 ### 6.1 Komponenten-Übersicht
 
@@ -456,7 +456,7 @@ DB (pages + fields)
 ### Werden bei Aufgabe X gerne vergessen
 - API-Routes `app/api/tenant/funnels/...` müssen bei DB-Schema-Änderungen ihre SELECT-Listen mit-ergänzen
 - `lib/getTenantConfig.ts` muss bei neuen Funnel-Spalten ihre SELECT-Query erweitern
-- `components/tenant-editor/defaults.ts` muss bei neuen EditorState-Feldern Default-Werte liefern
+- `components/editor/defaults.ts` muss bei neuen EditorState-Feldern Default-Werte liefern
 
 ---
 
@@ -515,11 +515,11 @@ DB (pages + fields)
 - `app/api/tenant/funnels/[slug]/webhooks/...` — Subscription-CRUD + `/test` + `/logs`.
 
 **Frontend (Editor):**
-- [`components/tenant-editor/v2/TopTabs.tsx`](../components/tenant-editor/v2/TopTabs.tsx) erweitert: neuer Tab „Webhooks".
-- [`components/tenant-editor/v2/WebhooksPanel.tsx`](../components/tenant-editor/v2/WebhooksPanel.tsx) ~600 LOC — Container + Liste + collapsible Cards (Config, Test, Logs, Secret-Rotation, Verify-Snippet Node/Python/PHP).
-- [`components/tenant-editor/v2/WebhookAddModal.tsx`](../components/tenant-editor/v2/WebhookAddModal.tsx) — Add-Modal mit Trigger-Auswahl (on_submit / after_page) + Event-Multi-Select.
-- [`components/tenant-editor/v2/EditorShell.tsx`](../components/tenant-editor/v2/EditorShell.tsx) routet `activeTab === "webhooks"` auf WebhooksPanel (full-width) + lädt webhook-trigger_page_id Map für StepPill-Badges.
-- [`components/tenant-editor/v2/StepPill.tsx`](../components/tenant-editor/v2/StepPill.tsx) + [`StepList.tsx`](../components/tenant-editor/v2/StepList.tsx) erweitert um violettes Webhook-Badge mit Count. Click → springt in Webhooks-Tab.
+- [`components/editor/TopTabs.tsx`](../components/editor/TopTabs.tsx) erweitert: neuer Tab „Webhooks".
+- [`components/editor/WebhooksPanel.tsx`](../components/editor/WebhooksPanel.tsx) ~600 LOC — Container + Liste + collapsible Cards (Config, Test, Logs, Secret-Rotation, Verify-Snippet Node/Python/PHP).
+- [`components/editor/WebhookAddModal.tsx`](../components/editor/WebhookAddModal.tsx) — Add-Modal mit Trigger-Auswahl (on_submit / after_page) + Event-Multi-Select.
+- [`components/editor/EditorShell.tsx`](../components/editor/EditorShell.tsx) routet `activeTab === "webhooks"` auf WebhooksPanel (full-width) + lädt webhook-trigger_page_id Map für StepPill-Badges.
+- [`components/editor/StepPill.tsx`](../components/editor/StepPill.tsx) + [`StepList.tsx`](../components/editor/StepList.tsx) erweitert um violettes Webhook-Badge mit Count. Click → springt in Webhooks-Tab.
 
 **Payload-Format Webhook (final):**
 ```json
@@ -556,10 +556,10 @@ DB (pages + fields)
 - `app/api/tenant/funnels/[slug]/emails/...` — Subscription-CRUD + `/test` (mit Draft-Override) + `/logs` + `/preview-leads` (top 5 completed Submissions für Vorschau-Lead-Picker).
 
 **Frontend (Editor):**
-- [`components/tenant-editor/v2/EmailsPanel.tsx`](../components/tenant-editor/v2/EmailsPanel.tsx) ~900 LOC — 3-Pane-Layout (Liste · Editor · Live-Vorschau). Draft-State lebt im Panel (`useState<EmailDraft>`), Editor + Vorschau lesen denselben Draft → Live-Updates beim Tippen. Auto-Save via `useEffect` mit `setTimeout(handleSave, 1500)`. Switch-Warn bei dirty (`trySwitchTo`). Resize-Handle zwischen Editor und Vorschau (320–900 px). Demo-Mode-Fallback bei API-Fehler.
-- [`components/tenant-editor/v2/email/EmailEditor.tsx`](../components/tenant-editor/v2/email/EmailEditor.tsx) — TipTap-Wrapper, single-line oder full-mode. Toolbar mit Standard-Marks + Portal-Dropdowns für „+Variable" / „+Baustein".
-- [`components/tenant-editor/v2/email/VariableNode.ts`](../components/tenant-editor/v2/email/VariableNode.ts) — Custom TipTap-Inline-Atom. NodeView rendert violetten Chip mit human-Label („Lead-Name" statt `contact.name`). Speichert sich als `<span data-variable="contact.name">{{contact.name}}</span>`.
-- [`components/tenant-editor/v2/email/MagicSectionNode.ts`](../components/tenant-editor/v2/email/MagicSectionNode.ts) — Custom TipTap-Block-Atom. NodeView rendert dashed Block-Card mit X-Button (Hover rot) zum Entfernen. Speichert sich als `<div data-magic-section="answers_overview"></div>`.
+- [`components/editor/EmailsPanel.tsx`](../components/editor/EmailsPanel.tsx) ~900 LOC — 3-Pane-Layout (Liste · Editor · Live-Vorschau). Draft-State lebt im Panel (`useState<EmailDraft>`), Editor + Vorschau lesen denselben Draft → Live-Updates beim Tippen. Auto-Save via `useEffect` mit `setTimeout(handleSave, 1500)`. Switch-Warn bei dirty (`trySwitchTo`). Resize-Handle zwischen Editor und Vorschau (320–900 px). Demo-Mode-Fallback bei API-Fehler.
+- [`components/editor/email/EmailEditor.tsx`](../components/editor/email/EmailEditor.tsx) — TipTap-Wrapper, single-line oder full-mode. Toolbar mit Standard-Marks + Portal-Dropdowns für „+Variable" / „+Baustein".
+- [`components/editor/email/VariableNode.ts`](../components/editor/email/VariableNode.ts) — Custom TipTap-Inline-Atom. NodeView rendert violetten Chip mit human-Label („Lead-Name" statt `contact.name`). Speichert sich als `<span data-variable="contact.name">{{contact.name}}</span>`.
+- [`components/editor/email/MagicSectionNode.ts`](../components/editor/email/MagicSectionNode.ts) — Custom TipTap-Block-Atom. NodeView rendert dashed Block-Card mit X-Button (Hover rot) zum Entfernen. Speichert sich als `<div data-magic-section="answers_overview"></div>`.
 
 **Magic-Sections:**
 - `answers_overview` — graue Box mit allen sichtbaren Antworten formatiert

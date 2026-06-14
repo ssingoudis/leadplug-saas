@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { DEFAULT_EDITOR_STATE } from "@/components/tenant-editor/defaults";
+import { DEFAULT_EDITOR_STATE } from "@/components/editor/defaults";
 import FunnelEditorClient from "../FunnelEditorClient";
 
 // Aufgabe 62 — leerer Editor-Start. Die bisherige /dashboard/funnels/new-Route
