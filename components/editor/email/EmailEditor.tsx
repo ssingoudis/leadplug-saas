@@ -13,7 +13,7 @@ import {
 import { VariableNode } from "./VariableNode";
 import { MagicSectionNode } from "./MagicSectionNode";
 import { CtaButtonNode } from "./CtaButtonNode";
-import { AVAILABLE_TOKENS } from "@/lib/emailTemplates";
+import { AVAILABLE_TOKENS } from "@/lib/email/emailTemplates";
 import type { FunnelVariables, VarGroup } from "./funnelVariables";
 
 // =============================================================================

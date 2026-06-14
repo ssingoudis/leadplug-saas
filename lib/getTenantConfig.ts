@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { mapLogicRuleRow } from '@/lib/logicRuleMapping'
+import { mapLogicRuleRow } from '@/lib/logic/logicRuleMapping'
 import type { TenantConfig, FunnelFont, ContactFieldConfig, QuestionType, QuestionConfig, LogicRule } from '@/types'
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-_]*$/

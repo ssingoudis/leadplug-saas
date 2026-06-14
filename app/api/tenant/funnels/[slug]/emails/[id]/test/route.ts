@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { sendTestEmail } from '@/lib/emails'
+import { sendTestEmail } from '@/lib/email/emails'
 
 // POST /api/tenant/funnels/[slug]/emails/[id]/test
 // Body: { recipient?: string }  ← optional, sonst default-Recipient laut Subscription

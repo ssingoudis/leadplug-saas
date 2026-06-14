@@ -1,6 +1,6 @@
 import { Node, mergeAttributes } from '@tiptap/core'
 import type { NodeViewRendererProps } from '@tiptap/core'
-import { AVAILABLE_TOKENS } from '@/lib/emailTemplates'
+import { AVAILABLE_TOKENS } from '@/lib/email/emailTemplates'
 
 // =============================================================================
 // Aufgabe 41 — TipTap Custom Block-Node: MagicSection

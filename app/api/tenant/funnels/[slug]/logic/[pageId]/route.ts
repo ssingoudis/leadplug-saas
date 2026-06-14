@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { VALID_LOGIC_OPS } from '@/lib/logicRuleMapping'
+import { VALID_LOGIC_OPS } from '@/lib/logic/logicRuleMapping'
 
 // =============================================================================
 // Aufgabe 58 — Regeln EINES Steps ersetzen (Save-Button im LogicRuleModal).

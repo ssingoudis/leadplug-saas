@@ -5,7 +5,7 @@ import { EyeOff, Info, ListPlus, Maximize, Minus, Pencil, Play, Plus, Split, Tri
 import type { EditorQuestion, LogicRule } from "@/types";
 import type { SelectedStep } from "./types";
 import { questionMeta, SUCCESS_META, CUSTOM_META, WELCOME_META, type FieldMeta } from "./fieldMeta";
-import { ruleConditionText } from "@/lib/logicDisplay";
+import { ruleConditionText } from "@/lib/logic/logicDisplay";
 import { EmptyState, PANEL_HEADER_H } from "./ui/Panel";
 
 // =============================================================================

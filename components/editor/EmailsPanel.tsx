@@ -10,11 +10,11 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_CUSTOM_RECIPIENTS = 5;
 import { EmailEditor } from "./email/EmailEditor";
 import { buildFunnelVariables, type FunnelVariables } from "./email/funnelVariables";
-import { renderEmail, RECIPIENT_ME, type TemplateContext } from "@/lib/emailTemplates";
+import { renderEmail, RECIPIENT_ME, type TemplateContext } from "@/lib/email/emailTemplates";
 import type { EditorState, TenantConfig, QuestionConfig } from "@/types";
 import { EmptyState, EDITOR_LEFT_COL, PanelListHeader } from "./ui/Panel";
 import { EditorButton, TextInput, Select, Toggle } from "./ui/Controls";
-import { useMinWidth } from "@/lib/useMinWidth";
+import { useMinWidth } from "@/lib/hooks/useMinWidth";
 
 // Aufgabe 60: Editor + Live-Vorschau nebeneinander. Die Vorschau ist fluid (Mail-Card
 // max. 600px, schmaler = Mobil-Darstellung — die echte Mail ist genauso fluid, siehe

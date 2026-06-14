@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { retryDelivery, triggerOnSubmit, type SubmissionSnapshot } from '@/lib/webhooks'
-import { processPendingDelivery, retryEmailDelivery, aggregateEmailStatusForSubmission } from '@/lib/emails'
+import { processPendingDelivery, retryEmailDelivery, aggregateEmailStatusForSubmission } from '@/lib/email/emails'
 import { getTenantConfig } from '@/lib/getTenantConfig'
 import { deriveContactFromAnswers } from '@/lib/tracking'
 
