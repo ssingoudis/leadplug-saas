@@ -447,7 +447,7 @@ leadplug-saas/
 │   │                                onSubmit() Callbacks.
 │   ├── TenantFunnelClient.tsx     ← Wrapper. Empfängt Callbacks, POSTet an
 │   │                                die /api/* Endpoints.
-│   └── tenant-editor/v2/
+│   └── editor/
 │       ├── WebhooksPanel.tsx      ← Editor-Tab "Webhooks". Liste, Add, Test,
 │       │                            Logs, Verify-Snippet.
 │       └── WebhookAddModal.tsx    ← Modal beim "+ Webhook hinzufügen".

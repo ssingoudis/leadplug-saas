@@ -110,6 +110,22 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
+## Aufgabe 70 — Ordner-Umbau Schritt 1: `tenant-editor/v2` → `editor` (2026-06-14)
+
+**Status:** Branch `feature/aufgabe-70-editor-ordner-umbau`, Build grün (`tsc --noEmit` + `next build`), kein DB-Change, keine neue Dependency, `funnel.tsx` unberührt. **Reiner Struktur-Umbau, kein Verhaltens-Change.**
+
+**Anlass:** Erster Schritt eines schrittweisen „Ordner-Struktur sauber machen"-Vorhabens (Stavros: step by step, nicht alles auf einmal). „v2" war ein Legacy-Name (kein v1 mehr seit C.1d), und es ist kein „tenant-editor", sondern schlicht der Editor.
+
+**Gemacht:**
+- `components/tenant-editor/v2/*` → `components/editor/*` (alle 30 Dateien inkl. `ui/`, `properties/`, `email/`) via `git mv` (History bleibt erhalten, von git als Renames erkannt).
+- `components/tenant-editor/defaults.ts` → `components/editor/defaults.ts` (lag eine Ebene zu hoch, wird nur vom Editor genutzt) — EditorShell importiert es jetzt relativ als `./defaults` (Geschwister-Stil wie die übrigen Editor-Module).
+- **Toter Code gelöscht:** `vorlagen.ts` (verifiziert 0 Importe; die alte v1/v2-Vorlagen-Idee wurde durch das DB-Vorlagen-System Aufgabe 61–63 ersetzt). Der leere `components/tenant-editor/`-Ordner ist weg.
+- **4 Code-Import-Stellen** angepasst: `new/FunnelEditorClient.tsx`, `[slug]/edit/FunnelEditorClient.tsx`, `new/blank/page.tsx`, `editor/EditorShell.tsx`. Verifiziert per Grep: 0 verbleibende `tenant-editor`/`editor/v2`-Referenzen im Code.
+- **Doku nachgezogen** (lebende Referenzen): CLAUDE.md (§5, §11 inkl. der veralteten „Ordner bleibt bewusst"-Parenthese), architecture.md (Layout-Baum + Code-Karten) + architecture.html, conversion-tracking.md, email-drip-architektur.md, webhook-architecture.md, webhook-erklaert.md, public/fonts/README.md. Historische Logs (history-archive.md, alte datierte Einträge hier) bewusst unangetastet — sie protokollieren den damaligen Stand (inkl. echter v1-Pfade + der Aufgabe-49-Entscheidung „v2 bleibt").
+- Next.js-16-Doku gegengeprüft: Ordner außerhalb `app/` sind frameworkseitig unkonventioniert; `@/`-Alias (tsconfig `@/* → ./*`) trägt die Imports — konfliktfrei.
+
+---
+
 ## Aufgabe 69 — Vorschau-Modal-Fix · CSV-Lead-Export · Feedback-Datei-Upload (2026-06-13)
 
 **Status:** Branch `feature/aufgabe-69-export-upload-modalfix`, Build grün (`tsc --noEmit` + `next build`), von Stavros abgenommen + nach `main` gemerged (`--no-ff`). Kein Schema-Change, keine neue Dependency, `funnel.tsx` unberührt.

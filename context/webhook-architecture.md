@@ -146,7 +146,7 @@ leadplug-saas/
 │       ├── [id]/test/route.ts                   ← POST-Test
 │       └── [id]/logs/route.ts                   ← GET-Logs (default last 50)
 │
-├── components/tenant-editor/v2/
+├── components/editor/
 │   ├── TopTabs.tsx                              ← erweitert: 'webhooks' Tab
 │   ├── EditorShell.tsx                        ← erweitert: routet auf WebhooksPanel,
 │   │                                              + lädt webhook_counts für StepPill-Badges
