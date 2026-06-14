@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Plus, X } from "lucide-react";
 import { CreateFromTemplateDialog } from "./CreateFromTemplateDialog";
-import type { TemplateItem } from "./templates";
+import type { TemplateItem } from "@/lib/templates";
 
 // =============================================================================
 // Aufgabe 62 Runde 2 — „Neuer Funnel" als Modal mit dark-blurred Backdrop (Stavros:

@@ -14,7 +14,7 @@ import {
   Trash2,
   TriangleAlert,
 } from "lucide-react";
-import { DeleteFunnelModal } from "@/components/dashboard/DeleteFunnelModal";
+import { DeleteFunnelModal } from "./DeleteFunnelModal";
 
 export interface FunnelItem {
   slug: string;
