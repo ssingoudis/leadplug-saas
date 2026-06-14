@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LeadPlug — Beta-Testplan (zum Ausdrucken)</title>
+<style>
+  :root {
+    --ink: #1a1d24;
+    --muted: #5b6472;
+    --line: #d7dce3;
+    --accent: #6d28d9;       /* LeadPlug-Lila */
+    --accent-soft: #f3effe;
+    --box: #2c3340;
+    --ok: #047857;
+  }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html { font-size: 16px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    line-height: 1.45;
+    margin: 0;
+    padding: 32px 20px 64px;
+    max-width: 920px;
+    margin-inline: auto;
+    background: #fff;
+  }
+
+  /* ---- Kopf ---- */
+  header.doc { border-bottom: 3px solid var(--accent); padding-bottom: 16px; margin-bottom: 8px; }
+  .brand { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  h1 { font-size: 1.7rem; margin: 0; letter-spacing: -0.01em; }
+  .brand .tag { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--accent); background: var(--accent-soft); padding: 3px 8px; border-radius: 999px; }
+  .lede { color: var(--muted); font-size: .92rem; margin: 10px 0 0; max-width: 70ch; }
+  .meta-fields { display: flex; gap: 28px; flex-wrap: wrap; margin-top: 14px; font-size: .85rem; color: var(--muted); }
+  .meta-fields span { display: inline-flex; gap: 8px; align-items: flex-end; }
+  .meta-fields .ln { display: inline-block; width: 150px; border-bottom: 1px solid var(--line); }
+
+  /* ---- Abschnitte ---- */
+  section { margin-top: 26px; break-inside: avoid; }
+  h2 {
+    font-size: 1.04rem; margin: 0 0 10px; padding: 7px 12px;
+    background: var(--accent-soft); border-left: 4px solid var(--accent); border-radius: 4px;
+    break-after: avoid;
+  }
+  h2 .n { color: var(--accent); font-weight: 800; margin-right: 6px; }
+  h3 { font-size: .9rem; margin: 14px 0 4px; color: var(--muted); font-weight: 700;
+    text-transform: uppercase; letter-spacing: .04em; break-after: avoid; }
+
+  /* ---- Checkliste ---- */
+  .item { display: flex; gap: 10px; align-items: flex-start; padding: 4px 0 4px 4px;
+    break-inside: avoid; font-size: .9rem; }
+  .item + .item { border-top: 1px dotted #e9edf2; }
+  .cb { flex: 0 0 auto; width: 15px; height: 15px; margin-top: 2px;
+    border: 1.6px solid var(--box); border-radius: 3.5px; background: #fff; }
+  .exp { color: var(--muted); font-style: italic; }
+  .exp::before { content: "→ "; font-style: normal; color: var(--accent); font-weight: 700; }
+  code { background: #f1f3f6; padding: 1px 5px; border-radius: 4px; font-size: .82em;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  strong { font-weight: 700; }
+
+  /* ---- Hinweisboxen ---- */
+  .note { border: 1px solid var(--line); background: #fafbfc; border-radius: 8px;
+    padding: 12px 14px; font-size: .86rem; color: var(--muted); margin: 8px 0 0; }
+  .note.warn { border-color: #f0c987; background: #fff8ec; color: #7a5212; }
+  .note strong { color: inherit; }
+
+  .endnote { margin-top: 8px; }
+  .endnote .ln { display: block; border-bottom: 1px solid var(--line); height: 20px; margin-top: 6px; }
+
+  footer.doc { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--line);
+    font-size: .78rem; color: var(--muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+  /* ---- Druck ---- */
+  @page { margin: 14mm; }
+  @media print {
+    html { font-size: 11pt; }
+    body { padding: 0; max-width: none; }
+    section { margin-top: 16px; }
+    h2 { font-size: 11.5pt; }
+    .item { font-size: 9.6pt; padding: 2.5px 0 2.5px 2px; }
+    .cb { width: 13px; height: 13px; }
+    a { color: inherit; text-decoration: none; }
+    .no-print { display: none; }
+  }
+  .printbtn { position: fixed; top: 16px; right: 16px; background: var(--accent); color: #fff;
+    border: 0; padding: 9px 16px; border-radius: 8px; font-size: .85rem; font-weight: 600; cursor: pointer;
+    box-shadow: 0 2px 8px rgba(109,40,217,.3); }
+</style>
+</head>
+<body>
+<button class="printbtn no-print" onclick="window.print()">🖨️ Drucken</button>
+
+<header class="doc">
+  <div class="brand"><h1>LeadPlug — Beta-Testplan</h1><span class="tag">Software-Test vor dem Launch</span></div>
+  <p class="lede"><strong>Ziel:</strong> Ein vollständiger Testtag, an dessen Ende du (a) sicher bist, dass alles funktioniert, und (b) genau weißt, wie jede Funktion arbeitet — bereit fürs Loom-Video&nbsp;+&nbsp;Invites. Von oben nach unten durchgehen, jedes Kästchen ankreuzen. <span class="exp" style="font-style:normal">erwartetes Ergebnis.</span> Passt etwas nicht → Kästchen leer lassen, Notiz danebenschreiben.</p>
+  <div class="meta-fields">
+    <span>Datum:&nbsp;<span class="ln"></span></span>
+    <span>Tester:&nbsp;<span class="ln"></span></span>
+    <span>Build/Version:&nbsp;<span class="ln"></span></span>
+  </div>
+</header>
+
+<section>
+  <h2><span class="n">0.</span>Vorbereitung (einmalig, vor dem Testen)</h2>
+  <div class="item"><span class="cb"></span><span><strong>Zwei Browser-Profile:</strong> eines als Agentur (Dashboard), eines als Endkunde (Inkognito) — beide Seiten gleichzeitig testen.</span></div>
+  <div class="item"><span class="cb"></span><span><strong>Frische, externe E-Mail-Adresse</strong> parat (NICHT dein Stamm-Konto) für den Registrierungs-Test.</span></div>
+  <div class="item"><span class="cb"></span><span><strong>Echte Test-Website</strong> zum Einbetten (leere HTML-Datei o. Ä.) für das iFrame-Embed.</span></div>
+  <div class="item"><span class="cb"></span><span><strong>Geräte:</strong> Desktop + Handy (iOS und/oder Android), optional Tablet.</span></div>
+  <div class="item"><span class="cb"></span><span><strong>Browser:</strong> mindestens Chrome + Firefox + Safari durchspielen.</span></div>
+  <div class="item"><span class="cb"></span><span><strong>Webhook-Testziel:</strong> <code>webhook.site</code> in einem Tab offen (Test-URL + zeigt eingehende Payloads).</span></div>
+</section>
+
+<section>
+  <h2><span class="n">1.</span>Registrierung, Login &amp; Onboarding</h2>
+  <div class="item"><span class="cb"></span><span><code>app.leadplug.de/signup</code> öffnen <span class="exp">Registrierungsformular, sauber in hell + dunkel.</span></span></div>
+  <div class="item"><span class="cb"></span><span>Mit frischer E-Mail registrieren <span class="exp">Bestätigungsseite erscheint, Adresse bricht nicht um.</span></span></div>
+  <div class="item"><span class="cb"></span><span>Bestätigungs-Mail kommt an <span class="exp">Posteingang (nicht Spam), Link klickbar.</span></span></div>
+  <div class="item"><span class="cb"></span><span><strong>Link klicken → landet direkt im Dashboard</strong> <span class="exp">NICHT localhost! Beweist Supabase-Site-URL + NEXT_PUBLIC_BASE_URL auf Prod.</span></span></div>
+  <div class="item"><span class="cb"></span><span>Erst-Login: <strong>Kontoname-Modal</strong> (geblurrt, nicht wegklickbar) <span class="exp">Name (min. 2 Zeichen), Enter speichert, Dashboard frei.</span></span></div>
+  <div class="item"><span class="cb"></span><span>Ausloggen → Login. Wieder einloggen mit E-Mail + Passwort <span class="exp">Dashboard.</span></span></div>
+  <div class="item"><span class="cb"></span><span>Falsches Passwort <span class="exp">klare Fehlermeldung, kein Absturz.</span></span></div>
+  <div class="item"><span class="cb"></span><span>Eingeloggt Root <code>/</code> aufrufen <span class="exp">leitet ins Dashboard.</span></span></div>
+  <div class="item"><span class="cb"></span><span>Ausgeloggt <code>/dashboard/leads</code> direkt aufrufen <span class="exp">leitet auf Login (kein Zugriff ohne Auth).</span></span></div>
+</section>
+
+<section>
+  <h2><span class="n">2.</span>Konto-Verwaltung <code>/dashboard/account</code></h2>
+  <div class="item"><span class="cb"></span><span>E-Mail-Feld ist schreibgeschützt (grau).</span></div>
+  <div class="item"><span class="cb"></span><span>Kontoname ändern → beim Verlassen (Blur) automatisch gespeichert <span class="exp">„Gespeichert"-Status.</span></span></div>
+  <div class="item"><span class="cb"></span><span>Name-Änderung spiegelt in der Sidebar (nach Refresh).</span></div>
+  <div class="item"><span class="cb"></span><span>Passwort: &lt; 8 Zeichen → Fehler; zwei verschiedene → Fehler; gültig → „✓ Gespeichert".</span></div>
+  <div class="item"><span class="cb"></span><span>Mit neuem Passwort aus-/einloggen <span class="exp">klappt.</span></span></div>
+  <div class="item"><span class="cb"></span><span>Gefahrenzone „Konto löschen" anschauen (Button → Modal verlangt exakten Kontonamen).</span></div>
+  <div class="item"><span class="cb"></span><span><em>(Optional, Wegwerf-Konto)</em> Löschen ausführen <span class="exp">Konto + Daten weg, Redirect Login, kein erneutes Login.</span></span></div>
+</section>
+
+<section>
+  <h2><span class="n">3.</span>Dashboard-Navigation &amp; Übersicht</h2>
+  <div class="item"><span class="cb"></span><span>Übersicht <code>/dashboard</code> lädt: letzte Leads + Chart, leeres Konto zeigt „Noch keine …".</span></div>
+  <div class="item"><span class="cb"></span><span>Sidebar: alle Punkte klickbar (Übersicht, Funnels, Leads, Statistiken, Vorlagen, Konto, Billing) <span class="exp">jede Seite lädt fehlerfrei.</span></span></div>
+  <div class="item"><span class="cb"></span><span>Dark-Mode-Schalter <span class="exp">sauberer Wechsel, kein weiß-auf-weiß/schwarz-auf-schwarz irgendwo.</span></span></div>
+  <div class="item"><span class="cb"></span><span>Benutzer-Menü: E-Mail sichtbar, Logout funktioniert.</span></div>
+  <div class="item"><span class="cb"></span><span>Schmales Fenster / Handy <span class="exp">Sidebar klappt sinnvoll, nichts abgeschnitten.</span></span></div>
+</section>
+
+<section>
+  <h2><span class="n">4.</span>Funnel-Verwaltung <code>/dashboard/funnels</code></h2>
+  <div class="item"><span class="cb"></span><span>„Neuer Funnel" → Auswahl aus Vorlage oder leer.</span></div>
+  <div class="item"><span class="cb"></span><span>Aus Vorlage: Vorlage wählen → Namen abfragen → Funnel erstellt + öffnet im Editor.</span></div>
+  <div class="item"><span class="cb"></span><span>Leeren Funnel erstellen <span class="exp">öffnet mit Grundgerüst.</span></span></div>
+  <div class="item"><span class="cb"></span><span><strong>Duplizieren</strong> <span class="exp">exakte Kopie, neuer Slug. Webhooks + Tracking-IDs werden NICHT mitkopiert (prüfen!).</span></span></div>
+  <div class="item"><span class="cb"></span><span>Umbenennen (interner Name) <span class="exp">gespeichert, in Liste aktualisiert.</span></span></div>
+  <div class="item"><span class="cb"></span><span>Slug ist nach Anlage unveränderlich <span class="exp">kein Bearbeiten möglich (schützt Embeds).</span></span></div>
+  <div class="item"><span class="cb"></span><span>Aktiv/Inaktiv schalten <span class="exp">inaktiv → öffentliche URL zeigt 404, nicht das Widget.</span></span></div>
+  <div class="item"><span class="cb"></span><span>Funnel-Karte zeigt Lead-Anzahl (nur completed) + Status korrekt.</span></div>
+  <div class="item"><span class="cb"></span><span>Löschen → Bestätigungs-Modal <span class="exp">gelöscht; Leads bleiben erhalten (Snapshot).</span></span></div>
+  <div class="item"><span class="cb"></span><span>„Live ansehen" <code>?preview=1</code> <span class="exp">öffnet Funnel, zählt KEINEN Aufruf (Statistik prüfen).</span></span></div>
+</section>
+
+<section>
+  <h2><span class="n">5.</span>Vorlagen-Galerie <code>/dashboard/vorlagen</code></h2>
+  <div class="item"><span class="cb"></span><span>Galerie lädt, alle Vorlagen als Karten.</span></div>
+  <div class="item"><span class="cb"></span><span>Kategorie-Filter filtert korrekt, „Alle" zeigt alles.</span></div>
+  <div class="item"><span class="cb"></span><span>Vorschau-Modal: spielbarer Funnel, scrollt bei hohen Schritten (auch kleiner Laptop).</span></div>
+  <div class="item"><span class="cb"></span><span>Aus Vorschau erstellen → Funnel im eigenen Konto.</span></div>
+  <div class="item"><span class="cb"></span><span>Vorschau-Spieler löst keine echten Mails/Leads aus.</span></div>
+</section>
+
+<section>
+  <h2><span class="n">6.</span>Editor — Tab „Bearbeiten" (Inhalt)</h2>
+  <div class="item"><span class="cb"></span><span>Schritt hinzufügen („+") → Auswahl-Modal mit allen Typen.</span></div>
+  <div class="item"><span class="cb"></span><span>Schritte per Drag umsortieren <span class="exp">Reihenfolge bleibt nach Speichern.</span></span></div>
+  <div class="item"><span class="cb"></span><span>Schritt löschen / duplizieren / ausblenden <span class="exp">ausgeblendet erscheint NICHT im Live-Widget.</span></span></div>
+  <div class="item"><span class="cb"></span><span>Schritt zwischen zwei andere einfügen (Pin-Edge) → richtige Stelle.</span></div>
+  <h3>Jeden Frage-Typ einmal anlegen + im Canvas testen</h3>
+  <div class="item"><span class="cb"></span><span><strong>Einfachauswahl</strong> — A/B/C-Chips, <strong>springt automatisch weiter</strong>.</span></div>
+  <div class="item"><span class="cb"></span><span><strong>Mehrfachauswahl</strong> — mehrere wählbar, kein Auto-Advance (Weiter-Button).</span></div>
+  <div class="item"><span class="cb"></span><span><strong>Kurztext</strong> — Eingabefeld + Placeholder.</span></div>
+  <div class="item"><span class="cb"></span><span><strong>Langtext</strong> — Textarea.</span></div>
+  <div class="item"><span class="cb"></span><span><strong>Schieberegler</strong> — Min/Max/Schritt/Einheit, Zahl-Readout.</span></div>
+  <div class="item"><span class="cb"></span><span><strong>Datum</strong> — Kalender, <strong>ausgewählter Tag in Funnel-Farbe</strong> (nicht Blau!), heute vorausgewählt.</span></div>
+  <div class="item"><span class="cb"></span><span><strong>Zahl</strong> — Min/Max/Schritt/Einheit.</span></div>
+  <div class="item"><span class="cb"></span><span><strong>Dropdown</strong> — Auswahlliste.</span></div>
+  <div class="item"><span class="cb"></span><span><strong>Checkbox</strong> (einzeln) — Label rechts.</span></div>
+  <div class="item"><span class="cb"></span><span><strong>Bewertung</strong> — Sterne mit Hover-Vorschau.</span></div>
+  <div class="item"><span class="cb"></span><span><strong>Skala</strong> (NPS) — 0–N Buttons, Labels links/rechts.</span></div>
+  <div class="item"><span class="cb"></span><span><strong>Aussage</strong> — kein Input, nur OK/Weiter.</span></div>
+  <div class="item"><span class="cb"></span><span>Marker-Stil umschalten (A/B/C · 1/2/3 · keiner · Checkbox) → Live korrekt.</span></div>
+  <h3>Optionen &amp; Pflichtfelder</h3>
+  <div class="item"><span class="cb"></span><span>Option hinzufügen / umbenennen / per Drag sortieren / löschen → spiegelt im Canvas.</span></div>
+  <div class="item"><span class="cb"></span><span>Pflichtfeld setzen → leeres Feld blockiert das Weitergehen im Widget.</span></div>
+  <h3>Spezial-Schritte</h3>
+  <div class="item"><span class="cb"></span><span><strong>Welcome-Screen</strong> — eigener Button-Text, kein Zurück-Button, am Anfang.</span></div>
+  <div class="item"><span class="cb"></span><span><strong>Kontaktdaten-Karte</strong> (Multi-Field) — mehrere Felder auf einer Karte.</span></div>
+  <div class="item"><span class="cb"></span><span>Karten-Feld-Typen: Vorname, Nachname, E-Mail, Telefon, PLZ, Radio, Text, Zahl, Datum.</span></div>
+  <div class="item"><span class="cb"></span><span>Pflichtfelder auf der Karte → blockieren Submit wenn leer.</span></div>
+  <div class="item"><span class="cb"></span><span><strong>Einwilligung</strong> als Checkbox mit Markdown-Link <code>[Datenschutz](https://…)</code> → Link klickbar.</span></div>
+  <div class="item"><span class="cb"></span><span><strong>Success-/End-Screen</strong> — Dank-Text, optional Antworten-Übersicht (Toggle).</span></div>
+</section>
+
+<section>
+  <h2><span class="n">7.</span>Editor — Design (Theme)</h2>
+  <div class="item"><span class="cb"></span><span>Markenfarbe ändern <span class="exp">Buttons/Chips/Progress/Kalender übernehmen sie (auch im Live-Widget!).</span></span></div>
+  <div class="item"><span class="cb"></span><span>Textfarbe / Card-BG / Seiten-BG ändern <span class="exp">„transparent" lässt Parent-Seite durchscheinen.</span></span></div>
+  <div class="item"><span class="cb"></span><span>Alle 10 Fonts durchprobieren (System, Inter, Poppins, Roboto, Montserrat, Open Sans, Lato, Nunito, DM Sans, Merriweather) <span class="exp">jeder lädt + sieht richtig aus.</span></span></div>
+  <div class="item"><span class="cb"></span><span>Eckenradius + max. Breite ändern <span class="exp">Live übernommen.</span></span></div>
+  <div class="item"><span class="cb"></span><span>Anzeige-Schalter: Fortschrittsbalken, Schritt-Chip, Überschrift links/mittig <span class="exp">je im Live-Widget prüfen.</span></span></div>
+</section>
+
+<section>
+  <h2><span class="n">8.</span>Editor — Tab „Logik" (Sprünge)</h2>
+  <div class="item"><span class="cb"></span><span>An einer Frage eine Regel anlegen → Bedingung(en) + Ziel (spätere Seite oder „Ende").</span></div>
+  <div class="item"><span class="cb"></span><span>Operatoren: <code>= / ≠</code>, <code>enthält</code> (Freitext), <code>enthält Auswahl</code> (Mehrfach), <code>&gt; ≥ &lt; ≤</code> (Zahl/Slider/Bewertung/Skala).</span></div>
+  <div class="item"><span class="cb"></span><span>„Alle anderen Fälle"-Fallback setzen.</span></div>
+  <div class="item"><span class="cb"></span><span>Nur Vorwärts-Sprünge möglich (Editor bietet nur spätere Schritte).</span></div>
+  <div class="item"><span class="cb"></span><span>Verzweigungs-Badges erscheinen in der Schritt-Liste.</span></div>
+  <div class="item"><span class="cb"></span><span>Logik-Map: Schritte-Kette + „Ende", Sprung-Bögen, Auto-Fit, Zoom (Strg+Mausrad), Drag-Pan. Karten-Klick öffnet Regel-Modal, Stift springt in „Bearbeiten".</span></div>
+  <div class="item"><span class="cb"></span><span>Test-Modus im Editor: Sprünge führen wie definiert (übersprungene Pflichtfelder blocken nicht).</span></div>
+  <div class="item"><span class="cb"></span><span>Live-Widget mit Logik = gleicher Pfad wie Test-Modus.</span></div>
+</section>
+
+<section>
+  <h2><span class="n">9.</span>Editor — Tab „E-Mails" (Drip)</h2>
+  <div class="item"><span class="cb"></span><span>Default-Mails sichtbar (Kunden-Bestätigung + Tenant-Benachrichtigung).</span></div>
+  <div class="item"><span class="cb"></span><span>Neue Mail anlegen (3-Pane: Liste · Editor · Live-Vorschau).</span></div>
+  <div class="item"><span class="cb"></span><span>Verzögerung <code>0</code> (sofort) und <code>&gt;0</code> (z. B. 5 Min) — beide Modi.</span></div>
+  <div class="item"><span class="cb"></span><span>Empfänger-Modus: Lead · feste Adresse(n) · <code>@me</code> (folgt Konto-Adresse) — je testen.</span></div>
+  <div class="item"><span class="cb"></span><span>Variablen einfügen → Chip; <code>{{answer.&lt;feld&gt;}}</code>, Lead-Name/E-Mail/Telefon → in Vorschau aufgelöst (Choice→Label).</span></div>
+  <div class="item"><span class="cb"></span><span>Magic-Sections: Antworten-Übersicht, Kontakt-Zusammenfassung, Dashboard-Button → in Vorschau gerendert.</span></div>
+  <div class="item"><span class="cb"></span><span>CTA-Button (Label + URL) einfügen; Link via Inline-Popover.</span></div>
+  <div class="item"><span class="cb"></span><span>Live-Vorschau mit Mock-Daten UND echtem Lead (Picker); Resize-Handle funktioniert.</span></div>
+  <div class="item"><span class="cb"></span><span>Auto-Save (~1,5 s); Wechsel warnt bei ungespeicherten Änderungen.</span></div>
+  <div class="item"><span class="cb"></span><span>„Test senden" → Mail kommt an, sieht aus wie Vorschau, taucht in Historie auf.</span></div>
+</section>
+
+<section>
+  <h2><span class="n">10.</span>Editor — Tab „Webhooks"</h2>
+  <div class="item"><span class="cb"></span><span>Webhook mit <code>webhook.site</code>-URL anlegen.</span></div>
+  <div class="item"><span class="cb"></span><span>URL-Validierung: <code>http://</code> abgelehnt, <code>localhost</code>/private IP abgelehnt, nur <code>https://</code> öffentlich erlaubt.</span></div>
+  <div class="item"><span class="cb"></span><span>Trigger <code>on_submit</code> (Event <code>submission.completed</code>) anlegen.</span></div>
+  <div class="item"><span class="cb"></span><span>Trigger <code>after_page</code> → Page wählen → violettes Badge an der Schritt-Pille.</span></div>
+  <div class="item"><span class="cb"></span><span>„Test senden" → Payload landet auf webhook.site.</span></div>
+  <div class="item"><span class="cb"></span><span>Secret: einmal voll gezeigt (Copy), danach maskiert; Rotieren testbar.</span></div>
+  <div class="item"><span class="cb"></span><span>Signatur-Snippets (Node/Python/PHP) vorhanden + kopierbar.</span></div>
+  <div class="item"><span class="cb"></span><span>Logs-Drawer zeigt Versuche mit Status/Code/Response.</span></div>
+  <div class="item"><span class="cb"></span><span>Webhook deaktivieren → feuert nicht mehr.</span></div>
+</section>
+
+<section>
+  <h2><span class="n">11.</span>Editor — Tab „Einbinden"</h2>
+  <div class="item"><span class="cb"></span><span>Embed-Code (iFrame) angezeigt → Copy-Button funktioniert.</span></div>
+  <div class="item"><span class="cb"></span><span>Plattform-Anleitungen vorhanden + verständlich.</span></div>
+  <div class="item"><span class="cb"></span><span>Meta-Pixel-ID eintragen → Format (nur Ziffern 5–20) → ungültig abgelehnt.</span></div>
+  <div class="item"><span class="cb"></span><span>Google-Ads-Conversion → Format <code>AW-XXXX/Label</code> → ungültig abgelehnt.</span></div>
+  <div class="item"><span class="cb"></span><span>Embed-Code tatsächlich in die Test-Website einbauen (Abschnitt 14/21).</span></div>
+</section>
+
+<section>
+  <h2><span class="n">12.</span>Speichern &amp; Persistenz</h2>
+  <div class="item"><span class="cb"></span><span>Funnel speichern (Top-Save) → Erfolg sichtbar.</span></div>
+  <div class="item"><span class="cb"></span><span>Seite neu laden → alles exakt wie gespeichert (nichts verloren).</span></div>
+  <div class="item"><span class="cb"></span><span>Undo/Redo funktioniert.</span></div>
+  <div class="item"><span class="cb"></span><span>Nach Speichern bleiben Page-IDs stabil → <code>after_page</code>-Webhook bleibt korrekt gebunden.</span></div>
+  <div class="item"><span class="cb"></span><span>Mehrere schnelle Änderungen + Speichern → keine Doppelungen/Verluste.</span></div>
+</section>
+
+<section>
+  <h2><span class="n">13.</span>Live-Widget — Rendering &amp; Navigation <code>/[slug]</code></h2>
+  <div class="item"><span class="cb"></span><span>Funnel-URL anonym öffnen → lädt schnell, sauber zentriert.</span></div>
+  <div class="item"><span class="cb"></span><span>Welcome-Screen (falls vorhanden) → Start-Button.</span></div>
+  <div class="item"><span class="cb"></span><span>Fortschrittsbalken bewegt sich; Schritt-Chip zeigt Nummer (falls aktiviert).</span></div>
+  <div class="item"><span class="cb"></span><span>Einfachauswahl → Klick springt automatisch (~250 ms).</span></div>
+  <div class="item"><span class="cb"></span><span>Alle anderen Typen → Weiter/OK nötig, kein zu frühes Wegschnipsen.</span></div>
+  <div class="item"><span class="cb"></span><span>Zurück-Button → eine Frage zurück, vorherige Antwort noch da (auch über Logik-Sprünge).</span></div>
+  <div class="item"><span class="cb"></span><span>Jeden Frage-Typ einmal beantworten <span class="exp">Eingabe wird angenommen.</span></span></div>
+  <div class="item"><span class="cb"></span><span>Kontaktdaten-Karte: mehrere Felder, Pflichtfeld leer → Weiter blockiert + Hinweis.</span></div>
+  <div class="item"><span class="cb"></span><span>Einwilligung: Datenschutz-Link öffnet (neuer Tab), Checkbox Pflicht falls gesetzt.</span></div>
+  <div class="item"><span class="cb"></span><span>Letzter Schritt → OK löst Absenden aus (kein separates Kontaktformular).</span></div>
+  <div class="item"><span class="cb"></span><span>Erfolgsseite (Dank-Text) ODER Redirect auf <code>redirectUrl</code> (falls gesetzt) nach ~1,5 s.</span></div>
+  <div class="item"><span class="cb"></span><span>Antworten-Übersicht auf der Erfolgsseite (falls aktiviert) korrekt.</span></div>
+</section>
+
+<section>
+  <h2><span class="n">14.</span>Live-Widget — Geräte, Themes &amp; iFrame</h2>
+  <div class="item"><span class="cb"></span><span>Handy (Hochformat) → alles bedienbar, Buttons groß genug, kein horizontales Scrollen.</span></div>
+  <div class="item"><span class="cb"></span><span>Tablet / schmales Fenster → Layout passt sich an (Container-Queries).</span></div>
+  <div class="item"><span class="cb"></span><span>Desktop breit → max. Breite greift, zentriert.</span></div>
+  <div class="item"><span class="cb"></span><span>Dunkles Theme → Text lesbar, Kontraste ok.</span></div>
+  <div class="item"><span class="cb"></span><span><strong>iFrame-Höhe</strong> passt sich an jeden Schritt an (kein Abschneiden, kein inneres Scrollen) — auf echter Test-Website prüfen.</span></div>
+  <div class="item"><span class="cb"></span><span>Font lädt im iFrame (kein Flackern auf System-Font).</span></div>
+</section>
+
+<section>
+  <h2><span class="n">15.</span>Submit &amp; Lead-Erfassung (End-to-End)</h2>
+  <div class="item"><span class="cb"></span><span>Funnel als Endkunde komplett ausfüllen + absenden.</span></div>
+  <div class="item"><span class="cb"></span><span>Lead erscheint im Posteingang <code>/dashboard/leads</code> (neueste oben).</span></div>
+  <div class="item"><span class="cb"></span><span>Kontaktdaten korrekt abgeleitet: Name, E-Mail, Telefon, PLZ.</span></div>
+  <div class="item"><span class="cb"></span><span>Alle Antworten gespeichert + in Detailansicht mit Fragen-Labels (nicht rohe Keys) + Choice-Labels.</span></div>
+  <div class="item"><span class="cb"></span><span>Anonymer Submit (Funnel ohne Kontaktfelder) → erscheint trotzdem als completed Lead.</span></div>
+  <div class="item"><span class="cb"></span><span>Leads verschiedener Funnels → richtig zugeordnet (Funnel-Name stimmt).</span></div>
+</section>
+
+<section>
+  <h2><span class="n">16.</span>Partial-Submissions &amp; Abbrecher</h2>
+  <div class="item"><span class="cb"></span><span>Funnel anfangen, E-Mail eingeben, abbrechen → nach ~10 Min im Tab „Abgebrochen — mit E-Mail".</span></div>
+  <div class="item"><span class="cb"></span><span>Anfangen ohne Kontaktdaten + abbrechen → nicht im Posteingang, aber als Aufruf in Statistik.</span></div>
+  <div class="item"><span class="cb"></span><span>Abbrecher-Webhook (falls konfiguriert) feuert nach Cooldown (~10 Min) einmal (nicht doppelt).</span></div>
+  <div class="item"><span class="cb"></span><span>Neuer Tab = neue Session; gleicher Tab nach Reload = Session fortgesetzt (Antworten noch da).</span></div>
+</section>
+
+<section>
+  <h2><span class="n">17.</span>Sicherheit, Bot-Schutz &amp; Fehler-Routen</h2>
+  <div class="item"><span class="cb"></span><span>Inaktiver Funnel <code>/[slug]</code> → 404/„nicht verfügbar".</span></div>
+  <div class="item"><span class="cb"></span><span>Nicht existierender Slug → 404.</span></div>
+  <div class="item"><span class="cb"></span><span>Quelltext einer Funnel-Seite prüfen → KEINE internen Felder (<code>notificationEmail</code>, Billing) sichtbar.</span></div>
+  <div class="item"><span class="cb"></span><span>Honeypot: Bot-Submit mit gefülltem Honeypot → Server 200, aber kein Lead in DB.</span></div>
+  <div class="item"><span class="cb"></span><span>Doppelter Submit (Doppelklick / Reload) → nur ein Lead, Mails/Webhooks einmal (Idempotenz).</span></div>
+  <div class="item"><span class="cb"></span><span>Bewusst kaputte URL → freundliche Fehlerseite, kein Stacktrace.</span></div>
+  <div class="item"><span class="cb"></span><span>Als Konto A keine Daten von Konto B sichtbar (mit zweitem Wegwerf-Konto checken).</span></div>
+</section>
+
+<section>
+  <h2><span class="n">18.</span>Lead-Posteingang <code>/dashboard/leads</code></h2>
+  <div class="item"><span class="cb"></span><span>Leere Ansicht (neues Konto) → „Noch keine Leads eingegangen".</span></div>
+  <div class="item"><span class="cb"></span><span>Listen- und Board-Ansicht umschalten → beide zeigen die Leads.</span></div>
+  <div class="item"><span class="cb"></span><span>Status ändern: offen → kontaktiert → abgeschlossen → bleibt nach Reload.</span></div>
+  <div class="item"><span class="cb"></span><span>Interne Notiz schreiben → gespeichert (Autosave), nach Reload da.</span></div>
+  <div class="item"><span class="cb"></span><span>Filter: Funnel · Status · Zeitraum · Suche → jeweils korrektes Ergebnis.</span></div>
+  <div class="item"><span class="cb"></span><span>Sortierung „Neueste zuerst" stimmt.</span></div>
+  <div class="item"><span class="cb"></span><span>CSV-Export (nur bei Einzel-Funnel aktiv): Excel (DE, Semikolon+BOM) + Standard (Komma) → beide öffnen → Spalten + Umlaute korrekt, leere Spalten weg, Choice→Label.</span></div>
+  <div class="item"><span class="cb"></span><span>Export-Button deaktiviert bei „Alle Funnels" → Tooltip erklärt warum.</span></div>
+  <div class="item"><span class="cb"></span><span>Lead-Detail aufklappen → alle Antworten + Kontaktfelder lesbar.</span></div>
+</section>
+
+<section>
+  <h2><span class="n">19.</span>E-Mail-Zustellung (echte Mails)</h2>
+  <div class="item"><span class="cb"></span><span>Kunden-Bestätigung kommt beim Endkunden an (nicht Spam).</span></div>
+  <div class="item"><span class="cb"></span><span>Tenant-Benachrichtigung kommt bei dir an (<code>notificationEmail</code>).</span></div>
+  <div class="item"><span class="cb"></span><span>Brand-Header in Markenfarbe; Footer-Link führt auf <strong>app.leadplug.de</strong> (nicht tot).</span></div>
+  <div class="item"><span class="cb"></span><span>Variablen aufgelöst, keine rohen <code>{{…}}</code>.</span></div>
+  <div class="item"><span class="cb"></span><span>Magic-Sections korrekt gerendert.</span></div>
+  <div class="item"><span class="cb"></span><span>Absender-Adresse stimmt (verifizierte Domain), Antworten-an sinnvoll.</span></div>
+  <div class="item"><span class="cb"></span><span>Verzögerte Mail (delay &gt; 0) kommt zur richtigen Zeit (Cron alle 5 Min).</span></div>
+  <div class="item"><span class="cb"></span><span>Mail auf Handy → responsive, lesbar.</span></div>
+</section>
+
+<section>
+  <h2><span class="n">20.</span>Webhook-Zustellung (echte Auslieferung)</h2>
+  <div class="item"><span class="cb"></span><span>Nach echtem Submit landet <code>submission.completed</code> auf webhook.site.</span></div>
+  <div class="item"><span class="cb"></span><span>Payload enthält: <code>event</code>, <code>contact</code>, <code>answers[]</code> (mit Labels) + <code>answers_flat</code>, <code>available_channels</code>.</span></div>
+  <div class="item"><span class="cb"></span><span>Signatur-Header <code>X-LeadPlug-Signature</code> vorhanden.</span></div>
+  <div class="item"><span class="cb"></span><span>after_page-Webhook feuert beim Überschreiten der gebundenen Page.</span></div>
+  <div class="item"><span class="cb"></span><span>Retry: Ziel liefert 500 → „retrying", Cron wiederholt mit Backoff; 4xx → sofort „failed" (kein Spam).</span></div>
+  <div class="item"><span class="cb"></span><span>Logs im Editor spiegeln alle Versuche.</span></div>
+</section>
+
+<section>
+  <h2><span class="n">21.</span>Conversion-Tracking (auf der Test-Website)</h2>
+  <div class="item"><span class="cb"></span><span>Embed-Code mit <code>embed.js</code> auf Test-Seite → Widget lädt.</span></div>
+  <div class="item"><span class="cb"></span><span>Nach Submit: <code>postMessage 'funnel-submit'</code> feuert (DevTools) → keine PII (nur slug + Pixel-IDs).</span></div>
+  <div class="item"><span class="cb"></span><span>Falls GTM: <code>dataLayer</code>-Push <code>leadplug_lead</code> sichtbar.</span></div>
+  <div class="item"><span class="cb"></span><span>Falls Meta-Pixel-ID: <code>fbq('track','Lead')</code> feuert (Pixel Helper).</span></div>
+  <div class="item"><span class="cb"></span><span>Falls Google-Ads: Conversion feuert.</span></div>
+  <div class="item"><span class="cb"></span><span><code>window.LeadPlug.onLead</code>-Callback (falls genutzt) wird aufgerufen.</span></div>
+</section>
+
+<section>
+  <h2><span class="n">22.</span>Statistiken <code>/dashboard/statistiken</code></h2>
+  <div class="item"><span class="cb"></span><span>Seite lädt mit 12-Monats-Daten.</span></div>
+  <div class="item"><span class="cb"></span><span>Aufrufe zählen bei echten Besuchen hoch (nicht bei <code>?preview=1</code>).</span></div>
+  <div class="item"><span class="cb"></span><span>Leads zählen nur abgeschlossene Submissions.</span></div>
+  <div class="item"><span class="cb"></span><span>Funnel-Filter → Charts aktualisieren sich.</span></div>
+  <div class="item"><span class="cb"></span><span>Donut / Monats-Chart / Aufrufe-vs-Leads-Trend → plausibel, kein NaN/leere Achsen.</span></div>
+</section>
+
+<section>
+  <h2><span class="n">23.</span>Billing-Seite <code>/dashboard/billing</code></h2>
+  <div class="item"><span class="cb"></span><span>Grüne „Offene Beta: kostenlos"-Box sichtbar.</span></div>
+  <div class="item"><span class="cb"></span><span>Status-Badge „Kostenlos", Feature-Liste, „nichts weiter zu tun".</span></div>
+  <div class="item"><span class="cb"></span><span>Kein Stripe-Zwang, keine Kreditkarten-Abfrage.</span></div>
+  <div class="item"><span class="cb"></span><span><em>(Optional, Test-Modus)</em> Test-Kachel „1 €/Monat" → Checkout öffnet Stripe → Zurück-Banner. Nicht nötig für Beta.</span></div>
+</section>
+
+<section>
+  <h2><span class="n">24.</span>Feedback-Widget (im Dashboard)</h2>
+  <div class="item"><span class="cb"></span><span>Floating-Button unten rechts → Modal „Nachricht senden".</span></div>
+  <div class="item"><span class="cb"></span><span>Kategorie + Nachricht → Senden → Erfolgs-Bestätigung.</span></div>
+  <div class="item"><span class="cb"></span><span>Datei-Anhang: ≤ 3 Dateien, zusammen ≤ 4 MB, nur PNG/JPG/PDF → Über-Limit/falscher Typ abgelehnt.</span></div>
+  <div class="item"><span class="cb"></span><span>Feedback-Mail kommt bei dir an (<code>SUPPORT_EMAIL</code>), Anhänge dabei, Reply-To = Absender.</span></div>
+  <div class="item"><span class="cb"></span><span>WhatsApp-Link (falls gesetzt) öffnet mit vorausgefülltem Text.</span></div>
+  <div class="item"><span class="cb"></span><span>Widget blendet sich im Vollbild-Editor aus.</span></div>
+</section>
+
+<section>
+  <h2><span class="n">25.</span>Fehler-, Grenz- &amp; Stress-Fälle</h2>
+  <div class="item"><span class="cb"></span><span>Sehr lange Texte in Eingabefeldern → kein Layout-Bruch.</span></div>
+  <div class="item"><span class="cb"></span><span>Sonderzeichen / Umlaute / Emoji in Antworten + Namen → korrekt in DB/Mail/Webhook/CSV.</span></div>
+  <div class="item"><span class="cb"></span><span>Leere Pflichtfelder überall → saubere Blockade mit Hinweis.</span></div>
+  <div class="item"><span class="cb"></span><span>Netzwerk während Submit kappen (DevTools offline) → „Danke" sichtbar, Retry rettet (Partial-Submission als Netz).</span></div>
+  <div class="item"><span class="cb"></span><span>Browser-Zurück im Widget → bleibt im Funnel.</span></div>
+  <div class="item"><span class="cb"></span><span>Mehrere Tabs desselben Funnels → unabhängige Sessions, kein Daten-Mix.</span></div>
+  <div class="item"><span class="cb"></span><span>Schneller Klick-Spam auf Weiter/OK → kein Doppel-Advance/Doppel-Submit.</span></div>
+</section>
+
+<section>
+  <h2><span class="n">26.</span>Cross-Browser &amp; Geräte (Quer-Check)</h2>
+  <div class="item"><span class="cb"></span><span>Chrome (Desktop) — Dashboard + Editor + Widget.</span></div>
+  <div class="item"><span class="cb"></span><span>Firefox — dasselbe.</span></div>
+  <div class="item"><span class="cb"></span><span>Safari (Mac) — dasselbe, besonders Datum/Animationen.</span></div>
+  <div class="item"><span class="cb"></span><span>iOS Safari (Handy) — Widget + Submit.</span></div>
+  <div class="item"><span class="cb"></span><span>Android Chrome (Handy) — Widget + Submit.</span></div>
+  <div class="item"><span class="cb"></span><span>Dark Mode auf jedem davon stichprobenartig.</span></div>
+</section>
+
+<section>
+  <h2><span class="n">27.</span>Abschluss — „Ich weiß, wie alles funktioniert"</h2>
+  <div class="note">Diese Fragen am Ende des Tages <strong>ohne Nachschauen</strong> beantworten können:</div>
+  <div class="item"><span class="cb"></span><span>Wie kommt ein Lead von „Submit" bis in Posteingang + Mail + Webhook?</span></div>
+  <div class="item"><span class="cb"></span><span>Unterschied abgeschlossener Lead ↔ Abbrecher (und wann zählt was)?</span></div>
+  <div class="item"><span class="cb"></span><span>Wie binde ich einen Funnel auf einer Kundenseite ein + richte Conversion-Tracking ein?</span></div>
+  <div class="item"><span class="cb"></span><span>Wie baue ich eine Logik-Verzweigung und prüfe sie?</span></div>
+  <div class="item"><span class="cb"></span><span>Wie richte ich Drip-Mails + Webhooks ein und teste sie?</span></div>
+  <div class="item"><span class="cb"></span><span>Was passiert mit Leads/Daten beim Löschen eines Funnels/Kontos?</span></div>
+  <div class="item"><span class="cb"></span><span>Wo sehe ich, ob eine Mail/ein Webhook fehlgeschlagen ist?</span></div>
+</section>
+
+<section>
+  <h2><span class="n">★</span>Ergebnis-Notiz (am Ende ausfüllen)</h2>
+  <div class="endnote">Gefundene Fehler:<span class="ln"></span><span class="ln"></span></div>
+  <div class="endnote">Blocker vor Invite (muss erst gefixt werden):<span class="ln"></span></div>
+  <div class="endnote">„Später"-Punkte (nach Launch ok):<span class="ln"></span></div>
+  <div class="endnote" style="margin-top:12px">Bereit für Loom + Invites? &nbsp;☐ Ja &nbsp;&nbsp;☐ Nein — weil:<span class="ln"></span></div>
+</section>
+
+<footer class="doc">
+  <span>LeadPlug — Beta-Testplan</span>
+  <span>Vor Loom-Video + Invites · ein Testtag</span>
+</footer>
+</body>
+</html>
