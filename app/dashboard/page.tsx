@@ -3,8 +3,8 @@ import { Plus, ArrowRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import Card from '@/components/ui/Card'
 import Sparkline from '@/components/dashboard/Sparkline'
-import { NewFunnelButton } from '@/components/dashboard/NewFunnelModal'
-import { mapTemplateRows, TEMPLATE_GALLERY_SELECT } from '@/components/dashboard/templates'
+import { NewFunnelButton } from '@/components/dashboard/funnels/NewFunnelModal'
+import { mapTemplateRows, TEMPLATE_GALLERY_SELECT } from '@/lib/templates'
 
 type LeadStatus = 'offen' | 'kontaktiert' | 'abgeschlossen'
 

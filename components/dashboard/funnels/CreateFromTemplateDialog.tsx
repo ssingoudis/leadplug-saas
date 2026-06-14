@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { LoaderCircle, TriangleAlert } from "lucide-react";
-import { createFunnelFromTemplate, type TemplateItem } from "./templates";
+import { createFunnelFromTemplate, type TemplateItem } from "@/lib/templates";
 
 // =============================================================================
 // Aufgabe 62 Runde 3 — Namens-Abfrage vor „Vorlage verwenden" (Stavros: gleiche

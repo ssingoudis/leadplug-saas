@@ -2,13 +2,13 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Plus, Zap } from "lucide-react";
 import Card from "@/components/ui/Card";
-import { FunnelCard } from "@/components/dashboard/FunnelCard";
-import { NewFunnelButton } from "@/components/dashboard/NewFunnelModal";
+import { FunnelCard } from "@/components/dashboard/funnels/FunnelCard";
+import { NewFunnelButton } from "@/components/dashboard/funnels/NewFunnelModal";
 import {
   mapTemplateRows,
   TEMPLATE_GALLERY_SELECT,
   type TemplateItem,
-} from "@/components/dashboard/templates";
+} from "@/lib/templates";
 
 interface FunnelItem {
   slug: string;

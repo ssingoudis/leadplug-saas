@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { buildScriptEmbed, buildEmbedSnippet } from "@/lib/embedSnippet";
-import { CodeBlock, CopyBar } from "@/components/dashboard/CodeSnippet";
-import TrackingSettings from "@/components/dashboard/TrackingSettings";
-import PlatformGuides from "@/components/dashboard/PlatformGuides";
+import { CodeBlock, CopyBar } from "./share/CodeSnippet";
+import TrackingSettings from "./share/TrackingSettings";
+import PlatformGuides from "./share/PlatformGuides";
 import { SectionCard } from "./ui/Panel";
 
 // =============================================================================

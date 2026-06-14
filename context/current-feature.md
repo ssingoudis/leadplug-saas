@@ -110,6 +110,20 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
+## Aufgabe 71 — Ordner-Umbau Schritt 2: `dashboard/` aufräumen (Phase A) (2026-06-14)
+
+**Status:** Branch `feature/aufgabe-71-dashboard-aufraeumen`, Build grün (`tsc --noEmit` + `next build`), kein DB-Change, keine neue Dependency, `funnel.tsx` unberührt. **Reiner Struktur-Umbau.** Plan: [`context/struktur-plan.md`](struktur-plan.md) Phase A (A1+A2+A3).
+
+**Gemacht (alles `git mv`, von git als Renames erkannt):**
+- **A1 — Share-Helfer gebündelt:** `CodeSnippet.tsx` · `TrackingSettings.tsx` · `PlatformGuides.tsx` → `components/editor/share/` (nur `editor/SharePanel.tsx` nutzt sie; `SharePanel` bleibt im Editor-Wurzel = Muster „Panel im Wurzel, Teile im Unterordner" wie `editor/email/`). SharePanel-Importe auf `./share/*` umgestellt.
+- **A2 — Daten raus aus den Komponenten:** `components/dashboard/templates.ts` → `lib/templates.ts` (ist Mapper + RPC-Helper, keine UI). 6 Import-Stellen aktualisiert (3 app-Pages + 3 Dashboard-Komponenten, alle auf `@/lib/templates`).
+- **A3 — `dashboard/` sub-gruppiert:** neuer `dashboard/nav/` (DashboardShell · Sidebar · LogoMark · navItems.ts) + `dashboard/funnels/` (FunnelCard · NewFunnelModal · DeleteFunnelModal · CreateFromTemplateDialog · TemplateShowcase). Im `dashboard/`-Wurzel bleiben nur noch BetaFeedback · OnboardingNameModal · Sparkline. Interne Relativ-Importe zogen mit; nur FunnelCard→DeleteFunnelModal (war absoluter Selbst-Bezug) auf `./DeleteFunnelModal` + die app-Page-Importe auf die neuen Pfade umgestellt.
+- Verifiziert per Grep: 0 verbleibende alte `@/components/dashboard/...`-Pfade auf verschobene Dateien. Vor dem Verschieben alle intra-dashboard Relativ-/Selbst-Importe geprüft (kein Relativ-Pfad bricht über die Ordnergrenze).
+
+**Phase C (funnel.tsx-Umzug) bleibt gestrichen** (siehe struktur-plan.md). Nächster möglicher Schritt: Phase B (`lib/` clustern).
+
+---
+
 ## Aufgabe 70 — Ordner-Umbau Schritt 1: `tenant-editor/v2` → `editor` (2026-06-14)
 
 **Status:** Branch `feature/aufgabe-70-editor-ordner-umbau`, Build grün (`tsc --noEmit` + `next build`), kein DB-Change, keine neue Dependency, `funnel.tsx` unberührt. **Reiner Struktur-Umbau, kein Verhaltens-Change.**

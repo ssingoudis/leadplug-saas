@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { TemplateShowcase } from "@/components/dashboard/TemplateShowcase";
-import { mapTemplateRows, TEMPLATE_GALLERY_SELECT } from "@/components/dashboard/templates";
+import { TemplateShowcase } from "@/components/dashboard/funnels/TemplateShowcase";
+import { mapTemplateRows, TEMPLATE_GALLERY_SELECT } from "@/lib/templates";
 
 // Aufgabe 62 Runde 2 — eigener Menüpunkt „Vorlagen": das Schaufenster der fertigen
 // Funnels (Hero-Karten + durchspielbare Vorschau). Templates kommen aus

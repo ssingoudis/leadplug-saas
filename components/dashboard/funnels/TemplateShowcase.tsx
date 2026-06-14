@@ -18,7 +18,7 @@ import {
   Zap,
 } from "lucide-react";
 import { CreateFromTemplateDialog } from "./CreateFromTemplateDialog";
-import type { TemplateItem } from "./templates";
+import type { TemplateItem } from "@/lib/templates";
 
 // =============================================================================
 // Aufgabe 62 Runde 2 — Vorlagen-Showcase (/dashboard/vorlagen).
