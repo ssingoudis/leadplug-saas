@@ -228,6 +228,23 @@ export interface TenantConfig {
   logicRules?: LogicRule[]     // Aufgabe 58: Logik-Sprünge (leer/undefined = lineares Verhalten wie bisher)
 }
 
+// Aufgabe 73: Öffentliche Projektion von TenantConfig — nur die Felder, die das
+// Live-Widget (Client) tatsächlich braucht. Interne Tenant-Daten (notificationEmail,
+// emailSenderLocal, billingModel/leadPrice/billingPrice, tenant/funnel-ids) werden
+// NICHT an den Browser serialisiert. Erzeugt via toPublicFunnelConfig (lib/getTenantConfig.ts),
+// einziger Consumer ist components/TenantFunnelClient.tsx.
+export type PublicFunnelConfig = Pick<
+  TenantConfig,
+  | 'slug'
+  | 'theme'
+  | 'funnel'
+  | 'questions'
+  | 'redirectUrl'
+  | 'logicRules'
+  | 'metaPixelId'
+  | 'googleAdsConversion'
+>
+
 // =============================================================================
 // LOGIK-SPRÜNGE (Aufgabe 58) — Regeln pro Step, erste matchende gewinnt.
 // Auswertung client (Widget) + server (Submit-Backstop) via lib/funnelLogic.ts.

@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { mapLogicRuleRow } from '@/lib/logic/logicRuleMapping'
-import type { TenantConfig, FunnelFont, ContactFieldConfig, QuestionType, QuestionConfig, LogicRule } from '@/types'
+import type { TenantConfig, PublicFunnelConfig, FunnelFont, ContactFieldConfig, QuestionType, QuestionConfig, LogicRule } from '@/types'
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-_]*$/
 
@@ -332,5 +332,25 @@ export async function getTenantConfig(slug: string): Promise<TenantConfig | null
     if (err instanceof TenantInactiveError) return null
     console.error('getTenantConfig: Supabase-Fehler', err)
     return null
+  }
+}
+
+/**
+ * Aufgabe 73: Reduziert die volle (server-seitige) TenantConfig auf die Felder, die
+ * das öffentliche Widget im Browser braucht. Verhindert, dass interne Tenant-Daten
+ * (notificationEmail, emailSenderLocal, billingModel/leadPrice/billingPrice,
+ * tenant-/funnel-ids) in den an den Client serialisierten Seiten-Payload gelangen.
+ * Einziger Consumer: components/TenantFunnelClient.tsx (via app/[slug]/page.tsx).
+ */
+export function toPublicFunnelConfig(config: TenantConfig): PublicFunnelConfig {
+  return {
+    slug:                config.slug,
+    theme:               config.theme,
+    funnel:              config.funnel,
+    questions:           config.questions,
+    redirectUrl:         config.redirectUrl,
+    logicRules:          config.logicRules,
+    metaPixelId:         config.metaPixelId,
+    googleAdsConversion: config.googleAdsConversion,
   }
 }

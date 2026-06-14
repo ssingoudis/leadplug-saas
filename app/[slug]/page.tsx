@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { TenantFunnelClient } from '@/components/TenantFunnelClient'
-import { getTenantConfig, TenantInactiveError } from '@/lib/getTenantConfig'
+import { getTenantConfig, toPublicFunnelConfig, TenantInactiveError } from '@/lib/getTenantConfig'
 import type { Metadata } from 'next'
 
 type SlugPageProps = {
@@ -42,7 +42,7 @@ export default async function SlugPage({ params }: SlugPageProps) {
       className="min-h-dvh flex items-center justify-center"
       style={{ backgroundColor: config.theme.pageBackgroundColor ?? "transparent" }}
     >
-      <TenantFunnelClient config={config} />
+      <TenantFunnelClient config={toPublicFunnelConfig(config)} />
     </main>
   )
 }

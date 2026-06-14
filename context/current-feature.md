@@ -110,6 +110,16 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
+## Aufgabe 73 — Öffentliche Widget-Config: interne Tenant-Daten nicht mehr an den Client (2026-06-14)
+
+**Status:** Branch `feature/aufgabe-73-public-funnel-config`, Build grün (`tsc --noEmit` + `next build`), kein DB-Change, keine neue Dependency, `funnel.tsx` unberührt.
+
+**Anlass (Go-Live-Audit):** `getTenantConfig` baut die volle `TenantConfig` (inkl. `notificationEmail`, `emailSenderLocal`, `billingModel`/`leadPrice`/`billingPrice`, tenant-/funnel-ids). [`app/[slug]/page.tsx`](../app/[slug]/page.tsx) reichte das **komplette** Objekt als Prop an die Client-Komponente `TenantFunnelClient` — Next.js serialisiert Client-Props in den öffentlichen Seiten-Payload, d.h. diese internen Agentur-Daten standen im Quelltext jeder eingebetteten Funnel-Seite. **Kein RLS-/Daten-Bruch** (Lead-Daten bleiben durch RLS geschützt), aber Hygiene-Leak — v.a. `notificationEmail`; die Billing-Felder werden relevant, sobald zahlende Kunden existieren.
+
+**Gemacht:** Neue öffentliche Projektion `PublicFunnelConfig = Pick<TenantConfig, slug|theme|funnel|questions|redirectUrl|logicRules|metaPixelId|googleAdsConversion>` ([types/index.ts](../types/index.ts)) + Helper `toPublicFunnelConfig` ([lib/getTenantConfig.ts](../lib/getTenantConfig.ts)). `page.tsx` gibt nur noch `toPublicFunnelConfig(config)` an den Client; `generateMetadata` nutzt weiter die volle Config (server-only, kein Leak). [`TenantFunnelClient`](../components/TenantFunnelClient.tsx) typt den Prop jetzt als `PublicFunnelConfig`. **Verifiziert vor dem Bauen:** der Client liest exakt diese 8 Felder (Grep über alle `config.`-Zugriffe), `TenantFunnelClient` wird nur in `page.tsx` verwendet (sonst nur Kommentar-Erwähnungen), `Funnel` bekommt nur die destrukturierten Props → kein Zugriff auf gestrippte Felder möglich.
+
+---
+
 ## Aufgabe 72 — Ordner-Umbau Schritt 3: `lib/` clustern (Phase B) (2026-06-14)
 
 **Status:** Branch `feature/aufgabe-72-lib-clustern`, Build grün (`tsc --noEmit` + `next build`), kein DB-Change, keine neue Dependency. Plan: [`context/struktur-plan.md`](struktur-plan.md) Phase B. **Damit ist die Ordner-Aufräumung abgeschlossen** (Phase C/funnel.tsx-Umzug bleibt bewusst gestrichen).
