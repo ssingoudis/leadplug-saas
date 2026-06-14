@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useRef } from 'react'
 import { Funnel } from '@/components/funnel'
-import type { TenantConfig } from '@/types'
+import type { PublicFunnelConfig } from '@/types'
 
 type Props = {
-  config: TenantConfig
+  // Aufgabe 73: nur die öffentliche Projektion — interne Tenant-Daten (notificationEmail,
+  // Billing, ids) werden bewusst nicht an den Client serialisiert.
+  config: PublicFunnelConfig
 }
 
 /**
