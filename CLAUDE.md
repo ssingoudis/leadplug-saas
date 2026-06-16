@@ -17,7 +17,7 @@ LeadPlug ist ein **SaaS-Funnel-Builder mit integriertem CRM** — vergleichbar m
 **Architektur-Kern:**
 
 - Einbettbares iFrame-Widget pro Funnel (`https://app.leadplug.de/[slug]`) als Standard-Einbindung
-- Script- / Web-Component-Embed als **geplantes Pro-Plan-Feature (v2, post-MVP)** — nahtlose Integration ohne iFrame-Sandbox
+- Script- / Web-Component-Embed als — nahtlose Integration ohne iFrame-Sandbox
 - Multi-Tenant Editor + Dashboard für Agenturen
 - Lead-Posteingang mit Status-Workflow (`offen` → `kontaktiert` → `abgeschlossen`)
 - Webhook-Export für externe CRMs (HubSpot, Pipedrive, Close, etc.)
@@ -54,15 +54,7 @@ Tenant (= Agentur, zahlender Account)
 
 ## 3. Pricing-Strategie
 
-Drei Tiers pro Tenant (Agentur). Preise sind Richtwerte:
-
-| Plan         | Preis       | Beinhaltet                                                                 |
-| ------------ | ----------- | -------------------------------------------------------------------------- |
-| **Webhook**  | ~29€/Monat  | Unlimited Funnels, Leads → externes CRM, 1 User                            |
-| **Standard** | ~99€/Monat  | Webhook + integrierter Lead-Posteingang + ~3 User                          |
-| **Pro**      | ~249€/Monat | Standard + Twilio (Telefonie/Audio/Auto-Summary) + Kanban + unlimited User |
-
-**Hintergrund:** Agenturen sitzen oft auf etablierten CRMs (HubSpot/Pipedrive) und wechseln nie — Webhook-Tier eliminiert Migrations-Friction als günstiger Einstieg. Voll-CRM ist Upsell für neue Use-Cases.
+Während der **offenen Beta ist LeadPlug kostenlos** — alle Konten laufen auf `billing_model='free'`, kein Zahlungs-Gate. Konkrete Pläne und Preise werden **erst nach der Beta** festgelegt und bis dahin bewusst nicht dokumentiert (vermeidet veraltete Annahmen).
 
 ---
 
@@ -280,7 +272,6 @@ Einzige Funnel-Komponente: `components/funnel.tsx` (generisch, nicht branchen-sp
 - `/api/stripe/webhook` — System-Event von Stripe, kein User-Kontext
 - `/api/tenant/slug-check` + `generateRandomSlug` in `/api/tenant/funnels` POST — globale Slug-Uniqueness (RLS würde fremde Tenants ausblenden)
 - `app/dashboard/layout.tsx` — Tenant-Lookup via `tenant_members`-Join + Auto-Tenant-Anlage beim ersten Login (User hat vor Anlage noch keine Membership; Lookup nutzt admin-Client weil verlässlicher als RLS bei Membership-Edge-Cases)
-- Admin-Operationen (Stavros / Plattform-Owner — kein UI mehr seit Aufgabe 26, neuer Build geplant für Phase E)
 
 > Bei neuen API-Routes oder DB-Zugriffen: **erst prüfen, ob RLS reicht** (default), Service-Key nur in obigen Ausnahmefällen.
 
