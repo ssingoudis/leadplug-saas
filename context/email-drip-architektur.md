@@ -5,7 +5,7 @@
 > Vollständige technische Doku des E-Mail-Subsystems: DB-Schema, Code-Layout, Send-Pipeline, Editor-UI, Sequence-Diagramme, Known-Issues.
 >
 > **Komplement zu:**
-> - [`CLAUDE.md`](../CLAUDE.md) §5 (Architektur-Konsens) + §10 (Code-Regeln) + §13.5 (Schema-Status)
+> - [`CLAUDE.md`](../CLAUDE.md) §5 (Architektur-Konsens) + §10 (Code-Regeln) + §13 (Datenbank); aktuelles Schema → [`supabase-schema.md`](supabase-schema.md)
 > - [`architecture.md`](architecture.md) §14 (Code-Karte)
 > - [`webhook-architecture.md`](webhook-architecture.md) — paralleles System für Webhooks (anderes Trigger-Modell)
 

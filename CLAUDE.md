@@ -6,18 +6,18 @@
 
 ## 1. Produkt & Positionierung
 
-LeadPlug ist ein **SaaS-Funnel-Builder mit integriertem CRM** — vergleichbar mit Typeform / FormFlow, aber mit nachgelagertem Lead-Posteingang und Sales-Stack. Verkauft an **Agenturen und Marketer**, die Funnels für ihre eigenen Endkunden (z.B. Solar-Betriebe, Anwälte, Coaches, aber auch jede andere denkbare branche, es gibt keine begrenzung der branchen) bauen.
+LeadPlug ist ein **SaaS-Funnel-Builder mit integriertem CRM** für **Agenturen und Marketer**, die Funnels für ihre Endkunden bauen (branchenoffen, z. B. Solar, Anwälte, Coaches). Das Funnel-Erlebnis ist Typeform-artig (linear, schlank), die Differenzierung ist der **nachgelagerte Lead-Posteingang + Sales-Stack** (CRM, Webhooks, Drip-Mails, Conversion-Tracking) — gebaut für Agenturen mit vielen Endkunden.
 
 **Was LeadPlug NICHT ist:**
 
-- Kein Funnel-Tool, das End-Betriebe direkt selbst bedienen
+- **Kein Tool für die Endbetriebe selbst** — Zielgruppe sind Agenturen/Marketer. Endbetriebe könnten es technisch zwar nutzen, sind aber nicht der Fokus (Produkt + Werbung zielen auf Agenturen mit vielen Endkunden).
 - Kein AI-Funnel-Generator (kein Race-to-the-Bottom im austauschbaren AI-Hype)
-- Kein Website-Builder. Branding läuft über **funnel-weite Theme-Variablen** (Brand-Color, Font, Border-Radius, Background, Logo) — nicht über Per-Element-Styling-Editoren wie bei FormFlow/Webflow
+- Kein Website-Builder. Branding läuft über **funnel-weite Theme-Variablen** (Brand-Color, Font, Border-Radius, Background) — nicht über Per-Element-Styling-Editoren wie bei FormFlow/Webflow
 
 **Architektur-Kern:**
 
 - Einbettbares iFrame-Widget pro Funnel (`https://app.leadplug.de/[slug]`) als Standard-Einbindung
-- Script- / Web-Component-Embed als — nahtlose Integration ohne iFrame-Sandbox
+- Einbindung per Script-Loader (`embed.js`): 2-Zeilen-Snippet (Container-DIV + `<script>`), das das iFrame automatisch einfügt, die Höhe anpasst und Conversion-Tracking feuert
 - Multi-Tenant Editor + Dashboard für Agenturen
 - Lead-Posteingang mit Status-Workflow (`offen` → `kontaktiert` → `abgeschlossen`)
 - Webhook-Export für externe CRMs (HubSpot, Pipedrive, Close, etc.)
@@ -46,9 +46,10 @@ Tenant (= Agentur, zahlender Account)
 
 **Regeln:**
 
-- **Tenant = Workspace.** Kein separater Workspace-Layer.
-- **Multi-User-Backend wird vorbereitet** (Junction-Table `tenant_members` mit Rollen `owner | admin | member`); UI für Invites kommt nach MVP.
-- **Endkunden der Agenturen haben keinen Login** im MVP. Whitelabel-Endkunden-Portal ist v2-Feature für Pro-Plan.
+- **Tenant = Konto (zahlender Account).** Alle Funnels hängen heute flach am Tenant — kein separater Gruppierungs-Layer. Der Begriff **„Workspace" ist reserviert** für ein späteres White-Label-Feature (Agentur-Arbeitsbereiche, in die mehrere User und ggf. Endkunden eingeladen werden) — heute nicht als Synonym für „Tenant" verwenden.
+- **Multi-User-Backend ist vorbereitet** (Junction-Table `tenant_members` mit Rollen `owner | admin | member`); die Invite-/Team-UI fehlt noch, kommt nach der Beta.
+- **Endkunden der Agenturen haben keinen Login.** Ein Whitelabel-Endkunden-Portal ist ein späteres Feature (post-Beta).
+
 
 ---
 
@@ -58,70 +59,32 @@ Während der **offenen Beta ist LeadPlug kostenlos** — alle Konten laufen auf 
 
 ---
 
-## 4. GTM-Strategie & MVP-Definition
+## 4. GTM-Strategie & Status
 
-**Pre-Launch — bevorzugter Einstieg:** Strategische Partnerschaft mit **einem Domain-Marktführer** (z.B. etablierte Solar-Agentur, Anwalts-Funnel-Agentur, Versicherungs-Marketer — egal welche Branche, Hauptsache hat eigene Kunden + Werbebudget).
+**Wo wir stehen:** MVP erreicht, **beta-reif**. Offen bis Launch: nur noch D.1 (Stripe Test→Live).
 
-**Was die Partnerschaft uns bringt:**
+**Wo's hingeht:** kostenlose Beta → **direkte Akquise von 5–10 Agenturen** (echte Funnels/Leads = Validierung + Conversion-Daten) → danach Launch + Direct-Sales. Domain-Partnerschaft ist willkommen, falls sie sich ergibt — kein Muss, nicht der Fokus.
 
-- Echte Kunden des Partners testen und validieren das Produkt mit echten Daten
-- Werbebudget des Partners liefert uns Conversion-Daten ohne eigene Marketing-Kosten
-- Glaubwürdigkeit-Boost über etablierten Kanal
-
-**Langfristige Logik:** Wir bleiben nicht für immer abhängig vom Partner. Ziel ist eigene direkte Akquise auf Basis der gewonnenen Validierungs- und Conversion-Daten. Der Partner ist Türöffner, nicht Dauerlösung.
-
-**Direkte Akquise** ist nicht ausgeschlossen — wenn sich zahlende Kunden auf anderem Weg ergeben, ist das willkommen. Aber sie ist nicht der primäre Pre-Launch-Fokus.
-
-**MVP = "fertig"** wenn folgendes gilt:
-
-- Du kannst mit gutem Gewissen einer etablierten Agentur ein 15-Min-Demo geben
-- **Robust und production-ready ab Tag 1** — Fehler werden abgefangen, Edge-Cases sind durchdacht, Daten gehen nicht verloren
-- Reliability > Feature-Breite
-- Builder fühlt sich nicht peinlich an im Vergleich zu Typeform/FormFlow
+**Nach der Beta:** Stripe live, dann Ausbau Richtung Workspaces / White-Label (eigene Mail-Absender-Domain, Team-Invite-UI, später Endkunden-Portal) — Details erst bei belegter Nachfrage.
 
 ---
 
 ## 5. Builder-Richtung (Architektur-Entscheidung)
 
-**Festgelegt:** Funnel-Builder bleibt **linear / Typeform-Stil**. **KEIN Node-Canvas, KEIN React Flow**. Bei "lass uns Canvas einbauen"-Impulsen: an diese Entscheidung erinnern und nach konkretem Kunden-Bedarf fragen.
+**Builder bleibt linear / Typeform-Stil.** KEIN Node-Canvas, KEIN React Flow. Bei „lass uns Canvas einbauen"-Impulsen: an diese Entscheidung erinnern und nach konkretem Kundenbedarf fragen. (Wie Builder/Widget technisch gebaut sind → [`context/architecture.md`](context/architecture.md).)
 
-**Stand seit Aufgabe 34 (2026-05-28):** Builder v2 (`?v=2`) ist das aktive System. Hat 3-Pane Layout (StepList · WYSIWYG-Canvas · Properties), Vorlagen (Kontakt/Adresse/Ja-Nein), Field-Level-Properties, Click-Select + Inline-Edit im Canvas, Drag-Reorder von Optionen, "+ Option / Duplicate / Delete" Inline-Aktionen, Pin-Edge-Insert zwischen Steps. Widget ist **Typeform-Stil-redesigned**: A/B/C/D Letter-Chips, Underline-Inputs, font-light Titel, framer-motion Slide-Animationen, 1px Progress-Bar oben, Bottom-Right Floating-Nav. v1-Editor ist Legacy, wird in C.1d entfernt.
+**Action-Element-Modell (Kern-Prinzip):** Alle Output-Mechanismen (Webhooks, E-Mails, …) sind **dynamisch konfigurierbare Builder-Elemente mit eigenem Editor-Tab** — NIE als hartkodierter Trigger in der Submit-Pipeline. Trigger passend zum Use-Case: Webhooks pushen **Events** (`on_submit` / `after_page` / abandoned-Cron), E-Mails sind **Sequenzen** (`delay_minutes` nach Submit). Neue Outputs (Slack, Discord, …) folgen demselben Muster. Detail-Docs: [`webhook-architecture.md`](context/webhook-architecture.md), [`email-drip-architektur.md`](context/email-drip-architektur.md), [`conversion-tracking.md`](context/conversion-tracking.md).
 
-**Strategische Entscheidungen aus Aufgabe 34:**
-- **Icons sind komplett raus** aus Code + DB (siehe §10). A/B/C/D ist Default. Picture-Choice kommt erst on-demand wenn Kunde fragt.
-- **Email + Telefon als Question-Types raus** (waren nur kosmetische Text-Inputs). Bleiben als ContactField-Types auf Submit-Page.
-- **Partial-Submissions live**: jede User-Session bekommt DB-Row mit `session_id` UPSERT + `completed_at` Flag. Abbrecher mit Email werden zu Leads. Pricing-Modell zählt Completed + Abandoned-mit-Email als Lead.
-- **DSGVO ignoriert für jetzt** — Rechtsgrundlage Art. 6 (1) (b) Vertragsanbahnung greift.
+**Logik-Sprünge** = bewusste Ausnahme: kein Output, sondern der Funnel-Fluss selbst — Regeln an der Frage, **nur Vorwärts-Sprünge** (Zyklen per Konstruktion unmöglich), Auswertung geteilt Widget↔Server ([`lib/logic/funnelLogic.ts`](lib/logic/funnelLogic.ts)).
 
-**Architektur-Konsens aus Aufgaben 40 + 41 (2026-05-29/31) — Action-Element-Modell:**
+**Weitere feste Prinzipien:**
+- Keine Submit-Page — Lead-Erfassung = Kontaktdaten-Karte am Funnel-Ende (`autoFinish`), Consent = Checkbox-Feld mit Markdown-Link.
+- Defaults vorausgefüllt in `DEFAULT_EDITOR_STATE`, nicht als Render-Fallback im Widget (leer = aus).
+- Conversion-Tracking ist **Embed-Mechanik** (Widget → `postMessage` → `embed.js` feuert GTM/Meta/Google), kein Action-Element.
 
-LeadPlug ist „eine Art Typeform-Klon". **Alle Output-Mechanismen sind dynamisch konfigurierbare Builder-Elemente, kein impliziter Automatismus:**
-- **Webhooks** ✅ live (Aufgabe 40) — Event-Push an externe CRMs. Eigener Editor-Tab „Webhooks". Pro Funnel N Subscriptions, pro Subscription Trigger-Konfig (`on_submit` Default / `after_page:<id>` für Mid-Funnel). Visuelle Step-Pill-Badges im Builder bei `after_page`-Triggern. Sender + HMAC + Cron + Retry: siehe [`lib/webhooks.ts`](lib/webhooks.ts).
-- **E-Mails** ✅ live (Aufgabe 41) — **Drip-System für Lead-Nurturing**. Eigener Editor-Tab „E-Mails", 3-Pane In-Place-Editor (Liste · Editor · Live-Vorschau). Pro Funnel N Drip-Mails mit `delay_minutes` (0 = sofort via `after()`, N = N Min nach Submit via Cron-Queue) + `recipient_type ('customer'|'tenant')`. TipTap-WYSIWYG-Editor mit Custom Variable-Chips + Magic-Section-Block-Cards. Live-Vorschau (resizable) mit Mock- oder echten Lead-Daten. Auto-Save mit 1.5 s Debounce. Hartkodierter Mail-Versand in `/api/submit` durch Backfill-Subscriptions ersetzt → Verhalten 1:1 erhalten. Sender + Queue + Cron: siehe [`lib/emails.ts`](lib/emails.ts) + [`context/email-drip-architektur.md`](context/email-drip-architektur.md). **Aufgabe 53 (2026-06-06):** Mail-Variablen sind jetzt **dynamisch aus den Funnel-Feldern** (Picker + `{{answer.<field-key>}}` mit Choice→Label-Auflösung, statt der alten statischen 3er-Liste; `buildFunnelVariables` + `resolveAnswerVar`). Empfänger-UI auf **2 Modi** (Lead | feste Adressen) mit Multi-Adress-Chips + dynamischem **`@me`-Marker** (`RECIPIENT_ME` → `notification_email`, folgt der Account-Adresse; `isInternalRecipient` steuert From/reply-to) — `recipient_type` bleibt {customer,tenant,custom}, **kein DB-Change** (alter Code sieht `@me` nie). Link-Setzer = Inline-Popover (kein `window.prompt` mehr).
-- **Logic-Jumps** ✅ live Stufe 1 (Aufgabe 58, 2026-06-11) — **bewusste Abweichung vom Action-Element-Pattern**: Logik ist kein Output, sondern der Fluss des Funnels selbst. Regeln werden AN der Frage definiert (Panel-Sektion „Logik" + Typeform-Stil-Modal `LogicRuleModal`), sichtbar als Verzweigungs-Badges in der StepList. Modell: pro Step 0..N Regeln (erste matchende gewinnt) + „Alle anderen Fälle"-Fallback; Bedingungen `[{field_key, op, value}]` UND-verknüpft; Ops: `eq|neq` (alle) · `contains` (Freitext, Substring) · `includes` (multi_choice-Liste) · `gt|gte|lt|lte` (numerisch — Slider/Zahl/Bewertung/Skala, z.B. „Bewertung ≥ 4"); Ziel = spätere Page oder „Ende". **Vergleichs-Semantik typ-tolerant** (Stavros-Befund): trim + case-insensitiv, Zahlen numerisch inkl. Dezimal-Komma („50"=„50,0"); numerische Ops matchen nie auf Nicht-Zahlen. Das Modal bietet pro Feldtyp nur die passenden Ops an; Choice-Werte bleiben kanonische Slugs (Editor-Picker). **NUR Vorwärts-Sprünge** (Stavros-Entscheid — Zyklen per Konstruktion unmöglich; Editor bietet nur spätere Steps, PUT-Route prüft sort_order, Runtime degradiert Rückwärts zu „weiter"). Auswertung geteilt in [`lib/funnelLogic.ts`](lib/funnelLogic.ts) (Widget-Runtime mit History-Stack fürs Zurück + **pfad-sensitiver Pflichtfeld-Backstop** in `/api/submit` via `computePath` — übersprungene Pflicht-Karten blocken keine Leads). Editor-Test-Modus führt dieselben Sprünge aus (pageId = dbId via buildQuestions). Speichern pro Step atomar via RPC `replace_page_logic_rules`. **Stufe 2 ✅ gebaut (Aufgabe 59, 2026-06-11):** der „Logik"-Tab ist jetzt die **read-only Logic-Map** ([`LogicMapPanel.tsx`](components/editor/LogicMapPanel.tsx)) — Steps als Karten in horizontaler Kette + „Ende"-Node, Sprung-Regeln als emerald Bézier-Bögen darüber (Fallback gestrichelt; gelöschte/rückwärtige Ziele amber zum Nachbarn degradiert, wie es die Runtime tut), custom SVG, KEIN React Flow, keine neue Dependency. Canvas-UX nach Stavros-Review: Auto-Fit beim Öffnen, Drag-Pan, Zoom (Strg+Mausrad + Controls), Hover-Emphasis (Karte hebt ihre Bögen hervor), Custom-Tooltips, Klartext-Legende. **Klick-Hierarchie: Karten-Klick öffnet das LogicRuleModal** (Logik ist die Hauptaktion der Seite), Stift-Icon (Hover) springt in den „Bearbeiten"-Tab. Map bewusst read-only — kein Kanten-Editing, das Modal bleibt der einzige Schreibweg. Regel-Lesefassung geteilt in [`lib/logicDisplay.ts`](lib/logicDisplay.ts) (Map + Panel-Kurzfassung sprechen dieselbe Sprache).
-- **Bei neuen Output-Mechanismen** (Slack, Discord, etc.): folge dem Action-Modell — eigener Tab oder Plugin-System, NIE als hartkodierter Trigger in der Submit-Pipeline.
-- **Wichtig — Webhooks ≠ E-Mails im Trigger-Modell:** Webhooks pushen Events (Timing matched dem Event: `on_submit`, `after_page`, abandoned-Cron). E-Mails sind Sequenzen (Timing relativ zum Submit via `delay_minutes`). Bei zukünftigen Actions: passendes Modell pro Use-Case wählen, nicht zwanghaft 1:1-Klon.
-- **Submit-Page abgeschafft (Aufgabe 51, 2026-06-06) + restlos rausgerissen (Aufgabe 52D, 2026-06-06)**: Kein hartkodiertes Kontaktformular mehr. Lead-Erfassung = normale Card (Kontaktdaten-Preset), Submit am Funnel-Ende (`autoFinish`) für **alle** Funnels, Consent = Checkbox-Feld mit Markdown-Link (`[Text](url)`). **Seit 52D ist das Submit-Page-Gerüst komplett aus dem Code entfernt** — kein `contactFields` mehr (weder im Widget noch in `TenantConfig`/`EditorState`/`getTenantConfig`/Editor/Webhooks/E-Mails), `enrichContact` + `SubmitProps` + `SelectedStep.submit` + `contact_summary`-Magic gelöscht, `editorStateToPagesAndFields` erzeugt keine Submit-Page mehr. **Honeypot lebt jetzt am Widget-Root** (vorher im Kontaktformular). Lead-Daten kommen ausschließlich aus `deriveContactFromAnswers` (Karten-Antworten); `/api/submit` validiert Pflicht-Card-Felder serverseitig als Backstop. **`skip_submit_step` voll abgebaut:** alle `skipSubmitStep`/`skip_submit_step`-Code-Referenzen entfernt; Spalten-DROP (`aufgabe_52d_drop_skip_submit_step`) **nach Deploy angewendet** (2026-06-06, verifiziert). **DB-Cleanup in 52D** (auf User-Wunsch): orphaned Submit-Pages + Fields gelöscht (Migration `aufgabe_52d_delete_orphaned_submit_pages` — 12 Pages + 52 Fields via Cascade; 0 Webhooks/Leads betroffen, Rollback-DOWN vorhanden). Die 11 Alt-Demo/Test-Funnels (`skip=false`, 0 echte Leads) verlieren ihr Kontaktformular (pre-launch freigegeben).
-- **Architektur-Prinzip „keine Render-Fallbacks" (Aufgabe 51):** Defaults für Funnel-Texte gehören **vorausgefüllt in `DEFAULT_EDITOR_STATE`**, NICHT als `?? TEXT_DEFAULTS.X`-Fallback in `getTenantConfig`/`buildFunnelConfig`. Das Widget zeigt was gespeichert ist (leer = aus). Für `successMessage`/`responseMessage` umgesetzt (Titel hat interim einen Default-Fallback weil ein nacktes Häkchen nicht reicht; sauber → Cleanup). Rest der `TEXT_DEFAULTS` folgt im Cleanup.
+**Bewusst NICHT gebaut** (nicht ohne konkreten Kundenbedarf bauen): Twilio/Call-Dialer · Mehrsprachigkeit · Slack/Discord · Onboarding-Wizard · Per-Page-Theme · Per-Element-CSS-Editor · Signature-Feld · iFrame-freie Web-Component-Einbindung · Public REST-API · Audit-Log.
 
-**Conversion-Tracking** ✅ live (Aufgaben 42 + 43 / D.2, 2026-05-31) — **kein** Action-Element, sondern Embed-Mechanik: das Widget meldet den Submit PII-frei per `postMessage` an die einbettende Seite, der zentral ausgelieferte `embed.js`-Script-Loader feuert daraufhin Conversions (GTM-`dataLayer`-Push `leadplug_lead` + Meta/Google-Auto-Fire + `window.LeadPlug.onLead`-Callback).
-- **Aufgabe 42** = event-basiertes Fundament + `embed.js`-Loader (Upgrade des bestehenden `public/embed.js`, abwärtskompatibel zu `data-funnel-slug`/`data-slug`).
-- **Aufgabe 43 = Turnkey:** Tenant trägt **Meta-Pixel-ID** + **Google-Ads-Conversion** pro Funnel im Editor-Reiter „Einbinden" ein (DB: `funnels.meta_pixel_id` / `google_ads_conversion`). Die IDs reisen PII-frei in der `funnel-submit`-Message mit; `embed.js` injiziert bei Bedarf den Pixel-Basiscode + feuert automatisch (Format-Whitelist client+server). **Tracking ist pro Funnel** (Agentur nutzt je Endkunde ein anderes Pixel). Die frühere globale `/dashboard/embed`-Seite + `EmbedBlock` wurden entfernt — Embed-Code + Tracking leben jetzt im Editor-Reiter „Einbinden" (konsistent zu Webhooks/E-Mails). Server-CAPI bleibt on-demand.
-- Sender + Loader + Turnkey: siehe [`context/conversion-tracking.md`](context/conversion-tracking.md).
-
-**Builder-Final-Sprint** ✅ abgeschlossen + gemerged (Aufgaben 35–37 + C.1d + C.2). Danach gebaut + gemerged: Aufgabe 38 (Custom Multi-Field-Pages), 39 (Welcome/End-Screen + Rating/Scale/Statement), 40 (Webhooks), 41 (E-Mail-Drip), 42 (Conversion-Tracking, oben).
-
-**Offen bis Launch (Phase D-Rest):** nur noch D.1 Stripe Test→Live (~1 Tag, aufgeschoben — Testkunden bekommen `free`-Tier). Danach: Launch + Direct-Sales. (C.4 Logic Jumps Stufe 1 ✅ Aufgabe 58 · Logic-Map Stufe 2 ✅ Aufgabe 59 · D.3 ✅ Aufgaben 61–63: **37 kuratierte Funnel-Vorlagen live** — Galerie `/dashboard/vorlagen` mit Kategorie-Filter; Regel-Design nach dem Kochbuch-Prinzip „Drei Regel-Typen", siehe [`context/vorlagen-kochbuch.md`](context/vorlagen-kochbuch.md).)
-
-**Bewusst gestrichen** (nicht mehr im Plan):
-
-- Twilio · Call-Dialer · Kanban-Board · Whitelabel-Endkunden-Portal
-- Plattform-Owner-Dashboard v2 · Public REST-API · Audit-Log · Team-Workspaces
-- Mehrsprachigkeit · E-Mail-Drip · Slack/Discord-Integration · Onboarding-Wizard
-- Per-Page-Theme · Signature-Feld · Script-/Web-Component-Embed
-- Per-Element-CSS-Editor
-
-**Post-Launch on demand** (erst bei 5+ zahlenden Kunden-Anfragen): Custom-Domain · A/B-Tests · Multi-User-Invite-UI · Calculator-Feld · File-Upload-Feld · `contacts`-Dedup-Tabelle.
+**Post-Launch on demand** (erst bei belegter Nachfrage): Custom-Domain · A/B-Tests · Workspaces + White-Label (Team-Invite-UI, eigene Mail-Absender-Domain, später Endkunden-Portal) · Calculator-Feld · File-Upload-Feld · `contacts`-Dedup-Tabelle.
 
 ---
 
@@ -183,11 +146,12 @@ Beispiele: `feature/aufgabe-25-schema-refactor`, `feature/aufgabe-26-pages-field
 
 | Prinzip            | Was es konkret heißt                                                                                                                                                             |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Sicherheit**     | Alle User-Inputs am API-Boundary validieren. `lead_price`, Auth, Tenant-Zugehörigkeit nie aus Client lesen. Supabase Service Key nur server-side, nie mit `NEXT_PUBLIC_`-Prefix. |
+| **Sicherheit**     | Alle User-Inputs am API-Boundary validieren. Auth, Tenant-Zugehörigkeit und Aktiv-Status (`is_active`) nie aus dem Client lesen/ableiten. Supabase Service Key nur server-side, nie mit `NEXT_PUBLIC_`-Prefix. |
 | **Robustheit**     | Kein `any` / `as` ohne Begründung. Fehler in Tracking/E-Mail loggen, **nicht werfen**. Defensive Defaults bei externen APIs.                                                     |
 | **Skalierbarkeit** | Kein Hardcode — alles Tenant-/Funnel-spezifische kommt aus Supabase. Dynamisch, nicht hartcodiert.                                                                               |
 | **Performance**    | DB-Indexe für alle gefilterten Spalten. Keine N+1 Queries. Server Components default, Client Components nur wo nötig.                                                            |
-| **Best Practice**  | Immer aktuelle Patterns nutzen (Next 16 App Router, RSC, Server Actions wo passend). Bei Unsicherheit: `mcp__next-devtools__nextjs_docs` konsultieren.                           |
+| **Best Practice**  | Immer aktuelle Patterns nutzen (Next 16 App Router, RSC, Server Actions wo passend). Next-Docs proaktiv konsultieren — siehe §14. |
+| **Wartbarkeit**    | Lesbarer, einfacher Code im Stil des umgebenden Codes (Naming, Patterns). Keine unnötige Komplexität, kein Copy-Paste (DRY). Lieber klar als clever — der/die Nächste (Mensch oder KI) muss es schnell verstehen.                           |
 
 ---
 
@@ -198,14 +162,13 @@ Beispiele: `feature/aufgabe-25-schema-refactor`, `feature/aufgabe-26-pages-field
 - **Supabase Service Key nur server-side**, niemals mit `NEXT_PUBLIC_`-Prefix.
 - **Partial-Submissions seit Aufgabe 34 (2026-05-28):** `/api/track-progress` macht UPSERT auf `submissions.session_id` (debounced vom Widget), `/api/submit` macht denselben UPSERT mit `completed_at = NOW()` + Mails. **NIE wieder Insert in `submissions` ohne `session_id`** — die Spalte ist UNIQUE + NOT NULL. `logSubmission` in `lib/tracking.ts` ist deprecated, neue Code-Pfade nutzen `upsertSubmissionProgress`.
 - **Reihenfolge in `/api/submit`:** erst `upsertSubmissionProgress(completed=true)` (Supabase, setzt completed_at), dann `triggerOnSubmit` (Webhooks) + `triggerEmailsOnSubmit` (Drip-Mails) via `after()`. Billing darf nie durch Webhook-/Mail-Fehler verloren gehen.
-- **E-Mails seit Aufgabe 41 (2026-05-31) dynamisch via Drip-System** — kein hartkodierter Versand mehr. Pro Funnel sind in `email_subscriptions` 1..N Mails konfigurierbar (Backfill legt 2 Default-Subs an: Customer-Confirmation + Tenant-Notification, beide delay=0). Versand-Pfad: `triggerEmailsOnSubmit` in [`lib/emails.ts`](lib/emails.ts) inserts pending attempts in `email_delivery_attempts`, sofort fällige (delay=0) werden via `after()` versendet, delayed (delay>0) vom Cron alle 5 Min gepickt. **Veraltet & gelöscht:** `lib/sendEmails.ts`, `emails/CustomerConfirmation.tsx`, `emails/TenantLeadNotification.tsx`, `lib/tracking.ts.updateEmailStatus` (jetzt `aggregateEmailStatusForSubmission` in `lib/emails.ts`).
-- **Kein PDF, keine Preisschätzung** — `generatePDF.ts` und `priceCalculator.ts` sind deprecated.
+- **E-Mails dynamisch via Drip-System** — kein hartkodierter Versand. Pro Funnel 1..N Mails in `email_subscriptions`; Versand-Pfad `triggerEmailsOnSubmit` in [`lib/email/emails.ts`](lib/email/emails.ts) (sofort fällige via `after()`, verzögerte via Cron). Detail: [`context/email-drip-architektur.md`](context/email-drip-architektur.md).
 - **Fehler in Tracking / E-Mail:** loggen, **nicht werfen**. Endkunde bekommt immer `{success:true}`.
 - **Bot-Schutz:** Honeypot-Feld im Formular (server-side prüfen). Bei ausgelöstem Honeypot: 200 zurückgeben, aber nicht in DB speichern. Gilt sowohl für `/api/submit` als auch `/api/track-progress`.
 - **postMessage Höhe:** Widget sendet nach jedem Render `window.parent.postMessage({type:'funnel-resize', height: X}, '*')`.
-- **`lead_price` server-side** aus `tenants.lead_price` lesen — nicht vom Client vertrauen.
+- **Abrechnung = Abo** (`billing_model`); **kein Per-Lead-Billing.** `lead_price`/`per_lead` sind vestigial (server-side gelesen, aber nicht abgerechnet) — optional für ein evtl. späteres Modell. (Security-Prinzip „billing-Werte nie vom Client" → §9.)
 - **Icons sind raus (Aufgabe 34):** `EditorOption` + `Option` haben kein `iconKey`/`iconUrl` mehr. Choice-Options rendern A/B/C/D Letter-Chip. `components/icons.tsx`, `components/icons/`, `components/dashboard/IconPicker.tsx` sind gelöscht. DB: `fields.options` jsonb hat keine `icon_key`/`icon_url`-Felder mehr.
-- **`QuestionType` hat 9 Werte (Aufgabe 34):** `single_choice`, `multi_choice`, `short_text`, `long_text`, `slider`, `date`, `number`, `dropdown`, `checkbox`. `email` + `tel` wurden als Question-Types entfernt (waren nur kosmetische Text-Inputs). Bleiben als ContactField-Types (`text`/`email`/`tel`/`plz`/`radio`) auf Submit-Page mit echter Lead-Daten-Bedeutung.
+- **Frage- vs. Kontaktfeld-Typen:** Die `QuestionType`-Werte sind Single-Source-of-Truth in [`types/index.ts`](types/index.ts) — dort pflegen, **nicht hier duplizieren**. Regel: `email` + `tel` sind **keine** Frage-Typen (waren nur kosmetische Text-Inputs), sondern **Kontaktfeld-Types** (echte Lead-Daten).
 - **DSGVO-Strategie:** bewusst nicht engineered (Stavros-Entscheidung 2026-05-28). Rechtsgrundlage Art. 6 (1) (b) „Vertragsanbahnung" greift bei Lead-Funnels. Tenants verantworten ihre Datenschutzerklärung. Kein Consent-Click am Anfang. Anpassung erst wenn zahlende Tenants nachfragen.
 - **Umgebungsvariablen:** `.env.local` (Vorlage `.env.example`).
 
@@ -234,16 +197,8 @@ Enthält: Design-Token (Light + Dark Mode), Komponenten-API, Dark-Mode-Implement
 ### Zwei getrennte Design-Welten
 
 - **`components/ui/`** → Dashboard & Tenant-Portal (das obige System)
-- **`components/editor/ui/Panel.tsx`** → **Editor-Design-System** (Aufgabe 45): geteilte Primitive `PanelShell · PanelHeader · Section · Field · FieldHint` für alle Editor-Tabs. **Neue Editor-Panels/Sektionen damit bauen, nicht lokal duplizieren.** Drei kanonische Layout-Templates: Canvas+Properties (Tab „Bearbeiten" — Inhalt+Design vereint mit Inspektor-Umschalter), Master-Detail (E-Mails, Webhooks), Einzelspalte-Config (Einbinden). Speichern-Modell: globaler Top-Save nur auf „Bearbeiten" (Dokument), Ressourcen-Tabs speichern pro Eintrag. **Aufgabe 49 erweitert:** `Panel.tsx` um `SectionCard` + `EmptyState`, neue `ui/Controls.tsx` (`EditorButton · TextInput · Textarea · Select · Toggle`) + `ui/EditorModal.tsx` (geteilte Modal-Chrome). Alle Ressourcen-Tabs (Webhooks/E-Mails/Einbinden) + Modals laufen jetzt auf diesem Vokabular. **Die Editor-Top-Komponente heißt seit Aufgabe 49 `EditorShell`** (vorher `EditorShellV2`; der Ordner heißt seit Aufgabe 70 `components/editor/` — vorher `tenant-editor/v2/`, das alte `?v=2`-Routing-Flag ist längst entfernt). **Autosave-Pattern** für Namen/Settings projektweit: `lib/useSaveStatus.ts` + `components/ui/SaveStatus.tsx` (on-blur, sichtbarer Status, nie still) — angewendet auf Funnel-Name, Account-Profil, Lead-Notizen; Mehrfeld-Draft-Editoren + Funnel-Inhalt bleiben explizites Speichern.
-- **`components/funnel.tsx`** → Widget-UI (Farben aus DB, komplett eigenständig). **Nur in Absprache anfassen** — keine spontanen KI-Edits an dieser Datei. Erweiterungen oder Refactors (neue Feldtypen, Design-Updates, etc.) brauchen explizite Freigabe und einen klaren Grund. Default-Haltung: hands off, frag nach. **Stand seit Aufgabe 34 (2026-05-28):** Datei ist signifikant gewachsen (~1500 LOC) durch Typeform-Redesign, framer-motion-Slide, EditableText-Helper für WYSIWYG-Edit, SortableEditOption für Canvas-Drag, Partial-Submissions-Hook. Auslagerung in `components/funnel/*` ist Option für eine kommende Pause-Aufgabe wenn die Datei unhandhabbar wird.
-
----
-
-## 12. Icon-System
-
-Einzige Funnel-Komponente: `components/funnel.tsx` (generisch, nicht branchen-spezifisch). Icons sind SVG-Komponenten in `components/icons.tsx`, referenziert per `icon_key` (String). Neue Icons = neuer Eintrag im `Icons`-Objekt in `icons.tsx`. Wenn `icon_url` in der DB gesetzt ist, wird das externe Bild statt des Icon-Keys gerendert.
-
-> **Hinweis:** Das aktuelle Icon-System (Schlüssel-basiertes ICON_MAP + optionales icon_url) ist eine Übergangs-Lösung. Eine bessere Architektur wird zukünftig erarbeitet — bis dahin reicht der Status quo.
+- **`components/editor/ui/`** → **Editor-Design-System**: geteilte Primitive (`Panel.tsx`: PanelShell/Section/Field/SectionCard/EmptyState · `Controls.tsx`: EditorButton/TextInput/Textarea/Select/Toggle · `EditorModal.tsx`: Modal-Chrome). **Neue Editor-Panels damit bauen, nicht lokal duplizieren.** Speichern: globaler Top-Save nur auf „Bearbeiten", Ressourcen-Tabs (E-Mails/Webhooks/Einbinden) pro Eintrag. Autosave (Namen/Settings): `lib/hooks/useSaveStatus.ts` + `components/ui/SaveStatus.tsx` (on-blur, sichtbarer Status).
+- **`components/funnel.tsx`** → Widget-UI (Farben aus DB, eigenständig). **Nur in Absprache anfassen — keine spontanen KI-Edits.** Erweiterungen/Refactors (neue Feldtypen, Design) brauchen explizite Freigabe + klaren Grund. Default-Haltung: hands off, frag nach. (Große, zentrale Datei; Teile sind bereits nach `components/funnel/*` ausgelagert.)
 
 ---
 
@@ -291,81 +246,18 @@ Klare Trennung — keine Override-Hierarchien zwischen Tabellen:
 | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `tenants`                                      | **Nur Agentur-Account-Daten:** Stripe-Felder, billing_model, billing_price, lead_price, is_active. Optional Anzeigename der Agentur             |
 | `tenant_members`                               | N:M-Junction Tenant ↔ User mit `role` (`owner` / `admin` / `member`). **Minimal — keine Profile-Felder** (kein display_name, kein phone). YAGNI |
-| `funnels`                                      | **Alle endkunden-spezifischen Daten:** Footer (company_name, email, phone), notification_email, Theme (Farben, Font, Radius), Texte, Slug, Conversion-Tracking-IDs (`meta_pixel_id`, `google_ads_conversion`) |
+| `funnels`                                      | **Alle endkunden-spezifischen Daten:** notification_email, Theme (Farben, Font, Radius, max. Breite), Funnel-Texte, Anzeige-Toggles (Fortschrittsbalken/Schritt-Nummer/Ausrichtung), Slug, Redirect-URL, Mail-Absender-Lokalteil, Conversion-Tracking-IDs (`meta_pixel_id`, `google_ads_conversion`) |
 | `pages` + `fields`                             | Funnel-Inhalt. Pro Funnel (seit 52D): N × question/custom/welcome-Pages + 1 × success-Page (leer). **Keine submit-Page mehr** (Kontaktformular abgeschafft; orphaned Submit-Pages in 52D per Migration gelöscht) |
 | `submissions`                                  | Lead-Daten (Snapshot-Pattern — keine FK auf Funnel/Tenant, damit auch nach Löschen erhalten)                                                    |
 | `funnel_templates`                             | Kuratierte Funnel-Vorlagen (Aufgabe 62): jsonb-Snapshot + Galerie-Metadaten. Plattform-Asset, kein Tenant-Bezug; Pflege nur Owner/Service       |
 
 **`user_profiles`** (eigene Tabelle 1:1 mit `auth.users`) wird angelegt, **falls je echte Profile-Daten** (Phone für Twilio-Pro, Avatar, etc.) gebraucht werden. Aktuell nicht nötig.
 
-### 13.5 Schema-Refactor-Status
-
-**Phase B abgeschlossen (Mai 2026).** Alle Schema-Refactor-Tasks vor MVP-Launch erledigt: B.1 (`tenant_members`) ✅, B.2 (UUID-FKs) ✅, B.3 (submissions.contact\_\*-Cleanup) ✅, B.4 (tenants als reine Account-Tabelle) ✅, B.5 (pages + fields, Kontaktfelder als reguläre Field-Types) ✅, B.6 (Webhook-Schema) ✅, B.7 (updated_at-Trigger-Konsistenz, mit B.5 erledigt) ✅.
-
-**Aufgabe 34 Schema-Erweiterungen (2026-05-28):**
-- `aufgabe_34_strip_icon_keys_from_field_options`: UPDATE auf `fields.options` jsonb — `icon_key` + `icon_url` aus allen Option-Objekten gestrippt (45 Fields betroffen, 175 Option-Einträge). Forward-only, kein DOWN-Pfad (Brand-Decision).
-- `aufgabe_34_partial_submissions_schema`: `submissions.session_id uuid NOT NULL UNIQUE` + `submissions.completed_at timestamptz NULL` + 2 Indices. Backfill: 26 bestehende Rows als completed markiert. UPSERT-Identität für Partial-Submissions.
-
-**Aufgabe 40 Schema-Erweiterungen (2026-05-29):**
-- `aufgabe_40_webhook_actions`: `webhook_subscriptions.funnel_id NOT NULL` + `trigger_type DEFAULT 'on_submit'` + `trigger_page_id` (FK pages SET NULL) + CHECK + 2 neue Indices. `webhook_delivery_attempts.next_retry_at` + `response_status_code` + `response_body` + `event_type` + Retry-Queue-Index. `submissions.abandoned_webhook_fired_at` + partial Index für Cron-Cooldown. Additive — kein Backfill (webhook_* Tabellen waren leer).
-
-**Aufgabe 41 Schema-Erweiterungen (2026-05-31):**
-- `aufgabe_41_email_subscriptions`: 2 neue Tabellen. `email_subscriptions(id, funnel_id, tenant_id, name, recipient_type, delay_minutes, subject, body_html, from_local, is_active, …)` mit CHECK-Constraints (recipient_type IN customer/tenant, delay_minutes>=0, subject/body/name nicht leer) + 2 partial Indices + updated_at-Trigger + 4 RLS-Policies. `email_delivery_attempts(id, subscription_id, submission_id, scheduled_at, attempt_count, status, recipient_address, resend_message_id, next_retry_at, delivered_at, …)` mit CHECK (status IN pending/retrying/success/failed) + 4 Indices (subscription, submission, due-pending, due-retrying) + 1 SELECT-Policy. **Backfill:** 2 Default-Subscriptions pro existierendem Funnel (Customer-Confirmation + Tenant-Notification, beide delay=0) → 24 Rows für 12 bestehende Funnels. Forward-only mit DOWN-File für Rollback. Additive — keine bestehenden Daten geändert.
-- `aufgabe_41_custom_recipient` (2026-05-31 abends): `email_subscriptions.recipient_type` CHECK erweitert um `'custom'` + neue Spalte `recipient_value text NULL` (comma-separated, max 3 Adressen, App-side enforced) + CHECK „bei custom muss recipient_value gefüllt sein". Additive, kein Backfill nötig.
-
-**Aufgabe 43 Schema-Erweiterung (2026-05-31):**
-- `aufgabe_43_funnel_tracking`: `funnels` + `meta_pixel_id text NULL` + `google_ads_conversion text NULL` (Turnkey-Conversion-Tracking, pro Funnel). Nullable, additiv, kein Backfill, kein CHECK (Format app-seitig validiert: `^[0-9]{5,20}$` / `^AW-[0-9]+(/[\w-]+)?$`). Direkt auf Produktion appliziert (mit User-Go — Branch-Test für 2 nullable Spalten unverhältnismäßig). DOWN-File vorhanden.
-
-**Aufgabe 49 Schema-Erweiterung (2026-06-03):**
-- `aufgabe_50_webhook_name`: `webhook_subscriptions` + `name text NULL` (Anzeigename pro Webhook, Konsistenz zu `email_subscriptions.name`). Backfill bestehender Rows aus dem URL-Host (`substring(url from '://([^/]+)')`). Additiv, direkt auf Produktion appliziert (mit User-Go). Rollback: `ALTER TABLE webhook_subscriptions DROP COLUMN name;`. (Migration-Name trägt aus History-Gründen `50`, gehört aber zum Aufgabe-49-Branch.)
-
-**Aufgabe 51 Schema-Erweiterung (2026-06-06):**
-- `aufgabe_51_funnel_show_answers_overview`: `funnels` + `show_answers_overview boolean NOT NULL DEFAULT false` (End-Screen-Antworten-Übersicht optional, Default aus = cleaner Dank). Additiv, kein Backfill-Risiko (Default false), direkt auf Produktion appliziert (mit User-Go). Rollback: `ALTER TABLE funnels DROP COLUMN show_answers_overview;`.
-
-**Aufgabe 52D DB-Cleanup (2026-06-06):**
-- `aufgabe_52d_delete_orphaned_submit_pages`: `DELETE FROM pages WHERE page_type='submit'` — 12 orphaned Submit-Pages + 52 Fields (via `fields.page_id` ON DELETE CASCADE). Reines Data-Cleanup, kein Schema-Change. Vorab geprüft: 0 webhook_subscriptions.trigger_page_id darauf, `submissions` ohne FK auf `pages` (Leads unberührt). Rollback: `..._DOWN.sql` (exakte Re-INSERTs der Snapshot-Zeilen) + tägliches Backup. Direkt auf Produktion appliziert (mit User-Go).
-
-- `aufgabe_52d_drop_skip_submit_step` (**angewendet 2026-06-06 nach Deploy**): `ALTER TABLE funnels DROP COLUMN skip_submit_step`. Code-Referenzen in 52D entfernt, Deploy abgewartet (Reihenfolge gegen 500 im alten SELECT), dann gedroppt + verifiziert (Spalte weg, Prod-Widget lädt sauber). UP+DOWN liegen im Repo.
-
-**Aufgabe 53 Migration (2026-06-06):**
-- `aufgabe_53_strip_funnel_var_chips`: `UPDATE email_subscriptions` — strippt tote `<span data-variable="funnel.*">`-Chips aus `body_html` + `subject` (15 Mails). Reines Data-Cleanup (funnel.*-Variablen wurden in 52A aus `resolveVar` entfernt, rendern seither ''), per Dry-Run verifiziert (nur funnel.*-Chips weg, contact.*/Magic-Sections intakt). Safe für jede Code-Version. Rollback: `..._DOWN.sql` (exakte Re-UPDATEs der Snapshot-Werte) + Backup.
-
-**Aufgabe 54 Migration (2026-06-09):**
-- `aufgabe_54_replace_funnel_content_rpc`: neue RPC `replace_funnel_content(p_funnel_id, p_pages jsonb, p_fields jsonb)` — atomares Speichern des Funnel-Inhalts (eine Transaktion statt delete-then-insert in PUT `/api/tenant/funnels/[slug]`). Pages werden **upserted**, bestehende Page-UUIDs bleiben über Saves stabil (Editor reicht `dbId` wieder mit) → `after_page`-Webhook-Bindings (`trigger_page_id`, FK SET NULL) überleben das Speichern. SECURITY INVOKER (RLS gilt vollständig), EXECUTE nur für `authenticated`. Plus partial Index `idx_submissions_ip_completed` — der Rate-Limiter in `/api/submit` zählt seit 54 nur completed Submissions (10/10min, eigene Session ausgenommen). Additiv, direkt auf Produktion appliziert (mit User-Go), SQL-seitig getestet (3 Läufe inkl. Atomicity-Rollback via ungültigem enum-Cast). DOWN-File vorhanden (Achtung Reihenfolge: erst Code zurückrollen, dann Funktion droppen — der PUT nutzt die RPC).
-
-**Aufgabe 54b Migration (2026-06-10):**
-- `aufgabe_54b_advisor_hardening`: EXECUTE auf `rls_auto_enable()` für public/anon/authenticated revoked (Event-Trigger feuert systemseitig, braucht keine RPC-Grants) + `update_updated_at()` mit gepinntem `search_path = public, pg_temp` (Advisor 0011). `current_tenant_ids`/`current_tenant_role` bleiben bewusst für authenticated ausführbar — RLS-Policies rufen sie auf. Additiv, direkt auf Produktion appliziert, Trigger danach funktional verifiziert, DOWN-File vorhanden. **Manuell offen:** Leaked-Password-Protection ist ein Auth-Dashboard-Toggle (Authentication → Passwords), nicht per SQL setzbar.
-
-**Aufgabe 56 Migration (2026-06-10):**
-- `aufgabe_56_design_toggles`: `funnels` + `show_progress_bar boolean NOT NULL DEFAULT true` + `show_step_badge boolean NOT NULL DEFAULT true` + `title_alignment text NOT NULL DEFAULT 'left'` (CHECK `'left'|'center'`) — 3 Anzeige-Schalter für das Widget (ThemePanel-Sektion „Anzeige"). Additiv mit Defaults, direkt auf Produktion appliziert (mit User-Go), DOWN-File vorhanden.
-
-**Aufgabe 57A Migration (2026-06-10):**
-- `aufgabe_57a_drop_submit_button_label`: `ALTER TABLE funnels DROP COLUMN submit_button_label` — Spalte war tot seit 52D (kein Submit-Button mehr), Code-Referenzen in Aufgabe 56 Runde 4 entfernt, Drop nach Deploy (skip_submit_step-Pattern). Datenlage beim Drop: 2 Funnels mit Standard-Label 'Anfrage absenden' — exakter Snapshot-Restore im DOWN-File. Direkt auf Produktion appliziert (mit User-Go), Prod-Widget danach verifiziert.
-
-**Aufgabe 57B Migration (2026-06-10):**
-- `aufgabe_57b_email_test_logging`: `email_delivery_attempts` + `is_test boolean NOT NULL DEFAULT false` — Test-Mails landen seit 57B in der Versand-Historie (Konsistenz zu Webhook-Tests): `sendTestEmail` legt nach jedem tatsächlichen Send eine Attempt-Row an (submission_id NULL, Status terminal success/failed, delivered_at bei success wegen CHECK). Cron-Queues (pending/retrying) + `aggregateEmailStatusForSubmission` (filtert auf submission_id) bleiben unberührt. Additiv, direkt auf Produktion appliziert (mit User-Go), verifiziert (7 Bestands-Rows = false). DOWN-File vorhanden (Reihenfolge: erst Code zurückrollen, dann Spalte droppen).
-
-**Aufgabe 57D Migration (2026-06-10):**
-- `aufgabe_57d_hide_contact_warning`: `funnels` + `hide_contact_warning boolean NOT NULL DEFAULT false` — Kontaktierbarkeits-Warnung im Editor ist quittierbar (X am Banner → dezenter Amber-Marker an der Bühne; Toggle persistiert via PATCH `/api/tenant/funnels/[slug]/contact-warning`, Best-Effort, bewusst außerhalb EditorState/Undo). Zusätzlich zwei Warnstufen: hard (kein E-Mail-/Telefon-Feld, amber) / soft (Feld vorhanden aber optional, grauer Info-Hinweis). Additiv, direkt auf Produktion appliziert (mit User-Go), DOWN-File vorhanden (erst Code zurückrollen, dann droppen).
-
-**Aufgabe 58 Migration (2026-06-11):**
-- `aufgabe_58_funnel_logic_rules`: neue Tabelle `funnel_logic_rules(id, funnel_id FK CASCADE, tenant_id FK CASCADE, source_page_id FK pages CASCADE, sort_order, is_fallback, conditions jsonb, target_type CHECK page/end, target_page_id FK pages SET NULL, …)` + 3 Indizes (funnel · source+sort · UNIQUE partial „max 1 Fallback/Step") + updated_at-Trigger + 4 tenant-scoped RLS-Policies (Muster Aufgabe 41) + RPC `replace_page_logic_rules(p_funnel_id, p_source_page_id, p_rules jsonb)` (SECURITY INVOKER, atomares delete+insert der Regeln EINES Steps, EXECUTE nur authenticated — Muster Aufgabe 54). CHECKs: target_type, fallback-ohne-conditions, conditions-ist-Array. Additiv, direkt auf Produktion appliziert (mit User-Go), RPC SQL-seitig getestet (Anlage/Reihenfolge, Atomicity-Rollback bei CHECK-Verletzung, Doppel-Fallback-Block, Leer-Array-Cleanup). DOWN-File vorhanden (erst Code zurückrollen, dann droppen — getTenantConfig liest defensiv und überlebt das Droppen).
-
-**Aufgabe 62 Migration (2026-06-11):**
-- `aufgabe_62_funnel_templates`: neue Tabelle `funnel_templates(id, slug unique, name, description, category, preview_funnel_slug, definition jsonb, sort_order, is_active, …)` — kuratierte Funnel-Vorlagen als **jsonb-Snapshot** (bewusst entkoppelt von den Demo-Funnels; Veröffentlichen ist ein expliziter Schritt). RLS: SELECT für authenticated (nur aktive), keine Write-Policies. Plus 3 RPCs: `snapshot_funnel_to_template` (Owner-only, EXECUTE für authenticated revoked), `create_funnel_from_template` (SECURITY INVOKER, atomare Instanziierung Funnel+Pages+Fields+Logik+Drip-Mails; Seiten-Index-Referenzen → frische UUIDs), `duplicate_funnel` (SECURITY INVOKER, Kopie im eigenen Tenant — RLS-SELECT macht cross-tenant unmöglich). **Webhooks + Tracking-IDs (`meta_pixel_id`/`google_ads_conversion`) werden bei Kopien NIE übernommen** (kundenspezifisch). Additiv, direkt auf Produktion appliziert (mit User-Go), RPCs SQL-seitig getestet (Instanziierung + Duplikat inkl. Regel-Remapping verifiziert). DOWN-File vorhanden (erst Code zurückrollen, dann droppen).
-
-- `aufgabe_62_template_funnel_name` (Runde 3): `create_funnel_from_template` um optionalen `p_funnel_name` erweitert (UI fragt den Namen vor dem Erstellen ab; leer → Vorlagen-Name). Signatur-Wechsel: 3-Param-Fassung gedroppt, 4-Param-Fassung mit neu gesetzten Grants. Direkt auf Produktion appliziert, SQL-getestet, DOWN-File stellt die 3-Param-Fassung wieder her (erst Code zurückrollen).
-
-**Aufgabe 63 Migration (2026-06-12):**
-- `aufgabe_63_snapshot_mails_active`: `snapshot_funnel_to_template` schreibt die emails-Sektion der Template-Definition jetzt IMMER mit `is_active: true` — der Demo-Betriebszustand (Mails aus, damit Vorschau-Spieler keine Mails fiktiver Firmen bekommen) ist kein Template-Inhalt; die Republish-Falle aus dem Kochbuch ist konstruktiv weg. CREATE OR REPLACE, direkt auf Produktion appliziert (mit User-Go), DOWN-File stellt die 62er-Fassung wieder her. Dazu in Aufgabe 63 (reine Daten, keine Schema-Änderung): 29 Demo-Funnels (Chargen 2–6) + 29 Template-Snapshots angelegt → nach Stavros-Realitäts-Review 37 Vorlagen live (Haartransplantation gelöscht, 14 Funnels umgebaut: Disqualifikations-Weichen ans Strecken-Ende statt früher Kontakt-Sprünge — Prinzip „Drei Regel-Typen" im Kochbuch).
-
-**Nächste DB-Arbeit:** keine offen — `footer_*`, orphaned Submit-Pages, `skip_submit_step`, `submit_button_label` sind weg (52B/52D/57A), tote funnel.*-Chips gestrippt (53), Funnel-Save atomar via RPC (54), Advisor-Härtung (54b), Test-Mail-Logging (57B), Warnungs-Quittierung (57D), Logik-Regeln (58), Vorlagen-System (62), Snapshot-Härtung (63).
-
 ---
 
 ## 14. Next.js 16
 
-- **Best Practices via MCP**: bei Unsicherheit über aktuelle Next-Patterns (Caching, Server Actions, RSC, etc.) `mcp__next-devtools__nextjs_docs` konsultieren — nicht raten.
+- **Next-Docs via MCP — proaktiv, nicht reaktiv:** Bei JEDER Next.js-spezifischen Arbeit (Caching, Server Actions, RSC vs. Client, Route Handlers, Middleware, Rendering, Data-Fetching, `next.config`) **zuerst** `mcp__next-devtools__nextjs_docs` konsultieren. Grund: Next 16 ist neu, das Trainingswissen kann veraltet sein — **Docs schlagen Gedächtnis, nicht raten.** (Bei trivialen Edits ohne Next-Bezug nicht nötig.)
 - **Browser-Testing**: `mcp__next-devtools__browser_eval` für lokale UI-Verifikation, bevor du eine Aufgabe als "fertig" meldest.
 - **App Router**, Server Components default, Client Components nur mit klarer Begründung.
 - **API-Routes** mit Supabase Service Key: `runtime = "nodejs"` setzen (kein Edge).
@@ -382,4 +274,6 @@ Nach jeder abgeschlossenen Aufgabe Eintrag in `context/current-feature.md` anfü
 
 Bei > ~10 Einträgen die ältesten nach `context/history-archive.md` verschieben.
 
-Bei strategisch wichtigen Architektur-Entscheidungen während einer Aufgabe: **diese CLAUDE.md aktualisieren** — sie ist das göttliche File.
+**Diese CLAUDE.md ist das göttliche File — Änderungen NUR in Absprache mit Stavros.** Die KI editiert sie nie eigenmächtig oder still: erst **vorschlagen + begründen**, dann auf explizites OK warten. Fällt beim Arbeiten auf, dass hier etwas **veraltet, falsch oder anpassungsbedürftig** ist (auch durch eine strategische Architektur-Entscheidung), **Stavros darauf hinweisen** statt selbst zu ändern — die Entscheidung trifft er.
+
+(Gilt nur für diese CLAUDE.md. Den Aufgaben-Eintrag in `context/current-feature.md` pflegt die KI weiterhin selbstständig.)
