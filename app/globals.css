@@ -270,7 +270,7 @@
   --color-destructive:            #ef4444;
   --color-destructive-foreground: #ffffff;
 
-  --radius:                       0.75rem;
+  --radius:                       0.625rem; /* Aufgabe 74: 10px Kompromiss (Original 12px, Crisp-Test war 8px) */
 }
 
 .dark {
@@ -312,6 +312,8 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  /* Aufgabe 74: 2xl an --radius gekoppelt (war Tailwind-Default 1rem) → EIN zentraler Radius-Regler. */
+  --radius-2xl: calc(var(--radius) + 4px);
 }
 
 /* ── Funnel widget animations ───────────────────────────────────────────── */

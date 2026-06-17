@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Check, ExternalLink, Monitor, Redo2, Save, TriangleAlert, Undo2 } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, ExternalLink, Monitor, Redo2, Save, TriangleAlert, Undo2, X } from "lucide-react";
 import type { EditorState, EditorQuestion, ContactFieldConfig, QuestionType, LogicRule } from "@/types";
 import { TopTabs, type TopTabKey } from "./TopTabs";
 import { StepList } from "./StepList";
@@ -16,7 +16,7 @@ import { LogicRuleModal } from "./LogicRuleModal";
 import { LogicMapPanel } from "./LogicMapPanel";
 import { AddContactFieldPicker } from "./properties/AddContactFieldPicker";
 import { EditorModal } from "./ui/EditorModal";
-import { EDITOR_LEFT_COL } from "./ui/Panel";
+import { EDITOR_LEFT_COL, EmptyState } from "./ui/Panel";
 import type { SelectedStep } from "./types";
 import {
   makeDefaultCustomPage,
@@ -28,6 +28,7 @@ import { generateFieldKey, toKey } from "@/lib/editorUtils";
 import { useHistoryState } from "@/lib/hooks/useHistoryState";
 import { useSaveStatus } from "@/lib/hooks/useSaveStatus";
 import { SaveStatus } from "@/components/ui/SaveStatus";
+import Tooltip from "@/components/ui/Tooltip";
 
 interface Props {
   initialState: EditorState;
@@ -191,9 +192,12 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
     else url.searchParams.set("tab", tab);
     window.history.pushState(null, "", url.toString());
   }, []);
-  // Aufgabe 45: rechter Inspektor im „Bearbeiten"-Tab — „content" = Schritt-Eigenschaften,
-  // „design" = funnel-weites Theme. (Inhalt + Design sind ein Tab mit Umschalter.)
-  const [inspectorMode, setInspectorMode] = useState<"content" | "design">("content");
+  // Aufgabe 74: „Design" ist jetzt ein rechts-rein-slidendes Overlay (statt Inhalt|Design-Toggle).
+  const [designOpen, setDesignOpen] = useState(false);
+  // Nur im Bearbeiten-Tab sinnvoll — bei Tab-Wechsel schließen.
+  useEffect(() => {
+    if (activeTab !== "content") setDesignOpen(false);
+  }, [activeTab]);
   const [showExitModal, setShowExitModal] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
 
@@ -1047,22 +1051,26 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
       </div>
 
       <div
-        className="fixed inset-y-0 right-0 left-0 lg:left-16 hidden lg:flex flex-col bg-gray-100 dark:bg-background"
+        className="fixed inset-y-0 right-0 left-0 z-50 hidden lg:flex flex-col bg-gray-100 dark:bg-background"
       >
         {/* Top-Bar: EINE Zeile — links Back+Name · Mitte Tabs (zentriert) · rechts Status+Speichern.
             Test/Geräte-Controls schweben im Canvas (CenterCanvas) statt als eigener Balken. */}
         <header className="flex shrink-0 items-center gap-4 border-b border-gray-200 bg-white px-4 py-2.5 dark:border-gray-800 dark:bg-gray-900">
           {/* Links */}
           <div className="flex min-w-0 flex-1 items-center gap-2">
+            {/* Aufgabe 74: Breadcrumb-Zurück (← Funnels › Name) — der Editor ist Vollbild,
+                der einzige Ausgang muss eindeutig sein. Der Name bleibt inline editierbar. */}
             <button
               type="button"
               onClick={handleBack}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
               aria-label="Zurück zur Funnel-Liste"
-              title="Zurück"
+              title="Zurück zur Übersicht"
             >
               <ArrowLeft size={16} />
+              Funnels
             </button>
+            <ChevronRight size={14} className="shrink-0 text-gray-300 dark:text-gray-600" />
             {/* Aufgabe 60 (Stavros-Review): Stift-Button entfernt (redundant — Klick auf den
                 Namen editiert direkt, Hover zeigt Rahmen + Tooltip) und die ch-Schätzbreite
                 durch einen unsichtbaren Spiegel-Span ersetzt: das Feld ist exakt so breit wie
@@ -1091,21 +1099,6 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
               />
             </div>
             <SaveStatus status={nameSave.status} className="shrink-0" />
-            {/* Aufgabe 56: Live-Preview — öffnet den echten Funnel in neuem Tab, OHNE den
-                Aufruf-Zähler zu erhöhen (?preview=1, Skip in TenantFunnelClient). Submits
-                bleiben echt → voller End-to-End-Test möglich. Zeigt den GESPEICHERTEN Stand. */}
-            {mode === "edit" && originalSlug && (
-              <a
-                href={`/${originalSlug}?preview=1`}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Live ansehen (gespeicherter Stand — zählt keinen Aufruf)"
-                aria-label="Live ansehen"
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
-              >
-                <ExternalLink size={15} />
-              </a>
-            )}
           </div>
 
           {/* Mitte: Tabs */}
@@ -1144,6 +1137,27 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
             {saveError && (
               <span className="hidden text-xs text-red-600 dark:text-red-400 md:inline">{saveError}</span>
             )}
+            {/* Aufgabe 74: „Vorschau" — beschrifteter Button (statt kryptischem ↗-Icon), an der
+                gewohnten Stelle (oben rechts, wie „Preview" bei den Konkurrenten). Öffnet den
+                ECHTEN Funnel in neuem Tab (gespeicherter Stand, zählt keinen Aufruf, ?preview=1).
+                Unterscheidet sich bewusst von „Funnel testen" unten (In-Editor-Sandbox). */}
+            {mode === "edit" && originalSlug && (
+              <Tooltip
+                label="Echten Funnel in neuem Tab ansehen — gespeicherter Stand, zählt keinen Aufruf"
+                side="bottom"
+                className="inline-flex shrink-0"
+              >
+                <a
+                  href={`/${originalSlug}?preview=1`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                >
+                  <ExternalLink size={14} />
+                  Vorschau
+                </a>
+              </Tooltip>
+            )}
             {/* Aufgabe 45/50: globaler Save nur auf Dokument-Tabs (Inhalt/Design) — oder wenn es
                 ungesicherte Dokument-Änderungen gibt. Status + Aktion sind EIN Element: grünes
                 „Gespeichert" im Ruhezustand, „Speichern"-Button bei ungesicherten Änderungen. */}
@@ -1181,15 +1195,7 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
           // beides lebt schon hier im Shell). Create-Modus: Regeln brauchen gespeicherte
           // Page-UUIDs → gleicher Hinweis wie bei Webhooks/E-Mails.
           mode === "create" || !originalSlug ? (
-            <div className="flex flex-1 items-center justify-center bg-gray-100 dark:bg-background p-8">
-              <div className="max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 text-center">
-                <p className="text-base font-semibold text-gray-900 dark:text-white">Funnel zuerst speichern</p>
-                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  Logik-Regeln brauchen gespeicherte Schritte. Bitte den Funnel einmal speichern —
-                  danach erscheint hier der Ablauf des Funnels als Übersicht.
-                </p>
-              </div>
-            </div>
+            <SaveFirstNotice description="Logik-Regeln brauchen gespeicherte Schritte. Bitte den Funnel einmal speichern — danach erscheint hier der Ablauf des Funnels als Übersicht." />
           ) : (
             <LogicMapPanel
               questions={state.questions}
@@ -1208,15 +1214,7 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
           )
         ) : activeTab === "webhooks" ? (
           mode === "create" || !originalSlug ? (
-            <div className="flex flex-1 items-center justify-center bg-gray-100 dark:bg-background p-8">
-              <div className="max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 text-center">
-                <p className="text-base font-semibold text-gray-900 dark:text-white">Funnel zuerst speichern</p>
-                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  Webhooks sind funnel-spezifisch. Bitte den Funnel einmal speichern — danach lassen sich
-                  hier die ersten Webhooks anlegen.
-                </p>
-              </div>
-            </div>
+            <SaveFirstNotice description="Webhooks sind funnel-spezifisch. Bitte den Funnel einmal speichern — danach lassen sich hier die ersten Webhooks anlegen." />
           ) : (
             <WebhooksPanel
               funnelSlug={originalSlug}
@@ -1226,29 +1224,13 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
           )
         ) : activeTab === "emails" ? (
           mode === "create" || !originalSlug ? (
-            <div className="flex flex-1 items-center justify-center bg-gray-100 dark:bg-background p-8">
-              <div className="max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 text-center">
-                <p className="text-base font-semibold text-gray-900 dark:text-white">Funnel zuerst speichern</p>
-                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  E-Mail-Aktionen sind funnel-spezifisch. Bitte den Funnel einmal speichern — danach lassen sich
-                  hier die ersten E-Mails anlegen.
-                </p>
-              </div>
-            </div>
+            <SaveFirstNotice description="E-Mail-Aktionen sind funnel-spezifisch. Bitte den Funnel einmal speichern — danach lassen sich hier die ersten E-Mails anlegen." />
           ) : (
             <EmailsPanel funnelSlug={originalSlug} state={state} />
           )
         ) : activeTab === "share" ? (
           mode === "create" || !originalSlug ? (
-            <div className="flex flex-1 items-center justify-center bg-gray-100 dark:bg-background p-8">
-              <div className="max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 text-center">
-                <p className="text-base font-semibold text-gray-900 dark:text-white">Funnel zuerst speichern</p>
-                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  Einbett-Code und Conversion-Tracking sind funnel-spezifisch. Bitte den Funnel einmal
-                  speichern — danach erscheinen hier der Code und die Tracking-Einstellungen.
-                </p>
-              </div>
-            </div>
+            <SaveFirstNotice description="Einbett-Code und Conversion-Tracking sind funnel-spezifisch. Bitte den Funnel einmal speichern — danach erscheinen hier der Code und die Tracking-Einstellungen." />
           ) : (
             <SharePanel funnelSlug={originalSlug} funnelName={state.funnelName} />
           )
@@ -1256,7 +1238,7 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
           // Aufgabe 50: clamp statt fix — Seiten-Panels schrumpfen sanft auf kleineren Screens,
           // Canvas behält Priorität. Linke Spalte = geteilte EDITOR_LEFT_COL (konsistent über alle Tabs).
           <div
-            className="grid min-h-0 flex-1"
+            className="relative grid min-h-0 flex-1 overflow-hidden"
             style={{ gridTemplateColumns: `${EDITOR_LEFT_COL} minmax(0, 1fr) clamp(340px, 24vw, 400px)` }}
           >
             {/* Aufgabe 59 (Stavros-Wunsch): Test-Modus als Fokus-Modus — dunkle Blur-Overlays
@@ -1300,47 +1282,63 @@ export function EditorShell({ initialState, mode, originalSlug, companyName, ini
               onDuplicateOption={handleDuplicateOption}
               onDeleteOption={handleDeleteOption}
               onAddCustomFieldRequest={() => setCanvasFieldPickerOpen(true)}
-              liveSlug={mode === "edit" ? originalSlug : undefined}
+              designOpen={designOpen}
+              onToggleDesign={() => setDesignOpen((o) => !o)}
             />
             <div className="relative flex min-h-0 flex-col">
               {isTestMode && <TestModeOverlay onClick={() => setIsTestMode(false)} />}
-              {/* Aufgabe 45: Inspektor-Umschalter Inhalt | Design (rechte Spalte des Bearbeiten-Tabs).
-                  „Inhalt" = Eigenschaften des gewählten Schritts, „Design" = funnel-weites Theme. */}
-              <div className="flex h-14 shrink-0 items-center gap-1 border-b border-l border-gray-200 bg-white px-2 dark:border-gray-800 dark:bg-gray-900">
-                {(["content", "design"] as const).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setInspectorMode(m)}
-                    className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-                      inspectorMode === m
-                        ? "bg-primary/10 text-primary"
-                        : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-                    }`}
-                  >
-                    {m === "content" ? "Inhalt" : "Design"}
-                  </button>
-                ))}
-              </div>
               <div className="min-h-0 flex-1">
-                {inspectorMode === "content" ? (
-                  <PropertiesPanel
-                    state={state}
-                    selected={selected}
-                    selectedFieldRef={selectedFieldRef}
-                    logicRules={logicRules}
-                    onOpenLogicEditor={(idx) => setLogicModalIndex(idx)}
-                    onPatch={handlePatch}
-                    onPatchQuestion={handlePatchQuestion}
-                    onDeleteQuestion={handleDeleteQuestion}
-                    onPatchCustomField={handlePatchCustomField}
-                    onAddCustomField={handleAddCustomField}
-                    onDeleteCustomField={handleDeleteCustomField}
-                    onReorderCustomFields={handleReorderCustomFields}
-                  />
-                ) : (
+                <PropertiesPanel
+                  state={state}
+                  selected={selected}
+                  selectedFieldRef={selectedFieldRef}
+                  logicRules={logicRules}
+                  onOpenLogicEditor={(idx) => setLogicModalIndex(idx)}
+                  onPatch={handlePatch}
+                  onPatchQuestion={handlePatchQuestion}
+                  onDeleteQuestion={handleDeleteQuestion}
+                  onPatchCustomField={handlePatchCustomField}
+                  onAddCustomField={handleAddCustomField}
+                  onDeleteCustomField={handleDeleteCustomField}
+                  onReorderCustomFields={handleReorderCustomFields}
+                />
+              </div>
+            </div>
+
+            {/* Aufgabe 74: leichter Scrim hinter dem Design-Panel — signalisiert „temporäres
+                Overlay" (nicht Teil des Layouts) und schließt bei Klick daneben (2. Weg neben X).
+                Bewusst nur ~10% → die Vorschau bleibt für Live-Theme-Änderungen sichtbar. */}
+            <div
+              onClick={() => setDesignOpen(false)}
+              aria-hidden="true"
+              className={`absolute inset-0 z-20 bg-black/10 transition-opacity duration-300 dark:bg-black/20 ${
+                designOpen ? "opacity-100" : "pointer-events-none opacity-0"
+              }`}
+            />
+            {/* Aufgabe 74: Design-Panel slidet von rechts rein (ersetzt den Inhalt|Design-Toggle).
+                Canvas + Vorschau bleiben sichtbar → Theme-Änderungen sind live zu sehen. */}
+            <div
+              aria-hidden={!designOpen}
+              className={`absolute inset-y-0 right-0 z-30 w-[clamp(320px,26vw,420px)] transform transition-transform duration-300 ${
+                designOpen ? "translate-x-0" : "pointer-events-none translate-x-full"
+              }`}
+            >
+              <div className="flex h-full flex-col border-l border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900">
+                <div className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200 px-5 dark:border-gray-800">
+                  <h2 className="text-sm font-bold text-gray-900 dark:text-white">Design</h2>
+                  <button
+                    type="button"
+                    onClick={() => setDesignOpen(false)}
+                    aria-label="Design schließen"
+                    title="Design schließen"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="min-h-0 flex-1">
                   <ThemePanel state={state} onPatch={handlePatch} />
-                )}
+                </div>
               </div>
             </div>
           </div>
@@ -1390,6 +1388,16 @@ function TestModeOverlay({ onClick }: { onClick: () => void }) {
       aria-label="Test beenden — zurück zum Editor"
       className="absolute inset-0 z-30 cursor-pointer bg-gray-900/30 backdrop-blur-[2px] dark:bg-black/50"
     />
+  );
+}
+
+// Aufgabe 74: einheitlicher „Funnel zuerst speichern"-Hinweis (vorher 4× inline dupliziert)
+// für die Ressourcen-/Logik-Tabs im Create-Modus.
+function SaveFirstNotice({ description }: { description: string }) {
+  return (
+    <div className="flex flex-1 items-center justify-center bg-gray-100 p-8 dark:bg-background">
+      <EmptyState icon={<Save size={22} />} title="Funnel zuerst speichern" description={description} />
+    </div>
   );
 }
 

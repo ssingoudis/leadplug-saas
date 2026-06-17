@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { ShieldCheck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { isSuperadmin } from '@/lib/auth/superadmin'
+import PageHeader from '@/components/ui/PageHeader'
 
 // Superadmin-Gate für den gesamten Admin-Bereich. notFound() (404) statt redirect —
 // verrät die Existenz des Bereichs nicht. Service-Key-Reads (lib/admin/queries.ts) laufen
@@ -18,16 +19,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-2.5">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400">
-          <ShieldCheck size={16} />
-        </span>
-        <div>
-          <h1 className="text-base font-bold text-gray-900 dark:text-white">Plattform-Admin</h1>
-          {/* Wording-Styleguide: Tenants heißen im UI „Konto" — „Workspace" ist fürs Whitelabel-Feature reserviert. */}
-          <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Alle Konten der Plattform — nur für dich sichtbar.</p>
-        </div>
-      </div>
+      {/* Wording-Styleguide: Tenants heißen im UI „Konto" — „Workspace" ist fürs Whitelabel-Feature reserviert. */}
+      <PageHeader
+        icon={
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400">
+            <ShieldCheck size={16} />
+          </span>
+        }
+        title="Plattform-Admin"
+        subtitle="Alle Konten der Plattform — nur für dich sichtbar."
+      />
       {children}
     </div>
   )

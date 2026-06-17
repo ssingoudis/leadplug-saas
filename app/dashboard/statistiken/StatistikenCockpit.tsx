@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import Card from '@/components/ui/Card'
 import StatTile from '@/components/ui/StatTile'
 import { Select } from '@/components/ui/Input'
+import PageHeader from '@/components/ui/PageHeader'
 import DonutChart from './DonutChart'
 import ViewsLeadsTrend from './ViewsLeadsTrend'
 import MonthlyTable from './MonthlyTable'
@@ -103,13 +104,15 @@ export default function StatistikenCockpit({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Funnel-Filter — Client-seitig, sofortige Umschaltung */}
-      {funnels.length > 1 && (
-        <div className="flex items-center justify-between gap-2">
-          <h1 className="text-base font-bold text-gray-900 dark:text-white">Statistiken</h1>
-          <Select value={funnelFilter} onChange={setFunnelFilter} options={funnelOptions} className="w-56" />
-        </div>
-      )}
+      {/* Funnel-Filter — Client-seitig, sofortige Umschaltung. Titel immer sichtbar (Aufgabe 74). */}
+      <PageHeader
+        title="Statistiken"
+        action={
+          funnels.length > 1 ? (
+            <Select value={funnelFilter} onChange={setFunnelFilter} options={funnelOptions} className="w-56" />
+          ) : undefined
+        }
+      />
 
       {/* Gesamtstatistik */}
       <Card title="Gesamtstatistik">

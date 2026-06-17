@@ -690,9 +690,9 @@ function StepCard({
         {/* items-center: Icon-Pille vertikal mittig zum zweizeiligen Textblock (Stavros-Review). */}
         <span className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2.5">
           <span
-            className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border text-xs font-bold ${node.meta.pillClass}`}
+            className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border ${node.meta.pillClass}`}
           >
-            {node.meta.icon}
+            <node.meta.Icon size={15} strokeWidth={2} />
           </span>
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="flex items-center gap-1 truncate text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">

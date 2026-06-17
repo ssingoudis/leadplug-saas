@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { TemplateShowcase } from "@/components/dashboard/funnels/TemplateShowcase";
+import PageHeader from "@/components/ui/PageHeader";
 import { mapTemplateRows, TEMPLATE_GALLERY_SELECT } from "@/lib/templates";
 
 // Aufgabe 62 Runde 2 — eigener Menüpunkt „Vorlagen": das Schaufenster der fertigen
@@ -23,12 +24,10 @@ export default async function VorlagenPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-base font-bold text-gray-900 dark:text-white">Vorlagen</h1>
-        <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-          Fertige Funnels für den schnellen Start — ansehen, übernehmen, anpassen.
-        </p>
-      </div>
+      <PageHeader
+        title="Vorlagen"
+        subtitle="Fertige Funnels für den schnellen Start — ansehen, übernehmen, anpassen."
+      />
 
       <TemplateShowcase templates={templates} />
     </div>

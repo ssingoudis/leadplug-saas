@@ -4,6 +4,7 @@ import { Plus, Zap } from "lucide-react";
 import Card from "@/components/ui/Card";
 import { FunnelCard } from "@/components/dashboard/funnels/FunnelCard";
 import { NewFunnelButton } from "@/components/dashboard/funnels/NewFunnelModal";
+import PageHeader from "@/components/ui/PageHeader";
 import {
   mapTemplateRows,
   TEMPLATE_GALLERY_SELECT,
@@ -95,25 +96,23 @@ export default async function FunnelsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-base font-bold text-gray-900 dark:text-white">
-            Funnels
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            {funnels.length === 0
-              ? "Noch keinen Funnel angelegt."
-              : `${funnels.length} Funnel${funnels.length !== 1 ? "s" : ""}`}
-          </p>
-        </div>
-        <NewFunnelButton
-          templates={templates}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover transition-colors"
-        >
-          <Plus size={16} />
-          Neuer Funnel
-        </NewFunnelButton>
-      </div>
+      <PageHeader
+        title="Funnels"
+        subtitle={
+          funnels.length === 0
+            ? "Noch keinen Funnel angelegt."
+            : `${funnels.length} Funnel${funnels.length !== 1 ? "s" : ""}`
+        }
+        action={
+          <NewFunnelButton
+            templates={templates}
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover"
+          >
+            <Plus size={16} strokeWidth={2.5} />
+            Neuer Funnel
+          </NewFunnelButton>
+        }
+      />
 
       {/* Leerer Zustand */}
       {funnels.length === 0 && (
