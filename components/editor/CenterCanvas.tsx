@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ExternalLink, Monitor, Smartphone, Play, Pencil, EyeOff, ListPlus, TriangleAlert, Info, X } from "lucide-react";
+import { Monitor, Smartphone, Play, Pencil, Palette, EyeOff, ListPlus, TriangleAlert, Info, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { Funnel } from "@/components/funnel";
 import { buildTheme, buildFunnelConfig, buildQuestions } from "@/lib/editorUtils";
@@ -26,8 +26,9 @@ interface Props {
   onDeleteOption: (idx: number) => void;
   // Polish: leere Custom-Karte zeigt Inline-"+"-Button → bubble nach EditorShell
   onAddCustomFieldRequest?: () => void;
-  // Aufgabe 56: Slug fuer den "Live"-Button (nur Edit-Modus — neue Funnels haben noch keinen).
-  liveSlug?: string;
+  // Aufgabe 74: Design-Panel-Slide-in — Auslöser sitzt in der Bottom-Toolbar.
+  designOpen: boolean;
+  onToggleDesign: () => void;
   // Aufgabe 57D: Kontaktierbarkeits-Warnung quittierbar (persistiert pro Funnel).
   hideContactWarning: boolean;
   onToggleContactWarning: (hidden: boolean) => void;
@@ -50,7 +51,8 @@ export function CenterCanvas({
   onDuplicateOption,
   onDeleteOption,
   onAddCustomFieldRequest,
-  liveSlug,
+  designOpen,
+  onToggleDesign,
   hideContactWarning,
   onToggleContactWarning,
   logicRules,
@@ -133,83 +135,88 @@ export function CenterCanvas({
           className="absolute inset-0 z-10 cursor-pointer bg-gray-900/30 backdrop-blur-[2px] dark:bg-black/50"
         />
       )}
-      {/* Aufgabe 50: Test-Toggle + Geräte-Umschalter schweben über der Bühne — nur Schatten,
-          kein umschließender Kasten. */}
-      <div className="pointer-events-none absolute inset-x-0 top-4 z-20 flex justify-center px-4">
-        <div className="pointer-events-auto flex items-center gap-2">
+      {/* Aufgabe 57D/74: quittierte Kontaktierbarkeits-Warnung → dezentes Badge oben rechts.
+          Klick blendet das Banner wieder ein (Toggle, persistiert pro Funnel). */}
+      {!isTestMode && contactWarningTier && hideContactWarning && (
+        <button
+          type="button"
+          onClick={() => onToggleContactWarning(false)}
+          title={
+            contactWarningTier === "hard"
+              ? "Kein E-Mail-/Telefon-Feld im Funnel — Leads sind nicht kontaktierbar. Klick zeigt den Hinweis wieder an."
+              : "E-Mail/Telefon ist optional — nicht jeder Lead wird kontaktierbar. Klick zeigt den Hinweis wieder an."
+          }
+          aria-label="Kontaktierbarkeits-Hinweis wieder anzeigen"
+          className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-amber-500 shadow-lg ring-1 ring-black/5 transition-colors hover:bg-amber-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800"
+        >
+          <TriangleAlert size={15} />
+        </button>
+      )}
+
+      {/* Aufgabe 74: EINE Werkzeug-Leiste UNTEN (Gerät · Test · Design) — ersetzt das
+          frühere Doppel-Menü (Top-Tabs + schwebende Top-Leiste). Schwebt über der Bühne. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-6 z-20 flex justify-center px-4">
+        <div className="pointer-events-auto flex items-center gap-1 rounded-2xl border border-gray-200 bg-white/95 p-1.5 shadow-lg ring-1 ring-black/5 backdrop-blur dark:border-gray-700 dark:bg-gray-900/95">
+          {/* Geräte-Umschalter */}
+          <button
+            type="button"
+            onClick={() => setIsMobile(false)}
+            title="Desktop-Ansicht"
+            aria-label="Desktop-Ansicht"
+            className={
+              !isMobile
+                ? "flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-gray-900 transition-colors dark:bg-gray-800 dark:text-white"
+                : "flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+            }
+          >
+            <Monitor size={15} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsMobile(true)}
+            title="Mobile-Ansicht"
+            aria-label="Mobile-Ansicht"
+            className={
+              isMobile
+                ? "flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-gray-900 transition-colors dark:bg-gray-800 dark:text-white"
+                : "flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+            }
+          >
+            <Smartphone size={15} />
+          </button>
+
+          <span className="mx-1 h-6 w-px bg-gray-200 dark:bg-gray-700" />
+
+          {/* Funnel testen / Zurück zum Editor */}
           <button
             type="button"
             onClick={onToggleTestMode}
             title={isTestMode ? "Zurück zum Editor" : "Funnel wie ein End-Kunde testen"}
             className={
               isTestMode
-                ? "inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-lg ring-1 ring-black/5 transition-colors hover:bg-amber-600"
-                : "inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-lg ring-1 ring-black/5 transition-colors hover:bg-primary-hover"
+                ? "inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-600"
+                : "inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
             }
           >
             {isTestMode ? <Pencil size={14} /> : <Play size={14} fill="currentColor" />}
             {isTestMode ? "Zurück zum Editor" : "Funnel testen"}
           </button>
 
-          {/* Aufgabe 56: Live-Preview direkt an der Buehne — oeffnet den echten Funnel
-              (gespeicherter Stand) in neuem Tab, zaehlt keinen Aufruf (?preview=1). */}
-          {liveSlug && (
-            <a
-              href={`/${liveSlug}?preview=1`}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Live ansehen (gespeicherter Stand — zählt keinen Aufruf)"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-semibold text-gray-700 shadow-lg ring-1 ring-black/5 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
-            >
-              <ExternalLink size={13} />
-              Live
-            </a>
-          )}
-
-          <div className="inline-flex items-center gap-1 rounded-xl border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-900">
+          {/* Design öffnet/schließt das Slide-in-Panel (nur außerhalb des Test-Modus) */}
+          {!isTestMode && (
             <button
               type="button"
-              onClick={() => setIsMobile(false)}
-              title="Desktop-Ansicht"
-              aria-label="Desktop-Ansicht"
+              onClick={onToggleDesign}
+              title="Design"
+              aria-pressed={designOpen}
               className={
-                !isMobile
-                  ? "flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-900 transition-colors dark:bg-gray-800 dark:text-white"
-                  : "flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+                designOpen
+                  ? "inline-flex items-center gap-2 rounded-xl bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-900 transition-colors dark:bg-gray-800 dark:text-white"
+                  : "inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
               }
             >
-              <Monitor size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsMobile(true)}
-              title="Mobile-Ansicht"
-              aria-label="Mobile-Ansicht"
-              className={
-                isMobile
-                  ? "flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-900 transition-colors dark:bg-gray-800 dark:text-white"
-                  : "flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
-              }
-            >
-              <Smartphone size={14} />
-            </button>
-          </div>
-
-          {/* Aufgabe 57D: quittierte Kontaktierbarkeits-Warnung → dezenter Erinnerungs-Marker.
-              Klick blendet das Banner wieder ein (Toggle, persistiert pro Funnel). */}
-          {!isTestMode && contactWarningTier && hideContactWarning && (
-            <button
-              type="button"
-              onClick={() => onToggleContactWarning(false)}
-              title={
-                contactWarningTier === "hard"
-                  ? "Kein E-Mail-/Telefon-Feld im Funnel — Leads sind nicht kontaktierbar. Klick zeigt den Hinweis wieder an."
-                  : "E-Mail/Telefon ist optional — nicht jeder Lead wird kontaktierbar. Klick zeigt den Hinweis wieder an."
-              }
-              aria-label="Kontaktierbarkeits-Hinweis wieder anzeigen"
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-amber-500 shadow-lg ring-1 ring-black/5 transition-colors hover:bg-amber-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800"
-            >
-              <TriangleAlert size={15} />
+              <Palette size={15} />
+              Design
             </button>
           )}
         </div>
@@ -223,7 +230,7 @@ export function CenterCanvas({
             subtilem Punktraster statt toter Fläche.
           • Click-into-empty deselected weiterhin (leere Fläche gehört dem Scroll-Container). */}
       <div
-        className={`flex flex-1 flex-col overflow-y-auto p-6 pt-24 lg:p-10 lg:pt-24 ${
+        className={`flex flex-1 flex-col overflow-y-auto p-6 pb-24 lg:p-10 lg:pb-24 ${
           stageBg
             ? ""
             : "bg-[radial-gradient(circle,rgba(17,24,39,0.06)_1px,transparent_1px)] bg-size-[18px_18px] dark:bg-[radial-gradient(circle,rgba(255,255,255,0.05)_1px,transparent_1px)]"
@@ -305,7 +312,7 @@ export function CenterCanvas({
           Dokumentfluss — die Karte bleibt exakt zentriert, ob Banner oder nicht.
           Breite folgt der Karte (maxWidth), damit es optisch zugehörig wirkt. */}
       {!isTestMode && contactWarningTier && !hideContactWarning && (
-        <div className="pointer-events-none absolute inset-x-0 top-20 z-10 flex justify-center px-6 lg:px-10">
+        <div className="pointer-events-none absolute inset-x-0 top-4 z-10 flex justify-center px-6 lg:px-10">
           <div
             className="pointer-events-auto w-full"
             style={{ maxWidth: isMobile ? "375px" : state.maxWidth || "720px" }}

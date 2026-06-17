@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Trash2, ChevronDown, Plus, Split, TriangleAlert } from "lucide-react";
+import { Trash2, ChevronDown, Plus, Split, TriangleAlert, Eye, EyeOff, type LucideIcon } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -28,6 +28,7 @@ import {
   CUSTOM_META,
   WELCOME_META,
   contactFieldTypeLabel,
+  contactFieldMeta,
   QUESTION_TYPE_OPTIONS,
 } from "./fieldMeta";
 import { FieldRow } from "./properties/FieldRow";
@@ -152,7 +153,13 @@ function QuestionProps({ state, index, logicRules, onOpenLogicEditor, onPatchQue
 
   return (
     <div className="flex flex-col">
-      <Header kindLabel={meta.label} kindIcon={meta.icon} pillClass={meta.pillClass} />
+      <Header
+        kindLabel={meta.label}
+        KindIcon={meta.Icon}
+        pillClass={meta.pillClass}
+        visible={q.visible !== false}
+        onToggleVisible={() => onPatchQuestion(index, { visible: q.visible === false })}
+      />
 
       <Section title="Seite">
         <Field label="Fragetyp">
@@ -179,11 +186,6 @@ function QuestionProps({ state, index, logicRules, onOpenLogicEditor, onPatchQue
             />
           </SelMark>
         </Field>
-        <Toggle
-          label="Sichtbar im Funnel"
-          enabled={q.visible !== false}
-          onToggle={(next) => onPatchQuestion(index, { visible: next })}
-        />
       </Section>
 
       {/* Aufgabe 50: flacher — kein „Feld dieser Seite"-Wrapper mehr. Eine Frage-Seite hat genau
@@ -300,7 +302,13 @@ function CustomPageProps({
 
   return (
     <div className="flex flex-col">
-      <Header kindLabel={CUSTOM_META.label} kindIcon={CUSTOM_META.icon} pillClass={CUSTOM_META.pillClass} />
+      <Header
+        kindLabel={CUSTOM_META.label}
+        KindIcon={CUSTOM_META.Icon}
+        pillClass={CUSTOM_META.pillClass}
+        visible={page.visible !== false}
+        onToggleVisible={() => onPatchQuestion(index, { visible: page.visible === false })}
+      />
 
       <Section title="Seite">
         <Field label="Überschrift">
@@ -321,11 +329,6 @@ function CustomPageProps({
             />
           </SelMark>
         </Field>
-        <Toggle
-          label="Sichtbar im Funnel"
-          enabled={page.visible !== false}
-          onToggle={(next) => onPatchQuestion(index, { visible: next })}
-        />
       </Section>
 
       <Section title="Felder dieser Karte">
@@ -525,48 +528,15 @@ function SortableContactFieldRow({
   };
 
   const typeLabel = contactFieldTypeLabel(field.type);
-  // Aufgabe 39 Polish: erweitert um long_text/number/date/checkbox/dropdown
-  const iconByType: Record<ContactFieldConfig["type"], string> = {
-    text: "T",
-    long_text: "¶",
-    email: "@",
-    tel: "☎",
-    plz: "⌗",
-    radio: "◉",
-    dropdown: "▽",
-    number: "#",
-    date: "▦",
-    checkbox: "☑",
-    slider: "≡",
-    multi_choice: "☑",
-    rating: "★",
-    scale: "⊢",
-    // Aufgabe 40 Polish
-    first_name: "👤",
-    last_name: "👤",
-    full_name: "👤",
-  };
-  const icon = iconByType[field.type] ?? "T";
-  const TEXT_PILL = "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800";
-  const CHOICE_PILL = "bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800";
-  const NUMERIC_PILL = "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800";
-  const RATING_PILL = "bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800";
-  const pillByType: Record<ContactFieldConfig["type"], string> = {
-    text: TEXT_PILL, long_text: TEXT_PILL, email: TEXT_PILL, tel: TEXT_PILL, plz: TEXT_PILL,
-    radio: CHOICE_PILL, dropdown: CHOICE_PILL, multi_choice: CHOICE_PILL,
-    number: NUMERIC_PILL, date: NUMERIC_PILL, checkbox: NUMERIC_PILL, slider: NUMERIC_PILL,
-    rating: RATING_PILL, scale: RATING_PILL,
-    // Aufgabe 40 Polish — Name-Fields wie TEXT
-    first_name: TEXT_PILL, last_name: TEXT_PILL, full_name: TEXT_PILL,
-  };
-  const pillClass = pillByType[field.type] ?? TEXT_PILL;
+  // Aufgabe 74: Icon + Farbe zentral aus fieldMeta (Kategorie „feld" → smaragd).
+  const meta = contactFieldMeta(field.type);
 
   return (
     // data-sel-target: Scroll-Anker für die Canvas-Klick-Selektion (Aufgabe 57C)
     <div ref={setNodeRef} style={style} data-sel-target={`card_field_${field._clientId ?? field.key}`} {...attributes}>
       <FieldRow
-        icon={icon}
-        pillClass={pillClass}
+        Icon={meta.Icon}
+        pillClass={meta.pillClass}
         label={field.label || field.key}
         typeLabel={typeLabel}
         expanded={expanded}
@@ -605,7 +575,13 @@ function WelcomeProps({
   }
   return (
     <div className="flex flex-col">
-      <Header kindLabel={WELCOME_META.label} kindIcon={WELCOME_META.icon} pillClass={WELCOME_META.pillClass} />
+      <Header
+        kindLabel={WELCOME_META.label}
+        KindIcon={WELCOME_META.Icon}
+        pillClass={WELCOME_META.pillClass}
+        visible={page.visible !== false}
+        onToggleVisible={() => onPatchQuestion(index, { visible: page.visible === false })}
+      />
 
       <Section title="Seite">
         <Field label="Überschrift">
@@ -635,11 +611,6 @@ function WelcomeProps({
             />
           </SelMark>
         </Field>
-        <Toggle
-          label="Sichtbar im Funnel"
-          enabled={page.visible !== false}
-          onToggle={(next) => onPatchQuestion(index, { visible: next })}
-        />
       </Section>
 
       <Section>
@@ -679,7 +650,7 @@ function SuccessProps({
 
   return (
     <div className="flex flex-col">
-      <Header kindLabel={SUCCESS_META.label} kindIcon={SUCCESS_META.icon} pillClass={SUCCESS_META.pillClass} />
+      <Header kindLabel={SUCCESS_META.label} KindIcon={SUCCESS_META.Icon} pillClass={SUCCESS_META.pillClass} />
 
       <Section title="Modus">
         <Toggle
@@ -767,14 +738,45 @@ function SuccessProps({
 // Aufgabe 45: delegiert an den geteilten PanelHeader (Section/Field kommen aus ui/Panel).
 function Header({
   kindLabel,
-  kindIcon,
+  KindIcon,
   pillClass,
+  visible,
+  onToggleVisible,
 }: {
   kindLabel: string;
-  kindIcon: string;
+  KindIcon: LucideIcon;
   pillClass: string;
+  // Aufgabe 74: Sichtbarkeit als Auge im Header (statt Toggle-Zeile in der Sektion) —
+  // konsistent zur Step-Pille + Karten-Feld-Zeile. Optional: Erfolgsseite hat keins.
+  visible?: boolean;
+  onToggleVisible?: () => void;
 }) {
-  return <PanelHeader badge={kindIcon} badgeClass={pillClass} scope="Seitentyp" title={kindLabel} />;
+  return (
+    <PanelHeader
+      badge={<KindIcon size={15} strokeWidth={2} />}
+      badgeClass={pillClass}
+      scope="Seitentyp"
+      title={kindLabel}
+      right={
+        onToggleVisible ? (
+          <button
+            type="button"
+            onClick={onToggleVisible}
+            title={visible ? "Im Funnel sichtbar — zum Ausblenden klicken" : "Ausgeblendet — zum Einblenden klicken"}
+            aria-label={visible ? "Schritt ausblenden" : "Schritt einblenden"}
+            aria-pressed={!visible}
+            className={
+              visible
+                ? "inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                : "inline-flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600 transition-colors hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/30"
+            }
+          >
+            {visible ? <Eye size={16} /> : <EyeOff size={16} />}
+          </button>
+        ) : undefined
+      }
+    />
+  );
 }
 
 function TextInput({
@@ -862,9 +864,9 @@ function TypeSelect({
         className="flex w-full items-center gap-2 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 outline-none transition hover:border-gray-400 focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:hover:border-gray-600"
       >
         <span
-          className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border text-xs font-bold ${current.pillClass}`}
+          className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border ${current.pillClass}`}
         >
-          {current.icon}
+          <current.Icon size={13} strokeWidth={2} />
         </span>
         <span className="flex-1 text-left">{current.label}</span>
         <ChevronDown
@@ -907,9 +909,9 @@ function TypeSelect({
                   }`}
                 >
                   <span
-                    className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border text-xs font-bold ${m.pillClass}`}
+                    className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border ${m.pillClass}`}
                   >
-                    {m.icon}
+                    <m.Icon size={13} strokeWidth={2} />
                   </span>
                   <span className="truncate">{o.label}</span>
                 </button>

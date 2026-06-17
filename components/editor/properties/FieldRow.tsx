@@ -1,12 +1,12 @@
 "use client";
 
-import { ChevronDown, ChevronRight, GripVertical, Trash2, Eye, EyeOff } from "lucide-react";
+import { ChevronDown, ChevronRight, GripVertical, Trash2, Eye, EyeOff, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { selRing } from "./selection";
 
 interface Props {
-  /** Linkes Icon + Pill-Farbe (kommt aus fieldMeta). */
-  icon: string;
+  /** Linkes Icon (lucide-Komponente) + Pill-Farbe (kommt aus fieldMeta). */
+  Icon: LucideIcon;
   pillClass: string;
   /** Hauptzeile: Anzeige-Name des Fields (z.B. „Frage" oder „Telefonnummer"). */
   label: string;
@@ -35,7 +35,7 @@ interface Props {
 }
 
 export function FieldRow({
-  icon,
+  Icon,
   pillClass,
   label,
   typeLabel,
@@ -75,9 +75,9 @@ export function FieldRow({
           className="flex flex-1 items-center gap-2 px-1.5 py-1 text-left disabled:cursor-default"
         >
           <span
-            className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border text-xs font-bold ${pillClass}`}
+            className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border ${pillClass}`}
           >
-            {icon}
+            <Icon size={15} strokeWidth={2} />
           </span>
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-sm font-medium text-gray-800 dark:text-gray-200">

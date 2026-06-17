@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Plus, ArrowRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import Card from '@/components/ui/Card'
+import PageHeader from '@/components/ui/PageHeader'
 import Sparkline from '@/components/dashboard/Sparkline'
 import { NewFunnelButton } from '@/components/dashboard/funnels/NewFunnelModal'
 import { mapTemplateRows, TEMPLATE_GALLERY_SELECT } from '@/lib/templates'
@@ -201,19 +202,19 @@ export default async function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Kopfzeile */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Willkommen zurück</h1>
-          <p className="text-sm text-gray-400 dark:text-gray-500">Überblick der letzten 30 Tage.</p>
-        </div>
-        <NewFunnelButton
-          templates={templates}
-          className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover"
-        >
-          <Plus size={16} strokeWidth={2.5} />
-          Neuer Funnel
-        </NewFunnelButton>
-      </div>
+      <PageHeader
+        title="Willkommen zurück"
+        subtitle="Überblick der letzten 30 Tage."
+        action={
+          <NewFunnelButton
+            templates={templates}
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover"
+          >
+            <Plus size={16} strokeWidth={2.5} />
+            Neuer Funnel
+          </NewFunnelButton>
+        }
+      />
 
       {/* KPIs — klickbar, mit Mini-Trend */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

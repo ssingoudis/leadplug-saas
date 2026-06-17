@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2, Plus, Eye, EyeOff, Pencil, AlertTriangle, Lock, SquareCheck } from "lucide-react";
+import { Trash2, Plus, Pencil, AlertTriangle, Lock, SquareCheck } from "lucide-react";
 import type { EditorQuestion, EditorOption, ContactFieldConfig, OptionMarker } from "@/types";
 import { OptionsEditor } from "./OptionsEditor";
 import { SelMark } from "./selection";
@@ -288,18 +288,13 @@ function ContactFieldProps({
         <TextInput value={f.label} onChange={(v) => onPatch({ label: v })} placeholder="z. B. Telefonnummer" />
       </Field>
 
-      <div className="grid grid-cols-2 gap-2">
-        <Toggle
-          label="Pflichtfeld"
-          enabled={f.required}
-          onToggle={(v) => onPatch({ required: v })}
-        />
-        <Toggle
-          label="Sichtbar"
-          enabled={f.visible}
-          onToggle={(v) => onPatch({ visible: v })}
-        />
-      </div>
+      {/* Aufgabe 74: „Sichtbar" raus — die Feld-Zeile hat oben schon ein Auge für visible
+          (konsistent zur Step-Ebene: Sichtbarkeit = immer Auge, nie Toggle). */}
+      <Toggle
+        label="Pflichtfeld"
+        enabled={f.required}
+        onToggle={(v) => onPatch({ required: v })}
+      />
 
       {isTextish && (
         <Field label="Platzhalter">
@@ -570,10 +565,7 @@ function Toggle({
 }) {
   return (
     <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 dark:border-gray-700">
-      <span className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-        {enabled ? <Eye size={14} /> : <EyeOff size={14} />}
-        {label}
-      </span>
+      <span className="text-sm text-gray-700 dark:text-gray-300">{label}</span>
       <button
         type="button"
         role="switch"

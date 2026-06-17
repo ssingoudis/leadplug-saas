@@ -2,6 +2,7 @@
 
 import type { EditorState, FunnelFont } from "@/types";
 import { PanelShell, Section, Field, FieldHint } from "./ui/Panel";
+import { Select } from "./ui/Controls";
 
 interface Props {
   state: EditorState;
@@ -38,7 +39,9 @@ export function ThemePanel({ state, onPatch }: Props) {
   const radiusIndex = Math.max(0, RADIUS_STEPS.indexOf(state.borderRadius));
 
   return (
-    <PanelShell>
+    // side="none": das Design-Panel sitzt im Slide-in (Aufgabe 74), das die linke Kante
+    // bereits stellt — kein doppelter Border.
+    <PanelShell side="none">
       <Section title="Farben">
         <ColorField
           label="Hauptfarbe"
@@ -68,9 +71,14 @@ export function ThemePanel({ state, onPatch }: Props) {
         <Field label="Schriftart">
           <Select
             value={state.font}
-            onChange={(v) => onPatch({ font: v as FunnelFont })}
-            options={FONT_OPTIONS}
-          />
+            onChange={(e) => onPatch({ font: e.target.value as FunnelFont })}
+          >
+            {FONT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </Select>
         </Field>
       </Section>
 
@@ -100,9 +108,14 @@ export function ThemePanel({ state, onPatch }: Props) {
         <Field label="Maximale Breite">
           <Select
             value={state.maxWidth}
-            onChange={(v) => onPatch({ maxWidth: v })}
-            options={MAX_WIDTH_PRESETS}
-          />
+            onChange={(e) => onPatch({ maxWidth: e.target.value })}
+          >
+            {MAX_WIDTH_PRESETS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </Select>
         </Field>
       </Section>
 
@@ -123,25 +136,14 @@ export function ThemePanel({ state, onPatch }: Props) {
         {/* Aufgabe 59: aus „Überschriften-Ausrichtung" wurde ein Layout-Modus der ganzen Karte
             (zentriert zusätzlich Rating/Skala + Button-Zeile; vollbreite Elemente bleiben). */}
         <Field label="Ausrichtung">
-          <div className="inline-flex w-full rounded-lg border border-gray-300 p-0.5 dark:border-gray-700">
-            {([
+          <SegmentedControl
+            value={state.titleAlignment}
+            onChange={(v) => onPatch({ titleAlignment: v })}
+            options={[
               { value: "left", label: "Links" },
               { value: "center", label: "Mittig" },
-            ] as const).map((o) => (
-              <button
-                key={o.value}
-                type="button"
-                onClick={() => onPatch({ titleAlignment: o.value })}
-                className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  state.titleAlignment === o.value
-                    ? "bg-primary/10 text-primary"
-                    : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-                }`}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
+            ]}
+          />
           <FieldHint>Gilt für Überschrift, Inhalt und Buttons aller Schritte.</FieldHint>
         </Field>
       </Section>
@@ -150,8 +152,70 @@ export function ThemePanel({ state, onPatch }: Props) {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   Building blocks (Theme-spezifisch; PanelShell/Header/Section/Field aus ui/Panel)
+   Building blocks (Theme-spezifisch; PanelShell/Section/Field aus ui/Panel)
    ───────────────────────────────────────────────────────────────────────────── */
+
+// Aufgabe 74: geteilter Segment-Umschalter (vorher 2× inline dupliziert). Aktiv =
+// weiße Pille auf grauem Track (wie die obere Tab-Leiste) — kein bg-primary/10 mehr
+// (das kippt im Dark Mode nach lila, siehe design-system.md).
+function SegmentedControl<T extends string>({
+  value,
+  onChange,
+  options,
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: ReadonlyArray<{ value: T; label: string }>;
+}) {
+  return (
+    <div className="inline-flex w-full rounded-lg bg-gray-100 p-0.5 dark:bg-gray-800">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          onClick={() => onChange(o.value)}
+          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+            value === o.value
+              ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
+              : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Aufgabe 74: geteilte Farb-Zeile (Color-Chip + Hex-Input) — vorher in ColorField
+// und PageBackgroundField dupliziert.
+function ColorRow({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="color"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="lp-color-chip h-9 w-9 cursor-pointer rounded-lg border border-gray-300 bg-white dark:border-gray-700"
+      />
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+      />
+    </div>
+  );
+}
 
 function ColorField({
   label,
@@ -166,21 +230,7 @@ function ColorField({
 }) {
   return (
     <Field label={label}>
-      <div className="flex items-center gap-2">
-        <input
-          type="color"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="lp-color-chip h-9 w-9 cursor-pointer rounded-lg border border-gray-300 bg-white dark:border-gray-700"
-        />
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="#22c55e"
-          className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-        />
-      </div>
+      <ColorRow value={value} onChange={onChange} placeholder="#22c55e" />
       {hint && <FieldHint>{hint}</FieldHint>}
     </Field>
   );
@@ -198,45 +248,20 @@ function PageBackgroundField({
   const isTransparent = value === "transparent";
   return (
     <Field label="Seiten-Hintergrund">
-      <div className="inline-flex w-full rounded-lg border border-gray-300 p-0.5 dark:border-gray-700">
-        <button
-          type="button"
-          onClick={() => onChange("transparent")}
-          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-            isTransparent
-              ? "bg-primary/10 text-primary"
-              : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-          }`}
-        >
-          Transparent
-        </button>
-        <button
-          type="button"
-          onClick={() => { if (isTransparent) onChange("#ffffff"); }}
-          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-            !isTransparent
-              ? "bg-primary/10 text-primary"
-              : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-          }`}
-        >
-          Eigene Farbe
-        </button>
-      </div>
+      <SegmentedControl
+        value={isTransparent ? "transparent" : "custom"}
+        onChange={(v) => {
+          if (v === "transparent") onChange("transparent");
+          else if (isTransparent) onChange("#ffffff");
+        }}
+        options={[
+          { value: "transparent", label: "Transparent" },
+          { value: "custom", label: "Eigene Farbe" },
+        ]}
+      />
       {!isTransparent && (
-        <div className="mt-2 flex items-center gap-2">
-          <input
-            type="color"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className="lp-color-chip h-9 w-9 cursor-pointer rounded-lg border border-gray-300 bg-white dark:border-gray-700"
-          />
-          <input
-            type="text"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="#ffffff"
-            className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-          />
+        <div className="mt-2">
+          <ColorRow value={value} onChange={onChange} placeholder="#ffffff" />
         </div>
       )}
       <FieldHint>
@@ -285,29 +310,5 @@ function ToggleField({
       </div>
       {hint && <FieldHint>{hint}</FieldHint>}
     </Field>
-  );
-}
-
-function Select<T extends string>({
-  value,
-  onChange,
-  options,
-}: {
-  value: T;
-  onChange: (v: T) => void;
-  options: Array<{ value: T; label: string }>;
-}) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value as T)}
-      className="w-full appearance-none rounded-lg border border-gray-300 bg-white bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%20stroke%3D%22%239ca3af%22%3E%3Cpath%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22M6%208l4%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[18px_18px] bg-position-[right_0.5rem_center] bg-no-repeat px-3 py-2 pr-9 text-sm text-gray-900 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-    >
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
-      ))}
-    </select>
   );
 }

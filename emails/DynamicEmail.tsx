@@ -47,9 +47,7 @@ export function DynamicEmail({
           </Section>
           <Hr style={styles.hr} />
           <Section style={styles.footerSection}>
-            {/* Später Ändern auf Leadplug.de */}
-            {/* <Link href="https://leadplug.de" style={styles.footerLink}> */}
-            <Link href="https://app.leadplug.de" style={styles.footerLink}>
+            <Link href="https://leadplug.de" style={styles.footerLink}>
               Übermittelt von leadplug.de
             </Link>
           </Section>

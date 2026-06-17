@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getSubscriptionStatus } from '@/lib/billing'
 import BillingClient from './BillingClient'
+import PageHeader from '@/components/ui/PageHeader'
 
 export default async function BillingPage({
   searchParams,
@@ -27,10 +28,7 @@ export default async function BillingPage({
 
   return (
     <div className="flex flex-col gap-6 max-w-xl">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Plan & Abrechnung</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Dein aktueller Plan und Abrechnungsstatus.</p>
-      </div>
+      <PageHeader title="Plan & Abrechnung" subtitle="Dein aktueller Plan und Abrechnungsstatus." />
 
       <BillingClient
         status={status}

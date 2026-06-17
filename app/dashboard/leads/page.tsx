@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Card from '@/components/ui/Card'
+import PageHeader from '@/components/ui/PageHeader'
 import TenantLeadsTable, { type TenantSubmission, type FunnelOption } from '@/app/dashboard/TenantLeadsTable'
 
 async function getLeadsData(): Promise<{ submissions: TenantSubmission[]; funnels: FunnelOption[] }> {
@@ -120,6 +121,10 @@ export default async function LeadsPage({
 
   return (
     <div className="space-y-6">
+      <PageHeader
+        title="Leads"
+        subtitle={`${submissions.length} Lead${submissions.length !== 1 ? "s" : ""}`}
+      />
       {submissions.length === 0 ? (
         <Card>
           <div className="flex flex-col items-center justify-center py-12 text-center">

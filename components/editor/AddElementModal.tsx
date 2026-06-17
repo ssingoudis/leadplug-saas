@@ -1,8 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { Contact, MapPin, type LucideIcon } from "lucide-react";
 import type { QuestionType, ContactFieldConfig } from "@/types";
-import { questionMeta, CUSTOM_META } from "./fieldMeta";
+import { questionMeta, CUSTOM_META, WELCOME_META, contactFieldMeta } from "./fieldMeta";
 import { EditorModal } from "./ui/EditorModal";
 
 type ContactFieldType = ContactFieldConfig["type"];
@@ -26,22 +27,10 @@ interface Props {
   hideWelcome?: boolean;
 }
 
-const TEXT_PILL =
-  "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800";
-const NUMERIC_PILL =
-  "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800";
-
-// Aufgabe 50: einfache Datenfelder, die in eine Karte wandern (gewählte Karte oder neue).
-const CARD_FIELDS: { type: ContactFieldType; icon: string; label: string; pillClass: string }[] = [
-  { type: "full_name", icon: "👤", label: "Name",      pillClass: TEXT_PILL },
-  { type: "email",     icon: "@",  label: "E-Mail",    pillClass: TEXT_PILL },
-  { type: "tel",       icon: "☎",  label: "Telefon",   pillClass: TEXT_PILL },
-  { type: "plz",       icon: "⌗",  label: "PLZ",       pillClass: TEXT_PILL },
-  { type: "text",      icon: "T",  label: "Text",      pillClass: TEXT_PILL },
-  { type: "long_text", icon: "¶",  label: "Lang-Text", pillClass: TEXT_PILL },
-  { type: "number",    icon: "#",  label: "Zahl",      pillClass: NUMERIC_PILL },
-  { type: "date",      icon: "▦",  label: "Datum",     pillClass: NUMERIC_PILL },
-  { type: "checkbox",  icon: "☑",  label: "Checkbox",  pillClass: NUMERIC_PILL },
+// Aufgabe 50/74: einfache Datenfelder, die in eine Karte wandern (Reihenfolge beabsichtigt).
+// Icon/Label/Farbe kommen zentral aus fieldMeta (Kategorie „feld").
+const CARD_FIELD_TYPES: ContactFieldType[] = [
+  "full_name", "email", "tel", "plz", "text", "long_text", "number", "date", "checkbox",
 ];
 
 // Aufgabe 50: Typen, die EINEN eigenständigen Schritt bilden (kein Extra-Feld möglich).
@@ -81,7 +70,7 @@ export function AddElementModal({
             return (
               <SmallCard
                 key={type}
-                icon={meta.icon}
+                Icon={meta.Icon}
                 pillClass={meta.pillClass}
                 label={meta.label}
                 onClick={() => { onSelectType(type); onClose(); }}
@@ -95,21 +84,21 @@ export function AddElementModal({
       <Section title="Karten" hint="Mehrere Felder auf einer Seite — Vorlage wählen oder leer starten.">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <BigCard
-            icon="👤"
+            Icon={Contact}
             pillClass={CUSTOM_META.pillClass}
             title="Kontaktdaten"
             desc="Karte mit Name + E-Mail + Telefon."
             onClick={() => { onSelectContactCard(); onClose(); }}
           />
           <BigCard
-            icon="⌖"
+            Icon={MapPin}
             pillClass={CUSTOM_META.pillClass}
             title="Adresse"
             desc="Karte mit Straße + Hausnr + PLZ + Ort."
             onClick={() => { onSelectAddressCard(); onClose(); }}
           />
           <BigCard
-            icon={CUSTOM_META.icon}
+            Icon={CUSTOM_META.Icon}
             pillClass={CUSTOM_META.pillClass}
             title="Eigene Karte"
             desc="Leere Karte für beliebige Felder."
@@ -119,17 +108,20 @@ export function AddElementModal({
       </Section>
 
       {/* Einzelne Felder — schmale Karten, eigene Sektion */}
-      <Section title="Einzelne Felder" hint="Landen in der gewählten Karte — oder einer neuen.">
+      <Section title="Einzelne Felder" hint="Ein einzelnes Feld für die gewählte Karte — oder eine neue.">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {CARD_FIELDS.map((f) => (
-            <SmallCard
-              key={f.type}
-              icon={f.icon}
-              pillClass={f.pillClass}
-              label={f.label}
-              onClick={() => { onSelectCardField(f.type); onClose(); }}
-            />
-          ))}
+          {CARD_FIELD_TYPES.map((type) => {
+            const meta = contactFieldMeta(type);
+            return (
+              <SmallCard
+                key={type}
+                Icon={meta.Icon}
+                pillClass={meta.pillClass}
+                label={meta.label}
+                onClick={() => { onSelectCardField(type); onClose(); }}
+              />
+            );
+          })}
         </div>
       </Section>
 
@@ -138,8 +130,8 @@ export function AddElementModal({
         <Section title="Start" hint="Optionale Begrüßung am Anfang.">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <BigCard
-              icon="▷"
-              pillClass="bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800"
+              Icon={WELCOME_META.Icon}
+              pillClass={WELCOME_META.pillClass}
               title="Begrüßung"
               desc="Erster Bildschirm mit Titel + Button."
               onClick={() => { onSelectWelcome(); onClose(); }}
@@ -168,13 +160,13 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
 }
 
 function BigCard({
-  icon,
+  Icon,
   pillClass,
   title,
   desc,
   onClick,
 }: {
-  icon: string;
+  Icon: LucideIcon;
   pillClass: string;
   title: string;
   desc: string;
@@ -186,8 +178,8 @@ function BigCard({
       onClick={onClick}
       className="group flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 text-left transition-all hover:border-primary hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:hover:border-primary"
     >
-      <span className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-base ${pillClass}`}>
-        {icon}
+      <span className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border ${pillClass}`}>
+        <Icon size={18} strokeWidth={2} />
       </span>
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="text-sm font-semibold text-gray-900 dark:text-white">{title}</span>
@@ -198,12 +190,12 @@ function BigCard({
 }
 
 function SmallCard({
-  icon,
+  Icon,
   pillClass,
   label,
   onClick,
 }: {
-  icon: string;
+  Icon: LucideIcon;
   pillClass: string;
   label: string;
   onClick: () => void;
@@ -214,8 +206,8 @@ function SmallCard({
       onClick={onClick}
       className="group flex items-center gap-2.5 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-left transition-all hover:border-primary hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:hover:border-primary"
     >
-      <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-sm font-bold ${pillClass}`}>
-        {icon}
+      <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border ${pillClass}`}>
+        <Icon size={16} strokeWidth={2} />
       </span>
       <span className="truncate text-sm font-medium text-gray-800 dark:text-gray-200 group-hover:text-gray-900 dark:group-hover:text-white">
         {label}

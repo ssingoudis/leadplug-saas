@@ -1,6 +1,7 @@
 "use client";
 
 import { Copy, GripVertical, EyeOff, Split, Trash2, Webhook } from "lucide-react";
+import Tooltip from "@/components/ui/Tooltip";
 import type { FieldMeta } from "./fieldMeta";
 
 interface Props {
@@ -74,15 +75,18 @@ export function StepPill({
         className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-2 text-left"
       >
         <span
-          className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border text-xs font-bold ${meta.pillClass}`}
+          className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border ${meta.pillClass}`}
         >
-          {meta.icon}
+          <meta.Icon size={15} strokeWidth={2} />
         </span>
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-            {number != null ? `${number} · ${meta.label}` : meta.label}
+            {number != null ? `Schritt ${number}` : meta.label}
           </span>
-          <span
+          {/* Aufgabe 74: volle Frage als Tooltip beim Hovern (Titel ist gekürzt). */}
+          <Tooltip
+            label={title.trim() ? title : null}
+            side="right"
             className={`truncate text-sm ${
               selected
                 ? "font-semibold text-gray-900 dark:text-white"
@@ -92,7 +96,7 @@ export function StepPill({
             {/* Aufgabe 55: neutraler Fallback statt kursivem „Ohne Titel" (wirkte wie ein Bug).
                 StepList liefert vorher schon Auto-Titel aus dem Inhalt (Options/Feld-Labels). */}
             {title || <span className="text-gray-400 dark:text-gray-500">Unbenannt</span>}
-          </span>
+          </Tooltip>
         </div>
         {hidden && (
           <span title="Ausgeblendet" className="text-gray-400 dark:text-gray-500">

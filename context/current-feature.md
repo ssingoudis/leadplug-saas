@@ -110,6 +110,30 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
+## Aufgabe 74 — Builder-Optik-Pass + Dashboard-Header/Tooltip-Vereinheitlichung (2026-06-17)
+
+**Status:** Branch `feature/aufgabe-74-builder-optik`, `tsc --noEmit` durchgehend grün, reine UI/Präsentation — **kein DB-Change, keine neue Dependency** (lucide-react + react-dom bereits da), `funnel.tsx` (Widget) unberührt. Hell + Dunkel geprüft.
+
+**Anlass:** Optische Überarbeitung des Funnel-Visual-Builders (`/dashboard/funnels/[slug]/edit`) anhand von Konkurrenz-Editoren (youform/niceform/collectform). Über den Editor hinaus auf Dashboard-Konsistenz erweitert.
+
+**Editor:**
+- **Icon-/Farb-System konsolidiert:** [fieldMeta.ts](../components/editor/fieldMeta.ts) ist die EINZIGE Quelle — lucide-Icons statt Unicode-Glyph/Emoji-Strings; Farbe pro **Kategorie** (`CATEGORY_TINT`: frage=blau · karte=bernstein · feld=smaragd · start=slate · abschluss=grün) statt Regenbogen pro Typ. 3 Duplikat-Maps gelöscht (AddElementModal/AddContactFieldPicker/PropertiesPanel). Konsumenten: StepPill · AddElementModal · AddContactFieldPicker · PropertiesPanel · FieldRow · LogicMapPanel. „Zahl" = `Calculator` (statt `#`).
+- **Frame:** echtes Vollbild ([EditorShell](../components/editor/EditorShell.tsx): `left-0` + `z-50` deckt die Dashboard-Nav), Breadcrumb „← Funnels › Name", beschrifteter „Vorschau"-Button oben rechts (statt kryptisches ↗).
+- **Canvas:** EINE Bottom-Toolbar (Gerät · Funnel testen · Design) statt zweier gestapelter Menüs; „Live" entdoppelt; Kontaktwarnung → Badge oben rechts ([CenterCanvas](../components/editor/CenterCanvas.tsx)).
+- **Design als rechts-rein-slidendes Overlay** (statt Inhalt|Design-Toggle) mit leichtem Scrim + Klick-daneben-schließt; löst nebenbei den verbotenen `bg-primary/10`-Aktiv-Toggle.
+- **Sichtbarkeit = Auge** im Properties-Header (alle Step-Typen); „Sichtbar"-Toggle-Zeilen raus (auch im Karten-Feld); irreführendes Auge an „Pflichtfeld" entfernt.
+- **ThemePanel aufgeräumt:** geteilter `Controls.Select` (dark-aware Chevron), `SegmentedControl` (weiße-Pille-aktiv) + `ColorRow` entdoppelt, kein Doppel-Border im Slide-in.
+- Step-Pille Eyebrow „Schritt N" (Typ-Wort raus, Icon trägt den Typ); TopTabs aktiver Text Indigo + toter badge/disabled-Pfad raus; „Frage hinzufügen" + alle `EditorButton` auf `py-2.5`.
+
+**Dashboard/global:**
+- **`--radius` zentralisiert** ([globals.css](../app/globals.css)): 12→**10px**, `--radius-2xl` an `--radius` gekoppelt → EIN Radius-Regler app-weit.
+- **`PageHeader`-Bauteil** ([components/ui/PageHeader.tsx](../components/ui/PageHeader.tsx)) — alle Nav-Seiten (Dashboard/Funnels/Vorlagen/Abrechnung/Admin/Statistiken/Leads) nutzen es; vorher hardcodete jede Seite ihren Header (Größen + Button-Höhen drifteten). Überschriften einheitlich `text-xl`.
+- **`Tooltip`-Bauteil** ([components/ui/Tooltip.tsx](../components/ui/Tooltip.tsx)) — dependency-frei, Portal (kein Clipping), dunkle Bubble. Angewandt: Step-Liste (volle Frage beim Hovern) + „Vorschau"-Button.
+
+**Bewusst aufgeschoben (eigene Aufgabe):** projektweiter Ersatz der restlichen nativen `title="`-Tooltips durch das `Tooltip`-Bauteil — Layout-Risiko beim Wrappen, vor der Beta nicht angefasst. Komponenten-Props namens `title` (Card/Modal/Section/PageHeader/SectionCard) + das Widget bleiben ohnehin außen vor.
+
+---
+
 ## Aufgabe 73 — Öffentliche Widget-Config: interne Tenant-Daten nicht mehr an den Client (2026-06-14)
 
 **Status:** Branch `feature/aufgabe-73-public-funnel-config`, Build grün (`tsc --noEmit` + `next build`), kein DB-Change, keine neue Dependency, `funnel.tsx` unberührt.
