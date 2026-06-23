@@ -1,5 +1,5 @@
 // Self-hosted Fonts unter public/fonts/ (DSGVO-konform, keine Google-Requests).
-// "system" = System-Font-Stack ohne Download. Aufgabe 66: +6 Familien (merriweather = Serife).
+// "system" = System-Font-Stack ohne Download; merriweather ist eine Serife.
 export type FunnelFont =
   | "system" | "inter" | "poppins" | "roboto"
   | "montserrat" | "open-sans" | "lato" | "nunito" | "dm-sans" | "merriweather"
@@ -24,16 +24,14 @@ export type QuestionType =
   | 'number'
   | 'dropdown'
   | 'checkbox'
-  // Aufgabe 39: neue Element-Types
   | 'rating'      // 1-5 (oder N) Sterne mit Hover-Preview, Antwort als String "1"..."5"
   | 'scale'       // 0-N Skala (NPS-Style), Antwort als String "0"..."N"
   | 'statement'   // Info-Block ohne Input — User klickt OK/Weiter, keine Antwort gespeichert
-  // Aufgabe 40 Polish: Name-Field-Types — Skip-Mode-Funnels brauchen das für robustes contact-Mapping.
+  // Name-Typen — für robustes contact-Mapping im Server.
   | 'first_name' | 'last_name' | 'full_name'
 
-// Aufgabe 50: Marker-Stil der Antwort-Optionen bei single_choice/multi_choice/dropdown.
-// 'letters' = A/B/C/D (Default), 'numbers' = 1/2/3, 'none' = kein Chip.
-// Aufgabe 65: 'checkbox' = leere Box, die bei Auswahl einen Haken in Brand-Farbe bekommt.
+// Marker-Stil der Antwort-Optionen: 'letters' = A/B/C (Default), 'numbers' = 1/2/3,
+// 'none' = kein Chip, 'checkbox' = Haken-Box.
 export type OptionMarker = 'letters' | 'numbers' | 'none' | 'checkbox'
 
 export interface Option {
@@ -78,7 +76,6 @@ export interface CheckboxConfig {
   required?: boolean
 }
 
-// Aufgabe 39: neue Element-Configs
 export interface RatingConfig {
   maxStars?: number  // Default 5
   required?: boolean
@@ -103,39 +100,33 @@ export interface WelcomeConfig {
 
 export interface QuestionConfig {
   id: string
-  /** Aufgabe 40 Polish: echte DB-page-uuid (pages.id). Wird vom Widget für
-   *  after_page-Webhook-Trigger an /api/track-progress mitgeschickt. */
+  /** DB-page-uuid (pages.id) — vom Widget für after_page-Webhooks an /api/track-progress geschickt. */
   pageId?: string
   title: string
   subtitle?: string
   questionType: QuestionType
   options: Option[]
-  // Aufgabe 50: Marker-Stil der Optionen (A/B/C · 1/2/3 · keiner). Default 'letters'.
+  // Marker-Stil der Optionen (A/B/C · 1/2/3 · keiner). Default 'letters'.
   optionMarker?: OptionMarker
   config:
     | TextConfig | SliderConfig | DateConfig | NumberConfig | CheckboxConfig
     | RatingConfig | ScaleConfig | StatementConfig | WelcomeConfig
     | Record<string, never>
   visible: boolean
-  // Aufgabe 38 + 39: Diskriminator.
-  // "question" (Default) = klassisch 1-Field-pro-Step.
-  // "custom" = Multi-Field-Karte. customFields ist dann gesetzt.
-  // "welcome" = Optionaler Intro-Step am Anfang. config.buttonLabel = Button-Text.
+  // Diskriminator: "question" (Default) = 1 Feld/Step · "custom" = Multi-Field-Karte
+  // (customFields gesetzt) · "welcome" = Intro-Step (config.buttonLabel).
   kind?: 'question' | 'custom' | 'welcome'
   customFields?: ContactFieldConfig[]
 }
 
-// Konfiguration eines einzelnen Kontaktformular-Felds (kommt aus den Fields der submit-Page
-// und ab Aufgabe 38 auch Custom-Multi-Field-Pages).
-// Aufgabe 39 Polish: erweitert um long_text/number/date/checkbox/dropdown.
-// Aufgabe 39 Polish-Runde 2: + slider/multi_choice/rating/scale.
+// Konfiguration eines einzelnen Karten-Felds (Custom-Multi-Field-Pages).
 export interface ContactFieldConfig {
   key:          string                           // Eindeutiger Bezeichner, z.B. "name", "email", "plz"
   type:
     | 'radio' | 'text' | 'email' | 'tel' | 'plz'
     | 'long_text' | 'number' | 'date' | 'checkbox' | 'dropdown'
     | 'slider' | 'multi_choice' | 'rating' | 'scale'
-    // Aufgabe 40 Polish: Name-Field-Types — Server mapped diese verlässlich ins contact-jsonb.
+    // Name-Typen — Server mappt diese verlässlich ins contact-jsonb.
     | 'first_name' | 'last_name' | 'full_name'
   label:        string
   placeholder?: string                           // Nur für textish (text/email/tel/plz/long_text/number)
@@ -157,13 +148,10 @@ export interface ContactFieldConfig {
   scaleMax?:        number
   scaleLabelLeft?:  string
   scaleLabelRight?: string
-  // Aufgabe 40 Polish: transient flag — Logik wie bei EditorQuestion._keyTouched.
-  // Wird beim DB-Save weggestrippt.
+  // Transient flag (wie EditorQuestion._keyTouched); beim DB-Save weggestrippt.
   _keyTouched?: boolean
-  // Aufgabe 40 Polish: stabile React-Key + Sortable-ID für Editor-UI.
-  // Initial bei jedem Add/Load via crypto.randomUUID(). Wird beim Save weggestrippt.
-  // Entkoppelt den UI-Identifier vom field.key, damit der user den key live editieren
-  // kann ohne dass die Row re-mounted und Edit-State verliert.
+  // Stabile React-Key/Sortable-ID für die Editor-UI (crypto.randomUUID, beim Save weg).
+  // Entkoppelt vom field.key, damit der User den key live editieren kann ohne Row-Remount.
   _clientId?: string
 }
 
@@ -176,12 +164,11 @@ export interface FunnelConfig {
   privacyPolicyUrl?: string
   privacyText: string          // Einwilligungstext vor dem Datenschutz-Link
   answersOverviewLabel: string // Überschrift der Antworten-Zusammenfassung
-  showAnswersOverview: boolean  // Aufgabe 51: Antworten-Übersicht im End-Screen zeigen (default false = cleaner Dank)
-  // Aufgabe 56: kuratierte Anzeige-Schalter (Design-Tab) — KEIN Per-Element-Styling.
+  showAnswersOverview: boolean  // Antworten-Übersicht im End-Screen (default false)
+  // Kuratierte Anzeige-Schalter (Design-Tab) — KEIN Per-Element-Styling.
   showProgressBar: boolean      // dünner Fortschrittsbalken oben an der Card
   showStepBadge: boolean        // Schritt-Nummern-Chip über der Frage
   titleAlignment: 'left' | 'center'  // Überschriften links (Default) oder mittig
-  // Aufgabe 52: footerText entfernt (Footer abgeschafft).
 }
 
 /* alte Datenbank solar-widget
@@ -211,7 +198,6 @@ export interface TenantConfig {
   funnelId?: string    // funnel ID
   slug: string         // funnel slug (URL-Identifier)
   companyName: string          // = tenant.company_name (Account-Name) — E-Mail-Absendername, Webhook-Payload, Page-Title
-  // Aufgabe 52: publicEmail/phone entfernt (Footer abgeschafft, Firmen-E-Mail-Variablen raus).
   notificationEmail: string    // Wohin neue Leads gesendet werden
   emailSenderLocal?: string    // Lokalteil der Absender-Adresse, z.B. "anfragen" → anfragen@domain.de
   theme: FunnelTheme
@@ -221,18 +207,15 @@ export interface TenantConfig {
   billingPrice?: number
 
   questions: QuestionConfig[]
-  // Aufgabe 52D: contactFields + skipSubmitStep entfernt (Submit-Page/Kontaktformular abgeschafft).
-  redirectUrl?: string         // Aufgabe 39: wenn gesetzt, Widget redirected nach Submit auf diese URL statt Success-Page
-  metaPixelId?: string         // Aufgabe 43: Meta-Pixel-ID — embed.js feuert fbq('track','Lead') beim Submit
-  googleAdsConversion?: string // Aufgabe 43: Google-Ads-Conversion send_to (AW-XXX/Label) — embed.js feuert gtag conversion
-  logicRules?: LogicRule[]     // Aufgabe 58: Logik-Sprünge (leer/undefined = lineares Verhalten wie bisher)
+  redirectUrl?: string         // wenn gesetzt: Widget redirected nach Submit auf diese URL
+  metaPixelId?: string         // Meta-Pixel-ID — embed.js feuert fbq('track','Lead') beim Submit
+  googleAdsConversion?: string // Google-Ads-Conversion send_to (AW-XXX/Label) — embed.js feuert gtag
+  logicRules?: LogicRule[]     // Logik-Sprünge (leer/undefined = linear)
 }
 
-// Aufgabe 73: Öffentliche Projektion von TenantConfig — nur die Felder, die das
-// Live-Widget (Client) tatsächlich braucht. Interne Tenant-Daten (notificationEmail,
-// emailSenderLocal, billingModel/leadPrice/billingPrice, tenant/funnel-ids) werden
-// NICHT an den Browser serialisiert. Erzeugt via toPublicFunnelConfig (lib/getTenantConfig.ts),
-// einziger Consumer ist components/TenantFunnelClient.tsx.
+// Öffentliche Projektion von TenantConfig — nur was das Live-Widget braucht. Interne
+// Tenant-Daten (notificationEmail, billing, ids) werden NICHT an den Browser serialisiert.
+// Erzeugt via toPublicFunnelConfig; einziger Consumer ist TenantFunnelClient.tsx.
 export type PublicFunnelConfig = Pick<
   TenantConfig,
   | 'slug'
@@ -246,7 +229,7 @@ export type PublicFunnelConfig = Pick<
 >
 
 // =============================================================================
-// LOGIK-SPRÜNGE (Aufgabe 58) — Regeln pro Step, erste matchende gewinnt.
+// LOGIK-SPRÜNGE — Regeln pro Step, erste matchende gewinnt.
 // Auswertung client (Widget) + server (Submit-Backstop) via lib/funnelLogic.ts.
 // =============================================================================
 
@@ -302,7 +285,7 @@ export interface EditorQuestion {
   sliderDefault: string
   // choice + dropdown:
   options: EditorOption[]
-  // Aufgabe 50: Marker-Stil der Optionen (A/B/C · 1/2/3 · keiner). Default 'letters'.
+  // Marker-Stil der Optionen (A/B/C · 1/2/3 · keiner). Default 'letters'.
   optionMarker?: OptionMarker
   // date (alle ISO YYYY-MM-DD):
   dateMin: string
@@ -316,25 +299,21 @@ export interface EditorQuestion {
   numberUnit: string      // optional, z.B. "kWh", "Stück"
   // checkbox (Single-Checkbox, z.B. DSGVO/Newsletter):
   checkboxLabel: string   // Text rechts neben der Box, z.B. "Ja, ich stimme zu"
-  // Aufgabe 39 — Rating (1-N Sterne):
+  // Rating (1-N Sterne):
   ratingMaxStars?: string  // Default "5"
-  // Aufgabe 39 — Scale (0-N Skala, NPS-Style):
+  // Scale (0-N Skala, NPS-Style):
   scaleMin?: string
   scaleMax?: string
   scaleLabelLeft?: string
   scaleLabelRight?: string
-  // Aufgabe 39 — Welcome-Screen:
+  // Welcome-Screen:
   welcomeButtonLabel?: string  // Default "Starten"
-  // Aufgabe 38 + 39: Diskriminator.
-  // "question" (Default) = klassisch 1-Field-pro-Step.
-  // "custom" = Multi-Field-Karte. customFields ist dann gesetzt.
-  // "welcome" = Intro-Step am Anfang mit eigenem Button-Label.
+  // Diskriminator: "question" (Default) = 1 Feld/Step · "custom" = Multi-Field-Karte
+  // (customFields gesetzt) · "welcome" = Intro-Step mit eigenem Button-Label.
   kind?: 'question' | 'custom' | 'welcome'
   customFields?: ContactFieldConfig[]
-  // Aufgabe 40 Polish: transient flag — nur im Editor-State, NICHT in DB persistiert.
-  // false = Auto-Sync questionKey ↔ toKey(title) bei jedem Title-Change.
-  // true = User hat questionKey manuell editiert → kein Auto-Sync mehr (Stabilität).
-  // Beim dbToEditorState wird das auf true gesetzt (alle existing keys sind "gesetzt").
+  // Transient (nicht in DB). false = Auto-Sync questionKey ↔ toKey(title) bei Title-Change;
+  // true = User hat den key manuell editiert → kein Auto-Sync mehr. Bei dbToEditorState true.
   _keyTouched?: boolean
 }
 
@@ -356,23 +335,19 @@ export interface EditorState {
   privacyText: string
   privacyPolicyUrl: string
   answersOverviewLabel: string
-  // Aufgabe 51: Antworten-Übersicht im End-Screen zeigen (default false = cleaner Dank ohne Antworten)
+  // Antworten-Übersicht im End-Screen (default false)
   showAnswersOverview: boolean
-  // Aufgabe 56: Anzeige-Schalter (Design-Tab)
+  // Anzeige-Schalter (Design-Tab)
   showProgressBar: boolean
   showStepBadge: boolean
   titleAlignment: 'left' | 'center'
-  // Aufgabe 52: footerText + footerCompanyName/Email/Phone entfernt (Footer abgeschafft).
   // E-Mail-Einstellungen (pro Funnel)
   notificationEmail: string   // Wohin neue Leads gesendet werden (Leer = Tenant-Standard)
   emailSenderLocal: string    // Lokalteil der Absender-Adresse, z.B. "anfragen"
   // Status
   isActive: boolean
-  // Aufgabe 52D: skipSubmitStep entfernt (Submit-Page abgeschafft).
-  // Aufgabe 39: End-Screen-Redirect-Modus. Leer = Content-Modus (Success-Page wird gerendert).
-  // Wert = window.location.replace nach Submit (Widget zeigt Success-Page kurz und redirected danach).
+  // End-Screen-Redirect: leer = Success-Page rendern; Wert = nach Submit dorthin redirecten.
   redirectUrl: string
   // Inhalte
-  // Aufgabe 52D: contactFields entfernt (Submit-Page/Kontaktformular abgeschafft).
   questions: EditorQuestion[]
 }

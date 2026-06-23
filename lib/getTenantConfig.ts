@@ -14,8 +14,6 @@ const TEXT_DEFAULTS = {
   footerText:            '{{company_name}} · {{public_email}}',
 }
 
-// Aufgabe 52D: DEFAULT_CONTACT_FIELDS entfernt (Submit-Page/Kontaktformular abgeschafft).
-
 // Rückmapping field_type → ContactFieldConfig.type — weiter genutzt für Karten-Felder (custom pages).
 function fieldTypeToContactType(ft: string): ContactFieldConfig['type'] {
   switch (ft) {
@@ -24,18 +22,15 @@ function fieldTypeToContactType(ft: string): ContactFieldConfig['type'] {
     case 'tel':          return 'tel'
     case 'plz':          return 'plz'
     case 'radio':        return 'radio'
-    // Aufgabe 39 Polish
     case 'long_text':    return 'long_text'
     case 'number':       return 'number'
     case 'date':         return 'date'
     case 'checkbox':     return 'checkbox'
     case 'dropdown':     return 'dropdown'
-    // Polish-Runde 2
     case 'slider':       return 'slider'
     case 'multi_choice': return 'multi_choice'
     case 'rating':       return 'rating'
     case 'scale':        return 'scale'
-    // Aufgabe 40 Polish
     case 'first_name':   return 'first_name'
     case 'last_name':    return 'last_name'
     case 'full_name':    return 'full_name'
@@ -43,20 +38,13 @@ function fieldTypeToContactType(ft: string): ContactFieldConfig['type'] {
   }
 }
 
-// Rückmapping für Question-Page-Fields → QuestionType.
-// Seit Aufgabe 31 sind alle QuestionType-Werte 1:1 valide field_type-Werte.
-// `radio` + `plz` sind Submit-Page-only und fallen auf single_choice zurück.
-// Aufgabe 54b: 'email' + 'tel' entfernt — als Question-Types seit Aufgabe 34
-// abgeschafft, das TS-Union QuestionType kennt sie nicht (der Cast unten log das
-// Type-System an). DB-verifiziert (2026-06-10): 0 Fields mit diesen Typen auf
-// Question-Pages. Als ContactField-Types (Karten) laufen sie über
-// fieldTypeToContactType, nicht über dieses Set.
+// Rückmapping Question-Page-Field → QuestionType. Alle QuestionType-Werte sind 1:1 valide
+// field_type-Werte. `radio`/`plz` sind Submit-Page-only → single_choice. 'email'/'tel' sind
+// keine Question-Types (laufen als Karten-Felder über fieldTypeToContactType).
 const VALID_QUESTION_TYPES: ReadonlySet<string> = new Set([
   'single_choice', 'multi_choice', 'short_text', 'long_text', 'slider',
   'date', 'number', 'dropdown', 'checkbox',
-  // Aufgabe 39
   'rating', 'scale', 'statement',
-  // Aufgabe 40 Polish
   'first_name', 'last_name', 'full_name',
 ])
 function fieldTypeToQuestionType(ft: string): QuestionType {
@@ -97,9 +85,8 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
   const theme: Record<string, any>  = row
   const pages: DbPage[] = Array.isArray(row.pages) ? row.pages : []
 
-  // Question + Custom + Welcome-Pages (sortiert nach sort_order) → questions[]
-  // Aufgabe 38 + 39: Alle drei Page-Typen leben im selben ordered Array.
-  // kind-Diskriminator pro Entry. Widget branched in der Render-Logik.
+  // Question + Custom + Welcome-Pages (sortiert nach sort_order) → questions[].
+  // Alle drei Page-Typen im selben ordered Array; kind-Diskriminator pro Entry.
   const stepPages = pages
     .filter((p) => p.page_type === 'question' || p.page_type === 'custom' || p.page_type === 'welcome')
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
@@ -109,19 +96,17 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
       ? [...page.fields].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       : []
 
-    // Aufgabe 39: Welcome-Screen
+    // Welcome-Screen
     if (page.page_type === 'welcome') {
       const pageCfg = page.config ?? {}
       return {
         id: typeof pageCfg.page_key === 'string' && pageCfg.page_key ? pageCfg.page_key : page.id,
-        // Aufgabe 40 Polish: echte page-uuid für after_page-Webhook-Trigger
+        // echte page-uuid für after_page-Webhooks
         pageId: page.id,
         title: typeof pageCfg.title === 'string' ? pageCfg.title : '',
         subtitle: typeof pageCfg.subtitle === 'string' ? pageCfg.subtitle : undefined,
         questionType: 'single_choice',
-        // Aufgabe 59 Bugfix: Sichtbarkeit aus dem page-config — vorher hart true,
-        // ausgeblendete Welcome-Screens erschienen im Live-Widget trotzdem.
-        // Alt-Rows ohne Key → sichtbar.
+        // Sichtbarkeit aus dem page-config (Alt-Rows ohne Key → sichtbar).
         visible: pageCfg.visible !== false,
         options: [],
         config: {
@@ -131,7 +116,7 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
       }
     }
 
-    // Aufgabe 38: Custom-Multi-Field-Page
+    // Custom-Multi-Field-Page
     if (page.page_type === 'custom') {
       const pageCfg = page.config ?? {}
       const customFields: ContactFieldConfig[] = pageFields.map((f) => ({
@@ -148,14 +133,14 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
       }))
       return {
         id: typeof pageCfg.page_key === 'string' && pageCfg.page_key ? pageCfg.page_key : page.id,
-        // Aufgabe 40 Polish: echte page-uuid für after_page-Webhook-Trigger
+        // echte page-uuid für after_page-Webhooks
         pageId: page.id,
         title: typeof pageCfg.title === 'string' ? pageCfg.title : '',
         subtitle: typeof pageCfg.subtitle === 'string' ? pageCfg.subtitle : undefined,
         // Custom-Page hat keinen klassischen questionType — Default-Wert nur fürs Type-System,
         // wird vom Widget durch kind="custom" überschrieben/ignoriert.
         questionType: 'single_choice',
-        // Aufgabe 59 Bugfix: Sichtbarkeit aus dem page-config (siehe Welcome oben).
+        // Sichtbarkeit aus dem page-config (siehe Welcome oben).
         visible: pageCfg.visible !== false,
         options: [],
         config: {},
@@ -178,11 +163,11 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
       }
     }
     const opts = Array.isArray(f.options) ? f.options : []
-    // Aufgabe 50: Marker-Stil (A/B/C · 1/2/3 · keiner) aus config; Default 'letters'.
+    // Marker-Stil (A/B/C · 1/2/3 · keiner) aus config; Default 'letters'.
     const fcfg = (f.config ?? {}) as Record<string, unknown>
     return {
       id: f.field_key,
-      // Aufgabe 40 Polish: echte page-uuid für after_page-Webhook-Trigger
+      // echte page-uuid für after_page-Webhooks
       pageId: page.id,
       title: f.label,
       subtitle: f.subtitle ?? undefined,
@@ -202,8 +187,8 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
     }
   })
 
-  // Aufgabe 52D: Submit-Page → contactFields entfernt. Orphaned Submit-Pages bei Alt-Funnels
-  // werden ignoriert; Lead-Daten kommen aus den Karten-Antworten (deriveContactFromAnswers).
+  // Orphaned Submit-Pages bei Alt-Funnels werden ignoriert; Lead-Daten kommen aus den
+  // Karten-Antworten (deriveContactFromAnswers).
 
   return {
     id:                tenant.id,
@@ -223,12 +208,12 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
     },
     funnel: {
       title:               row.contact_form_title      ?? TEXT_DEFAULTS.funnelTitle,
-      successMessage:      row.success_message        || 'Vielen Dank für Ihre Anfrage!',  // Aufgabe 51: Titel nie leer (nacktes Häkchen reicht nicht). Sauberer Editor-Default → Plan.
-      responseMessage:     row.response_message       ?? '',  // Aufgabe 51: optional — leer = ausgeblendet (kein Default-Fallback)
+      successMessage:      row.success_message        || 'Vielen Dank für Ihre Anfrage!',  // Titel nie leer (nacktes Häkchen reicht nicht).
+      responseMessage:     row.response_message       ?? '',  // optional — leer = ausgeblendet
       contactFormSubtitle: row.contact_form_subtitle  ?? TEXT_DEFAULTS.contactFormSubtitle,
       privacyPolicyUrl:    row.privacy_policy_url     ?? undefined,
       privacyText:         row.privacy_text           ?? TEXT_DEFAULTS.privacyText,
-      answersOverviewLabel: row.answers_overview_label ?? '',  // Aufgabe 52: Editor-Default, kein Render-Fallback
+      answersOverviewLabel: row.answers_overview_label ?? '',  // Editor-Default, kein Render-Fallback
       showAnswersOverview: row.show_answers_overview ?? false,
       showProgressBar: row.show_progress_bar ?? true,
       showStepBadge: row.show_step_badge ?? true,
@@ -302,9 +287,8 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
   return config
 }
 
-// Aufgabe 58: Logik-Regeln des Funnels. Bewusst defensiv (eigene Query + eigener
-// catch): ein Fehler hier (z.B. Tabelle noch nicht migriert) darf das Widget nie
-// killen — dann läuft der Funnel einfach linear wie bisher.
+// Logik-Regeln des Funnels. Defensiv (eigener catch): ein Fehler hier darf das Widget nie
+// killen — dann läuft der Funnel linear.
 async function fetchLogicRules(supabase: SupabaseClient, funnelId: string): Promise<LogicRule[]> {
   try {
     const { data, error } = await supabase
@@ -336,11 +320,9 @@ export async function getTenantConfig(slug: string): Promise<TenantConfig | null
 }
 
 /**
- * Aufgabe 73: Reduziert die volle (server-seitige) TenantConfig auf die Felder, die
- * das öffentliche Widget im Browser braucht. Verhindert, dass interne Tenant-Daten
- * (notificationEmail, emailSenderLocal, billingModel/leadPrice/billingPrice,
- * tenant-/funnel-ids) in den an den Client serialisierten Seiten-Payload gelangen.
- * Einziger Consumer: components/TenantFunnelClient.tsx (via app/[slug]/page.tsx).
+ * Reduziert die volle TenantConfig auf die Felder, die das öffentliche Widget braucht —
+ * verhindert, dass interne Tenant-Daten (notificationEmail, billing, ids) in den
+ * Client-Payload gelangen. Einziger Consumer: TenantFunnelClient.tsx.
  */
 export function toPublicFunnelConfig(config: TenantConfig): PublicFunnelConfig {
   return {

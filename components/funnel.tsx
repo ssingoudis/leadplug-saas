@@ -2,14 +2,11 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
-import { ChevronLeft, Check, CircleAlert, GripVertical, Plus, Trash2, Copy } from "lucide-react";
-// Aufgabe 64: framer-motion ist komplett raus aus dem Widget — der Folien-Übergang
-// ist eine reine CSS-Animation (siehe .funnel-step-enter-* in globals.css). JS-getriebene
-// Springs liefen auf dem Main-Thread und ruckelten in Firefox/Mobile; CSS-transform/opacity
-// animiert der Compositor. Nebeneffekt: ~30 KB weniger Widget-Bundle.
+import { ChevronLeft, Check, CircleAlert, Plus } from "lucide-react";
+// Kein framer-motion: der Folien-Übergang ist reine CSS-Animation (.funnel-step-enter-*
+// in globals.css). JS-Springs ruckelten auf Mobile/Firefox; CSS animiert der Compositor.
 
-// Lazy-loaded Inline-Kalender — Bundle wird nur geladen wenn der Funnel ein date-Feld hat.
-// ~30KB (react-day-picker + date-fns) bleiben aus dem Initial-Bundle.
+// Lazy Inline-Kalender (react-day-picker+date-fns ~30 KB) — lädt nur bei date-Feldern.
 const DateInlinePicker = dynamic(() => import("./funnel/DateInlinePicker"), {
   ssr: false,
   loading: () => <div className="mb-3 h-80 w-full max-w-80 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-800" />,
@@ -25,239 +22,37 @@ import {
 } from "@dnd-kit/core";
 import {
   SortableContext,
-  useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { cn } from "@/lib/utils";
 import { resolveAnswer } from "@/lib/resolveAnswer";
 import { validateContactField } from "@/lib/validateContactField";
 import { groupRulesBySource, resolveNext } from "@/lib/logic/funnelLogic";
+import { resolveFunnelTheme } from "@/lib/funnel/theme";
+import { SHADOW_PADDING, CARD_SHADOW_STRING } from "@/lib/funnel/shadow";
+import { optionMarkerFor, renderLabelWithLinks } from "@/lib/funnel/markdown";
+import { BackButton } from "./funnel/BackButton";
+import { RatingStars } from "./funnel/RatingStars";
+import { ScaleButtons } from "./funnel/ScaleButtons";
+import { EditableText } from "./funnel/EditableText";
+import { SortableEditOption } from "./funnel/SortableEditOption";
+import { autoGrowTextarea } from "./funnel/autoGrowTextarea";
 import type {
-  FunnelTheme,
-  FunnelFont,
-  FunnelConfig,
-  QuestionConfig,
   TextConfig,
   SliderConfig,
   DateConfig,
   NumberConfig,
   CheckboxConfig,
   ContactFieldConfig,
-  OptionMarker,
-  LogicRule,
 } from "@/types";
+import type { FunnelProps } from "./funnel/types";
 
-// Aufgabe 50: Marker-String einer Antwort-Option je nach Stil. null = kein Chip rendern.
-// Aufgabe 65: 'checkbox' rendert keinen Text-Chip — die Haken-Box kommt aus renderOptionContent.
-function optionMarkerFor(marker: OptionMarker | undefined, idx: number): string | null {
-  if (marker === "none" || marker === "checkbox") return null;
-  if (marker === "numbers") return String(idx + 1);
-  return String.fromCharCode(65 + idx); // 'letters' (Default)
-}
-
-// Aufgabe 51: einfacher Markdown-Link-Parser für Consent-Texte. `[Text](https://…)` wird zu einem
-// klickbaren <a> in Brand-Farbe. stopPropagation, damit der Link-Klick nicht die umgebende Checkbox togglet.
-function renderLabelWithLinks(text: string, linkColor: string): React.ReactNode {
-  const re = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
-  const parts: React.ReactNode[] = [];
-  let lastIndex = 0;
-  let key = 0;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
-    if (m.index > lastIndex) parts.push(text.slice(lastIndex, m.index));
-    parts.push(
-      <a
-        key={key++}
-        href={m[2]}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(e) => e.stopPropagation()}
-        style={{ color: linkColor, textDecoration: "underline" }}
-      >
-        {m[1]}
-      </a>,
-    );
-    lastIndex = m.index + m[0].length;
-  }
-  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
-  return parts.length > 0 ? parts : text;
-}
-
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-// Multi-layer shadow: strong bottom offset + soft ambient glow.
-// SHADOW_PADDING reserves space around the card so the shadow isn't clipped.
-const CARD_SHADOW_LAYERS = [
-  { offsetY: 0, blur: 16, spread: -4,  alpha: 0.10 },
-  { offsetY: 10, blur: 32, spread: -10, alpha: 0.18 },
-] as const;
-
-const shadowExtent = CARD_SHADOW_LAYERS.reduce(
-  (acc, { offsetY, blur, spread }) => {
-    const base = blur + spread;
-    return {
-      top:    Math.max(acc.top,    Math.max(0, base - offsetY)),
-      bottom: Math.max(acc.bottom, base + offsetY),
-      sides:  Math.max(acc.sides,  Math.max(0, base)),
-    };
-  },
-  { top: 0, bottom: 0, sides: 0 },
-);
-
-const SHADOW_PADDING = {
-  top:    Math.ceil(shadowExtent.top) + 4,
-  bottom: Math.ceil(shadowExtent.bottom),
-  sides:  Math.ceil(shadowExtent.sides),
-};
-
-const CARD_SHADOW_STRING = CARD_SHADOW_LAYERS.map(
-  ({ offsetY, blur, spread, alpha }) =>
-    `0 ${offsetY}px ${blur}px ${spread}px rgba(0,0,0,${alpha})`,
-).join(", ");
-
-const THEME_DEFAULTS = {
-  primaryColor:        "#22c55e",
-  textColor:           "#1f2937",
-  backgroundColor:     "#ffffff",
-  pageBackgroundColor: "transparent",
-  font:                "system" as FunnelFont,
-  borderRadius:        "0.5rem",
-  maxWidth:            "720px",
-};
-
-const SYSTEM_FONT =
-  '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
-
-// Self-hosted fonts loaded via @font-face in app/globals.css (DSGVO-konform).
-// Aufgabe 66: +6 Familien. Merriweather ist die Serife → eigener Serif-Fallback-Stack.
-const SERIF_FALLBACK = 'Georgia, "Times New Roman", serif';
-const FONT_STACKS: Record<FunnelFont, string> = {
-  system:         SYSTEM_FONT,
-  inter:          `'Inter', ${SYSTEM_FONT}`,
-  poppins:        `'Poppins', ${SYSTEM_FONT}`,
-  roboto:         `'Roboto', ${SYSTEM_FONT}`,
-  montserrat:     `'Montserrat', ${SYSTEM_FONT}`,
-  "open-sans":    `'Open Sans', ${SYSTEM_FONT}`,
-  lato:           `'Lato', ${SYSTEM_FONT}`,
-  nunito:         `'Nunito', ${SYSTEM_FONT}`,
-  "dm-sans":      `'DM Sans', ${SYSTEM_FONT}`,
-  merriweather:   `'Merriweather', ${SERIF_FALLBACK}`,
-};
-
-// =============================================================================
-// COLOR HELPERS
-// =============================================================================
-
-// Pure color math: hex ↔ rgb, darkening, and mixing.
-// Used to derive hover, muted-text, border, and input-bg colors from primaryColor.
-
-function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace("#", "");
-  return [
-    parseInt(h.slice(0, 2), 16),
-    parseInt(h.slice(2, 4), 16),
-    parseInt(h.slice(4, 6), 16),
-  ];
-}
-
-// Aufgabe 54c: Theme-Farben aus der DB defensiv normalisieren — die Color-Math oben
-// (hexToRgb/darken/mix) braucht 6-stelliges Hex. 3-stellige Werte (#abc) werden
-// expandiert, alles andere Ungültige fällt auf den Default zurück. Ohne das würde
-// ein einziger kaputter DB-Wert ALLE abgeleiteten Farben (hover/muted/border/tint)
-// zu "NaN"-Strings zerschießen.
-function normalizeHex(value: string | undefined, fallback: string): string {
-  if (!value) return fallback;
-  const v = value.trim();
-  if (/^#[0-9a-f]{6}$/i.test(v)) return v;
-  if (/^#[0-9a-f]{3}$/i.test(v)) return `#${v[1]}${v[1]}${v[2]}${v[2]}${v[3]}${v[3]}`;
-  return fallback;
-}
-
-function toHex(r: number, g: number, b: number): string {
-  const clamp = (c: number) => Math.max(0, Math.min(255, Math.round(c)));
-  return `#${[r, g, b].map((c) => clamp(c).toString(16).padStart(2, "0")).join("")}`;
-}
-
-// Returns a darkened version of `hex` by `amount` (0–1).
-function darken(hex: string, amount: number): string {
-  const [r, g, b] = hexToRgb(hex);
-  return toHex(r * (1 - amount), g * (1 - amount), b * (1 - amount));
-}
-
-// Blends hex1 toward hex2 by `pct` (0 = hex1, 1 = hex2).
-function mix(hex1: string, hex2: string, pct: number): string {
-  const [r1, g1, b1] = hexToRgb(hex1);
-  const [r2, g2, b2] = hexToRgb(hex2);
-  return toHex(
-    r1 * (1 - pct) + r2 * pct,
-    g1 * (1 - pct) + g2 * pct,
-    b1 * (1 - pct) + b2 * pct,
-  );
-}
-
-// =============================================================================
-// FOOTER HELPER
-// =============================================================================
-
-
-// =============================================================================
-// SLIDE-ANIMATION (Typeform-Stil) — Aufgabe 64: reine CSS-Animation.
-// Beim Step-Wechsel remountet der key={`q-${currentStep}`}-Wrapper, die neue Folie
-// gleitet richtungsabhängig rein (.funnel-step-enter-fwd/-back in globals.css),
-// die alte verschwindet im Schnitt. Den harten Höhensprung im Embed glättet die
-// height-Transition in embed.js.
-// =============================================================================
+// Slide-Animation: beim Step-Wechsel remountet der key={`q-${currentStep}`}-Wrapper und
+// die neue Folie gleitet rein (.funnel-step-enter-fwd/-back in globals.css); die
+// Höhen-Transition im Embed glättet embed.js.
 
 // =============================================================================
 // COMPONENT
 // =============================================================================
-
-interface FunnelProps {
-  theme?: Partial<FunnelTheme>;
-  funnel: FunnelConfig;
-  questions: QuestionConfig[];
-  initialSubmitted?: boolean;
-  initialStep?: number;
-  previewHighlight?: string; // Editor-only: hebt das gerade bearbeitete Element hervor
-  initialAnswers?: Record<string, string>; // Editor-only: Platzhalter-Antworten für Erfolgsseiten-Preview
-  onFieldClick?: (field: string, questionVisibleIndex?: number) => void; // Editor-only: Klick im Preview → Sidebar-Feld fokussieren
-  onStepChange?: (mode: "question" | "contact" | "success", index: number) => void; // Editor-only: Test-Modus reflektiert den aktuellen Schritt in der Step-Navigation
-  // C.1c WYSIWYG-Edit: Wenn editMode=true werden inline-editierbare Texte zu contentEditable,
-  // und alle Step-Advance-Handler werden short-circuited (kein Weiterspringen bei Klick auf Option).
-  editMode?: boolean;
-  onTextChange?: (fieldRef: string, newText: string) => void; // Editor-only: Inline-Edit committed → State-Update durchreichen
-  // Editor-only Canvas-Aktionen für Choice-Options (single_choice / multi_choice). Alle beziehen sich auf die aktuell sichtbare Frage.
-  onAddOption?: () => void;
-  onReorderOptions?: (fromIdx: number, toIdx: number) => void;
-  onDuplicateOption?: (idx: number) => void;
-  onDeleteOption?: (idx: number) => void;
-  // Partial-Submissions: feuert (debounced) wenn answers sich ändern (contact ist seit
-  // Aufgabe 52D immer {} — Lead-Daten kommen aus den Karten-Antworten).
-  // Live-Mode: TenantFunnelClient POSTet das an /api/track-progress.
-  // Editor-Mode: undefined → kein Tracking.
-  onAnswersChange?: (data: { answers: Record<string, string>; contact: Record<string, string> }) => void;
-  // Aufgabe 40 Polish: nach jedem Step-Advance über eine Page feuert (mit der dbId der gerade verlassenen
-  // Page). Wir liefern auch den aktuellen answers+contact-Snapshot mit, damit der Server-side UPSERT
-  // mit den korrekten Daten passiert (sonst würde leerer {}-Snapshot existing Daten überschreiben).
-  // Live-Mode: TenantFunnelClient POSTet das an /api/track-progress mit advancedPageId + snapshot.
-  // Server triggert dann after_page-Webhooks via triggerOnPageAdvance (mit server-side Dedup).
-  onPageAdvanced?: (pageId: string, snapshot: { answers: Record<string, string>; contact: Record<string, string> }) => void;
-  onSubmit?: (data: {
-    answers: Record<string, string>;
-    contact: Record<string, string>;
-    honeypot: string;
-  }) => void;
-  // Aufgabe 39: End-Screen-Redirect-Modus. Wenn gesetzt, Widget redirected nach Submit auf diese URL.
-  redirectUrl?: string;
-  // Polish: Custom-Karte leer → Builder rendert inline "+ Feld hinzufügen"-Button im Canvas, bubble up
-  onAddCustomFieldRequest?: () => void;
-  // Aufgabe 58: Logik-Sprünge. Leer/undefined = lineares Verhalten (exakt wie vor 58).
-  // Auswertung beim Step-Advance via lib/funnelLogic (Quell-Page → Ziel-Page/Ende).
-  logicRules?: LogicRule[];
-}
 
 export function Funnel({
   theme: themeOverrides,
@@ -283,27 +78,22 @@ export function Funnel({
   logicRules,
 }: FunnelProps) {
 
-  // Editor-Preview-Highlight (Standard): outline AUSSERHALB des Elements (offset +3px).
-  // Mit Luft zwischen Element-Kante und Rahmen → klar erkennbar, auch wenn das Element
-  // selbst die Primärfarbe verwendet (Option-Buttons).
+  // Editor-Preview-Highlight: Outline außerhalb des Elements (offset +3px) — sichtbar auch
+  // wenn das Element selbst die Primärfarbe nutzt (Option-Buttons).
   const hl = (...keys: string[]): React.CSSProperties =>
     previewHighlight && keys.includes(previewHighlight)
       ? { outline: "2px solid var(--funnel-primary)", outlineOffset: "3px" }
       : {};
 
-  // Edge-Variante: outline INSIDE (offset -2px) für Elemente die direkt an der Card-Kante sitzen
-  // und sonst von overflow:hidden geclippt würden (Header-Banner, Footer, die Card selbst,
-  // der äußere Page-BG-Wrapper).
+  // Edge-Variante: Outline innen (offset -2px) für Elemente an der Card-Kante, die sonst
+  // von overflow:hidden geclippt würden (Card selbst, Page-BG-Wrapper).
   const hlEdge = (...keys: string[]): React.CSSProperties =>
     previewHighlight && keys.includes(previewHighlight)
       ? { outline: "2px solid var(--funnel-primary)", outlineOffset: "-2px" }
       : {};
 
-  // Editor-only: Klick auf ein data-edit-field-Element → Callback zum Editor.
-  // In editMode KEIN stopPropagation/preventDefault — sonst feuern die Canvas-Buttons (Duplicate/Delete/Add-Option)
-  // ihre eigenen onClick-Handler nicht. Step-Advance ist via editMode-Short-Circuit in handleSelect/handleNext
-  // sowieso disabled, Submit-Button ist type="button" in editMode.
-  // Im Live-/Test-Modus: stopPropagation + preventDefault verhindern unbeabsichtigte Option-Klicks/Form-Submit.
+  // Editor-only: Klick auf [data-edit-field] → onFieldClick. In editMode KEIN stopPropagation
+  // (sonst feuern die Canvas-Buttons nicht); Live/Test stoppt unbeabsichtigte Option-Klicks.
   const handlePreviewClick = (e: React.MouseEvent) => {
     if (!onFieldClick) return;
     const target = (e.target as HTMLElement).closest("[data-edit-field]") as HTMLElement | null;
@@ -318,67 +108,27 @@ export function Funnel({
   // Im Editor-Modus signalisieren Anzeige-Elemente Klickbarkeit per Cursor.
   const editCursor: React.CSSProperties = onFieldClick ? { cursor: "pointer" } : {};
 
-  // ---------------------------------------------------------------------------
-  // Theme resolution
-  // Overrides are merged with defaults; hover/muted/border variants are derived
-  // automatically via color math so no manual secondary colors are needed.
-  // ---------------------------------------------------------------------------
-
-  // Aufgabe 54c: normalizeHex statt nacktem ?? — die drei Farben laufen durch die
-  // Color-Math und müssen valides 6-stelliges Hex sein. pageBackgroundColor bleibt
-  // un-normalisiert (wird nur als CSS-Wert durchgereicht, darf z.B. 'transparent' sein).
-  const primaryColor        = normalizeHex(themeOverrides?.primaryColor,    THEME_DEFAULTS.primaryColor);
-  const textColor           = normalizeHex(themeOverrides?.textColor,       THEME_DEFAULTS.textColor);
-  const backgroundColor     = normalizeHex(themeOverrides?.backgroundColor, THEME_DEFAULTS.backgroundColor);
-  const pageBackgroundColor = themeOverrides?.pageBackgroundColor ?? THEME_DEFAULTS.pageBackgroundColor;
-  const borderRadius        = themeOverrides?.borderRadius        ?? THEME_DEFAULTS.borderRadius;
-  const maxWidth            = themeOverrides?.maxWidth            ?? THEME_DEFAULTS.maxWidth;
-  const font                = themeOverrides?.font                ?? THEME_DEFAULTS.font;
-
-  const theme = {
-    primaryColor,
-    primaryColorHover: darken(primaryColor, 0.12),
-    textColor,
-    textColorMuted:    mix(backgroundColor, textColor, 0.55),
-    backgroundColor,
-    borderColor:       mix(backgroundColor, textColor, 0.12),
-    // Underline für Text-Inputs (resting state): 35% Brand-Mix mit BG.
-    // Aktiv (focus) bleibt voller primaryColor. Gibt subtile Markenpräsenz ohne
-    // den cleanen Typeform-Look mit klobigem Border zu zerstören.
-    underlineColor:    mix(backgroundColor, primaryColor, 0.35),
-    // Tint-Variante des Brand-Colors für „weiche" Hintergründe: Choice-Option-Cards
-    // im Resting-State, Back-Button, etc. Hover ist eine Stufe stärker.
-    tintColor:         mix(backgroundColor, primaryColor, 0.06),
-    tintColorHover:    mix(backgroundColor, primaryColor, 0.12),
-    inputBgColor:      mix(backgroundColor, textColor, 0.03),
-    borderRadius,
-    maxWidth,
-    fontFamily:        FONT_STACKS[font],
-  };
+  const theme = resolveFunnelTheme(themeOverrides);
 
   // ---------------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------------
 
   const containerRef     = useRef<HTMLDivElement>(null);
-  // Aufgabe 50 Fix: im Editor NICHT nach visible filtern — dort enthält `questions` bewusst auch
-  // hidden Pages (keepHidden), damit der Sidebar-Index 1:1 dem Widget-Index entspricht und hidden
-  // Steps ausgegraut anzeigbar sind. Sonst kippt die Zuordnung, sobald ein hidden Step vor dem
-  // selektierten liegt (z.B. ein deaktivierter Welcome-Screen an Index 0). Live/Test filtert normal.
+  // Im Editor NICHT nach visible filtern: `questions` enthält dort bewusst auch hidden Pages
+  // (keepHidden), damit Sidebar-Index 1:1 dem Widget-Index entspricht. Live/Test filtert normal.
   const visibleQuestions = editMode ? questions : questions.filter((q) => q.visible);
 
   const [currentStep, setCurrentStep] = useState(initialStep ?? 0);
-  // C.1c — Slide-Animations-Richtung (1 = forward/slide-up, -1 = backward/slide-down). In editMode unbenutzt.
+  // Slide-Richtung (1 = vorwärts, -1 = zurück); in editMode unbenutzt.
   const [slideDirection, setSlideDirection] = useState<1 | -1>(1);
-  // Aufgabe 64: erst ab der ersten Navigation animieren — der initiale Render soll
-  // nicht reinsliden (Äquivalent zum früheren AnimatePresence initial={false}).
+  // Erst ab der ersten Navigation animieren (Initial-Render slidet nicht rein).
   const hasNavigatedRef = useRef(false);
 
-  // Aufgabe 58 — Logik-Sprünge: Regeln nach Quell-Page gruppiert (O(1)-Lookup beim Advance).
+  // Logik-Sprünge: Regeln nach Quell-Page gruppiert (O(1)-Lookup beim Advance).
   const rulesBySource = useMemo(() => groupRulesBySource(logicRules ?? []), [logicRules]);
-  // History-Stack der besuchten Step-Indizes: „Zurück" nach einem Sprung muss auf den
-  // tatsächlich besuchten Step zurückführen, nicht auf Index-1. Ref statt State —
-  // der Stack ändert nie das Rendering (Back-Disabled hängt an currentStep > 0).
+  // Stack der besuchten Step-Indizes: „Zurück" nach einem Sprung führt auf den tatsächlich
+  // besuchten Step, nicht Index-1. Ref, weil render-irrelevant.
   const stepHistoryRef = useRef<number[]>([]);
 
   const [answers, setAnswers] = useState<Record<string, string>>(initialAnswers ?? {});
@@ -386,12 +136,9 @@ export function Funnel({
   const [isSubmitted, setIsSubmitted] = useState(initialSubmitted ?? false);
   const [honeypot,    setHoneypot]    = useState("");
 
-  // Aufgabe 64: Browser-Zurück (Button/Wisch-Geste) geht eine Frage zurück statt aus
-  // dem Funnel raus. Pro Step-Advance wird ein History-Eintrag gepusht (URL unverändert,
-  // Next-Router-State wird gemerged statt ersetzt); popstate führt den Schritt aus.
-  // Funktioniert auch im iFrame-Embed (iFrames teilen die Session-History der Host-Seite).
-  // Live-only — Builder-Canvas (editMode), read-only Preview (onFieldClick) und
-  // Editor-Test-Modus (onStepChange) fassen die Browser-History nicht an.
+  // Browser-Zurück (Button/Geste) geht eine Frage zurück statt aus dem Funnel. Pro Advance
+  // ein History-Push, popstate führt den Schritt aus (auch im iFrame-Embed). Nur Live —
+  // editMode/Preview/Test fassen die History nicht an.
   const historyEnabled = !editMode && !onFieldClick && !onStepChange;
   const currentStepRef = useRef(currentStep);
   currentStepRef.current = currentStep;
@@ -439,10 +186,8 @@ export function Funnel({
     return () => window.removeEventListener("popstate", onPop);
   }, [historyEnabled]);
 
-  // Aufgabe 56: dezentes Validierungs-Feedback in Karten (Stavros: "subtil, Ausrufezeichen
-  // rechts"). Ein Feld gilt als berührt, sobald es einmal den Fokus verlor — erst DANN
-  // zeigt ein invalides Feld das Icon (frisch geöffnete Karte bleibt ruhig). Beim
-  // Korrigieren verschwindet das Icon live; die Meldung steckt als Tooltip im title.
+  // Validierungs-Icon erst zeigen, wenn ein Feld einmal den Fokus verlor (frisch geöffnete
+  // Karte bleibt ruhig). Meldung steckt als Tooltip im title.
   const [touchedKeys, setTouchedKeys] = useState<Set<string>>(new Set());
   const markTouched = useCallback((key: string) => {
     setTouchedKeys((prev) => {
@@ -462,20 +207,17 @@ export function Funnel({
   const currentQuestion = visibleQuestions[currentStep];
   const isLastQuestion  = currentStep === visibleQuestions.length - 1;
 
-  // Aufgabe 38: Custom-Multi-Field-Page (kind="custom") wird wie ein Multi-Field-Step behandelt.
+  // Custom-Multi-Field-Karte (kind="custom").
   const isCustomStep     = currentQuestion?.kind === "custom";
-  // Aufgabe 39: Welcome-Page = Intro mit Button, Statement = Info ohne Input.
+  // Welcome = Intro mit Button, Statement = Info ohne Input.
   const isWelcomeStep    = currentQuestion?.kind === "welcome";
   const isStatementStep  = currentQuestion?.questionType === "statement";
-  // single_choice auto-advances on click; all other types (incl. custom/welcome/rating/scale/statement) need an explicit Weiter button.
+  // single_choice advanced beim Klick automatisch; alle anderen brauchen den Weiter-Button.
   const isChoiceType     = !isCustomStep && !isWelcomeStep && currentQuestion?.questionType === "single_choice";
   const showWeiterButton = !isChoiceType;
 
-  // Aufgabe 59: „Mittig" ist ein Layout-Modus für die ganze Karte, nicht nur die Überschrift.
-  // Zentriert werden kompakte Inline-Gruppen (Rating-Sterne, Skala-Chips, Kalender — letzterer
-  // seit Aufgabe 65) + die Button-Zeile.
-  // Vollbreite Elemente (Optionen, Text-Inputs, Slider, Checkbox-Box) bleiben unverändert —
-  // die sind von Natur aus symmetrisch, zentrierter Input-Text wäre UX-Murks.
+  // „Mittig" ist ein Layout-Modus für die ganze Karte: zentriert kompakte Inline-Gruppen
+  // (Rating/Skala/Kalender) + Button-Zeile. Vollbreite Felder bleiben unverändert.
   const isCenteredLayout = funnel.titleAlignment === "center";
 
   const currentAnswer      = currentQuestion ? (answers[currentQuestion.id] ?? "") : "";
@@ -486,9 +228,8 @@ export function Funnel({
     ? currentQuestion.customFields.filter((f) => f.visible)
     : [];
 
-  // Aufgabe 50: 1-Feld-Karte = sauberer Einzelfrage-Look. Bei genau EINEM sichtbaren Feld blenden
-  // wir das Feld-Label aus — der große Karten-Titel benennt die Frage. Ab 2 Feldern: Labels zeigen.
-  // Fallback: hat die Karte (noch) keinen Titel, bleibt das Feld-Label sichtbar (sonst stünde nichts da).
+  // 1-Feld-Karte: Feld-Label ausblenden (der Karten-Titel benennt die Frage); ab 2 Feldern zeigen.
+  // Ohne Karten-Titel bleibt das Label sichtbar (sonst stünde nichts da).
   const singleCustomField = visibleCustomFields.length === 1;
   const cardHasTitle = Boolean((currentQuestion?.title ?? "").trim());
   const customFieldLabel = (field: ContactFieldConfig) =>
@@ -498,7 +239,7 @@ export function Funnel({
       </label>
     );
 
-  // Aufgabe 56: Ausrufezeichen rechts im Feld, wenn berührt + invalide (editMode: nie).
+  // Ausrufezeichen rechts im Feld, wenn berührt + invalide (in editMode nie).
   const fieldErrorHint = (field: ContactFieldConfig, value: string, align: "center" | "top" = "center") => {
     if (editMode || !touchedKeys.has(field.key)) return null;
     const err = validateContactField(field, value);
@@ -542,7 +283,7 @@ export function Funnel({
               ? currentAnswer !== "true"
               : !currentAnswer.trim()));
 
-  // Slider config and current value — null when the current question is not a slider.
+  // Slider-Config + aktueller Wert; null wenn die Frage kein Slider ist.
   const sliderConfig =
     currentQuestion?.questionType === "slider"
       ? (currentQuestion.config as SliderConfig)
@@ -555,7 +296,7 @@ export function Funnel({
   // Handlers
   // ---------------------------------------------------------------------------
 
-  // C.1c Canvas-Options: Sensors für Drag-Reorder der Choice-Optionen (nur in editMode aktiv).
+  // Sensoren für Drag-Reorder der Choice-Optionen (nur editMode).
   const optionSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
@@ -572,10 +313,8 @@ export function Funnel({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onReorderOptions, currentQuestion]);
 
-  // Aufgabe 35: Auto-Finish im Skip-Mode. Wird sowohl vom Auto-Advance (Single-Choice)
-  // als auch vom Weiter-Button am Ende der letzten Frage gerufen.
-  // Verwendet Funktional-Update via Ref auf das letzte Answer-Snapshot, damit der gerade
-  // gesetzte Wert nicht durch eine async setState-Race verloren geht.
+  // Submit-Auslöser (von Auto-Advance + Weiter-Button auf der letzten Frage). Mergt extraAnswer
+  // in den Snapshot, damit der gerade gesetzte Wert nicht durch die async setState-Race verloren geht.
   const autoFinish = useCallback(
     (extraAnswer?: { questionId: string; value: string }) => {
       const finalAnswers = extraAnswer
@@ -587,10 +326,9 @@ export function Funnel({
     [answers, honeypot, onSubmit],
   );
 
-  // Aufgabe 58 — Sprung-Auflösung beim Step-Advance: wertet die Logik-Regeln der
-  // aktuellen Page gegen den Antworten-Snapshot aus. Liefert den Ziel-Index oder
-  // "end" (= sofort absenden). Vorwärts-only: Ziele vor/auf dem aktuellen Step
-  // (oder nicht (mehr) vorhandene Ziel-Pages) degradieren zu „nächster Schritt".
+  // Sprung-Auflösung: wertet die Logik-Regeln der aktuellen Page gegen den Snapshot aus →
+  // Ziel-Index oder "end". Vorwärts-only (MUSS = computePath im Server-Backstop bleiben):
+  // Rückwärts-/fehlende Ziele degradieren zu „nächster Schritt".
   const resolveAdvanceIndex = useCallback(
     (answersSnapshot: Record<string, string>): number | "end" => {
       const pageId = currentQuestion?.pageId;
@@ -605,12 +343,9 @@ export function Funnel({
     [currentQuestion, currentStep, visibleQuestions, rulesBySource],
   );
 
-  // Single-choice: sets answer, then advances after 250ms so the selected color
-  // is briefly visible before the step transition fires (Typeform-Pattern).
-  // C.1c: editMode short-circuit — Builder-Klick auf Option soll selektieren/editieren, nicht advancen.
-  // Aufgabe 35: im Skip-Mode + letzter Frage feuert direkt /api/submit + zeigt Success.
-  // Aufgabe 40 Polish: nach Step-Advance feuert onPageAdvanced(pageId) — triggert after_page-Webhooks.
-  // Aufgabe 58: Advance läuft über resolveAdvanceIndex (Logik-Sprünge); History-Stack für „Zurück".
+  // Single-Choice: setzt Antwort, advanced nach 250ms (Farb-Feedback kurz sichtbar, Typeform).
+  // editMode short-circuit. Letzte Frage → autoFinish; sonst resolveAdvanceIndex + History-Push
+  // + onPageAdvanced (after_page-Webhooks).
   const handleSelect = useCallback(
     (questionId: string, value: string) => {
       if (editMode) return;
@@ -638,16 +373,13 @@ export function Funnel({
     [currentStep, visibleQuestions.length, editMode, isLastQuestion, autoFinish, currentQuestion, onPageAdvanced, answers, resolveAdvanceIndex, pushStepToHistory],
   );
 
-  // Goes back one step. The zurück button is disabled at step 0.
-  // Aufgabe 58: nach Sprüngen führt „Zurück" auf den tatsächlich besuchten Step (History-Stack);
-  // der Index-Guard ist Defensive gegen Stack-Desync (dann linear zurück).
+  // Ein Schritt zurück (an Step 0 disabled). Nach Sprüngen auf den tatsächlich besuchten Step
+  // (History-Stack); Index-Guard ist Defensive gegen Stack-Desync.
   const handleBack = () => {
     if (editMode) return;
     if (currentStep > 0) {
-      // Aufgabe 64: im Live-Modus läuft Zurück über die Browser-History (history.back()
-      // → popstate führt den Schritt aus) — EIN Pfad für Widget-Button UND Browser-/
-      // Gesten-Zurück, beide bleiben synchron. currentStep > 0 garantiert, dass ein
-      // lpStep-Eintrag dahinter liegt (jeder Advance pusht einen).
+      // Live: Zurück läuft über history.back() → popstate führt den Schritt aus — EIN Pfad
+      // für Widget-Button + Browser/Geste, beide bleiben synchron.
       if (historyEnabled && typeof window !== "undefined") {
         window.history.back();
         return;
@@ -659,10 +391,8 @@ export function Funnel({
     }
   };
 
-  // Advances to the next step. Used by the Weiter button on non-choice question types.
-  // Aufgabe 35: im Skip-Mode + letzter Frage Auto-Finish statt Step-Advance.
-  // Aufgabe 40 Polish: nach Step-Advance feuert onPageAdvanced(pageId) — triggert after_page-Webhooks.
-  // Aufgabe 58: Advance läuft über resolveAdvanceIndex (Logik-Sprünge); History-Stack für „Zurück".
+  // Weiter-Button (Nicht-Single-Choice). Letzte Frage → autoFinish; sonst resolveAdvanceIndex
+  // + History-Push + onPageAdvanced (after_page-Webhooks).
   const handleNext = useCallback(() => {
     if (editMode) return;
     if (isLastQuestion) {
@@ -685,7 +415,7 @@ export function Funnel({
     }
   }, [editMode, isLastQuestion, autoFinish, currentQuestion, onPageAdvanced, answers, resolveAdvanceIndex, currentStep, pushStepToHistory]);
 
-  // Multiple-choice: toggles `value` in/out of the comma-separated answer string for `questionId`.
+  // Multi-Choice: togglet value in der comma-separierten Antwort-Liste.
   const handleToggleMultiple = useCallback(
     (questionId: string, value: string) => {
       if (editMode) return;
@@ -700,12 +430,8 @@ export function Funnel({
     [editMode],
   );
 
-  // Aufgabe 59 — Tastatur-Bedienung (Typeform-Parität), nur live/test, nie im Builder:
-  //   • A–Z bzw. 1–9 wählen Antwort-Optionen (beide Tastengruppen unabhängig vom
-  //     Marker-Stil — die Chips zeigen Buchstaben ODER Ziffern, gedrückt werden darf beides).
-  //     single_choice advanced wie ein Klick, multi_choice toggelt.
-  //   • Enter bestätigt (OK/Weiter/Start) — außer der Fokus liegt in einem Eingabe-Element
-  //     (Felder regeln Enter selbst) oder auf einem Button (nativer Klick reicht, sonst doppelt).
+  // Tastatur-Bedienung (nur live/test): A–Z bzw. 1–9 wählen Optionen (single advanced, multi
+  // togglet); Enter bestätigt OK/Weiter — außer Fokus liegt in einem Feld/Button.
   useEffect(() => {
     if (editMode || isSubmitted) return;
     function onKey(e: KeyboardEvent) {
@@ -749,10 +475,8 @@ export function Funnel({
     handleToggleMultiple,
   ]);
 
-  // Aufgabe 39: End-Screen-Redirect-Modus. Wenn redirectUrl gesetzt UND wir gerade
-  // submitted haben → kurze Success-Anzeige (~1500ms damit Tracking-Pixel feuern können),
-  // dann window.location.replace. Im editMode/onFieldClick-Mode (Builder-Preview) NICHT
-  // redirecten, sonst springt der Editor weg.
+  // Redirect nach Submit: ~1500ms Success-Anzeige (damit Tracking-Pixel feuern), dann
+  // window.location.replace. Nicht in editMode/Preview (sonst springt der Editor weg).
   useEffect(() => {
     if (!isSubmitted) return;
     if (editMode || onFieldClick) return;
@@ -775,8 +499,7 @@ export function Funnel({
   // Effects
   // ---------------------------------------------------------------------------
 
-  // Editor-Test-Modus: meldet aktuellen Schritt zurück an PreviewPanel,
-  // damit die Step-Navigation oben mitläuft. Im Live-Widget ist onStepChange undefined → No-Op.
+  // Editor-Test-Modus: meldet den aktuellen Schritt an den Editor. Live: onStepChange undefined → No-Op.
   useEffect(() => {
     if (!onStepChange) return;
     if (isSubmitted) {
@@ -786,15 +509,9 @@ export function Funnel({
     }
   }, [currentStep, isSubmitted, onStepChange]);
 
-  // Aufgabe 55: Slider zeigen immer einen Wert an (Default bzw. Min) — der muss auch als
-  // Antwort gelten, wenn der User ihn unverändert akzeptiert und weiterklickt. Vorher
-  // entstand die Antwort nur onChange → "Default akzeptiert" wurde nie übermittelt.
-  // Beim Anzeigen eines Steps werden fehlende Slider-Werte einmalig committed — exakt
-  // mit derselben Fallback-Kette, die auch die Anzeige nutzt (Wert == Anzeige garantiert).
-  // Aufgabe 67-Polish: Datum analog — der heutige Tag (bzw. der konfigurierte Default,
-  // geklemmt auf min/max) wird beim Anzeigen committed → der Kalender zeigt sofort den
-  // gefüllten Kreis und der OK-Button ist konsistent aktiv (Stavros-Vorgabe).
-  // editMode: aus (Editor-Preview soll answers nicht anfassen). isSubmitted: aus.
+  // Slider-/Datum-Defaults beim Step-Wechsel einmalig in answers committen — sonst gilt ein
+  // unverändert akzeptierter Default nicht als Antwort. Gleiche Fallback-Kette wie die Anzeige
+  // (Wert == Anzeige). Nicht in editMode/isSubmitted.
   useEffect(() => {
     if (editMode || isSubmitted || !currentQuestion) return;
     const todayIso = () => {
@@ -842,13 +559,13 @@ export function Funnel({
     if (Object.keys(updates).length > 0) {
       setAnswers((prev) => ({ ...prev, ...updates }));
     }
-    // Bewusst NUR bei Step-Wechsel — answers in den Deps würde den Effect bei jedem
-    // Tastendruck neu laufen lassen (der Guard oben macht ihn idempotent, aber unnötig).
+    // Deps bewusst nur [currentStep]: answers in den Deps würde den Effect bei jedem Tastendruck
+    // neu laufen lassen (unnötig, Guard ist idempotent).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, editMode, isSubmitted]);
 
-  // Partial-Submissions: feuere debounced 600ms nach jeder Antwort-Änderung den onAnswersChange-Callback.
-  // In editMode oder ohne Callback: No-Op. Submitted-State auch No-Op (dort wird /api/submit aufgerufen).
+  // Partial-Submissions: onAnswersChange 600ms debounced nach jeder answers-Änderung.
+  // No-Op in editMode/ohne Callback/submitted (dort läuft /api/submit).
   useEffect(() => {
     if (!onAnswersChange || editMode || isSubmitted) return;
     const timer = window.setTimeout(() => {
@@ -857,10 +574,8 @@ export function Funnel({
     return () => window.clearTimeout(timer);
   }, [answers, onAnswersChange, editMode, isSubmitted]);
 
-  // Aufgabe 64: Date-Picker-Chunk vorladen, wenn der Funnel irgendwo ein Datumsfeld hat.
-  // Sonst lädt der Lazy-Chunk (react-day-picker, ~30KB) erst beim Step-Wechsel AUF die
-  // Datums-Folie — mitten in der Slide-Animation (Skeleton-Swap + Ruckler). Idle-Load
-  // nach Mount hält den Initial-Render schlank; Funnels ohne Datum laden weiterhin nichts.
+  // Date-Picker-Chunk vorladen, wenn der Funnel ein Datumsfeld hat — sonst lädt er erst beim
+  // Step-Wechsel auf die Datums-Folie, mitten in der Slide-Animation (Ruckler).
   useEffect(() => {
     const hasDateField = questions.some(
       (q) => q.questionType === "date" || (q.customFields ?? []).some((f) => f.type === "date"),
@@ -873,9 +588,8 @@ export function Funnel({
     return () => window.clearTimeout(t);
   }, [questions]);
 
-  // Sends the widget height to the parent frame after every layout change via postMessage.
-  // The ResizeObserver re-fires automatically on step transitions and after fonts load.
-  // Only active when the widget is embedded in an iframe (window.parent !== window).
+  // Sendet die Widget-Höhe per postMessage an den Parent (ResizeObserver feuert bei Step-
+  // Wechsel + nach Font-Load). Nur im iFrame aktiv (window.parent !== window).
   useEffect(() => {
     if (typeof window === "undefined" || window.parent === window) return;
     const el = containerRef.current;
@@ -916,7 +630,7 @@ export function Funnel({
         ref={containerRef}
         onClickCapture={onFieldClick ? handlePreviewClick : undefined}
         style={{
-          backgroundColor: pageBackgroundColor,
+          backgroundColor: theme.pageBackgroundColor,
           width: "100%",
           paddingTop:    `${SHADOW_PADDING.top}px`,
           paddingBottom: `${SHADOW_PADDING.bottom}px`,
@@ -938,10 +652,7 @@ export function Funnel({
             ...hlEdge("primary_color", "text_color", "background_color", "font", "border_radius", "max_width"),
           }}
         >
-          {/* Aufgabe 51: kein Top-Streifen + kein Footer mehr. Die Markenfarbe lebt zentriert im
-              gefüllten Häkchen-Kreis (weißer Haken) — passt zum mittigen Success-Layout und ist das
-              klassische „erledigt"-Pattern, ohne Fremdkörper-Streifen oder asymmetrischen Seitenrand. */}
-          {/* Checkmark + success message */}
+          {/* Checkmark + Erfolgs-Nachricht */}
           <div className="p-8 text-center">
             <div
               className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5 shadow-sm"
@@ -962,7 +673,7 @@ export function Funnel({
               className="text-2xl font-bold mb-2 leading-snug"
               style={{ color: theme.textColor, ...editCursor, ...hl("success_message") }}
             />
-            {/* Aufgabe 51: Antwort-Text ist optional (Toggle in SuccessProps). Leer = nicht rendern. */}
+            {/* Antwort-Text optional — leer = nicht rendern. */}
             {funnel.responseMessage && (
               <EditableText
                 as="p"
@@ -976,7 +687,7 @@ export function Funnel({
               />
             )}
 
-            {/* Summary of answers — Aufgabe 51: nur wenn aktiviert (Default aus = cleaner Dank) */}
+            {/* Antworten-Übersicht — nur wenn aktiviert (Default aus). */}
             {funnel.showAnswersOverview && (
             <div
               className="rounded-lg text-left text-sm p-4"
@@ -1011,7 +722,7 @@ export function Funnel({
   }
 
   // ---------------------------------------------------------------------------
-  // Render — Funnel (question steps + contact form)
+  // Render — Frage-Schritte
   // ---------------------------------------------------------------------------
 
   return (
@@ -1019,7 +730,7 @@ export function Funnel({
       ref={containerRef}
       onClickCapture={onFieldClick ? handlePreviewClick : undefined}
       style={{
-        backgroundColor: pageBackgroundColor,
+        backgroundColor: theme.pageBackgroundColor,
         width: "100%",
         paddingTop:    `${SHADOW_PADDING.top}px`,
         paddingBottom: `${SHADOW_PADDING.bottom}px`,
@@ -1043,7 +754,7 @@ export function Funnel({
           ...hlEdge("primary_color", "text_color", "background_color", "font", "border_radius", "max_width"),
         }}
       >
-        {/* Progress-Bar 1px oben — Typeform-Pattern. Aufgabe 56: per Design-Schalter abschaltbar. */}
+        {/* Progress-Bar oben (per Design-Schalter abschaltbar). */}
         {funnel.showProgressBar && (
           <div className="h-0.5 w-full" style={{ backgroundColor: `color-mix(in srgb, ${theme.textColor} 8%, transparent)` }}>
             <div
@@ -1052,12 +763,8 @@ export function Funnel({
             />
           </div>
         )}
-        {/* Floating-Nav existiert nicht mehr (siehe BackButton-Bar am Content-Ende),
-            also gleichmäßiges Padding ohne übergroßen Bottom-Buffer. */}
         <div className="p-4 @md:p-8 overflow-hidden">
-          {/* Honeypot — invisible to humans, filled by bots → rejected server-side.
-              Aufgabe 52D: lebt jetzt am Widget-Root (immer gerendert), seit das
-              Kontaktformular abgeschafft ist. honeypot-State + onSubmit-Check bleiben. */}
+          {/* Honeypot — für Menschen unsichtbar, von Bots gefüllt → server-side verworfen. */}
           <input
             type="text"
             name="website"
@@ -1068,8 +775,7 @@ export function Funnel({
             aria-hidden="true"
             style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 0, height: 0 }}
           />
-          {/* Aufgabe 64: key-Remount + CSS-Enter-Animation (richtungsabhängig). Erst ab der
-              ersten Navigation — der Initial-Render steht sofort, ohne reinzusliden. */}
+          {/* key-Remount + CSS-Enter-Animation (richtungsabhängig); erst ab der ersten Navigation. */}
           <div
             key={`q-${currentStep}`}
             className={
@@ -1081,18 +787,12 @@ export function Funnel({
             }
           >
 
-            {/* --------------------------------------------------------------
-                Question step (Kontaktformular-Zweig in Aufgabe 52D entfernt)
-            -------------------------------------------------------------- */}
               <div>
-                {/* Aufgabe 39: Welcome-Step hat keinen Step-Counter (Intro-Step vor dem eigentlichen Flow).
-                    Aufgabe 56: Badge per Design-Schalter abschaltbar — die Zeile rendert dann nur noch,
-                    wenn der Zurück-Pfeil (Single-Choice-Steps ab Schritt 2) sie braucht. */}
+                {/* Welcome-Step hat keinen Step-Counter; Badge per Design-Schalter abschaltbar
+                    — die Zeile rendert dann nur für den Zurück-Pfeil (Single-Choice ab Schritt 2). */}
                 {!isWelcomeStep && (funnel.showStepBadge || (!editMode && !showWeiterButton && currentStep > 0)) && (
-                  // Aufgabe 59: Im Mittig-Layout ist der Zurück-Pfeil Chrome, kein Inhalt —
-                  // er ankert absolut am linken Rand, nur das Badge sitzt auf der Mittelachse
-                  // (zentriert klebten beide als Paar zusammen — sah kaputt aus, Stavros-Befund).
-                  // h-5 hält die Zeilenhöhe stabil, auch wenn nur der absolute Pfeil rendert.
+                  // Mittig-Layout: Zurück-Pfeil ankert absolut links, nur das Badge auf der Mittelachse.
+                  // h-5 hält die Zeilenhöhe stabil, auch wenn nur der Pfeil rendert.
                   <div className={`relative mb-3 flex h-5 items-center gap-2 font-mono text-xs ${isCenteredLayout ? "justify-center" : ""}`} style={{ color: theme.primaryColor }}>
                     {!editMode && !showWeiterButton && currentStep > 0 && (
                       <button
@@ -1114,7 +814,7 @@ export function Funnel({
                     )}
                     {funnel.showStepBadge && (
                       <span className="inline-flex h-5 min-w-5 items-center justify-center rounded px-1.5 text-[11px] font-semibold" style={{ backgroundColor: theme.primaryColor, color: "#ffffff" }}>
-                        {/* Aufgabe 51: nur Fragen/Cards zählen — Welcome-Step nicht mitnummerieren (1. Frage = 1) */}
+                        {/* nur Fragen/Cards zählen — Welcome nicht mitnummerieren. */}
                         {visibleQuestions.slice(0, currentStep + 1).filter((q) => q.kind !== "welcome").length}
                       </span>
                     )}
@@ -1131,8 +831,7 @@ export function Funnel({
                     onCommit={onTextChange}
                     className={`font-light leading-snug text-balance ${funnel.titleAlignment === "center" ? "text-center" : "text-left"}`}
                     style={{
-                      // Fluid Typography: skaliert smooth zwischen 24px (schmale Cards) und 36px (breite Cards).
-                      // cqw = % der Container-Width (Card hat @container) — kein abrupter Breakpoint-Sprung.
+                      // Fluid Typography via cqw (% der @container-Card-Breite): smooth 24px→36px, kein Breakpoint-Sprung.
                       fontSize: "clamp(1.5rem, 5.5cqw, 2.25rem)",
                       color: currentQuestion.title ? theme.textColor : theme.textColorMuted,
                       fontStyle: currentQuestion.title ? "normal" : "italic",
@@ -1140,9 +839,8 @@ export function Funnel({
                       ...hl("question_title"),
                     }}
                   />
-                  {/* Aufgabe 56: Untertitel ohne Content = unsichtbarer Hover-Ghost-Slot im editMode
-                      (opacity 0 → 60% bei Hover auf den Titel-Block, 100% bei Fokus). Schliesst die
-                      tote Zone "kein Klick-Ziel ohne Untertitel", ohne im Ruhezustand zu rauschen. */}
+                  {/* Untertitel ohne Content = Hover-Ghost-Slot im editMode (opacity 0→60% bei Hover,
+                      100% bei Fokus) — Klick-Ziel ohne im Ruhezustand zu rauschen. */}
                   {(currentQuestion.subtitle || previewHighlight === "question_subtitle" || editMode) && (
                     <EditableText
                       as="p"
@@ -1166,9 +864,7 @@ export function Funnel({
                   )}
                 </div>
 
-                {/* Aufgabe 38: Custom-Multi-Field-Page — rendert N Felder als vertikale Stack,
-                    Werte werden in answers gespeichert (keyed by field.key). Submit-Page bleibt
-                    der finale Step. */}
+                {/* Custom-Karte: N Felder als vertikaler Stack, Werte in answers (keyed by field.key). */}
                 {isCustomStep && editMode && visibleCustomFields.length === 0 && onAddCustomFieldRequest && (
                   <button
                     type="button"
@@ -1190,9 +886,8 @@ export function Funnel({
                   <div className="space-y-4 mb-2">
                     {visibleCustomFields.map((field) => {
                       const fieldValue = answers[field.key] ?? "";
-                      // Aufgabe 57C: Canvas-Klick-Selektion pro Karten-Feld. Identität = _clientId ?? key —
-                      // exakt die Row-Identität im Properties-Panel (CustomPageProps), kollisionssicher auch
-                      // bei doppelten/leeren Keys vor dem Save. Im Live-Widget inert (onFieldClick undefined).
+                      // Canvas-Klick-Selektion pro Karten-Feld. Identität = _clientId ?? key
+                      // (kollisionssicher bei doppelten/leeren Keys). Live-Widget: inert.
                       const cardFieldRef = `card_field_${field._clientId ?? field.key}`;
 
                       // --- Radio (z.B. Anrede) ---
@@ -1229,7 +924,7 @@ export function Funnel({
                         );
                       }
 
-                      // Polish-Runde 2: Multi-Choice (mehrere Werte als comma-separated)
+                      // Multi-Choice (mehrere Werte comma-separiert)
                       if (field.type === "multi_choice" && field.options) {
                         const selected = (fieldValue || "").split(",").map((s) => s.trim()).filter(Boolean);
                         return (
@@ -1279,7 +974,7 @@ export function Funnel({
                         );
                       }
 
-                      // Polish-Runde 2: Slider
+                      // Slider
                       if (field.type === "slider") {
                         const min = field.sliderMin ?? 0;
                         const max = field.sliderMax ?? 100;
@@ -1304,8 +999,7 @@ export function Funnel({
                               onChange={(e) =>
                                 setAnswers((prev) => ({ ...prev, [field.key]: e.target.value }))
                               }
-                              // Aufgabe 56-Polish: gleiche .funnel-slider-Optik wie der Frage-Slider
-                              // (vorher nativer accent-color-Slider — anderes Styling im selben Widget).
+                              // gleiche .funnel-slider-Optik wie der Frage-Slider
                               className="funnel-slider"
                               style={{
                                 "--slider-fill": `${Math.min(100, Math.max(0, ((current - min) / Math.max(1, max - min)) * 100))}%`,
@@ -1319,7 +1013,7 @@ export function Funnel({
                         );
                       }
 
-                      // Polish-Runde 2: Rating
+                      // Rating
                       if (field.type === "rating") {
                         const maxStars = Math.max(1, Math.min(10, field.ratingMaxStars ?? 5));
                         const currentVal = Number(fieldValue) || 0;
@@ -1337,7 +1031,7 @@ export function Funnel({
                         );
                       }
 
-                      // Polish-Runde 2: Scale (NPS-Style)
+                      // Scale (NPS-Style)
                       if (field.type === "scale") {
                         const min = field.scaleMin ?? 0;
                         const max = field.scaleMax ?? 10;
@@ -1362,7 +1056,7 @@ export function Funnel({
                         );
                       }
 
-                      // Aufgabe 39 Polish: Long-Text (Textarea)
+                      // Long-Text (Textarea)
                       if (field.type === "long_text") {
                         return (
                           <div key={field.key} data-edit-field={cardFieldRef} style={{ ...editCursor, ...hl(cardFieldRef) }}>
@@ -1388,7 +1082,7 @@ export function Funnel({
                         );
                       }
 
-                      // Aufgabe 39 Polish: Number (ohne native Spinner — Typeform-Look)
+                      // Number (ohne native Spinner)
                       if (field.type === "number") {
                         return (
                           <div key={field.key} data-edit-field={cardFieldRef} style={{ ...editCursor, ...hl(cardFieldRef) }}>
@@ -1413,13 +1107,9 @@ export function Funnel({
                         );
                       }
 
-                      // Aufgabe 39 Polish: Date
-                      // Aufgabe 65: Kalender folgt als kompaktes Element dem „Mittig"-Layout —
-                      // auch hier im Karten-Zweig (seit dem Karten-Modell der Standard-Pfad für
-                      // Datumsfragen, 1-Feld-Karte rendert wie Einzelfrage).
+                      // Date — Inline-Kalender, folgt dem „Mittig"-Layout.
                       if (field.type === "date") {
-                        // Kein Feld-Label überm Kalender (Stavros-Entscheid Aufgabe 65):
-                        // ein Kalender ist selbsterklärend, Kontext liefert der Karten-Titel.
+                        // Kein Feld-Label überm Kalender — selbsterklärend, Kontext liefert der Karten-Titel.
                         return (
                           <div key={field.key} data-edit-field={cardFieldRef} style={{ ...editCursor, ...hl(cardFieldRef) }}>
                             <div className={isCenteredLayout ? "flex justify-center" : undefined}>
@@ -1437,7 +1127,7 @@ export function Funnel({
                         );
                       }
 
-                      // Aufgabe 39 Polish: Checkbox
+                      // Checkbox
                       if (field.type === "checkbox") {
                         const isChecked = fieldValue === "true";
                         return (
@@ -1478,7 +1168,7 @@ export function Funnel({
                         );
                       }
 
-                      // Aufgabe 39 Polish: Dropdown
+                      // Dropdown
                       if (field.type === "dropdown" && field.options) {
                         return (
                           <div key={field.key} data-edit-field={cardFieldRef} style={{ ...editCursor, ...hl(cardFieldRef) }}>
@@ -1503,8 +1193,7 @@ export function Funnel({
                       }
 
                       // --- Text / Email / Tel / PLZ / Name (Default-Fallback) ---
-                      // Aufgabe 40 Polish: first_name/last_name/full_name werden wie text gerendert,
-                      // aber mit sinnvollen Platzhaltern wenn der Tenant keinen eigenen gesetzt hat.
+                      // Name-Typen rendern wie text, aber mit sinnvollen Default-Platzhaltern.
                       const inputType =
                         field.type === "email" ? "email" :
                         field.type === "tel"   ? "tel"   :
@@ -1544,7 +1233,7 @@ export function Funnel({
                   </div>
                 )}
 
-                {/* Aufgabe 50: Canvas-„+" auf nicht-leeren Karten — Feld direkt in die Karte hinzufügen. */}
+                {/* Canvas-„+" auf nicht-leeren Karten — Feld direkt in die Karte hinzufügen. */}
                 {isCustomStep && editMode && visibleCustomFields.length > 0 && onAddCustomFieldRequest && (
                   <button
                     type="button"
@@ -1575,8 +1264,7 @@ export function Funnel({
                     option: typeof currentQuestion.options[0],
                     idx: number,
                     isSelected: boolean,
-                    // Aufgabe 50: im editMode wird der Letter-Chip zusätzlich zum Griff zum Drag-Handle
-                    // (größerer Greifbereich) — die Listener kommen aus dem SortableEditOption-Wrapper.
+                    // editMode: der Letter-Chip dient zusätzlich als Drag-Handle (Listener vom Wrapper).
                     dragListeners?: DraggableSyntheticListeners,
                   ) => {
                     const letter = optionMarkerFor(currentQuestion.optionMarker, idx);
@@ -1594,9 +1282,8 @@ export function Funnel({
                         {letter}
                       </span>
                     );
-                    // Aufgabe 65: Marker-Stil 'checkbox' rendert die Haken-Box für ALLE Choice-Typen
-                    // (bei multi_choice ersetzt sie die bisherige Zusatz-Box — keine Doppel-Box).
-                    // Im editMode übernimmt die Box die Drag-Handle-Rolle des Letter-Chips.
+                    // Marker-Stil 'checkbox': Haken-Box für alle Choice-Typen (bei multi_choice ersetzt
+                    // sie die Zusatz-Box, keine Doppel-Box). editMode: Box ist das Drag-Handle.
                     const isCheckboxMarker = currentQuestion.optionMarker === "checkbox";
                     const multiCheckbox = (isMultiple || isCheckboxMarker) ? (
                       <span
@@ -1789,8 +1476,7 @@ export function Funnel({
                       onFocus={(e) => { e.currentTarget.style.borderColor = theme.primaryColor; }}
                       onBlur={(e) => { e.currentTarget.style.borderColor = theme.underlineColor; }}
                     />
-                    {/* Aufgabe 59: Typeform-Hinweis — macht den Unterschied zu Kurz-Text sichtbar
-                        (Enter springt weiter, Shift+Enter bricht um) und lehrt das Tastatur-Muster. */}
+                    {/* Hinweis: Enter springt weiter, Shift+Enter bricht um (Unterschied zu Kurz-Text). */}
                     <p className="mt-1.5 text-xs font-light" style={{ color: theme.textColorMuted }}>
                       Shift ⇧ + Enter ↵ für eine neue Zeile
                     </p>
@@ -1827,9 +1513,7 @@ export function Funnel({
                   </div>
                 )}
 
-                {/* date — Inline-Kalender via react-day-picker (lazy-loaded).
-                    Aufgabe 65: der Kalender ist ein kompaktes Inline-Element wie Rating/Skala
-                    und folgt deshalb dem „Mittig"-Layout (war in Aufgabe 59 vergessen worden). */}
+                {/* date — lazy Inline-Kalender; kompaktes Element, folgt dem „Mittig"-Layout. */}
                 {currentQuestion.questionType === "date" && (() => {
                   const dateCfg = currentQuestion.config as DateConfig;
                   const value = answers[currentQuestion.id] ?? dateCfg.default ?? "";
@@ -1924,7 +1608,7 @@ export function Funnel({
                   </div>
                 )}
 
-                {/* Aufgabe 39: rating — 1-N Sterne mit Hover-Preview, Click setzt Antwort */}
+                {/* rating — 1-N Sterne mit Hover-Preview */}
                 {currentQuestion.questionType === "rating" && (() => {
                   const cfg = currentQuestion.config as { maxStars?: number };
                   const maxStars = Math.max(1, Math.min(10, cfg.maxStars ?? 5));
@@ -1941,7 +1625,7 @@ export function Funnel({
                   );
                 })()}
 
-                {/* Aufgabe 39: scale — 0-N Buttons in a row (NPS-Style) mit optionalen Labels links/rechts */}
+                {/* scale — 0-N Buttons (NPS-Style) mit optionalen Labels */}
                 {currentQuestion.questionType === "scale" && (() => {
                   const cfg = currentQuestion.config as { min?: number; max?: number; labelLeft?: string; labelRight?: string };
                   const min = cfg.min ?? 0;
@@ -1966,7 +1650,7 @@ export function Funnel({
                   );
                 })()}
 
-                {/* Aufgabe 39: statement — Info-Block ohne Input. Render = nichts (Title + Subtitle reichen). */}
+                {/* statement — Info-Block ohne Input (Render = nichts). */}
 
                 {/* checkbox — Single-Boolean (z.B. DSGVO/Newsletter), Typeform-Light-Style */}
                 {currentQuestion.questionType === "checkbox" && (() => {
@@ -2056,376 +1740,6 @@ export function Funnel({
         </div>
 
       </div>
-    </div>
-  );
-}
-
-/* ──────────────────────────────────────────────────────────────────────────────
-   BackButton — quadratischer Tinted-Brand-Button, links neben dem OK-Button.
-   Ersetzt die alte Bottom-Right-Floating-Nav: einheitliche Action-Bar am Ende
-   des Content statt zwei separater Layer (löst auch Aufgabe-37-Overlap dauerhaft).
-   ────────────────────────────────────────────────────────────────────────────── */
-
-function BackButton({
-  onClick,
-  theme,
-  editMode,
-}: {
-  onClick: () => void;
-  theme: { primaryColor: string; tintColor: string; tintColorHover: string; borderRadius: string };
-  editMode: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={editMode}
-      aria-label="Zurück zur vorherigen Frage"
-      title="Zurück"
-      className="inline-flex h-9 w-9 items-center justify-center transition-colors disabled:cursor-not-allowed disabled:opacity-40"
-      style={{
-        backgroundColor: theme.tintColor,
-        color: theme.primaryColor,
-        borderRadius: theme.borderRadius,
-      }}
-      onMouseEnter={(e) => {
-        if (!e.currentTarget.disabled) e.currentTarget.style.backgroundColor = theme.tintColorHover;
-      }}
-      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = theme.tintColor; }}
-    >
-      <ChevronLeft size={16} strokeWidth={2.5} />
-    </button>
-  );
-}
-
-/* ──────────────────────────────────────────────────────────────────────────────
-   Aufgabe 39: RatingStars — 1-N Sterne mit Hover-Preview (Typeform/Tally-Style).
-   Klick setzt Wert. Hover füllt bis zur gehoverten Position. Wert als String "1"..."N".
-   ────────────────────────────────────────────────────────────────────────────── */
-
-// Aufgabe 59 (Stavros-Befund): Lang-Text startet einzeilig und wächst mit dem Inhalt
-// (Typeform-Pattern). Vorher rows={3}: der Platzhalter klebte oben in einer hohen leeren
-// Box, die Unterstrich-Linie hing zwei Zeilen tiefer — deplatziert gegenüber allen anderen
-// Underline-Feldern. Als ref (initial, deckt restaurierte Antworten ab) + onInput (Tippen).
-function autoGrowTextarea(el: HTMLTextAreaElement | null) {
-  if (!el) return;
-  el.style.height = "auto";
-  el.style.height = `${el.scrollHeight}px`;
-}
-
-function RatingStars({
-  maxStars,
-  value,
-  onChange,
-  primaryColor,
-  mutedColor,
-  centered = false,
-}: {
-  maxStars: number;
-  value: number;
-  onChange: (v: number) => void;
-  primaryColor: string;
-  mutedColor: string;
-  /** Aufgabe 59: folgt dem Karten-Layout „Mittig" (titleAlignment). */
-  centered?: boolean;
-}) {
-  const [hovered, setHovered] = useState<number | null>(null);
-  const display = hovered ?? value;
-  return (
-    <div
-      className={`mb-3 flex items-center gap-1 @md:gap-1.5 ${centered ? "justify-center" : ""}`}
-      onMouseLeave={() => setHovered(null)}
-    >
-      {Array.from({ length: maxStars }, (_, i) => i + 1).map((n) => {
-        const filled = n <= display;
-        return (
-          <button
-            key={n}
-            type="button"
-            onClick={() => onChange(n)}
-            onMouseEnter={() => setHovered(n)}
-            aria-label={`${n} von ${maxStars} Sternen`}
-            className="inline-flex h-10 w-10 @md:h-12 @md:w-12 items-center justify-center transition-colors"
-            style={{ color: filled ? primaryColor : mutedColor, opacity: filled ? 1 : 0.4 }}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill={filled ? "currentColor" : "none"}
-              stroke="currentColor"
-              strokeWidth={1.5}
-              className="h-7 w-7 @md:h-9 @md:w-9"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
-            </svg>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-/* ──────────────────────────────────────────────────────────────────────────────
-   Aufgabe 39: ScaleButtons — 0-N Buttons in einer Reihe (NPS-Style).
-   Aktiver Button = full Brand. Optionale Labels links/rechts unter den Buttons.
-   ────────────────────────────────────────────────────────────────────────────── */
-
-function ScaleButtons({
-  min,
-  max,
-  value,
-  onChange,
-  labelLeft,
-  labelRight,
-  primaryColor,
-  tintColor,
-  tintColorHover,
-  textColor,
-  mutedColor,
-  borderRadius,
-  centered = false,
-}: {
-  min: number;
-  max: number;
-  value: string;
-  onChange: (v: string) => void;
-  labelLeft?: string;
-  labelRight?: string;
-  primaryColor: string;
-  tintColor: string;
-  tintColorHover: string;
-  textColor: string;
-  mutedColor: string;
-  borderRadius: string;
-  /** Aufgabe 59: folgt dem Karten-Layout „Mittig" (titleAlignment). */
-  centered?: boolean;
-}) {
-  const range = Array.from({ length: Math.max(0, max - min + 1) }, (_, i) => min + i);
-  return (
-    <div className="mb-3">
-      <div className={`flex flex-wrap items-center gap-1.5 @md:gap-2 ${centered ? "justify-center" : ""}`}>
-        {range.map((n) => {
-          const active = String(n) === value;
-          return (
-            <button
-              key={n}
-              type="button"
-              onClick={() => onChange(String(n))}
-              className="inline-flex h-10 min-w-10 @md:h-12 @md:min-w-12 items-center justify-center px-2 text-sm @md:text-base font-medium transition-colors"
-              style={{
-                backgroundColor: active ? primaryColor : tintColor,
-                color: active ? "#ffffff" : textColor,
-                borderRadius,
-              }}
-              onMouseEnter={(e) => {
-                if (!active) e.currentTarget.style.backgroundColor = tintColorHover;
-              }}
-              onMouseLeave={(e) => {
-                if (!active) e.currentTarget.style.backgroundColor = tintColor;
-              }}
-            >
-              {n}
-            </button>
-          );
-        })}
-      </div>
-      {(labelLeft || labelRight) && (
-        <div className="mt-2 flex items-baseline justify-between text-xs @md:text-sm font-light" style={{ color: mutedColor }}>
-          <span>{labelLeft}</span>
-          <span>{labelRight}</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ──────────────────────────────────────────────────────────────────────────────
-   C.1c WYSIWYG-Edit: EditableText
-   Schaltet zwischen reiner Anzeige (editMode=false, Live + read-only Preview)
-   und contentEditable (editMode=true, Builder-Canvas) um. Uncontrolled —
-   commit nur auf blur/Enter, Esc revertet via Remount-Key.
-   ────────────────────────────────────────────────────────────────────────────── */
-
-type EditableTextTag = "h1" | "h2" | "p" | "span" | "div";
-
-interface EditableTextProps {
-  as?: EditableTextTag;
-  editMode: boolean;
-  fieldRef: string;
-  initial: string;
-  placeholder: string;
-  onCommit?: (fieldRef: string, newText: string) => void;
-  multiline?: boolean;
-  className?: string;
-  style?: React.CSSProperties;
-}
-
-function EditableText({
-  as = "span",
-  editMode,
-  fieldRef,
-  initial,
-  placeholder,
-  onCommit,
-  multiline = false,
-  className,
-  style,
-}: EditableTextProps) {
-  const skipNextCommit = useRef(false);
-
-  if (!editMode) {
-    // Read-only Branch: identisch zum existierenden Render (Tag + data-edit-field + style + initial).
-    // Empty-State zeigt den Placeholder gefadet/italic (Style wird vom Caller via style-prop reingegeben).
-    const Tag = as;
-    return (
-      <Tag data-edit-field={fieldRef} className={className} style={style}>
-        {initial}
-      </Tag>
-    );
-  }
-
-  // Edit-Branch: contentEditable mit Placeholder-via-CSS-Pseudo.
-  // key={fieldRef + "_" + initial} → externe State-Änderungen remounten das Element sauber
-  // (z.B. wenn der User in der OptionsEditor-Liste rechts den Text ändert, soll der contenteditable nachziehen).
-  const Tag = as;
-  return (
-    <Tag
-      key={`${fieldRef}_${initial}`}
-      data-edit-field={fieldRef}
-      data-placeholder={placeholder}
-      contentEditable
-      suppressContentEditableWarning
-      className={cn("funnel-editable", className)}
-      // Text-Cursor (I-Beam) statt Pointer — Signal "hier kannst du tippen". Nach dem Spread damit es Parent-Pointer übersteuert.
-      style={{ ...style, cursor: "text" }}
-      onBlur={(e: React.FocusEvent<HTMLElement>) => {
-        if (skipNextCommit.current) {
-          skipNextCommit.current = false;
-          return;
-        }
-        const text = e.currentTarget.innerText.replace(/ /g, " ").trim();
-        if (text !== initial) {
-          onCommit?.(fieldRef, text);
-        }
-      }}
-      onKeyDown={(e: React.KeyboardEvent<HTMLElement>) => {
-        if (e.key === "Enter" && !multiline) {
-          e.preventDefault();
-          e.currentTarget.blur();
-        } else if (e.key === "Escape") {
-          e.preventDefault();
-          skipNextCommit.current = true;
-          // Revert: setze innerText zurück auf initial, dann blur
-          (e.currentTarget as HTMLElement).innerText = initial;
-          e.currentTarget.blur();
-        }
-      }}
-      onPaste={(e: React.ClipboardEvent<HTMLElement>) => {
-        // Plain-Text-Paste-Sanitization gegen Rich-HTML aus Word/Browser.
-        // execCommand ist deprecated aber für contentEditable-Paste das einzige Pattern
-        // mit Cursor-Position-Preservation. Alternative (Selection-API + manueller Insert)
-        // wäre ~30 Zeilen für minimalen Nutzen — bleiben bei execCommand bis Browser-Support endet.
-        e.preventDefault();
-        const text = e.clipboardData.getData("text/plain");
-        // eslint-disable-next-line @typescript-eslint/no-deprecated
-        if (typeof document !== "undefined" && document.execCommand) {
-          // eslint-disable-next-line @typescript-eslint/no-deprecated
-          document.execCommand("insertText", false, text);
-        }
-      }}
-    >
-      {initial}
-    </Tag>
-  );
-}
-
-/* ──────────────────────────────────────────────────────────────────────────────
-   C.1c Canvas-Edit: SortableEditOption
-   Wrapper um eine Choice-Option im editMode — fügt Drag-Handle (links, hover-visible)
-   und Duplicate/Delete-Buttons (rechts, hover-visible) hinzu, plus useSortable für
-   @dnd-kit-Drag-Reorder. data-edit-field bleibt am Wrapper für Click-Select.
-   ────────────────────────────────────────────────────────────────────────────── */
-
-interface SortableEditOptionProps {
-  id: string;
-  idx: number;
-  wrapperClassName: string;
-  wrapperStyle: React.CSSProperties;
-  onDuplicate?: (idx: number) => void;
-  onDelete?: (idx: number) => void;
-  // Aufgabe 50: children als Render-Funktion bekommt die Drag-Listener — damit z.B. der
-  // Letter-Chip zusätzlich zum Griff als Drag-Handle dienen kann.
-  children: React.ReactNode | ((dragListeners: DraggableSyntheticListeners) => React.ReactNode);
-}
-
-function SortableEditOption({
-  id,
-  idx,
-  wrapperClassName,
-  wrapperStyle,
-  onDuplicate,
-  onDelete,
-  children,
-}: SortableEditOptionProps) {
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
-    useSortable({ id });
-
-  const sortableStyle: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 10 : undefined,
-    opacity: isDragging ? 0.85 : undefined,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      {...attributes}
-      role="button"
-      tabIndex={-1}
-      data-edit-field={`option_${idx}`}
-      className={wrapperClassName}
-      style={{ ...wrapperStyle, ...sortableStyle }}
-    >
-      {/* Drag-Handle — auf Hover sichtbar, links vor dem Indicator */}
-      <span
-        ref={setActivatorNodeRef}
-        {...listeners}
-        aria-label="Reihenfolge ändern"
-        title="Reihenfolge ändern"
-        className="-ml-1 flex h-6 w-4 shrink-0 cursor-grab items-center justify-center opacity-0 transition-opacity group-hover/option:opacity-60 active:cursor-grabbing"
-        style={{ color: "currentColor" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <GripVertical size={14} />
-      </span>
-
-      {typeof children === "function" ? children(listeners) : children}
-
-      {/* Aktions-Buttons rechts — auf Hover sichtbar */}
-      <span className="ml-auto flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/option:opacity-100">
-        {onDuplicate && (
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onDuplicate(idx); }}
-            aria-label="Option duplizieren"
-            title="Duplizieren"
-            className="inline-flex h-6 w-6 items-center justify-center rounded transition-colors hover:bg-black/10"
-          >
-            <Copy size={12} />
-          </button>
-        )}
-        {onDelete && (
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onDelete(idx); }}
-            aria-label="Option löschen"
-            title="Löschen"
-            className="inline-flex h-6 w-6 items-center justify-center rounded text-red-500 transition-colors hover:bg-red-500/10"
-          >
-            <Trash2 size={12} />
-          </button>
-        )}
-      </span>
     </div>
   );
 }
