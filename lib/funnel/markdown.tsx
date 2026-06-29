@@ -1,9 +1,9 @@
 import type { OptionMarker } from "@/types";
 
 // Marker-String einer Option (Buchstabe/Ziffer); null = kein Chip
-// ('none' / 'checkbox' rendern ihre eigene Box).
+// ('none' / 'checkbox' rendern ihre eigene Box, 'image' rendert das Option-Bild).
 export function optionMarkerFor(marker: OptionMarker | undefined, idx: number): string | null {
-  if (marker === "none" || marker === "checkbox") return null;
+  if (marker === "none" || marker === "checkbox" || marker === "image") return null;
   if (marker === "numbers") return String(idx + 1);
   return String.fromCharCode(65 + idx); // 'letters' (Default)
 }
