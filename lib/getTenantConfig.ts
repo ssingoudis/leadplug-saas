@@ -174,14 +174,18 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
       questionType: fieldTypeToQuestionType(f.field_type),
       visible: f.visible ?? true,
       optionMarker:
-        fcfg.optionMarker === 'numbers' || fcfg.optionMarker === 'none' || fcfg.optionMarker === 'checkbox'
+        fcfg.optionMarker === 'numbers' || fcfg.optionMarker === 'none' || fcfg.optionMarker === 'checkbox' || fcfg.optionMarker === 'image'
           ? fcfg.optionMarker
           : 'letters',
+      // Aufgabe 76: Bilddarstellung (Symbol/Foto) ans Live-Widget durchreichen.
+      imageFit: fcfg.imageFit === 'cover' ? 'cover' : 'contain',
       config: f.config ?? {},
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       options: opts.map((o: Record<string, any>) => ({
         label: o.label,
         value: o.value,
+        // Aufgabe 76: Bild-URL aus jsonb `image_url` ans Live-Widget durchreichen.
+        imageUrl: typeof o.image_url === 'string' ? o.image_url : undefined,
       })),
       kind: 'question',
     }

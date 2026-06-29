@@ -239,6 +239,8 @@ export function buildQuestions(
         return {
           label: o.label,
           value,
+          // Aufgabe 76: Bild-URL in die Widget-/Preview-Config durchreichen.
+          imageUrl: o.imageUrl,
         };
       });
       return {
@@ -251,6 +253,8 @@ export function buildQuestions(
         options: mapped,
         // Aufgabe 50: Marker-Stil (A/B/C · 1/2/3 · keiner) ins Widget durchreichen.
         optionMarker: q.optionMarker,
+        // Aufgabe 76: Bilddarstellung (Symbol/Foto) ins Widget durchreichen.
+        imageFit: q.imageFit,
         config: buildQuestionConfig(q),
         kind: "question" as const,
       };
@@ -636,12 +640,19 @@ export function editorStateToPagesAndFields(
               label: o.label,
               value: o.value || toKey(o.label),
               sort_order: oidx,
+              // Aufgabe 76: Bild-URL als jsonb-Key `image_url` persistieren (leer = null).
+              image_url: o.imageUrl?.trim() || null,
             }))
         : [],
       // Aufgabe 50: Marker-Stil im config-jsonb persistieren (nur wenn non-default, hält config schlank).
       config:
         OPTION_BASED_TYPES.has(q.questionType) && q.optionMarker && q.optionMarker !== "letters"
-          ? { ...buildQuestionConfig(q), optionMarker: q.optionMarker }
+          ? {
+              ...buildQuestionConfig(q),
+              optionMarker: q.optionMarker,
+              // Aufgabe 76: Bild-Fit nur persistieren, wenn Bild-Marker + non-default 'cover' (config schlank halten).
+              ...(q.optionMarker === "image" && q.imageFit === "cover" ? { imageFit: "cover" } : {}),
+            }
           : buildQuestionConfig(q),
     });
   });
@@ -924,6 +935,8 @@ export function dbToEditorState(
         _id: uid(),
         label: typeof o.label === "string" ? o.label : "",
         value: typeof o.value === "string" ? o.value : "",
+        // Aufgabe 76: Bild-URL aus jsonb `image_url` zurück in den Editor-State.
+        imageUrl: typeof o.image_url === "string" ? o.image_url : undefined,
       })),
       // Date
       dateMin: questionType === "date" && typeof cfg.min === "string" ? cfg.min : "",
@@ -946,9 +959,11 @@ export function dbToEditorState(
       scaleLabelRight: questionType === "scale" && typeof cfg.labelRight === "string" ? cfg.labelRight : "",
       // Aufgabe 50: Marker-Stil aus config (Default 'letters' wenn nicht gesetzt). +'checkbox' seit 65.
       optionMarker:
-        cfg.optionMarker === "numbers" || cfg.optionMarker === "none" || cfg.optionMarker === "checkbox"
+        cfg.optionMarker === "numbers" || cfg.optionMarker === "none" || cfg.optionMarker === "checkbox" || cfg.optionMarker === "image"
           ? cfg.optionMarker
           : "letters",
+      // Aufgabe 76: Bilddarstellung aus config (Default 'contain' = Symbol).
+      imageFit: cfg.imageFit === "cover" ? "cover" : "contain",
       // Aufgabe 40 Polish: existing key aus DB → kein Auto-Sync mehr (Stabilität)
       _keyTouched: true,
     };

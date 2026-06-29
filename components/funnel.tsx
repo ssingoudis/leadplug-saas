@@ -1259,6 +1259,17 @@ export function Funnel({
                   currentQuestion.questionType === "multi_choice") && (() => {
                   const isMultiple = currentQuestion.questionType === "multi_choice";
                   const selectedValues = answers[currentQuestion.id]?.split(",").filter(Boolean) ?? [];
+                  // Aufgabe 76: Bild-Optionen. imageMode = single_choice/multi_choice mit Markierung
+                  // "Bild" (optionMarker === 'image'). cardLayout (= imageMode im Live/Test-Render) →
+                  // responsives Karten-Grid; editMode bleibt die sortierbare Reihen-Liste
+                  // (Drag-Reorder via verticalListSortingStrategy).
+                  const imageMode =
+                    (currentQuestion.questionType === "single_choice" ||
+                      currentQuestion.questionType === "multi_choice") &&
+                    currentQuestion.optionMarker === "image";
+                  const cardLayout = imageMode && !editMode;
+                  // Aufgabe 76: 'cover' = Foto (randlos füllend), 'contain' = Symbol/Icon (mit Rand). Default 'contain'.
+                  const imageFit = currentQuestion.imageFit === "cover" ? "cover" : "contain";
 
                   const renderOptionContent = (
                     option: typeof currentQuestion.options[0],
@@ -1267,6 +1278,52 @@ export function Funnel({
                     // editMode: der Letter-Chip dient zusätzlich als Drag-Handle (Listener vom Wrapper).
                     dragListeners?: DraggableSyntheticListeners,
                   ) => {
+                    // Aufgabe 76: Bild-Karte — Bild-Box (oben im Grid / links als Thumbnail in der
+                    // Reihen-Liste) + Label, KEIN Letter-Chip. Auswahl = Brand-Rahmen der Karte.
+                    if (imageMode) {
+                      return (
+                        <>
+                          <span
+                            {...(dragListeners ?? {})}
+                            className={`relative flex shrink-0 items-center justify-center overflow-hidden border${cardLayout ? " h-14 w-14 @md:h-auto @md:w-full @md:aspect-square" : " h-12 w-12"}${dragListeners ? " cursor-grab active:cursor-grabbing" : ""}`}
+                            style={{
+                              borderRadius: theme.borderRadius,
+                              borderColor: isSelected ? theme.primaryColor : theme.underlineColor,
+                              backgroundColor: theme.backgroundColor,
+                            }}
+                          >
+                            {option.imageUrl ? (
+                              <img
+                                src={option.imageUrl}
+                                alt=""
+                                loading="lazy"
+                                className={`h-full w-full ${imageFit === "cover" ? "object-cover" : "object-contain p-1.5"}`}
+                              />
+                            ) : null}
+                            {/* Aufgabe 76: bei Mehrfachauswahl dezenter Haken auf gewählten Karten —
+                                signalisiert „mehrere möglich". Einfachauswahl zeigt Auswahl nur per Rahmen. */}
+                            {isMultiple && isSelected && (
+                              <span
+                                className="absolute right-1 top-1 inline-flex h-4 w-4 items-center justify-center rounded-full"
+                                style={{ backgroundColor: theme.primaryColor }}
+                              >
+                                <Check size={11} strokeWidth={3} color="#ffffff" />
+                              </span>
+                            )}
+                          </span>
+                          <EditableText
+                            as="span"
+                            editMode={editMode}
+                            fieldRef={`option_${idx}`}
+                            initial={option.label}
+                            placeholder="Option-Text"
+                            onCommit={onTextChange}
+                            className={`min-w-0 flex-1 wrap-break-word text-sm @md:text-base font-light leading-snug${cardLayout ? " @md:w-full @md:flex-none @md:text-center" : ""}`}
+                            style={{ color: theme.textColor }}
+                          />
+                        </>
+                      );
+                    }
                     const letter = optionMarkerFor(currentQuestion.optionMarker, idx);
                     const indicator = letter === null ? null : (
                       <span
@@ -1325,7 +1382,9 @@ export function Funnel({
                       : theme.tintColor,
                     ...hl(`option_${idx}`),
                   });
-                  const optionWrapperClass = "group/option relative flex items-center w-full text-left gap-3 px-3 py-2.5 cursor-pointer outline-none border transition-colors";
+                  const optionWrapperClass = cardLayout
+                    ? "group/option relative flex items-center @md:flex-col @md:items-stretch @md:text-center w-full text-left gap-3 @md:gap-2 p-2.5 overflow-hidden cursor-pointer outline-none border transition-colors"
+                    : "group/option relative flex items-center w-full text-left gap-3 px-3 py-2.5 cursor-pointer outline-none border transition-colors";
                   const handleOptionHover = (e: React.MouseEvent<HTMLElement>, isSelected: boolean) => {
                     if (isSelected || editMode) return;
                     e.currentTarget.style.backgroundColor = theme.tintColorHover;
@@ -1336,7 +1395,13 @@ export function Funnel({
                   };
 
                   return (
-                    <div className="mb-3 flex flex-col gap-2.5">
+                    <div
+                      className={
+                        cardLayout
+                          ? "mb-3 grid grid-cols-1 gap-2.5 @md:grid-cols-[repeat(auto-fit,minmax(7rem,1fr))]"
+                          : "mb-3 flex flex-col gap-2.5"
+                      }
+                    >
                       {editMode ? (
                         <DndContext sensors={optionSensors} collisionDetection={closestCenter} onDragEnd={handleOptionDragEnd}>
                           <SortableContext items={currentQuestion.options.map((o) => o.value)} strategy={verticalListSortingStrategy}>

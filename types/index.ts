@@ -31,12 +31,19 @@ export type QuestionType =
   | 'first_name' | 'last_name' | 'full_name'
 
 // Marker-Stil der Antwort-Optionen: 'letters' = A/B/C (Default), 'numbers' = 1/2/3,
-// 'none' = kein Chip, 'checkbox' = Haken-Box.
-export type OptionMarker = 'letters' | 'numbers' | 'none' | 'checkbox'
+// 'none' = kein Chip, 'checkbox' = Haken-Box, 'image' = Bild pro Option (Karten, single_choice + multi_choice).
+export type OptionMarker = 'letters' | 'numbers' | 'none' | 'checkbox' | 'image'
+
+// Aufgabe 76: Bilddarstellung der Bild-Optionen — 'contain' = Symbol/Icon (mit Rahmen, Default),
+// 'cover' = Foto (randlos füllend, beschnitten).
+export type ImageFit = 'contain' | 'cover'
 
 export interface Option {
   label: string
   value: string
+  // Aufgabe 76: optionales Bild pro Option (Bild-Funnels, single_choice). DB-Key `image_url`.
+  // „leer = aus" → ohne Bild rendert die Option wie bisher (Letter-Chip/Marker).
+  imageUrl?: string
 }
 
 export interface TextConfig {
@@ -108,6 +115,8 @@ export interface QuestionConfig {
   options: Option[]
   // Marker-Stil der Optionen (A/B/C · 1/2/3 · keiner). Default 'letters'.
   optionMarker?: OptionMarker
+  // Aufgabe 76: Bilddarstellung der Bild-Optionen (nur bei optionMarker='image'). Default 'contain'.
+  imageFit?: ImageFit
   config:
     | TextConfig | SliderConfig | DateConfig | NumberConfig | CheckboxConfig
     | RatingConfig | ScaleConfig | StatementConfig | WelcomeConfig
@@ -263,6 +272,8 @@ export interface EditorOption {
   _id: string       // temporäre React-Key-ID, wird nicht in DB gespeichert
   label: string
   value: string     // auto-slug aus label, stabil nach erster Erstellung
+  // Aufgabe 76: optionale Bild-URL pro Option (single_choice). DB-Key `image_url`.
+  imageUrl?: string
 }
 
 export interface EditorQuestion {
@@ -287,6 +298,8 @@ export interface EditorQuestion {
   options: EditorOption[]
   // Marker-Stil der Optionen (A/B/C · 1/2/3 · keiner). Default 'letters'.
   optionMarker?: OptionMarker
+  // Aufgabe 76: Bilddarstellung der Bild-Optionen (nur bei optionMarker='image'). Default 'contain'.
+  imageFit?: ImageFit
   // date (alle ISO YYYY-MM-DD):
   dateMin: string
   dateMax: string

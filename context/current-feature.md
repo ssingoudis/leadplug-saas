@@ -110,6 +110,25 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
+## Aufgabe 76 — Bild-Optionen für `single_choice` + `multi_choice` (Bild-Funnels) (2026-06-29)
+
+**Status:** Branch `feature/aufgabe-76-bild-optionen`, `tsc --noEmit` grün. Additiv + optional („leer = aus") — **kein DB-Migration** (schema-flexibles `fields.options` jsonb), **keine neue Dependency**, **kein Storage/Upload** (URL betreiber-gesetzt). `funnel.tsx` mit expliziter Freigabe angefasst. CLAUDE.md §10 mit Freigabe ergänzt.
+
+**Anlass:** Erster echter Solar-Kunde will Bild-Karten (Haus/Mehrfamilienhaus/Firma/…) wie im Branchen-Standard. Done-for-you-Setup (Kunde loggt sich nie ein, wird eingerichtet + monatlich verkauft) → Upload-UI/Storage bewusst aufgeschoben; nur `imageUrl` als permanentes Fundament gebaut (Phase 2 = Upload schreibt später in dasselbe Feld).
+
+**Umsetzung:**
+- `imageUrl?: string` an `Option` + `EditorOption` (`types/index.ts`); persistiert als jsonb-Key `image_url`.
+- Durch alle 4 Option-Mapper gethreadet (keine Spreads → Hand-Arbeit): `buildQuestions`, DB-Write, DB-Read (`lib/editorUtils.ts`) + `mapDbRow` (`lib/getTenantConfig.ts`), mit `typeof`-Guards beim Lesen.
+- Aktivierung: 5. Stil unter „Markierung der Optionen" → **„Bild"** (`OptionMarker = 'image'`), bei `single_choice` **und** `multi_choice` (`MarkerStyleControl` in `FieldProperties.tsx`). Erst dann erscheint pro Option ein kompaktes „Bild-URL"-Feld mit Thumbnail-Vorschau (`OptionsEditor.tsx`, opt-in via `allowImages`). Marker-Whitelists in `editorUtils.ts` + `getTenantConfig.ts` um `'image'` ergänzt (sonst Reset auf `letters` beim Neuladen). Der Editor-Panel-Chip spiegelt jetzt den Marker (A/B/C · 1/2/3 · Haken · —) via geteilter `optionMarkerFor` (vorher fest A/B/C).
+- Widget (`funnel.tsx`): `imageMode = (single_choice || multi_choice) && optionMarker === 'image'` → `cardLayout` rendert responsives Karten-Grid (Bild oben, `@md`-Container-Query) ↔ gestapelte Reihen (Bild-Thumbnail links) bei schmalem Embed. Kein Letter-Chip; Auswahl = Brand-Rahmen, bei Mehrfachauswahl zusätzlich dezenter Haken auf gewählten Karten. editMode bleibt sortierbare Reihen-Liste (Drag-Reorder unverändert).
+- Bilddarstellung pro Frage umschaltbar (`imageFit`, Editor-Schalter „Bilddarstellung: Symbol / Foto", nur bei Bild-Marker sichtbar): `contain` = Symbol/Icon mittig mit Rahmen (Default) vs. `cover` = Foto randlos füllend/beschnitten. Im field-config-jsonb persistiert (nur non-default `cover`). Bug-Fix: langer Optionstext bricht jetzt um (`wrap-break-word`) statt aus der Kachel auszubrechen, plus `overflow-hidden`-Garantie an der Karte.
+
+**Rollback:** Reiner Code-Change. `git revert -m 1 <merge>` stellt den Vorzustand her; bereits gespeicherte `image_url`-Keys im jsonb sind ohne den Render-/Mapper-Pfad inert (werden ignoriert). Kein DB-Eingriff nötig.
+
+**Offen / Folge:** Phase 2 (Supabase-Storage-Bucket + RLS + Upload-UI für Self-Service-Agenturen) erst bei belegtem Bedarf. `dropdown` bleibt textbasiert. Bild-Quelle bislang nur per URL; Stavros hostet die Bilder selbst (z. B. manueller öffentlicher Bucket).
+
+---
+
 ## Aufgabe 74 — Builder-Optik-Pass + Dashboard-Header/Tooltip-Vereinheitlichung (2026-06-17)
 
 **Status:** Branch `feature/aufgabe-74-builder-optik`, `tsc --noEmit` durchgehend grün, reine UI/Präsentation — **kein DB-Change, keine neue Dependency** (lucide-react + react-dom bereits da), `funnel.tsx` (Widget) unberührt. Hell + Dunkel geprüft.

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Trash2, Plus, Pencil, AlertTriangle, Lock, SquareCheck } from "lucide-react";
-import type { EditorQuestion, EditorOption, ContactFieldConfig, OptionMarker } from "@/types";
+import type { EditorQuestion, EditorOption, ContactFieldConfig, OptionMarker, ImageFit } from "@/types";
 import { OptionsEditor } from "./OptionsEditor";
 import { SelMark } from "./selection";
 import { validateFieldKey, toKey } from "@/lib/editorUtils";
@@ -90,6 +90,8 @@ function QuestionFieldProps({
               <OptionsEditor
                 value={question.options}
                 onChange={(next: EditorOption[]) => onPatch({ options: next })}
+                allowImages={(type === "single_choice" || type === "multi_choice") && question.optionMarker === "image"}
+                marker={question.optionMarker}
               />
             </SelMark>
           </Field>
@@ -98,8 +100,18 @@ function QuestionFieldProps({
             <MarkerStyleControl
               value={question.optionMarker ?? "letters"}
               onChange={(m) => onPatch({ optionMarker: m })}
+              allowImage={type === "single_choice" || type === "multi_choice"}
             />
           </Field>
+          {/* Aufgabe 76: Bilddarstellung (Symbol/Icon vs. Foto) — nur sichtbar bei aktivem Bild-Marker. */}
+          {question.optionMarker === "image" && (
+            <Field label="Bilddarstellung">
+              <ImageFitControl
+                value={question.imageFit ?? "contain"}
+                onChange={(f) => onPatch({ imageFit: f })}
+              />
+            </Field>
+          )}
         </>
       )}
 
@@ -498,13 +510,48 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+/* Aufgabe 76: Segmented-Control für die Bilddarstellung der Bild-Optionen (Symbol/Icon vs. Foto). */
+function ImageFitControl({
+  value,
+  onChange,
+}: {
+  value: ImageFit;
+  onChange: (f: ImageFit) => void;
+}) {
+  const opts: { key: ImageFit; label: string; title: string }[] = [
+    { key: "contain", label: "Symbol", title: "Icon/SVG — ganzes Bild mittig mit Rahmen" },
+    { key: "cover", label: "Foto", title: "Echtes Foto — randlos füllend, passend beschnitten" },
+  ];
+  return (
+    <div className="flex gap-1.5">
+      {opts.map((o) => (
+        <button
+          key={o.key}
+          type="button"
+          onClick={() => onChange(o.key)}
+          title={o.title}
+          className={
+            value === o.key
+              ? "flex-1 rounded-lg border border-primary bg-primary/10 px-3 py-2 text-sm font-semibold text-primary"
+              : "flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:border-primary dark:border-gray-700 dark:text-gray-400"
+          }
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /* Aufgabe 50: Segmented-Control für den Marker-Stil der Optionen (A/B/C · 1/2/3 · keiner). */
 function MarkerStyleControl({
   value,
   onChange,
+  allowImage,
 }: {
   value: OptionMarker;
   onChange: (m: OptionMarker) => void;
+  allowImage?: boolean;
 }) {
   const opts: { key: OptionMarker; label: React.ReactNode; title: string }[] = [
     { key: "letters", label: "A B C", title: "Buchstaben" },
@@ -512,6 +559,8 @@ function MarkerStyleControl({
     // Aufgabe 65: leere Box, die bei Auswahl einen Haken bekommt (Tally-Pattern).
     { key: "checkbox", label: <SquareCheck size={16} className="mx-auto" />, title: "Checkbox mit Haken" },
     { key: "none", label: "ohne", title: "Kein Marker" },
+    // Aufgabe 76: Bild pro Option (nur single_choice) — Bild ersetzt den Chip, Karten-Layout im Widget.
+    ...(allowImage ? [{ key: "image" as const, label: "Bild", title: "Bild pro Option (Karten)" }] : []),
   ];
   return (
     <div className="flex gap-1.5">
