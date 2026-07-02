@@ -48,9 +48,10 @@ keine Ausrufezeichen-Inflation.
 | Abmelde-Vorgang | **Abmelden** | ~~Ausloggen, Logout~~ | |
 | Lead-Status (UI-Label) | **Neu / Kontaktiert / Erledigt** | — | DB bleibt `offen/kontaktiert/abgeschlossen` — nur UI-Label. |
 | Funnel ins Web einbauen | **Einbinden** | ~~Embed, Teilen~~ | Editor-Reiter. |
+| Bibliotheks-Grafik einer Bild-Option | **Icon** | ~~Symbol~~ | Entscheidung 2026-07-02 (Aufgabe 77): ein Wort für den ganzen Cluster — Icon-Bibliothek, „Icon wählen", „Icon-Farbe", Bilddarstellung „Icon / Foto". |
 
 **Bewusst englische Fachbegriffe** (Zielgruppe = Agenturen/Marketer, die sie ohnehin
-englisch nutzen): **Funnel, Lead, Dashboard, Webhook, Conversion**.
+englisch nutzen): **Funnel, Lead, Dashboard, Webhook, Conversion, Icon**.
 **Alles Allgemeine auf Deutsch:** Übersicht, Statistiken, Abrechnung, Einstellungen,
 Anmelden, Speichern, Aufrufe.
 Faustregel im Zweifel: *das Wort, das der Marketer im Alltag sagt.*

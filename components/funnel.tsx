@@ -31,6 +31,7 @@ import { resolveFunnelTheme } from "@/lib/funnel/theme";
 import { SHADOW_PADDING, CARD_SHADOW_STRING } from "@/lib/funnel/shadow";
 import { optionMarkerFor, renderLabelWithLinks } from "@/lib/funnel/markdown";
 import { BackButton } from "./funnel/BackButton";
+import { OptionIcon } from "./funnel/OptionIcon";
 import { RatingStars } from "./funnel/RatingStars";
 import { ScaleButtons } from "./funnel/ScaleButtons";
 import { EditableText } from "./funnel/EditableText";
@@ -1270,6 +1271,8 @@ export function Funnel({
                   const cardLayout = imageMode && !editMode;
                   // Aufgabe 76: 'cover' = Foto (randlos füllend), 'contain' = Symbol/Icon (mit Rand). Default 'contain'.
                   const imageFit = currentQuestion.imageFit === "cover" ? "cover" : "contain";
+                  // Aufgabe 77: Tint der Bibliotheks-Icons — funnel-weiter Farbmodus aus dem Design-Panel.
+                  const iconTint = theme.iconColor === "brand" ? theme.primaryColor : theme.textColor;
 
                   const renderOptionContent = (
                     option: typeof currentQuestion.options[0],
@@ -1292,7 +1295,15 @@ export function Funnel({
                               backgroundColor: theme.backgroundColor,
                             }}
                           >
-                            {option.imageUrl ? (
+                            {option.iconKey ? (
+                              // Aufgabe 77: Bibliotheks-Icon (inline, tintbar) — gewinnt über imageUrl.
+                              // Ignoriert imageFit: Icons sind immer Symbol-Darstellung mit Innenabstand.
+                              <OptionIcon
+                                iconKey={option.iconKey}
+                                tintColor={iconTint}
+                                className="h-full w-full p-1.5"
+                              />
+                            ) : option.imageUrl ? (
                               <img
                                 src={option.imageUrl}
                                 alt=""

@@ -180,6 +180,7 @@ export const DEFAULT_EDITOR_STATE: EditorState = {
   font: "system",
   borderRadius: "0.5rem",
   maxWidth: "720px",
+  iconColor: "neutral",
   contactFormSubtitle: "Wer soll das Angebot erhalten?",
   successMessage: "Vielen Dank für Ihre Anfrage!",
   showProgressBar: true,

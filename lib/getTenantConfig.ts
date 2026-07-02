@@ -186,6 +186,8 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
         value: o.value,
         // Aufgabe 76: Bild-URL aus jsonb `image_url` ans Live-Widget durchreichen.
         imageUrl: typeof o.image_url === 'string' ? o.image_url : undefined,
+        // Aufgabe 77: Bibliotheks-Icon aus jsonb `icon_key` ans Live-Widget durchreichen.
+        iconKey: typeof o.icon_key === 'string' ? o.icon_key : undefined,
       })),
       kind: 'question',
     }
@@ -209,6 +211,8 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
       font:                (theme.font ?? 'system') as FunnelFont,
       borderRadius:        theme.border_radius        ?? '0.5rem',
       maxWidth:            theme.max_width            ?? '720px',
+      // Aufgabe 77: Icon-Farbmodus (NULL/unbekannt = 'neutral').
+      iconColor:           theme.icon_color === 'brand' ? 'brand' : 'neutral',
     },
     funnel: {
       title:               row.contact_form_title      ?? TEXT_DEFAULTS.funnelTitle,
@@ -263,7 +267,7 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
       redirect_url,
       meta_pixel_id, google_ads_conversion,
       primary_color, text_color, background_color, page_background_color,
-      font, border_radius, max_width,
+      font, border_radius, max_width, icon_color,
       tenants!funnels_tenant_id_fkey (
         id, company_name, is_active,
         billing_model, lead_price, billing_price

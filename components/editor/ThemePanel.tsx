@@ -65,6 +65,19 @@ export function ThemePanel({ state, onPatch }: Props) {
           value={state.pageBackgroundColor}
           onChange={(v) => onPatch({ pageBackgroundColor: v })}
         />
+        {/* Aufgabe 77: Farbmodus der Bibliotheks-Icons (Bild-Optionen) — funnel-weit,
+            passend zur Theme-Philosophie (Branding über funnel-weite Variablen). */}
+        <Field label="Icon-Farbe">
+          <SegmentedControl
+            value={state.iconColor}
+            onChange={(v) => onPatch({ iconColor: v })}
+            options={[
+              { value: "neutral", label: "Neutral" },
+              { value: "brand", label: "Hauptfarbe" },
+            ]}
+          />
+          <FieldHint>Gilt für Icons aus der Bibliothek bei Bild-Optionen.</FieldHint>
+        </Field>
       </Section>
 
       <Section title="Schrift">

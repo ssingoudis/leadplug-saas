@@ -349,6 +349,14 @@
   pointer-events: none;
 }
 
+/* Aufgabe 77: Bibliotheks-Icons der Bild-Optionen (inline-SVG via OptionIcon) —
+   das injizierte SVG füllt seine Box; die Farbe kommt per currentColor vom Wrapper. */
+.funnel-option-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 /* Funnel Slider — Brand-Fill bis zum Daumen (Aufgabe 56-Polish, Typeform-Pattern).
    --slider-fill setzt das Widget pro Render (0-100%); der ungefüllte Rest ist ein
    dezenter Brand-Tint statt grauem Strich (konsistent zur Tint-Sprache der Options). */
