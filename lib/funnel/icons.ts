@@ -95,6 +95,12 @@ export const FUNNEL_ICONS: Record<string, FunnelIconEntry> = {
     category: "Gebäude",
     keywords: "zweifamilienhaus haus anbau generationen gebaeude",
   },
+  "gebaeude-doppelhaus": {
+    file: "gebaeude-doppelhaus.svg",
+    label: "Doppelhaus",
+    category: "Gebäude",
+    keywords: "doppelhaus haus zwei parteien gebaeude",
+  },
   "gebaeude-doppelhaushaelfte": {
     file: "gebaeude-doppelhaushaelfte.svg",
     label: "Doppelhaushälfte",
@@ -250,12 +256,42 @@ export const FUNNEL_ICONS: Record<string, FunnelIconEntry> = {
     category: "Energie",
     keywords: "pv speicher solar photovoltaik batterie sonne strom",
   },
+  "energie-solarpanel": {
+    file: "energie-solarpanel.svg",
+    label: "Solarmodul",
+    category: "Energie",
+    keywords: "solar solarmodul panel photovoltaik pv modul anlage",
+  },
+  "energie-pv-waermepumpe": {
+    file: "energie-pv-waermepumpe.svg",
+    label: "PV + Wärmepumpe",
+    category: "Energie",
+    keywords: "pv waermepumpe kombi beides solar photovoltaik",
+  },
   // ── Heizung ─────────────────────────────────────────────────────────────
   "heizung-waermepumpe": {
     file: "heizung-waermepumpe.svg",
     label: "Wärmepumpe",
     category: "Heizung",
     keywords: "heizung waermepumpe luft wasser klima geraet",
+  },
+  "heizung-gastherme": {
+    file: "heizung-gastherme.svg",
+    label: "Gastherme",
+    category: "Heizung",
+    keywords: "gastherme gas heizung therme kessel flamme",
+  },
+  "heizung-oeltank": {
+    file: "heizung-oeltank.svg",
+    label: "Öltank",
+    category: "Heizung",
+    keywords: "oel oeltank tank heizung heizoel tropfen",
+  },
+  "heizung-fluessiggastank": {
+    file: "heizung-fluessiggastank.svg",
+    label: "Flüssiggas-Tank",
+    category: "Heizung",
+    keywords: "fluessiggas lpg gas tank propan heizung",
   },
   // ── Wohnen ──────────────────────────────────────────────────────────────
   "wohnen-eigentum-ja": {
