@@ -162,6 +162,8 @@ export function buildFunnelConfig(state: EditorState): FunnelConfig {
     showProgressBar: state.showProgressBar,
     showStepBadge: state.showStepBadge,
     titleAlignment: state.titleAlignment,
+    // Aufgabe 78: Karten-Schatten in die Preview durchreichen.
+    showShadow: state.showShadow,
   };
 }
 
@@ -348,6 +350,8 @@ export function editorStateToFunnelRow(
     contact_form_title: state.funnelTitle || null,
     success_message: state.successMessage || null,
     show_progress_bar: state.showProgressBar,
+    // Aufgabe 78: Karten-Schatten an/aus.
+    show_shadow: state.showShadow,
     show_step_badge: state.showStepBadge,
     title_alignment: state.titleAlignment,
     response_message: state.responseMessage || null,
@@ -998,6 +1002,8 @@ export function dbToEditorState(
     privacyPolicyUrl: funnelRow.privacy_policy_url ?? "",
     answersOverviewLabel: funnelRow.answers_overview_label ?? "",
     showProgressBar: funnelRow.show_progress_bar ?? true,
+    // Aufgabe 78: Karten-Schatten aus `show_shadow` (Default an).
+    showShadow: funnelRow.show_shadow ?? true,
     showStepBadge: funnelRow.show_step_badge ?? true,
     titleAlignment: funnelRow.title_alignment === "center" ? "center" : "left",
     showAnswersOverview: funnelRow.show_answers_overview ?? false,

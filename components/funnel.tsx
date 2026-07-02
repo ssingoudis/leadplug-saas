@@ -621,6 +621,13 @@ export function Funnel({
     "--funnel-radius":        theme.borderRadius,
   } as React.CSSProperties;
 
+  // Aufgabe 78: Karten-Schatten abschaltbar (Design-Schalter). Ohne Schatten entfällt
+  // auch das reservierte SHADOW_PADDING drumherum — sonst bliebe im Embed ein
+  // unsichtbarer Rand (embed.js misst die Höhe inklusive Padding).
+  const showShadow = funnel.showShadow !== false;
+  const shadowPad = showShadow ? SHADOW_PADDING : { top: 0, bottom: 0, sides: 0 };
+  const cardShadow = showShadow ? CARD_SHADOW_STRING : "none";
+
   // ---------------------------------------------------------------------------
   // Render — Success screen (shown after submit)
   // ---------------------------------------------------------------------------
@@ -633,10 +640,10 @@ export function Funnel({
         style={{
           backgroundColor: theme.pageBackgroundColor,
           width: "100%",
-          paddingTop:    `${SHADOW_PADDING.top}px`,
-          paddingBottom: `${SHADOW_PADDING.bottom}px`,
-          paddingLeft:   `${SHADOW_PADDING.sides}px`,
-          paddingRight:  `${SHADOW_PADDING.sides}px`,
+          paddingTop:    `${shadowPad.top}px`,
+          paddingBottom: `${shadowPad.bottom}px`,
+          paddingLeft:   `${shadowPad.sides}px`,
+          paddingRight:  `${shadowPad.sides}px`,
           overflowX: "hidden",
           ...hlEdge("page_background_color"),
         }}
@@ -649,7 +656,7 @@ export function Funnel({
             backgroundColor: theme.backgroundColor,
             fontFamily:      theme.fontFamily,
             borderRadius:    theme.borderRadius,
-            boxShadow:       CARD_SHADOW_STRING,
+            boxShadow:       cardShadow,
             ...hlEdge("primary_color", "text_color", "background_color", "font", "border_radius", "max_width"),
           }}
         >
@@ -733,10 +740,10 @@ export function Funnel({
       style={{
         backgroundColor: theme.pageBackgroundColor,
         width: "100%",
-        paddingTop:    `${SHADOW_PADDING.top}px`,
-        paddingBottom: `${SHADOW_PADDING.bottom}px`,
-        paddingLeft:   `${SHADOW_PADDING.sides}px`,
-        paddingRight:  `${SHADOW_PADDING.sides}px`,
+        paddingTop:    `${shadowPad.top}px`,
+        paddingBottom: `${shadowPad.bottom}px`,
+        paddingLeft:   `${shadowPad.sides}px`,
+        paddingRight:  `${shadowPad.sides}px`,
         overflowX: "hidden",
         ...hlEdge("page_background_color"),
       }}
@@ -751,7 +758,7 @@ export function Funnel({
           fontFamily:      theme.fontFamily,
           borderRadius:    theme.borderRadius,
           overflow:        "hidden",
-          boxShadow:       CARD_SHADOW_STRING,
+          boxShadow:       cardShadow,
           ...hlEdge("primary_color", "text_color", "background_color", "font", "border_radius", "max_width"),
         }}
       >

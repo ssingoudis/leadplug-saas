@@ -186,6 +186,7 @@ export const DEFAULT_EDITOR_STATE: EditorState = {
   showProgressBar: true,
   showStepBadge: true,
   titleAlignment: "left",
+  showShadow: true,
   responseMessage: "Wir melden uns in Kürze bei Ihnen.",
   privacyText:
     "Mit dem Absenden stimme ich zu, per E-Mail und Telefon zu meiner Anfrage kontaktiert zu werden.",
