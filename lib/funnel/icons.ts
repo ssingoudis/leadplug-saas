@@ -319,6 +319,20 @@ export const FUNNEL_ICONS: Record<string, FunnelIconEntry> = {
     keywords: "selbst bewohnt vermietet nein person",
   },
   // ── Allgemein ───────────────────────────────────────────────────────────
+  // Glyphen-Trio Haken/X/Fragezeichen: gleiche Strichstärke 5, gleiche optische
+  // Größe — gedacht für Ja/Nein/Weiß-nicht-Fragen in Kombination.
+  "allgemein-haken": {
+    file: "allgemein-haken.svg",
+    label: "Haken (Ja)",
+    category: "Allgemein",
+    keywords: "haken ja check bestaetigen richtig zustimmen",
+  },
+  "allgemein-x": {
+    file: "allgemein-x.svg",
+    label: "X (Nein)",
+    category: "Allgemein",
+    keywords: "x kreuz nein ablehnen falsch",
+  },
   "allgemein-daumen-hoch": {
     file: "allgemein-daumen-hoch.svg",
     label: "Daumen hoch",
