@@ -221,7 +221,7 @@ async function main() {
     'answers_overview_label', 'privacy_text', 'privacy_policy_url', 'show_answers_overview',
     'show_progress_bar', 'show_step_badge', 'title_alignment', 'hide_contact_warning',
     'redirect_url', 'email_sender_local', 'primary_color', 'text_color', 'background_color',
-    'page_background_color', 'font', 'border_radius', 'max_width',
+    'page_background_color', 'font', 'border_radius', 'max_width', 'icon_color',
   ]
   const funnelRow = { slug: NEW_SLUG, tenant_id: tenantId, funnel_name: FUNNEL_NAME, notification_email: EMAIL, is_active: true }
   for (const c of copyCols) funnelRow[c] = src[c]

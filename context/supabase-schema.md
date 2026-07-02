@@ -354,6 +354,7 @@ Das Widget pro Tenant. Ein Tenant kann mehrere haben. Aktuell 12 Zeilen.
 | `font` | text | YES | — |
 | `border_radius` | text | YES | — |
 | `max_width` | text | YES | — |
+| `icon_color` | text | YES | — | Aufgabe 77: Farbmodus der Bibliotheks-Icons (CHECK `neutral`/`brand`, NULL = App-Default `neutral`) |
 | `meta_pixel_id` | text | YES | — |
 | `google_ads_conversion` | text | YES | — |
 | `total_views` | int4 | NO | `0` | **Deprecated (Aufgabe 46 Phase 3).** App liest/schreibt nicht mehr — Aufrufe kommen jetzt ausschließlich aus `funnel_view_logs`. Wird per Migration `aufgabe_46b_drop_total_views` **nach dem Deploy** gedroppt (mit `increment_funnel_views`). |
@@ -474,16 +475,18 @@ Felder pro Page. Eingeführt mit Migration `aufgabe_30a_pages_fields_add` (Phase
   )
   ```
 
-**`options` jsonb-Schema (seit Aufgabe 34):**
+**`options` jsonb-Schema (seit Aufgabe 34; +`image_url` seit 76, +`icon_key` seit 77):**
 - Choice-Types (`single_choice`, `multi_choice`, `dropdown`): Object-Array
   ```typescript
   {
     label: string,
     value: string,
     sort_order?: number,
+    image_url?: string | null,  // Aufgabe 76: Bild pro Option (Marker 'image'); dropdown schreibt null, rendert aber nie
+    icon_key?: string | null,   // Aufgabe 77: Bibliotheks-Icon (Manifest-Key aus lib/funnel/icons.ts); exklusiv zu image_url, gewinnt im Render
   }[]
   ```
-  **Aufgabe 34 (2026-05-28)** strippt `icon_key` + `icon_url` aus allen Option-Objekten (45 Fields, 175 Einträge). Choice-Options rendern jetzt A/B/C/D Letter-Chips als Default. Migration `aufgabe_34_strip_icon_keys_from_field_options` ist forward-only.
+  **Aufgabe 34 (2026-05-28)** strippt das alte Glyphen-System (`icon_key`/`icon_url` des Lucide-Pickers) aus allen Option-Objekten (45 Fields, 175 Einträge); Letter-Chips A/B/C/D als Default. Migration `aufgabe_34_strip_icon_keys_from_field_options` ist forward-only. Der **neue** `icon_key` (Aufgabe 77) ist ein anderes System: kuratierte eigene SVGs, Whitelist-validiert im Render.
 - Radio-Type (z.B. Anrede): String-Array
   ```typescript
   string[]  // z.B. ["Herr", "Frau"]
@@ -492,6 +495,7 @@ Felder pro Page. Eingeführt mit Migration `aufgabe_30a_pages_fields_add` (Phase
 **`config` jsonb-Schema:** Frei strukturierbar pro field_type. Beispiele:
 - Slider: `{ min: number, max: number, step?: number, unit?: string, default?: number, openMax?: boolean }`
 - Text/Long-Text: `{ maxLength?: number, placeholder?: string, required?: boolean }`
+- Choice: `{ optionMarker?: 'numbers' | 'none' | 'checkbox' | 'image', imageFit?: 'cover' }` — nur non-default persistiert (Default `letters`/`contain`)
 
 ---
 

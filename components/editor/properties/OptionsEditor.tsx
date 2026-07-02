@@ -1,6 +1,7 @@
 "use client";
 
-import { GripVertical, Trash2, Plus, Image as ImageIcon, SquareCheck } from "lucide-react";
+import { useState } from "react";
+import { GripVertical, Trash2, Plus, Image as ImageIcon, SquareCheck, X } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -20,7 +21,10 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import type { EditorOption, OptionMarker } from "@/types";
 import { optionMarkerFor } from "@/lib/funnel/markdown";
+import { FUNNEL_ICONS, EDITOR_ICON_TINT } from "@/lib/funnel/icons";
+import { OptionIcon } from "@/components/funnel/OptionIcon";
 import { useSelectedFieldRef, selRing } from "./selection";
+import { IconLibraryPicker } from "./IconLibraryPicker";
 
 interface Props {
   value: EditorOption[];
@@ -118,6 +122,9 @@ function SortableOptionRow({
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: option._id });
 
+  // Aufgabe 77: Icon-Bibliothek-Picker (Modal) — geöffnet über das Thumbnail der Bild-Zeile.
+  const [pickerOpen, setPickerOpen] = useState(false);
+
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -195,34 +202,76 @@ function SortableOptionRow({
         </button>
       </div>
 
-      {/* Aufgabe 76: optionale Bild-URL pro Option (nur single_choice). Eingerückt unter dem
-          Letter-Chip; Vorschau-Thumbnail wenn gesetzt, sonst gestrichelter Platzhalter. */}
+      {/* Aufgabe 76/77: Bild-Zeile pro Option. Der Bibliotheks-Einstieg ist der prominente
+          „Icon wählen"-Button (Stavros-Review: das nackte Thumbnail wirkte wie ein URL-Upload);
+          die Bild-URL ist die sekundäre Alternative („oder Bild-URL"). Icon und URL sind
+          exklusiv: Icon wählen leert die URL, Icon entfernen gibt das URL-Feld wieder frei. */}
       {allowImages && (
         <div className="flex items-center gap-1.5 pl-6.5">
-          {option.imageUrl ? (
-            <img
-              src={option.imageUrl}
-              alt=""
-              className="h-7 w-7 shrink-0 rounded-md border border-gray-200 object-contain dark:border-gray-700"
-            />
+          {option.iconKey ? (
+            <>
+              {/* Gewähltes Icon als Chip — Klick öffnet den Picker erneut (Icon tauschen). */}
+              <button
+                type="button"
+                onClick={() => setPickerOpen(true)}
+                title="Icon ändern"
+                className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 text-left transition-colors hover:border-primary dark:border-gray-700 dark:bg-gray-800/60"
+              >
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded bg-white">
+                  <OptionIcon iconKey={option.iconKey} tintColor={EDITOR_ICON_TINT} className="block h-full w-full p-0.5" />
+                </span>
+                <span className="truncate text-xs text-gray-600 dark:text-gray-300">
+                  {FUNNEL_ICONS[option.iconKey]?.label ?? option.iconKey}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onPatch({ iconKey: undefined })}
+                title="Icon entfernen"
+                className="shrink-0 p-1.5 text-gray-400 transition-colors hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400"
+              >
+                <X size={13} />
+              </button>
+            </>
           ) : (
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-dashed border-gray-300 text-gray-300 dark:border-gray-600 dark:text-gray-600">
-              <ImageIcon size={14} />
-            </span>
+            <>
+              {/* Stil wie „Option hinzufügen" (primary-Rahmen) — klarer Haupt-Einstieg. */}
+              <button
+                type="button"
+                onClick={() => setPickerOpen(true)}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-primary/40 px-2.5 py-1.5 text-xs font-semibold text-primary transition-colors hover:border-primary"
+              >
+                <ImageIcon size={13} />
+                Icon wählen
+              </button>
+              {option.imageUrl ? (
+                <img
+                  src={option.imageUrl}
+                  alt=""
+                  className="h-7 w-7 shrink-0 rounded-md border border-gray-200 object-contain dark:border-gray-700"
+                />
+              ) : null}
+              <input
+                type="url"
+                inputMode="url"
+                value={option.imageUrl ?? ""}
+                onChange={(e) => onPatch({ imageUrl: e.target.value || undefined })}
+                placeholder="oder Bild-URL"
+                className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-900 placeholder-gray-400 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+              />
+              {/* Aufgabe 76: unsichtbarer Platzhalter in Mülleimer-Größe — bringt die Zeile auf
+                  dieselbe Rechtskante wie die Label-Zeile darüber. */}
+              <span aria-hidden="true" className="shrink-0 p-1.5">
+                <Trash2 size={13} className="opacity-0" />
+              </span>
+            </>
           )}
-          <input
-            type="url"
-            inputMode="url"
-            value={option.imageUrl ?? ""}
-            onChange={(e) => onPatch({ imageUrl: e.target.value || undefined })}
-            placeholder="Bild-URL"
-            className="flex-1 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-900 placeholder-gray-400 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+
+          <IconLibraryPicker
+            open={pickerOpen}
+            onClose={() => setPickerOpen(false)}
+            onSelect={(key) => onPatch({ iconKey: key, imageUrl: undefined })}
           />
-          {/* Aufgabe 76: unsichtbarer Platzhalter in Mülleimer-Größe — bringt das URL-Feld auf
-              dieselbe Breite/Rechtskante wie die Label-Zeile darüber (sonst läuft es weiter rechts raus). */}
-          <span aria-hidden="true" className="shrink-0 p-1.5">
-            <Trash2 size={13} className="opacity-0" />
-          </span>
         </div>
       )}
     </div>

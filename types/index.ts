@@ -4,6 +4,10 @@ export type FunnelFont =
   | "system" | "inter" | "poppins" | "roboto"
   | "montserrat" | "open-sans" | "lato" | "nunito" | "dm-sans" | "merriweather"
 
+// Aufgabe 77: Farbmodus der Bibliotheks-Icons (funnel-weit, Design-Panel) —
+// 'neutral' = textColor (schwarz/weiß je nach Theme, Default), 'brand' = primaryColor.
+export type IconColor = 'neutral' | 'brand'
+
 export interface FunnelTheme {
   primaryColor: string         // Markenfarbe (Pflicht). Alle abgeleiteten Farben (Hover, Border, Muted-Text, Input-BG) werden daraus + textColor/backgroundColor berechnet.
   textColor?: string           // Optional. Default "#1f2937". Nur setzen bei Dark-Themes.
@@ -12,6 +16,7 @@ export interface FunnelTheme {
   font?: FunnelFont            // Optional. Default "system".
   borderRadius?: string        // Optional. Default "0.5rem".
   maxWidth?: string            // Optional. Default "720px".
+  iconColor?: IconColor        // Optional. Default "neutral". DB-Spalte `icon_color` (NULL = neutral).
 }
 
 export type QuestionType =
@@ -44,6 +49,9 @@ export interface Option {
   // Aufgabe 76: optionales Bild pro Option (Bild-Funnels, single_choice). DB-Key `image_url`.
   // „leer = aus" → ohne Bild rendert die Option wie bisher (Letter-Chip/Marker).
   imageUrl?: string
+  // Aufgabe 77: optionales Bibliotheks-Icon pro Option (Manifest-Key aus lib/funnel/icons.ts).
+  // DB-Key `icon_key`. Exklusiv zu imageUrl (Editor erzwingt es); im Render gewinnt iconKey.
+  iconKey?: string
 }
 
 export interface TextConfig {
@@ -274,6 +282,8 @@ export interface EditorOption {
   value: string     // auto-slug aus label, stabil nach erster Erstellung
   // Aufgabe 76: optionale Bild-URL pro Option (single_choice). DB-Key `image_url`.
   imageUrl?: string
+  // Aufgabe 77: optionales Bibliotheks-Icon pro Option. DB-Key `icon_key`. Exklusiv zu imageUrl.
+  iconKey?: string
 }
 
 export interface EditorQuestion {
@@ -341,6 +351,8 @@ export interface EditorState {
   font: FunnelFont
   borderRadius: string
   maxWidth: string
+  // Aufgabe 77: Farbmodus der Bibliotheks-Icons (Design-Panel). DB-Spalte `icon_color`.
+  iconColor: IconColor
   // Texte
   contactFormSubtitle: string
   successMessage: string

@@ -138,6 +138,8 @@ export function buildTheme(state: EditorState): Partial<FunnelTheme> {
     font: state.font,
     borderRadius: state.borderRadius,
     maxWidth: state.maxWidth,
+    // Aufgabe 77: Farbmodus der Bibliotheks-Icons in die Preview durchreichen.
+    iconColor: state.iconColor,
   };
 }
 
@@ -241,6 +243,8 @@ export function buildQuestions(
           value,
           // Aufgabe 76: Bild-URL in die Widget-/Preview-Config durchreichen.
           imageUrl: o.imageUrl,
+          // Aufgabe 77: Bibliotheks-Icon in die Widget-/Preview-Config durchreichen.
+          iconKey: o.iconKey,
         };
       });
       return {
@@ -361,6 +365,8 @@ export function editorStateToFunnelRow(
     font: state.font || null,
     border_radius: state.borderRadius || null,
     max_width: state.maxWidth || null,
+    // Aufgabe 77: Icon-Farbmodus — NULL = Default 'neutral' (hält Rows schlank).
+    icon_color: state.iconColor === "brand" ? "brand" : null,
     is_active: state.isActive,
     redirect_url: state.redirectUrl?.trim() || null,
   };
@@ -642,6 +648,8 @@ export function editorStateToPagesAndFields(
               sort_order: oidx,
               // Aufgabe 76: Bild-URL als jsonb-Key `image_url` persistieren (leer = null).
               image_url: o.imageUrl?.trim() || null,
+              // Aufgabe 77: Bibliotheks-Icon als jsonb-Key `icon_key` persistieren (leer = null).
+              icon_key: o.iconKey?.trim() || null,
             }))
         : [],
       // Aufgabe 50: Marker-Stil im config-jsonb persistieren (nur wenn non-default, hält config schlank).
@@ -937,6 +945,8 @@ export function dbToEditorState(
         value: typeof o.value === "string" ? o.value : "",
         // Aufgabe 76: Bild-URL aus jsonb `image_url` zurück in den Editor-State.
         imageUrl: typeof o.image_url === "string" ? o.image_url : undefined,
+        // Aufgabe 77: Bibliotheks-Icon aus jsonb `icon_key` zurück in den Editor-State.
+        iconKey: typeof o.icon_key === "string" ? o.icon_key : undefined,
       })),
       // Date
       dateMin: questionType === "date" && typeof cfg.min === "string" ? cfg.min : "",
@@ -979,6 +989,8 @@ export function dbToEditorState(
     font: funnelRow.font ?? "system",
     borderRadius: funnelRow.border_radius ?? "0.5rem",
     maxWidth: funnelRow.max_width ?? "720px",
+    // Aufgabe 77: Icon-Farbmodus aus `icon_color` (NULL/unbekannt = 'neutral').
+    iconColor: funnelRow.icon_color === "brand" ? "brand" : "neutral",
     contactFormSubtitle: funnelRow.contact_form_subtitle ?? "",
     successMessage: funnelRow.success_message ?? "",
     responseMessage: funnelRow.response_message ?? "",

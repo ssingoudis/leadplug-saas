@@ -1,4 +1,4 @@
-import type { FunnelFont, FunnelTheme } from "@/types";
+import type { FunnelFont, FunnelTheme, IconColor } from "@/types";
 import { normalizeHex, darken, mix } from "@/lib/funnel/colors";
 
 // Theme-Auflösung: mergt Tenant-Overrides mit Defaults und leitet alle Sekundär-
@@ -50,6 +50,8 @@ export interface ResolvedFunnelTheme {
   borderRadius:        string;
   maxWidth:            string;
   fontFamily:          string;
+  // Aufgabe 77: Farbmodus der Bibliotheks-Icons ('neutral' = textColor, 'brand' = primaryColor).
+  iconColor:           IconColor;
 }
 
 // primary/text/background MÜSSEN durch normalizeHex (Color-Math braucht 6-stelliges
@@ -83,5 +85,6 @@ export function resolveFunnelTheme(themeOverrides?: Partial<FunnelTheme>): Resol
     borderRadius,
     maxWidth,
     fontFamily:        FONT_STACKS[font],
+    iconColor:         themeOverrides?.iconColor === "brand" ? "brand" : "neutral",
   };
 }

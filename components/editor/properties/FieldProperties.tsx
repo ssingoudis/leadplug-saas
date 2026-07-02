@@ -519,7 +519,8 @@ function ImageFitControl({
   onChange: (f: ImageFit) => void;
 }) {
   const opts: { key: ImageFit; label: string; title: string }[] = [
-    { key: "contain", label: "Symbol", title: "Icon/SVG — ganzes Bild mittig mit Rahmen" },
+    // Wording-Entscheidung 2026-07-02: „Icon" kanonisch (statt „Symbol") — siehe wording-styleguide.
+    { key: "contain", label: "Icon", title: "Icon/SVG — ganzes Bild mittig mit Rahmen" },
     { key: "cover", label: "Foto", title: "Echtes Foto — randlos füllend, passend beschnitten" },
   ];
   return (
