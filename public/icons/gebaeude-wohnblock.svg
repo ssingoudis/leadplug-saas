@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 170 129" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M56 30 H114"/>
+  <path d="M62 30 V110"/>
+  <path d="M108 30 V110"/>
+  <rect x="70" y="40" width="30" height="10" rx="1.5" fill="currentColor" fill-opacity="0.15" stroke="none"/>
+  <rect x="70" y="58" width="30" height="10" rx="1.5" fill="currentColor" fill-opacity="0.15" stroke="none"/>
+  <rect x="70" y="76" width="30" height="10" rx="1.5" fill="currentColor" fill-opacity="0.15" stroke="none"/>
+  <path d="M78 110 V94 Q78 92 80 92 H90 Q92 92 92 94 V110"/>
+  <rect x="36" y="44" width="26" height="12" rx="2"/>
+  <path d="M49 44 V56"/>
+  <rect x="36" y="62" width="26" height="12" rx="2"/>
+  <path d="M49 62 V74"/>
+  <rect x="36" y="80" width="26" height="12" rx="2"/>
+  <path d="M49 80 V92"/>
+  <rect x="108" y="44" width="26" height="12" rx="2"/>
+  <path d="M121 44 V56"/>
+  <rect x="108" y="62" width="26" height="12" rx="2"/>
+  <path d="M121 62 V74"/>
+  <rect x="108" y="80" width="26" height="12" rx="2"/>
+  <path d="M121 80 V92"/>
+  <path d="M24 110 H146"/>
+</svg>
