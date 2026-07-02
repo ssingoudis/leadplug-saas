@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 170 129" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M34 60 L72 32 L110 60 Z" fill="currentColor" fill-opacity="0.12" stroke="none"/>
+  <path d="M34 60 L72 32 L110 60"/>
+  <path d="M42 64 V106"/>
+  <path d="M102 64 V106"/>
+  <path d="M26 110 H120"/>
+  <path d="M64 106 V86 Q64 84 66 84 H78 Q80 84 80 86 V106"/>
+  <circle cx="128" cy="44" r="9"/>
+  <path d="M128 53 V74"/>
+  <path d="M128 66 H136"/>
+  <path d="M128 74 H134"/>
+  <circle cx="126" cy="90" r="14" fill="currentColor" stroke="none"/>
+  <path d="M121 85 L131 95 M131 85 L121 95" stroke="var(--funnel-bg, #ffffff)"/>
+</svg>
