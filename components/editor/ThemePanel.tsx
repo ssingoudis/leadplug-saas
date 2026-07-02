@@ -288,8 +288,10 @@ function MaxWidthField({
         ))}
         <option value="custom">Eigene Breite</option>
       </Select>
+      {/* Festes „px"-Suffix im Feld (Stavros-Review) — macht die Einheit sichtbar,
+          der frühere „Breite in Pixel"-Hint entfällt dadurch. */}
       {showCustom && (
-        <div className="mt-2">
+        <div className="relative mt-2">
           <input
             type="number"
             min={280}
@@ -306,9 +308,11 @@ function MaxWidthField({
               const clamped = Math.min(1920, Math.max(280, Number.isFinite(n) ? n : 720));
               onChange(`${clamped}px`);
             }}
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+            className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-3 pr-10 text-sm text-gray-900 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
           />
-          <FieldHint>Breite in Pixel (280–1920).</FieldHint>
+          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-gray-400 dark:text-gray-500">
+            px
+          </span>
         </div>
       )}
     </Field>

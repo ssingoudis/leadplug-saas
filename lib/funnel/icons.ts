@@ -12,6 +12,10 @@
 // Dieses Manifest ist zugleich die WHITELIST: Widget (OptionIcon) und Editor-Picker
 // akzeptieren nur Keys, die hier stehen — nie Pfade aus DB-Werten frei zusammenbauen,
 // weil die Dateien inline ins DOM injiziert werden (nur eigener, kuratierter Inhalt).
+//
+// NEUE ICONS ANLEGEN (auch aus SVG-/PNG-Vorlagen): Anleitungen/Icon-Bibliothek.md —
+// kompletter Workflow inkl. Stil-Regeln, Rechtsregel (nachzeichnen, nie kopieren/tracen),
+// Validierungs-Checkliste und QA-Prozess.
 // =============================================================================
 
 export interface FunnelIconEntry {
