@@ -1210,7 +1210,7 @@ export function Funnel({
                         field.type === "first_name" ? "Vorname" :
                         field.type === "last_name"  ? "Nachname" :
                         field.type === "full_name"  ? "Vor- und Nachname" :
-                        field.type === "email"      ? "name@beispiel.de" :
+                        field.type === "email"      ? "Ihre E-Mail-Adresse" :
                         field.type === "tel"        ? "0151 23456789" :
                         field.type === "plz"        ? "z. B. 10115" :
                         "";
