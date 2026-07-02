@@ -447,6 +447,7 @@ function buildPreviewConfig(state: EditorState, funnelSlug: string): TenantConfi
       showProgressBar:      state.showProgressBar,
       showStepBadge:        state.showStepBadge,
       titleAlignment:       state.titleAlignment,
+      showShadow:           state.showShadow,
     },
     billingModel:    "per_month",
     leadPrice:       0,

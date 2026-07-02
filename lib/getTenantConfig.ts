@@ -226,6 +226,8 @@ function mapDbRow(row: Record<string, any>): TenantConfig {
       showProgressBar: row.show_progress_bar ?? true,
       showStepBadge: row.show_step_badge ?? true,
       titleAlignment: row.title_alignment === 'center' ? 'center' : 'left',
+      // Aufgabe 78: Karten-Schatten an/aus (nahtloses Einbetten).
+      showShadow: row.show_shadow ?? true,
     },
     billingModel:         tenant.billing_model,
     leadPrice:    Number(tenant.lead_price ?? 0),
@@ -262,7 +264,7 @@ async function fetchFromSupabase(slug: string): Promise<TenantConfig | null> {
       contact_form_title, success_message,
       response_message, contact_form_subtitle, privacy_policy_url,
       privacy_text, answers_overview_label, show_answers_overview,
-      show_progress_bar, show_step_badge, title_alignment,
+      show_progress_bar, show_step_badge, title_alignment, show_shadow,
       email_sender_local, notification_email,
       redirect_url,
       meta_pixel_id, google_ads_conversion,

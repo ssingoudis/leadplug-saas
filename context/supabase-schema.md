@@ -355,6 +355,7 @@ Das Widget pro Tenant. Ein Tenant kann mehrere haben. Aktuell 12 Zeilen.
 | `border_radius` | text | YES | — |
 | `max_width` | text | YES | — |
 | `icon_color` | text | YES | — | Aufgabe 77: Farbmodus der Bibliotheks-Icons (CHECK `neutral`/`brand`, NULL = App-Default `neutral`) |
+| `show_shadow` | bool | NO | `true` | Aufgabe 78: Karten-Schatten an/aus — Schatten aus + Funnel-Hintergrund in Seiten-Farbe = nahtloses Einbetten |
 | `meta_pixel_id` | text | YES | — |
 | `google_ads_conversion` | text | YES | — |
 | `total_views` | int4 | NO | `0` | **Deprecated (Aufgabe 46 Phase 3).** App liest/schreibt nicht mehr — Aufrufe kommen jetzt ausschließlich aus `funnel_view_logs`. Wird per Migration `aufgabe_46b_drop_total_views` **nach dem Deploy** gedroppt (mit `increment_funnel_views`). |

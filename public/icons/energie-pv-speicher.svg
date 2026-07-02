@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 170 129" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="46" y="70" width="16" height="28" rx="2" fill="currentColor" fill-opacity="0.15" stroke="none"/>
+  <rect x="40" y="64" width="82" height="40" rx="6"/>
+  <rect x="122" y="76" width="10" height="16" rx="2"/>
+  <path d="M88 50 L70 82 H81 L76 104 L97 70 H86 Z" fill="var(--funnel-bg, #ffffff)"/>
+  <path d="M69 44 A12 12 0 0 1 93 44"/>
+  <path d="M81 24 V31"/>
+  <path d="M70 33 L65 28"/>
+  <path d="M92 33 L97 28"/>
+  <path d="M65 44 H58"/>
+  <path d="M97 44 H104"/>
+</svg>

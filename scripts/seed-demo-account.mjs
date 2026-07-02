@@ -219,7 +219,7 @@ async function main() {
   const copyCols = [
     'contact_form_title', 'contact_form_subtitle', 'success_message', 'response_message',
     'answers_overview_label', 'privacy_text', 'privacy_policy_url', 'show_answers_overview',
-    'show_progress_bar', 'show_step_badge', 'title_alignment', 'hide_contact_warning',
+    'show_progress_bar', 'show_step_badge', 'title_alignment', 'hide_contact_warning', 'show_shadow',
     'redirect_url', 'email_sender_local', 'primary_color', 'text_color', 'background_color',
     'page_background_color', 'font', 'border_radius', 'max_width', 'icon_color',
   ]

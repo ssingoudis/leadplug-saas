@@ -12,6 +12,10 @@
 // Dieses Manifest ist zugleich die WHITELIST: Widget (OptionIcon) und Editor-Picker
 // akzeptieren nur Keys, die hier stehen — nie Pfade aus DB-Werten frei zusammenbauen,
 // weil die Dateien inline ins DOM injiziert werden (nur eigener, kuratierter Inhalt).
+//
+// NEUE ICONS ANLEGEN (auch aus SVG-/PNG-Vorlagen): Anleitungen/Icon-Bibliothek.md —
+// kompletter Workflow inkl. Stil-Regeln, Rechtsregel (nachzeichnen, nie kopieren/tracen),
+// Validierungs-Checkliste und QA-Prozess.
 // =============================================================================
 
 export interface FunnelIconEntry {
@@ -85,6 +89,18 @@ export const FUNNEL_ICONS: Record<string, FunnelIconEntry> = {
     category: "Gebäude",
     keywords: "einfamilienhaus freistehend haus gebaeude",
   },
+  "gebaeude-zweifamilienhaus": {
+    file: "gebaeude-zweifamilienhaus.svg",
+    label: "Zweifamilienhaus",
+    category: "Gebäude",
+    keywords: "zweifamilienhaus haus anbau generationen gebaeude",
+  },
+  "gebaeude-doppelhaus": {
+    file: "gebaeude-doppelhaus.svg",
+    label: "Doppelhaus",
+    category: "Gebäude",
+    keywords: "doppelhaus haus zwei parteien gebaeude",
+  },
   "gebaeude-doppelhaushaelfte": {
     file: "gebaeude-doppelhaushaelfte.svg",
     label: "Doppelhaushälfte",
@@ -109,11 +125,17 @@ export const FUNNEL_ICONS: Record<string, FunnelIconEntry> = {
     category: "Gebäude",
     keywords: "gebaeude mehrfamilienhaus wohnung etagen mieter block",
   },
-  "gebaeude-sonstige": {
-    file: "gebaeude-sonstige.svg",
-    label: "Sonstiges",
+  "gebaeude-wohnblock": {
+    file: "gebaeude-wohnblock.svg",
+    label: "Wohnblock",
     category: "Gebäude",
-    keywords: "sonstiges andere frage fragezeichen unbekannt",
+    keywords: "wohnblock wohnung apartment balkon etagen gebaeude",
+  },
+  "gebaeude-firma": {
+    file: "gebaeude-firma.svg",
+    label: "Firmengebäude",
+    category: "Gebäude",
+    keywords: "firma gewerbe industrie fabrik gebaeude betrieb",
   },
   // ── Fläche ──────────────────────────────────────────────────────────────
   "flaeche-bis-30": {
@@ -228,12 +250,48 @@ export const FUNNEL_ICONS: Record<string, FunnelIconEntry> = {
     category: "Energie",
     keywords: "stromspeicher batterie speicher nein keiner",
   },
+  "energie-pv-speicher": {
+    file: "energie-pv-speicher.svg",
+    label: "PV-Speicher",
+    category: "Energie",
+    keywords: "pv speicher solar photovoltaik batterie sonne strom",
+  },
+  "energie-solarpanel": {
+    file: "energie-solarpanel.svg",
+    label: "Solarmodul",
+    category: "Energie",
+    keywords: "solar solarmodul panel photovoltaik pv modul anlage",
+  },
+  "energie-pv-waermepumpe": {
+    file: "energie-pv-waermepumpe.svg",
+    label: "PV + Wärmepumpe",
+    category: "Energie",
+    keywords: "pv waermepumpe kombi beides solar photovoltaik",
+  },
   // ── Heizung ─────────────────────────────────────────────────────────────
   "heizung-waermepumpe": {
     file: "heizung-waermepumpe.svg",
     label: "Wärmepumpe",
     category: "Heizung",
     keywords: "heizung waermepumpe luft wasser klima geraet",
+  },
+  "heizung-gastherme": {
+    file: "heizung-gastherme.svg",
+    label: "Gastherme",
+    category: "Heizung",
+    keywords: "gastherme gas heizung therme kessel flamme",
+  },
+  "heizung-oeltank": {
+    file: "heizung-oeltank.svg",
+    label: "Öltank",
+    category: "Heizung",
+    keywords: "oel oeltank tank heizung heizoel tropfen",
+  },
+  "heizung-fluessiggastank": {
+    file: "heizung-fluessiggastank.svg",
+    label: "Flüssiggas-Tank",
+    category: "Heizung",
+    keywords: "fluessiggas lpg gas tank propan heizung",
   },
   // ── Wohnen ──────────────────────────────────────────────────────────────
   "wohnen-eigentum-ja": {
@@ -259,6 +317,41 @@ export const FUNNEL_ICONS: Record<string, FunnelIconEntry> = {
     label: "Selbst bewohnt: Nein",
     category: "Wohnen",
     keywords: "selbst bewohnt vermietet nein person",
+  },
+  // ── Allgemein ───────────────────────────────────────────────────────────
+  // Glyphen-Trio Haken/X/Fragezeichen: gleiche Strichstärke 5, gleiche optische
+  // Größe — gedacht für Ja/Nein/Weiß-nicht-Fragen in Kombination.
+  "allgemein-haken": {
+    file: "allgemein-haken.svg",
+    label: "Haken (Ja)",
+    category: "Allgemein",
+    keywords: "haken ja check bestaetigen richtig zustimmen",
+  },
+  "allgemein-x": {
+    file: "allgemein-x.svg",
+    label: "X (Nein)",
+    category: "Allgemein",
+    keywords: "x kreuz nein ablehnen falsch",
+  },
+  "allgemein-daumen-hoch": {
+    file: "allgemein-daumen-hoch.svg",
+    label: "Daumen hoch",
+    category: "Allgemein",
+    keywords: "daumen hoch ja gut positiv like",
+  },
+  "allgemein-daumen-runter": {
+    file: "allgemein-daumen-runter.svg",
+    label: "Daumen runter",
+    category: "Allgemein",
+    keywords: "daumen runter nein schlecht negativ dislike",
+  },
+  // Key/Datei historisch „gebaeude-…" (Haupt-Charge); seit der Nachzeichen-Runde in
+  // „Allgemein", weil ein Fragezeichen als „Sonstiges"-Option jede Frage betrifft.
+  "gebaeude-sonstige": {
+    file: "gebaeude-sonstige.svg",
+    label: "Sonstiges",
+    category: "Allgemein",
+    keywords: "sonstiges andere frage fragezeichen unbekannt gebaeude",
   },
 };
 

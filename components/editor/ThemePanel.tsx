@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { EditorState, FunnelFont } from "@/types";
 import { PanelShell, Section, Field, FieldHint } from "./ui/Panel";
 import { Select } from "./ui/Controls";
@@ -118,18 +119,16 @@ export function ThemePanel({ state, onPatch }: Props) {
           </div>
         </Field>
 
-        <Field label="Maximale Breite">
-          <Select
-            value={state.maxWidth}
-            onChange={(e) => onPatch({ maxWidth: e.target.value })}
-          >
-            {MAX_WIDTH_PRESETS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </Select>
-        </Field>
+        <MaxWidthField value={state.maxWidth} onChange={(v) => onPatch({ maxWidth: v })} />
+
+        {/* Aufgabe 78: Schatten abschaltbar — Baustein für nahtloses Einbetten
+            (Schatten aus + Funnel-Hintergrund = Farbe der Webseite ⇒ keine sichtbare Karte). */}
+        <ToggleField
+          label="Schatten"
+          enabled={state.showShadow}
+          onToggle={(v) => onPatch({ showShadow: v })}
+          hint="Für nahtlose Einbettung: Schatten aus und Funnel-Hintergrund auf die Farbe der Webseite setzen."
+        />
       </Section>
 
       {/* Aufgabe 56: kuratierte Anzeige-Schalter — bewusst wenige, kein Per-Element-Styling. */}
@@ -245,6 +244,77 @@ function ColorField({
     <Field label={label}>
       <ColorRow value={value} onChange={onChange} placeholder="#22c55e" />
       {hint && <FieldHint>{hint}</FieldHint>}
+    </Field>
+  );
+}
+
+/* Aufgabe 78: Maximale Breite — Presets + „Eigene Breite" mit Pixel-Eingabe (Muster
+   „Eigene Farbe" beim Seiten-Hintergrund). `max_width` ist eine freie text-Spalte,
+   die Pipeline verdaut jeden CSS-Wert — das hier ist reine Editor-UI. */
+function MaxWidthField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const isPreset = MAX_WIDTH_PRESETS.some((p) => p.value === value);
+  // „Eigene" bleibt auch aktiv, wenn der getippte Wert zufällig einem Preset entspricht.
+  const [customMode, setCustomMode] = useState(!isPreset);
+  // Eingabe-Zwischenstand (erlaubt Leeren beim Tippen); Commit clamt beim Verlassen.
+  const [draft, setDraft] = useState<string | null>(null);
+  const showCustom = customMode || !isPreset;
+  const px = value.endsWith("px") ? parseInt(value, 10) : NaN;
+
+  return (
+    <Field label="Maximale Breite">
+      <Select
+        value={showCustom ? "custom" : value}
+        onChange={(e) => {
+          if (e.target.value === "custom") {
+            setCustomMode(true);
+            onChange(`${Number.isFinite(px) && px > 0 ? px : 720}px`);
+          } else {
+            setCustomMode(false);
+            setDraft(null);
+            onChange(e.target.value);
+          }
+        }}
+      >
+        {MAX_WIDTH_PRESETS.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+        <option value="custom">Eigene Breite</option>
+      </Select>
+      {/* Festes „px"-Suffix im Feld (Stavros-Review) — macht die Einheit sichtbar,
+          der frühere „Breite in Pixel"-Hint entfällt dadurch. */}
+      {showCustom && (
+        <div className="relative mt-2">
+          <input
+            type="number"
+            min={280}
+            max={1920}
+            value={draft ?? (Number.isFinite(px) ? String(px) : "")}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              const n = parseInt(e.target.value, 10);
+              if (Number.isFinite(n)) onChange(`${n}px`);
+            }}
+            onBlur={() => {
+              setDraft(null);
+              const n = parseInt(value, 10);
+              const clamped = Math.min(1920, Math.max(280, Number.isFinite(n) ? n : 720));
+              onChange(`${clamped}px`);
+            }}
+            className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-3 pr-10 text-sm text-gray-900 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+          />
+          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-gray-400 dark:text-gray-500">
+            px
+          </span>
+        </div>
+      )}
     </Field>
   );
 }

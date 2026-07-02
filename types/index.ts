@@ -186,6 +186,9 @@ export interface FunnelConfig {
   showProgressBar: boolean      // dünner Fortschrittsbalken oben an der Card
   showStepBadge: boolean        // Schritt-Nummern-Chip über der Frage
   titleAlignment: 'left' | 'center'  // Überschriften links (Default) oder mittig
+  // Aufgabe 78: Karten-Schatten an/aus — Schatten aus + Funnel-Hintergrund in der
+  // Farbe der Eltern-Seite = nahtloses Einbetten. DB-Spalte `show_shadow`.
+  showShadow: boolean
 }
 
 /* alte Datenbank solar-widget
@@ -366,6 +369,8 @@ export interface EditorState {
   showProgressBar: boolean
   showStepBadge: boolean
   titleAlignment: 'left' | 'center'
+  // Aufgabe 78: Karten-Schatten an/aus (nahtloses Einbetten). DB-Spalte `show_shadow`.
+  showShadow: boolean
   // E-Mail-Einstellungen (pro Funnel)
   notificationEmail: string   // Wohin neue Leads gesendet werden (Leer = Tenant-Standard)
   emailSenderLocal: string    // Lokalteil der Absender-Adresse, z.B. "anfragen"

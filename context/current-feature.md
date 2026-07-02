@@ -110,6 +110,23 @@ UPDATE tenants SET billing_model = 'free' WHERE slug = 'kunde-slug';
 
 ---
 
+## Aufgabe 78 — Einbett-Feinschliff: Eigene Breite + Schatten-Schalter (2026-07-02)
+
+**Status:** Branch `feature/aufgabe-78-einbett-feinschliff` (stacked auf 77), `tsc --noEmit` grün, E2E-verifiziert per Wegwerf-Funnel (Eigene Breite 640px + Schatten aus → Save → DB-Check → Live-Widget nahtlos → gelöscht). **Migration `20260702140000` (Spalte `show_shadow` + duplicate_funnel-Update) auf Prod angewendet** — diesmal VOR den Code-Änderungen, damit der laufende Dev-Server kein kaputtes Speichern-Fenster hat (Lehre aus 77). `funnel.tsx` mit Freigabe angefasst (Schatten/Padding-Konditional).
+
+**Anlass:** Stavros-Fragen aus der Icon-Abnahme: individuelle Funnel-Breite + nahtloses Einbetten. Konsens: Schatten-Schalter + Hintergrund-Farbe-angleichen ersetzt „Karte transparent" für einfarbige Eltern-Seiten (die Farb-Mathematik rechnet dann korrekt weiter, Icon-Verdeckungs-Weiß deckt richtig ab); echtes Transparent (Verlauf/Bild-Untergründe) bewusst NICHT gebaut — on demand.
+
+**Umsetzung:**
+- **Eigene Breite:** `MaxWidthField` in [ThemePanel.tsx](../components/editor/ThemePanel.tsx) — Preset-Select + „Eigene Breite" mit Pixel-Eingabe (280–1920, Draft-State + Clamp on blur; „Eigene" klebt auch wenn der Wert zufällig einem Preset entspricht). **Keine Migration/Mapper-Änderung** — `max_width` ist eine freie text-Spalte, die Pipeline verdaut jeden CSS-Wert.
+- **Schatten-Schalter:** `showShadow: boolean` durch die komplette Kette (FunnelConfig + EditorState in [types/index.ts](../types/index.ts), defaults, `buildFunnelConfig`/`editorStateToFunnelRow`/`dbToEditorState`, `mapDbRow`+Select in getTenantConfig, Mail-Preview in EmailsPanel) — exakt das `showProgressBar`-Muster (Aufgabe 56). Widget: `boxShadow` konditional UND `SHADOW_PADDING` → 0 (sonst bliebe ein unsichtbarer Rand im Embed; embed.js misst inklusive Padding). Toggle im Design-Panel (Layout) mit Hint: „Für nahtlose Einbettung: Schatten aus und Funnel-Hintergrund auf die Farbe der Webseite setzen."
+- **Spalte:** `show_shadow boolean NOT NULL DEFAULT true` + `duplicate_funnel` kopiert sie mit (Enumeration-Lehre aus dem 77-Review); Seed-Skript copyCols ergänzt. Template-RPCs: weiter gesammelt offen (Instanzen bekommen Default true = Standard-Look).
+
+**Rollback:** Migration hat DOWN (Funktion auf 77-Fassung zurück, Spalte droppen — erst Code zurückrollen). Sonst reiner Code-Change.
+
+**Offen / Folge:** „Karte transparent" für Verlauf-/Bild-Untergründe nur bei belegtem Bedarf (Farb-Ableitungen + `var(--funnel-bg)`-Occlusion brauchen dann definierte Fallbacks).
+
+---
+
 ## Aufgabe 77 — Kuratierte Icon-Bibliothek für Bild-Optionen (2026-07-02)
 
 **Status:** Branch `feature/aufgabe-77-icon-bibliothek`, `tsc --noEmit` grün, Browser-verifiziert (Picker, Karten-Grid, Neutral/Brand-Tint). **Keine neue Dependency.** `funnel.tsx` mit expliziter Freigabe angefasst. **Beide Migrationen (`20260702120000` Spalte + `20260702130000` duplicate_funnel) am 2026-07-02 auf Prod angewendet** (Go von Stavros nach Schema-Cache-Fehler beim lokalen Speichern; Branch-Test nicht möglich — `confirm_cost`-Tool fehlt in der MCP-Config). Wording-Entscheidung: **„Icon" kanonisch** (Styleguide-Glossar ergänzt, 76er-Label „Symbol" → „Icon" umbenannt). Picker-Einstieg nach Stavros-Review prominenter: „Icon wählen"-Button statt nacktem Thumbnail, URL-Feld heißt „oder Bild-URL".
